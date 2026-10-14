@@ -7,5 +7,5 @@ export function scenarioMatrix(input: UnderwritingInput) {
       cases.push({name:rate===0.035?'best':rate>=0.08||vacancy>=0.12?'worst':'base',interestRate:rate,vacancyRate:vacancy,maintenanceMultiplier:1});
     }
   }
-  return cases.map(c=>({case:c,...underwrite(input,[c]).stress[0]}));
+  return cases.map(c=>({stressCase:c,...underwrite(input,[c]).stress[0]}));
 }
