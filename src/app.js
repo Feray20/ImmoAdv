@@ -1,29 +1,87 @@
 document.addEventListener('DOMContentLoaded',()=>{
   const $=s=>document.querySelector(s);
-  const euro=n=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n);
-  const pct=n=>`${n.toFixed(2).replace('.',',')} %`;
+  const euro=n=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(Number.isFinite(n)?n:0);
+  const pct=n=>`${(Number.isFinite(n)?n:0).toFixed(2).replace('.',',')} %`;
+  const num=(value,fallback=0)=>{const n=Number(String(value??'').replace(',','.'));return Number.isFinite(n)?n:fallback};
 
   function calculate(){
     const form=$('#calcForm');
     if(!form)return;
     const f=new FormData(form);const v=Object.fromEntries(f.entries());
-    const price=+v.price||0,rent=+v.rent||0,costs=+v.purchaseCosts||0,maint=+v.maintenance||0,equity=+v.equity||0,interest=(+v.interest||0)/100,repayment=(+v.repayment||0)/100,ltv=(+v.ltv||0)/100,tax=(+v.tax||0)/100,afa=(+v.afa||0)/100,afaRate=(+v.afaRate||0)/100,vacancy=(+v.vacancy||0)/100;
-    const effectiveRent=rent*(1-vacancy),grossYield=price?rent/price:0,loan=price*ltv,debt=loan*(interest+repayment),building=price*afa,depreciation=building*afaRate,deductibleInterest=loan*interest,taxable=Math.max(0,effectiveRent-maint-deductibleInterest-depreciation),taxAmount=taxable*tax,cashAfterTax=effectiveRent-maint-debt-taxAmount,netYield=price?(effectiveRent-maint)/price:0,invested=Math.max(1,equity+price*costs/100),equityReturn=cashAfterTax/invested,dscr=debt?Math.max(0,effectiveRent-maint)/debt:0;
-    let score=50;if(grossYield>=.06)score+=12;else if(grossYield>=.05)score+=7;if(dscr>=1.25)score+=18;else if(dscr>=1.1)score+=10;if(ltv<=.8)score+=10;if(equity/Math.max(1,price)>=.2)score+=10;score=Math.min(100,Math.round(score));
+    const price=Math.max(0,num(v.price)),rent=Math.max(0,num(v.rent)),costs=Math.max(0,num(v.purchaseCosts)),maint=Math.max(0,num(v.maintenance)),equity=Math.max(0,num(v.equity)),interest=Math.max(0,num(v.interest))/100,repayment=Math.max(0,num(v.repayment))/100,ltv=Math.max(0,num(v.ltv))/100,tax=Math.min(1,Math.max(0,num(v.tax)/100)),afa=Math.min(1,Math.max(0,num(v.afa)/100)),afaRate=Math.max(0,num(v.afaRate))/100,vacancy=Math.min(1,Math.max(0,num(v.vacancy)/100));
+    const effectiveRent=rent*(1-vacancy),grossYield=price?rent/price:0,loan=price*ltv,debt=loan*(interest+repayment),building=price*afa,depreciation=building*afaRate,deductibleInterest=loan*interest,taxable=effectiveRent-maint-deductibleInterest-depreciation,taxAmount=taxable*tax,cashAfterTax=effectiveRent-maint-debt-taxAmount,netYield=price?(effectiveRent-maint)/price:0,invested=Math.max(1,equity+(price*costs/100)),equityReturn=cashAfterTax/invested,dscr=debt?Math.max(0,effectiveRent-maint)/debt:0;
+    let score=50;
+    if(grossYield>=.06)score+=12;else if(grossYield>=.05)score+=7;else if(grossYield<.03)score-=8;
+    if(dscr>=1.25)score+=18;else if(dscr>=1.1)score+=10;else if(dscr<1)score-=12;
+    if(ltv<=.8)score+=10;else if(ltv>.9)score-=10;
+    if(equity/Math.max(1,price)>=.2)score+=10;else if(equity/Math.max(1,price)<.1)score-=5;
+    score=Math.min(100,Math.max(0,Math.round(score)));
     $('#afterTax')?.replaceChildren(document.createTextNode(euro(cashAfterTax/12)));
     $('#cashflowHint')?.replaceChildren(document.createTextNode(cashAfterTax>=0?'positiver modellierter Jahres-Cashflow':'negativer modellierter Jahres-Cashflow'));
     $('#yield')?.replaceChildren(document.createTextNode(pct(grossYield*100)));$('#netYield')?.replaceChildren(document.createTextNode(pct(netYield*100)));$('#debtService')?.replaceChildren(document.createTextNode(euro(debt)));$('#equityReturn')?.replaceChildren(document.createTextNode(pct(equityReturn*100)));$('#dscr')?.replaceChildren(document.createTextNode(dscr.toFixed(2).replace('.',',')));$('#bankScore')?.replaceChildren(document.createTextNode(`${score} / 100`));
-    const note=$('#resultNote');if(note)note.textContent=`Modelliert mit ${euro(loan)} Darlehen, ${euro(depreciation)} AfA p.a. und ${pct(tax*100)} Grenzsteuersatz. Keine Kredit- oder Steuerzusage.`;
+    const note=$('#resultNote');if(note)note.textContent=`Modelliert mit ${euro(loan)} Darlehen, ${euro(depreciation)} AfA p.a. und ${pct(tax*100)} Grenzsteuersatz. Steuerwirkung ist modellhaft und keine individuelle Steuerberechnung.`;
   }
 
   const form=$('#calcForm');
   form?.addEventListener('input',calculate);form?.addEventListener('submit',e=>{e.preventDefault();calculate()});
   $('#printBtn')?.addEventListener('click',()=>window.print());
-  document.querySelectorAll('[data-scroll]').forEach(b=>b.addEventListener('click',()=>document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:'smooth'})));
+  document.querySelectorAll('[data-scroll]').forEach(b=>b.addEventListener('click',()=>document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:'smooth',block:'start'})));
   const toast=$('#toast');let toastTimer;
-  document.querySelectorAll('[data-toast]').forEach(b=>b.addEventListener('click',()=>{if(!toast)return;toast.textContent=b.dataset.toast;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)}));
+  const showToast=message=>{if(!toast)return;toast.textContent=message;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),3200)};
+  document.querySelectorAll('[data-toast]').forEach(b=>b.addEventListener('click',()=>showToast(b.dataset.toast)));
   const menu=$('.mobile-menu'),nav=$('.mobile-nav');
-  menu?.addEventListener('click',()=>{const open=menu.getAttribute('aria-expanded')==='true';menu.setAttribute('aria-expanded',String(!open));if(nav)nav.hidden=open});
-  nav?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{nav.hidden=true;menu?.setAttribute('aria-expanded','false')}));
+  menu?.addEventListener('click',()=>{const open=menu.getAttribute('aria-expanded')==='true';menu.setAttribute('aria-expanded',String(!open));menu.setAttribute('aria-label',open?'Menü öffnen':'Menü schließen');if(nav)nav.hidden=open});
+  nav?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{nav.hidden=true;menu?.setAttribute('aria-expanded','false');menu?.setAttribute('aria-label','Menü öffnen')}));
+
+  // Safe, browser-only progress persistence. No financial/document data is stored here.
+  const stateKey='immoadv-ui-progress-v1';
+  const readState=()=>{try{return JSON.parse(localStorage.getItem(stateKey)||'{}')}catch{return {}}};
+  const writeState=state=>{try{localStorage.setItem(stateKey,JSON.stringify(state))}catch{}};
+  const state=readState();
+
+  // Pro-Begleiter checkboxes: persist only completion state.
+  document.querySelectorAll('input[type="checkbox"][data-pro]').forEach(input=>{
+    const key=`pro:${input.dataset.pro}`;input.checked=state[key]===true;
+    input.addEventListener('change',()=>{state[key]=input.checked;writeState(state);});
+  });
+
+  // Document checklist: persist only checked/not-checked state.
+  const docs=[...document.querySelectorAll('input[type="checkbox"][data-doc]')];
+  const updateDocs=()=>{
+    const checked=docs.filter(x=>x.checked).length;const count=$('#dp');const bar=$('#db');
+    if(count)count.textContent=`${checked} von ${docs.length||21} Unterlagen abgehakt`;
+    if(bar)bar.style.width=`${docs.length?Math.round(checked/docs.length*100):0}%`;
+  };
+  docs.forEach(input=>{const key=`doc:${input.dataset.doc}`;input.checked=state[key]===true;input.addEventListener('change',()=>{state[key]=input.checked;writeState(state);updateDocs()})});
+  updateDocs();
+
+  // Knowledge accordion and search: progressively enhance existing route markup.
+  document.querySelectorAll('.route-q').forEach(button=>button.addEventListener('click',()=>{
+    const answer=button.parentElement?.querySelector('.route-a');if(!answer)return;
+    const expanded=button.getAttribute('aria-expanded')==='true';button.setAttribute('aria-expanded',String(!expanded));answer.hidden=expanded;
+  }));
+  const knowledgeSearch=$('#ks');
+  knowledgeSearch?.addEventListener('input',()=>{
+    const term=knowledgeSearch.value.trim().toLowerCase();let visible=0;
+    document.querySelectorAll('.route-accordion article[data-search]').forEach(article=>{const match=!term||article.dataset.search.includes(term);article.hidden=!match;if(match)visible++});
+    const counter=$('#kc');if(counter)counter.textContent=`${visible} von 30 Einträgen`;
+  });
+
+  // Pricing comparison on /angebote.
+  const maps=$('#maps'),months=$('#months'),one=$('#one'),two=$('#two'),which=$('#which');
+  const updateComparison=()=>{
+    if(!maps||!months)return;const m=Math.max(1,Math.floor(num(maps.value,1))),mo=Math.max(1,Math.floor(num(months.value,1)));maps.value=m;months.value=mo;
+    const individual=m*39,pro=mo*19;if(one)one.textContent=euro(individual);if(two)two.textContent=euro(pro);
+    if(which)which.textContent=individual<pro?'Bei diesen Annahmen ist der Einzelkauf günstiger.':individual>pro?'Bei diesen Annahmen ist Pro günstiger.':'Bei diesen Annahmen sind beide Optionen gleich teuer.';
+  };
+  maps?.addEventListener('input',updateComparison);months?.addEventListener('input',updateComparison);updateComparison();
+  $('#print')?.addEventListener('click',()=>window.print());
+
+  // Generic form guard: prevent invalid numeric values from silently propagating.
+  document.querySelectorAll('input[type="number"]').forEach(input=>input.addEventListener('blur',()=>{
+    const min=input.getAttribute('min');const max=input.getAttribute('max');let value=num(input.value,0);
+    if(min!==null)value=Math.max(num(min),value);if(max!==null)value=Math.min(num(max),value);input.value=String(value);
+  }));
+
   calculate();
 });
