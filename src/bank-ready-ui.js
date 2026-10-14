@@ -1,0 +1,11 @@
+(()=>{
+const SESSION='immoadv-auth-session-v1';
+const get=()=>{try{return JSON.parse(localStorage.getItem(SESSION)||'null')}catch{return null}};
+async function cfg(){const r=await fetch('/api/supabase-config');if(!r.ok)throw Error('Supabase-Konfiguration nicht verfügbar.');return r.json()}
+async function fn(name,body){const c=await cfg(),s=get();if(!s?.access_token)throw Error('Bitte anmelden.');const r=await fetch(`${c.url}/functions/v1/${name}`,{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:`Bearer ${s.access_token}`},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Backend-Aufruf fehlgeschlagen.');return d}
+function wire(){const share=document.querySelector('#msShare'),out=document.querySelector('#msShareOut'),revoke=document.querySelector('#msRevoke');if(!share||share.dataset.live)return;share.dataset.live='1';
+ share.onclick=async()=>{out.textContent='Erzeuge sichere Data-Room-Freigabe …';try{const expiry=document.querySelector('#msExpiry')?.value;const ttl=expiry?Math.max(1,Math.ceil((new Date(expiry+'T23:59:59').getTime()-Date.now())/3600000)):168;const d=await fn('bank-package-share',{action:'create',deal_id:window.ImmoAdvDealId||null,ttlHours:Math.min(ttl,720),permissions:{property:true,financing:true,private_tax:false,payslips:false}});out.innerHTML=`<strong>Freigabe aktiv</strong><br>Share-ID: ${d.share_id}<br>gültig bis: ${new Date(d.expires_at).toLocaleString('de-DE')}<br><code>${location.origin}/data-room/${encodeURIComponent(d.token)}</code><br><small>Token wird serverseitig nur als Hash gespeichert.</small>`;window.ImmoAdvShareId=d.share_id}catch(e){out.textContent=e.message}};
+ revoke.onclick=async()=>{if(!window.ImmoAdvShareId){out.textContent='Keine aktive Freigabe in dieser Sitzung.';return}out.textContent='Widerrufe Freigabe …';try{await fn('data-room-share',{action:'revoke',share_id:window.ImmoAdvShareId});out.textContent='Freigabe erfolgreich widerrufen.'}catch(e){out.textContent=e.message}};
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setInterval(wire,500));else setInterval(wire,500);
+})();
