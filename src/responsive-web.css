@@ -1,1 +1,69 @@
-@media (max-width:900px){.desktop-nav{display:flex!important;align-items:center;gap:14px;flex:1;min-width:0;overflow-x:auto;white-space:nowrap;scrollbar-width:none}.desktop-nav::-webkit-scrollbar{display:none}.nav-actions{display:flex!important;flex-shrink:0;gap:6px}.site-header .mobile-menu{display:none!important}.mobile-nav{display:none!important}.site-header .nav-wrap,.route-header .nav-wrap{gap:12px;min-height:68px;overflow:hidden}.brand{flex-shrink:0}.hero-grid,.calculator-layout,.two-col,.faq,.bank-card{grid-template-columns:1fr 1fr;gap:24px}.feature-grid,.knowledge-grid{grid-template-columns:repeat(2,1fr)}.price-grid,.route-prices{grid-template-columns:repeat(3,minmax(190px,1fr));overflow-x:auto;padding-bottom:8px}.price-grid article,.route-prices article{min-width:190px}.level-row{grid-template-columns:repeat(5,minmax(145px,1fr));overflow-x:auto;padding-bottom:6px}.problem-grid{grid-template-columns:repeat(3,minmax(180px,1fr));overflow-x:auto;padding-bottom:8px}.coop-grid,.status-columns{grid-template-columns:1fr 1fr}.metrics-grid{grid-template-columns:repeat(3,1fr)}.filterbar{grid-template-columns:1fr 1fr auto}.route-search{grid-template-columns:minmax(0,1fr) auto}}@media (max-width:620px){.container{width:calc(100% - 20px)}.site-header .nav-wrap,.route-header .nav-wrap{height:62px;min-height:62px;gap:8px}.brand{font-size:18px}.brand-mark{width:30px;height:30px;font-size:18px}.desktop-nav{gap:11px;font-size:11px;margin-left:2px}.nav-actions .btn{padding:6px 8px;font-size:10px;white-space:nowrap}.hero-grid,.calculator-layout,.two-col,.faq,.bank-card{grid-template-columns:1fr 1fr;gap:14px}.hero h1{font-size:clamp(30px,8vw,44px)}.lead{font-size:13px}.hero-actions{flex-direction:row;flex-wrap:wrap;gap:7px}.feature-grid,.knowledge-grid{grid-template-columns:repeat(2,minmax(145px,1fr));overflow-x:auto}.form-grid,.result-grid{grid-template-columns:1fr 1fr}.section{padding:46px 0}.section-head{display:block}.section-head>p{margin-top:10px;font-size:12px}.section-head h2,.two-col h2,.bank-card h2,.faq h2,.knowledge h2{font-size:24px}.metrics-grid{grid-template-columns:repeat(3,1fr)}.route-q{grid-template-columns:36px minmax(0,1fr) 20px;padding:15px}.route-a{padding:0 15px 15px 51px}.filterbar{grid-template-columns:1fr 1fr auto}.route-search{grid-template-columns:minmax(0,1fr) auto;padding:13px}}@media print{.mobile-nav,.mobile-menu{display:none!important}}
+/* ImmoAdv responsive system — overrides legacy breakpoint rules */
+.nav-wrap{min-width:0}
+.nav-actions{align-items:center;flex-wrap:nowrap}
+.btn,.text-btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;line-height:1.2;text-align:center}
+.btn{white-space:nowrap}
+.hero-actions{display:flex;align-items:center;flex-wrap:wrap}
+.calc-actions{display:flex;align-items:center;flex-wrap:wrap}
+.price-grid article{display:flex;flex-direction:column;align-items:flex-start}
+.price-grid article .btn{margin-top:auto}
+.bank-card .btn{margin-top:8px}
+.mobile-nav .btn{width:100%}
+@media(max-width:1100px){
+  .container{width:min(100% - 32px,1180px)}
+  .desktop-nav{gap:15px}
+  .desktop-nav a{white-space:nowrap}
+  .hero-grid{grid-template-columns:1fr 0.82fr;gap:38px}
+}
+@media(max-width:900px){
+  .desktop-nav{display:none!important}
+  .mobile-menu{display:grid!important;place-items:center;width:44px;height:44px;margin-left:auto;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);font-size:22px;cursor:pointer}
+  .nav-actions{margin-left:0}
+  .nav-actions .btn-ghost{display:inline-flex}
+  .mobile-nav{display:grid}
+  .hero-grid,.calculator-layout,.two-col,.faq,.bank-card{grid-template-columns:1fr}
+  .hero-grid{gap:32px}
+  .results{position:static}
+  .feature-grid,.knowledge-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .price-grid{grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible}
+  .price-grid article{min-width:0}
+  .level-row,.problem-grid{grid-template-columns:repeat(3,minmax(0,1fr));overflow-x:auto}
+  .coop-grid,.status-columns{grid-template-columns:1fr}
+  .metrics-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .filterbar{grid-template-columns:1fr 1fr}
+  .route-search{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .container{width:calc(100% - 28px)}
+  .nav-wrap{height:64px;min-height:64px;gap:8px}
+  .brand{font-size:18px}
+  .brand-mark{width:30px;height:30px;font-size:18px}
+  .nav-actions{margin-left:auto}
+  .nav-actions .btn-ghost{display:none}
+  .nav-actions .btn-dark{padding:9px 11px;font-size:12px}
+  .mobile-menu{width:42px;height:42px}
+  .hero{padding:56px 0 52px}
+  .hero h1{font-size:clamp(36px,10vw,48px)}
+  .lead{font-size:16px}
+  .hero-actions,.calc-actions{align-items:stretch;flex-direction:column}
+  .hero-actions .btn,.hero-actions .text-btn,.calc-actions .btn{width:100%}
+  .trust-row{display:grid;gap:7px}
+  .feature-grid,.knowledge-grid{grid-template-columns:1fr}
+  .form-grid,.result-grid,.bank-points{grid-template-columns:1fr}
+  .section{padding:58px 0}
+  .section-head h2,.two-col h2,.bank-card h2,.faq h2,.knowledge h2{font-size:32px}
+  .calc-form{padding:20px}
+  .bank-card{padding:28px}
+  .audience-list>div{display:block}
+  .audience-list span{display:block;text-align:left;margin-top:5px}
+  .price-grid{grid-template-columns:1fr;gap:12px}
+  .price-grid article{width:100%;padding:24px}
+  .price-grid article .btn{width:100%}
+  .metrics-grid{grid-template-columns:1fr 1fr}
+  .filterbar{grid-template-columns:1fr}
+  .route-q{grid-template-columns:36px minmax(0,1fr) 20px;padding:15px}
+  .route-a{padding:0 15px 15px 51px}
+}
+@media print{
+  .mobile-nav,.mobile-menu,.nav-actions,.hero-actions,.toast{display:none!important}
+}
