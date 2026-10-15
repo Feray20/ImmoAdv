@@ -344,3 +344,43 @@ export function budget({ netIncome = 0, expenses = 0, rent = 0, rentSharePct = 7
     loanToPrice: price > 0 ? r2((loan / price) * 100) : 0, restAfter10: plan ? plan.restAtFixed : 0, months: plan ? plan.months : 0,
   };
 }
+
+// ---------- Bankreife je Objekt ----------
+// Welche Angaben und Unterlagen für ein vollständiges Bankgespräch noch fehlen. docs: [{ category }].
+const has = (v) => v !== undefined && v !== null && v !== '' && !(typeof v === 'number' && Number.isNaN(v));
+const pos = (v) => Number(v) > 0;
+export function readiness(o, docs = []) {
+  const cats = new Set(docs.map((d) => d.category));
+  const financed = pos(o.loan);
+  const weg = pos(o.meaTotal);
+  const groups = [
+    { key: 'basis', label: 'Grunddaten', items: [
+      ['Kaufpreis', pos(o.price)], ['Nettokaltmiete', has(o.rent)], ['Wohnfläche', pos(o.area)], ['Baujahr', pos(o.yearBuilt)] ] },
+    { key: 'bewirtschaftung', label: 'Bewirtschaftung', items: [
+      ['Nicht umlagefähige Kosten', has(o.nonRecoverable)], ['Instandhaltung', has(o.maintenance)], ['Mietausfall', has(o.vacancyPct)] ] },
+    { key: 'finanzierung', label: 'Finanzierung', items: [
+      ['Eigenkapital', has(o.equity)],
+      ...(financed ? [['Sollzins', pos(o.interestPct)], ['Tilgung', pos(o.repaymentPct)], ['Zinsbindung', pos(o.fixedYears)]] : []) ] },
+    { key: 'objekt', label: 'Objektangaben für die Bank', items: [
+      ['Grundbuch (Amtsgericht, Blatt)', has(o.grundbuchAmt) && has(o.grundbuchBlatt)], ['Flur und Flurstück', has(o.flur) && has(o.flurstueck)],
+      ['Heizung', has(o.heatingType)], ['Energiekennwert', pos(o.energyConsumption) || pos(o.primaryEnergy)] ] },
+    { key: 'unterlagen', label: 'Unterlagen', items: [
+      ['Objekt (Exposé, Grundrisse)', cats.has('objekt')], ['Mietverträge', cats.has('miete')], ['Grundbuch und Flurkarte', cats.has('grundbuch')],
+      ['Energieausweis / Technik', cats.has('technik')], ['Einkommen und Eigenkapital', cats.has('finanzen')],
+      ...(weg ? [['WEG-Unterlagen', cats.has('weg')]] : []) ] },
+  ].map((g) => ({ ...g, done: g.items.filter((i) => i[1]).length, total: g.items.length, missing: g.items.filter((i) => !i[1]).map((i) => i[0]) }));
+  const done = groups.reduce((s, g) => s + g.done, 0), total = groups.reduce((s, g) => s + g.total, 0);
+  return { pct: total ? Math.round((done / total) * 100) : 0, done, total, groups, mappeReady: pos(o.price) && has(o.rent) && has(o.name) };
+}
+
+// ---------- Nächste Termine über alle Objekte ----------
+export function upcoming(objects, { today = new Date(), limit = 8 } = {}) {
+  const t = iso(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())));
+  const all = [];
+  for (const o of objects) {
+    const f = fristen({ purchaseDate: o.purchaseDate, payoutDate: o.payoutDate, fixedYears: Number(o.fixedYears) || 0, lastRentChange: o.lastRentChange });
+    for (const e of f) if (e.date >= t) all.push({ ...e, object: o.name || 'Objekt', objectId: o.id });
+  }
+  all.sort((a, b) => a.date.localeCompare(b.date));
+  return { items: all.slice(0, limit), all };
+}

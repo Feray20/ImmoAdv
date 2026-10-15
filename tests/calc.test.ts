@@ -144,3 +144,28 @@ test('budget: Rate → Darlehen → Kaufpreis inkl. Nebenkosten', async () => {
   assert.equal(k.equityCoversNk, false);
   assert.equal(budget({ ratePa: 0.03, repaymentPa: 0.02, land: 'xx' }), null);
 });
+
+test('readiness: Anteil, fehlende Punkte, WEG nur bei Miteigentum', async () => {
+  const { readiness } = await import('../public/src/calc.mjs');
+  const leer = readiness({ name: 'A', price: 300000, rent: 1000 });
+  assert.equal(leer.mappeReady, true);
+  assert.ok(leer.pct < 40);
+  assert.ok(leer.groups.find((g) => g.key === 'unterlagen')!.missing.includes('Mietverträge'));
+  assert.equal(leer.groups.find((g) => g.key === 'unterlagen')!.total, 5);
+  const voll = readiness({ name: 'B', price: 300000, rent: 1000, area: 70, yearBuilt: 1995, nonRecoverable: 50, maintenance: 60, vacancyPct: 2, equity: 60000,
+    loan: 270000, interestPct: 3.5, repaymentPct: 2, fixedYears: 10, grundbuchAmt: 'AG X', grundbuchBlatt: '12', flur: '3', flurstueck: '45', heatingType: 'Gas', energyConsumption: 120, meaTotal: 1000 },
+    ['objekt', 'miete', 'grundbuch', 'technik', 'finanzen', 'weg'].map((category) => ({ category })));
+  assert.equal(voll.pct, 100);
+  assert.equal(readiness({ name: 'C' }).mappeReady, false);
+});
+
+test('upcoming: nur künftige Termine, sortiert, mit Objektname', async () => {
+  const { upcoming } = await import('../public/src/calc.mjs');
+  const u = upcoming([{ id: 'a', name: 'Altbau', purchaseDate: '2024-03-01', fixedYears: 10 }, { id: 'b', name: 'Neubau', purchaseDate: '2026-01-15', payoutDate: '2026-02-01', fixedYears: 15 }],
+    { today: new Date('2026-10-15T00:00:00Z'), limit: 3 });
+  assert.equal(u.items.length, 3);
+  assert.equal(u.items[0].date, '2027-03-01');
+  assert.equal(u.items[0].object, 'Altbau');
+  assert.ok(u.items.every((x, i, a) => i === 0 || a[i - 1].date <= x.date));
+  assert.ok(u.all.every((x) => x.date >= '2026-10-15'));
+});

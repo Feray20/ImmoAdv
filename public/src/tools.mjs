@@ -20,7 +20,27 @@ const remember = (k, ids) => {
   const save = () => { try { const o = {}; ids.forEach((id) => { if ($(id)) o[id] = $(id).type === 'checkbox' ? $(id).checked : $(id).value; }); localStorage.setItem(KEY(k), JSON.stringify(o)); } catch {} };
   ids.forEach((id) => { if (fromHash.has(id) && $(id)) $(id).value = fromHash.get(id); });
   ids.forEach((id) => $(id)?.addEventListener('change', save));
+  share(ids);
 };
+// „Link zum Ergebnis“: Eingaben als #feld=wert im Link, damit Ergebnisse geteilt oder gemerkt werden können.
+function share(ids) {
+  const first = ids.map($).find(Boolean);
+  const card = first?.closest('.dash-card, .wz, #wz, article');
+  if (!card || card.querySelector('.share-btn')) return;
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'btn btn-outline share-btn'; b.textContent = 'Link zum Ergebnis kopieren';
+  const note = document.createElement('span'); note.className = 'form-note share-note'; note.setAttribute('role', 'status');
+  b.onclick = async () => {
+    const q = new URLSearchParams();
+    ids.forEach((id) => { const el = $(id); if (el && el.type !== 'checkbox' && el.value !== '') q.set(id, el.value); });
+    const url = `${location.origin}${location.pathname}#${q.toString()}`;
+    try { await navigator.clipboard.writeText(url); note.textContent = ' Link kopiert.'; }
+    catch { history.replaceState(null, '', url); note.textContent = ' Link steht jetzt in der Adresszeile.'; }
+  };
+  const wrap = document.createElement('p'); wrap.className = 'share-row'; wrap.append(b, note);
+  card.append(wrap);
+}
+document.querySelectorAll('.calc-out').forEach((e) => e.setAttribute('aria-live', 'polite'));
 
 // Indexmiete
 if ($('ix_out')) {
