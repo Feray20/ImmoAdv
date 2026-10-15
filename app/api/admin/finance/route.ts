@@ -95,7 +95,18 @@ export async function GET(req: Request) {
     cnt('immo_b2b_leads', (q) => q.gte('created_at', fromTs).lte('created_at', toTs)),
   ]);
 
+  // Netto-Umsatz der letzten 12 Kalendermonate (unabhängig vom gewählten Zeitraum).
+  const m0 = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 12, 1)).toISOString().slice(0, 10);
+  const { data: last12 } = await db.from('immo_invoices').select('issue_date, net_cents').gte('issue_date', m0).limit(20000);
+  const months: { m: string; net: number }[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1 - i, 1));
+    const key = d.toISOString().slice(0, 7);
+    months.push({ m: key, net: (last12 ?? []).filter((x) => String(x.issue_date).startsWith(key)).reduce((a, x) => a + Number(x.net_cents || 0), 0) });
+  }
+
   return j({
+    months,
     range: r, revenue, invoices: rows.slice(0, 200), openItems,
     recurring: { mrrNet: mrr, arrNet: mrr * 12, activeAccounts: active.length, byTier, manualWithoutPrice: manual, expiredInRange: expired },
     viral: { verifyViews, partnerDossiers, newAccounts, viaVerify, leads },

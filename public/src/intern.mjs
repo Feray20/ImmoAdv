@@ -87,6 +87,7 @@ async function cockpit(v, zeitraum = 'monat', von = '', bis = '') {
     <h2>${esc(d.range.label)}</h2>
     <div class="pt-kpis">${tile('Umsatz netto', eur(d.revenue.net), `${d.revenue.count} Rechnungen${d.revenue.stornos ? `, ${d.revenue.stornos} Korrekturen` : ''}`)}${tile('Umsatzsteuer 19 %', eur(d.revenue.vat))}${tile('Umsatz brutto', eur(d.revenue.gross))}${tile('Offene Posten', String(d.openItems.length), eur(d.openItems.reduce((s, x) => s + Number(x.gross_cents), 0)))}</div>
     <div class="pt-kpis">${tile('MRR netto', eur(d.recurring.mrrNet), 'aus Stripe-Abos zum Listenpreis')}${tile('ARR netto', eur(d.recurring.arrNet))}${tile('Aktive Tarife', String(d.recurring.activeAccounts), `Basic ${d.recurring.byTier.BASIC} · Pro ${d.recurring.byTier.PRO} · Enterprise ${d.recurring.byTier.ENTERPRISE}${d.recurring.manualWithoutPrice ? ` · ${d.recurring.manualWithoutPrice} manuell` : ''}`)}${tile('Abgelaufen im Zeitraum', String(d.recurring.expiredInRange))}</div>
+    <h2>Netto-Umsatz der letzten 12 Monate</h2>${monthsChart(d.months || [])}
     <h2>Weiterempfehlung über Kreditmappen</h2>
     <div class="pt-kpis">${tile('Kreditmappen von Unternehmen', String(d.viral.partnerDossiers))}${tile('Aufrufe der Prüfseite', String(d.viral.verifyViews))}${tile('Neue Unternehmenskonten', String(d.viral.newAccounts), `davon über Prüfseite: ${d.viral.viaVerify}`)}${tile('Endkunden-Anfragen', String(d.viral.leads))}</div>
     <h2>Offene Posten</h2>${d.openItems.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Ampel</th><th>Nummer</th><th>Kunde</th><th>Fällig</th><th>Brutto</th><th></th></tr></thead><tbody>
@@ -95,6 +96,13 @@ async function cockpit(v, zeitraum = 'monat', von = '', bis = '') {
   v.querySelectorAll('[data-z]').forEach((b) => b.onclick = () => cockpit(v, b.dataset.z));
   $('#zf').onclick = () => cockpit(v, 'frei', $('#zv').value, $('#zb').value);
   bindInv(v, () => cockpit(v, zeitraum, von, bis));
+}
+
+// Einfache Balken mit Wertbeschriftung; Monate ohne Umsatz bleiben sichtbar (0 €).
+function monthsChart(months) {
+  const max = Math.max(1, ...months.map((x) => x.net));
+  const lab = (m) => new Intl.DateTimeFormat('de-DE', { month: 'short', year: '2-digit' }).format(new Date(m + '-01T12:00:00Z'));
+  return `<div class="ad-bars" role="list">${months.map((x) => `<div class="ad-bar" role="listitem" aria-label="${lab(x.m)}: ${eur(x.net, 0)}"><span class="ad-bar-v">${x.net ? eur(x.net, 0) : ''}</span><span class="ad-bar-f" style="height:${Math.max(x.net > 0 ? 3 : 0, Math.round((x.net / max) * 100))}%"></span><span class="ad-bar-l">${lab(x.m)}</span></div>`).join('')}</div>`;
 }
 
 const invTable = (rows) => rows.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Nummer</th><th>Art</th><th>Datum</th><th>Kunde</th><th>Netto</th><th>USt</th><th>Brutto</th><th>Status</th><th></th></tr></thead><tbody>
@@ -152,7 +160,7 @@ async function partner(v) {
   const r = await api('/api/admin/b2b');
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
   const list = r.data.accounts;
-  v.innerHTML = `<div class="pt-row" style="margin-bottom:10px"><input id="pq" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><select id="ps" style="border:1px solid #CBD5E1;border-radius:6px;padding:8px"><option value="">Alle</option><option value="active">Aktiv</option><option value="locked">Gesperrt</option><option value="unverified">Ungeprüft</option></select></div>
+  v.innerHTML = `<div class="pt-row" style="margin-bottom:10px"><input id="pq" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><select id="ps" style="border:1px solid #CBD5E1;border-radius:6px;padding:8px"><option value="">Alle</option><option value="active">Aktiv</option><option value="locked">Gesperrt</option><option value="unverified">Ungeprüft</option></select><button class="btn btn-ghost" id="pCsv" type="button">CSV</button></div>
     ${list.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Unternehmen</th><th>Art</th><th>Register / Steuer</th><th>Tarif</th><th>Status</th><th>Anfragen</th><th>Aktionen</th></tr></thead><tbody>
     ${list.map((a) => `<tr data-row="${a.id}" data-s="${a.status}${a.verified_at ? '' : ' unverified'}" data-q="${esc((a.company_name + ' ' + a.city + ' ' + a.customer_number + ' ' + a.email).toLowerCase())}">
       <td><strong>${esc(a.company_name)}</strong> ${esc(a.legal_form)}<br><small>${esc(a.customer_number)} · ${esc(a.postal_code)} ${esc(a.city)} · ${esc(a.email)}</small></td>
@@ -176,6 +184,13 @@ async function partner(v) {
     v.querySelectorAll('[data-row]').forEach((tr) => { tr.hidden = (q && !tr.dataset.q.includes(q)) || (s && !tr.dataset.s.split(' ').includes(s)); });
   };
   $('#pq').oninput = filter; $('#ps').onchange = filter;
+  $('#pCsv').onclick = () => {
+    const cell = (v) => `"${String(v ?? '').replace(/"/g, '""').replace(/^[=+\-@]/, "'$&")}"`;
+    const head = ['Kundennummer', 'Firma', 'Rechtsform', 'Art', 'Registernummer', 'Steuernummer', 'Ansprechpartner', 'E-Mail', 'PLZ', 'Ort', 'Tarif', 'Quelle', 'Status', 'Geprüft', 'Anfragen', 'Angelegt'];
+    const rows = list.map((a) => [a.customer_number, a.company_name, a.legal_form, a.institution_type, a.register_number, a.tax_id, a.advisor_name, a.email, a.postal_code, a.city, a.tier || '', a.plan_source || '', a.status, a.verified_at ? 'ja' : 'nein', a.leads, a.created_at.slice(0, 10)]);
+    const blob = new Blob(['\uFEFF' + [head, ...rows].map((r) => r.map(cell).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const el = document.createElement('a'); el.href = URL.createObjectURL(blob); el.download = 'ImmoAdv_Unternehmen.csv'; document.body.append(el); el.click(); el.remove();
+  };
   v.querySelectorAll('[data-a]').forEach((b) => b.onclick = async () => {
     const id = b.dataset.id, a = b.dataset.a;
     let body = { action: a, id };

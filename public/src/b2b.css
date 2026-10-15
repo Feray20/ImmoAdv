@@ -1,5 +1,4 @@
 /* Unternehmensportal, Partnerseite, B2B-Angebot und Admin-Zentrale */
-[hidden]{display:none!important}
 body.is-portal{background:#F1F5F9;margin:0}
 .pt{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
 .pt-side{position:sticky;top:0;height:100vh;background:#0F2C59;color:#CBD5E1;display:flex;flex-direction:column;padding:18px 12px;gap:4px;overflow:auto}
@@ -52,7 +51,6 @@ body.is-portal{background:#F1F5F9;margin:0}
 .pt-onb .pt-card h2{margin-top:14px}.pt-onb .obj-grid select{border:1px solid #CBD5E1;border-radius:4px;padding:8px 10px;background:#fff}
 .pt-avv{border:1px solid #E2E8F0;border-radius:8px;padding:10px 14px;margin:10px 0;max-height:none;font-size:13px}.pt-avv summary{cursor:pointer;font-weight:700;color:#0F2C59}
 .pt-avv[open]{max-height:360px;overflow:auto}
-.obj-grid select{border:1px solid var(--ia-hair,#CBD5E1);border-radius:4px;padding:8px 10px;background:#fff;color:#0F172A}
 @media (max-width:900px){
   .pt{display:block}.pt-side{display:none}.pt-main{padding:0 14px calc(84px + env(safe-area-inset-bottom))}
   .pt-top{margin:0 -14px 10px;padding:12px 14px;background:#fff;border-bottom:1px solid #E2E8F0}.pt-top h1{font-size:19px}
@@ -110,3 +108,9 @@ body.intern>main,body.intern #intern{min-width:0}
 .pp-head .pp-sub{display:block;color:#64748B;font-size:13px}
 .ad-table td,.ad-table th{text-align:left!important}.ad-table small,.pt-main small:not(.pt-tag),.pt-lead small{text-transform:none;letter-spacing:0;font-size:12px}.ad-table td.ad-actions{display:table-cell}
 .ad-actions button{margin:2px}
+
+.ad-bars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;align-items:end;height:180px;background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:12px 12px 6px;margin-bottom:16px}
+.ad-bar{display:grid;grid-template-rows:auto 1fr auto;height:100%;text-align:center;min-width:0}
+.ad-bar-f{align-self:end;background:#0284C7;border-radius:4px 4px 0 0;width:70%;margin:0 auto}
+.ad-bar-v{font-size:10px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ad-bar-l{font-size:10px;color:#64748B;padding-top:4px;white-space:nowrap}
+@media (max-width:620px){.ad-bar-v{display:none}}

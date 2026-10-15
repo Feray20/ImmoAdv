@@ -350,3 +350,5 @@ body.is-app .dashboard-grid{gap:16px}
   .offers,.mode-pick{grid-template-columns:1fr}
 }
 .app-side .brand>span{color:#fff}.app-side .brand>span>span{color:#38BDF8}
+[hidden]{display:none!important}
+.obj-grid select{border:1px solid var(--ia-hair,#CBD5E1);border-radius:4px;padding:8px 10px;background:#fff;color:#0F172A}
