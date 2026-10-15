@@ -62,3 +62,11 @@ test('Download-Schlüssel für die Finanzierungsübersicht: gültig, gebunden, v
   assert.ok(!checkLeadToken(id, t, 1_000_000 + 3 * 3600_000), 'nach 2 Stunden ungültig');
   assert.ok(!checkLeadToken(id, t.replace(/.$/, (c) => (c === 'A' ? 'B' : 'A')), 1_000_000));
 });
+
+test('Webhook: Signatur und Schutz vor internen Adressen', async () => {
+  const { signPayload, isPrivateIp } = await import('../lib/b2b/webhook-sign');
+  const { createHmac } = await import('node:crypto');
+  assert.equal(signPayload('geheim', '1700000000', '{"a":1}'), 'sha256=' + createHmac('sha256', 'geheim').update('1700000000.{"a":1}').digest('hex'));
+  for (const ip of ['10.0.0.1', '127.0.0.1', '192.168.1.5', '172.20.0.1', '169.254.169.254', '100.64.0.1', '::1', 'fd00::1']) assert.ok(isPrivateIp(ip), ip);
+  for (const ip of ['8.8.8.8', '172.32.0.1', '2a00:1450::1']) assert.ok(!isPrivateIp(ip), ip);
+});

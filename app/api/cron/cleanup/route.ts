@@ -29,8 +29,9 @@ export async function GET(req: Request) {
   const db = supabaseAdmin();
   const overdue = await db.from('immo_invoices').update({ payment_status: 'OVERDUE' }).eq('payment_status', 'PENDING').lt('due_date', today).select('id').then((r) => r.data?.length ?? 0, () => -1);
   await db.from('immo_b2b_invites').delete().lt('expires_at', new Date(Date.now() - 30 * 864e5).toISOString()).then(() => null, () => null);
+  const retention = await leadRetention().catch((e) => ({ error: String(e instanceof Error ? e.message : e) }));
   const tax = await taxDispatch(today).catch((e) => ({ error: String(e instanceof Error ? e.message : e) }));
-  return NextResponse.json({ ok: true, cleanup, reminders, overdue, tax }, { headers: { 'Cache-Control': 'no-store' } });
+  return NextResponse.json({ ok: true, cleanup, reminders, overdue, retention, tax }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 // Monatsarchiv des Vormonats am n-ten Werktag (TAX_DISPATCH_WORKDAY, Standard 3) an TAX_ADVISOR_EMAIL senden. Einmal je Monat.
@@ -54,4 +55,18 @@ async function taxDispatch(today: string): Promise<Record<string, unknown>> {
     '\nDiese E-Mail wurde automatisch erstellt.', [{ filename: `ImmoAdv_Steuerexport_${prev}.zip`, content: a.zip }]);
   await db.from('immo_admin_audit').insert({ actor_email: 'cron', action: ok ? 'tax_dispatch' : 'tax_dispatch_failed', target: prev, meta: { to, count: a.count, problems: a.problems.length } });
   return { sent: ok, monat: prev, count: a.count };
+}
+
+// Speicherbegrenzung (Art. 5 Abs. 1 lit. e DSGVO): Anfragen nach der vom Unternehmen gewählten Frist löschen (Standard 24 Monate).
+async function leadRetention(): Promise<Record<string, number>> {
+  const db = supabaseAdmin();
+  const { data: accs } = await db.from('immo_b2b_accounts').select('id, lead_retention_months').limit(5000);
+  let deleted = 0;
+  for (const a of accs ?? []) {
+    const cutoff = new Date(Date.now() - (a.lead_retention_months || 24) * 30.44 * 864e5).toISOString();
+    const r = await db.from('immo_b2b_leads').delete().eq('account_id', a.id).lt('created_at', cutoff).select('id');
+    deleted += r.data?.length ?? 0;
+  }
+  await db.from('immo_webhook_log').delete().lt('created_at', new Date(Date.now() - 90 * 864e5).toISOString());
+  return { deleted };
 }

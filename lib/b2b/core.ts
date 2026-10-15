@@ -51,6 +51,9 @@ export type B2BAccount = {
   support_access_until?: string | null;
   accept_submissions?: boolean;
   custom_disclaimer?: string | null;
+  lead_retention_months?: number;
+  webhook_url?: string | null;
+  webhook_secret?: string | null;
   created_at: string;
 };
 

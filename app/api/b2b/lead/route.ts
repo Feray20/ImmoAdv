@@ -6,6 +6,7 @@ import { effectiveTier, type B2BAccount } from '@/lib/b2b/core';
 import { json } from '@/lib/b2b/http';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
 import { leadToken } from '@/lib/b2b/leadtoken';
+import { sendWebhook } from '@/lib/b2b/webhook';
 // Gleicher Rechenkern wie im Browser.
 import { analyse } from '@/public/src/calc.mjs';
 
@@ -68,6 +69,7 @@ export async function POST(req: Request) {
   }).select('id').single();
   if (ins.error) return json({ error: 'Anfrage konnte nicht gespeichert werden.' }, 500);
 
+  if (a.webhook_url) await sendWebhook(a, 'lead.created', { id: ins.data.id, source: b.source, name: b.name, email: b.email, phone: b.phone || null, message: b.message || null, property: p, metrics, consentAt: new Date().toISOString() });
   if (mailConfigured()) {
     const eur = (v: unknown) => (typeof v === 'number' ? v.toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' €' : '–');
     await sendMail(a.email, `Neue Finanzierungsanfrage über ImmoAdv (${b.source})`,

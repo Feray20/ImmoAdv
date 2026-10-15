@@ -6,6 +6,7 @@ import { AVV_VERSION, TIER_LIMITS, adminAudit, dossiersThisMonth, effectiveTier,
 import { json, requireMember } from '@/lib/b2b/http';
 import { adminList } from '@/lib/security/admin';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
+import { newWebhookSecret, safeTarget } from '@/lib/b2b/webhook';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,6 +48,9 @@ const PatchSchema = z.object({
   regenerateKey: z.literal(true).optional(),
   supportAccessDays: z.union([z.literal(0), z.literal(7)]).optional(),
   acceptSubmissions: z.boolean().optional(),
+  leadRetentionMonths: z.number().int().min(1).max(120).optional(),
+  webhookUrl: z.union([z.literal(''), z.string().url().max(300)]).optional(),
+  regenerateWebhookSecret: z.literal(true).optional(),
   customDisclaimer: z.string().trim().max(600).optional(),
 });
 
@@ -65,7 +69,7 @@ function view(a: B2BAccount, role: string) {
       avvAcceptedAt: a.avv_accepted_at, avvVersion: a.avv_version, unternehmerConfirmedAt: a.unternehmer_confirmed_at,
       hasLogo: Boolean(a.logo_path), brandColor: a.brand_color, bookingUrl: a.booking_url, slug: a.slug,
       widgetKey: role === 'owner' ? a.widget_key : null, widgetActive: a.widget_active, allowedDomains: a.allowed_domains, leadGate: a.lead_gate,
-      createdAt: a.created_at, supportAccessUntil: a.support_access_until ?? null, acceptSubmissions: Boolean(a.accept_submissions), customDisclaimer: a.custom_disclaimer ?? null,
+      createdAt: a.created_at, supportAccessUntil: a.support_access_until ?? null, acceptSubmissions: Boolean(a.accept_submissions), leadRetentionMonths: a.lead_retention_months ?? 24, webhookUrl: role === 'owner' ? a.webhook_url ?? null : null, webhookSecret: role === 'owner' ? a.webhook_secret ?? null : null, customDisclaimer: a.custom_disclaimer ?? null,
     },
   };
 }
@@ -175,6 +179,17 @@ export async function PATCH(req: Request) {
   if (p.widgetActive !== undefined) up.widget_active = p.widgetActive;
   if (p.regenerateKey) up.widget_key = newWidgetKey();
   // Support-Zugriff: Betreiber darf das Portal 7 Tage lesend einsehen (Auftragsverarbeitung nur auf Weisung).
+  if (p.leadRetentionMonths !== undefined) up.lead_retention_months = p.leadRetentionMonths;
+  if (p.webhookUrl !== undefined) {
+    if (p.webhookUrl) {
+      if (!effectiveTier(ctx.account) || effectiveTier(ctx.account) === 'BASIC') return json({ error: 'Webhooks gibt es ab Tarif Pro.' }, 402);
+      const bad = await safeTarget(p.webhookUrl);
+      if (bad) return json({ error: bad }, 400);
+      up.webhook_url = p.webhookUrl;
+      if (!ctx.account.webhook_secret) up.webhook_secret = newWebhookSecret();
+    } else up.webhook_url = null;
+  }
+  if (p.regenerateWebhookSecret) up.webhook_secret = newWebhookSecret();
   if (p.acceptSubmissions !== undefined) {
     if (p.acceptSubmissions && ctx.account.institution_type !== 'BANK') return json({ error: 'Einreichungen empfangen können nur Kreditinstitute.' }, 400);
     up.accept_submissions = p.acceptSubmissions;

@@ -51,6 +51,16 @@ function route() {
 }
 
 // ---------- Übersicht ----------
+async function startStats(el) {
+  const r = await api('/api/b2b/leads');
+  if (!r.ok) return;
+  const since = Date.now() - 30 * 864e5;
+  const l = r.data.leads.filter((x) => new Date(x.created_at).getTime() >= since);
+  const by = (k) => l.filter((x) => x.source === k).length;
+  const done = l.filter((x) => x.status === 'abgeschlossen').length;
+  el.innerHTML = `<h2>Letzte 30 Tage</h2><dl class="pt-dl"><div><dt>Anfragen gesamt</dt><dd>${l.length}</dd></div><div><dt>Website-Widget</dt><dd>${by('widget')}</dd></div><div><dt>Partnerseite</dt><dd>${by('landing')}</dd></div><div><dt>QR-Code</dt><dd>${by('qr')}</dd></div><div><dt>Abgeschlossen</dt><dd>${done}${l.length ? ` (${Math.round((done / l.length) * 100)} %)` : ''}</dd></div><div><dt>Ohne Zuständigen</dt><dd>${l.filter((x) => !x.assigned_to).length}</dd></div></dl>`;
+}
+
 function vStart(box) {
   const a = me.account, u = me.usage, lim = me.limits;
   const quota = lim ? (lim.dossiersPerMonth == null ? 'unbegrenzt' : `${u.dossiersThisMonth} von ${lim.dossiersPerMonth + (a.dossierBonus || 0)}`) : '–';
@@ -75,7 +85,8 @@ function vStart(box) {
         <li><strong>Kreditmappe erstellen:</strong> Kennzahlen nach banküblichen Kriterien (Kapitaldienstfähigkeit, Beleihungsauslauf, Cashflow) mit Echtheits-QR${me.limits?.cobranding ? ' und Ihrem Logo' : ''}.</li>
         <li><strong>Anfragen gewinnen:</strong> Widget auf Ihrer Website, QR-Code im Exposé oder Ihre <a href="#werkzeuge">Partnerseite</a>.</li></ol>
         <p class="form-note">Rechnerische Orientierungswerte nach einem strukturierten Datenmodell. Keine Kreditzusage und keine Bonitätsentscheidung; die Entscheidung trifft das finanzierende Institut.</p></section>
-    </div>`;
+    </div><section class="pt-card" id="stats30"></section>`;
+  startStats($('#stats30'));
 }
 
 // ---------- Anfragen ----------
@@ -101,6 +112,7 @@ async function vLeads(box) {
         <dl class="pt-dl"><div><dt>Objekt</dt><dd>${esc(p.address || p.ref || '–')}</dd></div><div><dt>Kaufpreis</dt><dd>${n(p.price)}</dd></div><div><dt>Kaltmiete</dt><dd>${n(p.rent)}</dd></div><div><dt>Eigenkapital</dt><dd>${n(p.equity)}</dd></div>
         ${m.allIn ? `<div><dt>Gesamtkosten</dt><dd>${n(m.allIn)}</dd></div><div><dt>Darlehen</dt><dd>${n(m.loan)}</dd></div><div><dt>Rate</dt><dd>${n(m.rate)}</dd></div><div><dt>DSCR</dt><dd>${m.dscr ?? '–'}</dd></div>` : ''}</dl>
         ${l.message ? `<p class="pt-msg">${esc(l.message)}</p>` : ''}
+        <label class="pt-field">Interne Notiz (nur Ihr Team)<textarea data-nt="${l.id}" rows="2" maxlength="4000">${esc(l.notes || '')}</textarea></label>
         ${assignSel(l)}${l.assigned_to && !assignSel(l) ? `<p class="form-note">Zuständig: ${esc(who(l.assigned_to))}</p>` : ''}
         <details><summary>Einwilligung</summary><p class="form-note">${dtt(l.consent_at)}: ${esc(l.consent_text)}</p></details>
         ${me.role === 'owner' ? `<button class="text-btn del" data-del="${l.id}" type="button">Löschen</button>` : ''}
@@ -109,6 +121,10 @@ async function vLeads(box) {
   box.querySelectorAll('[data-f]').forEach((b) => b.onclick = () => {
     box.querySelectorAll('[data-f]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
     box.querySelectorAll('.pt-lead').forEach((el) => { el.hidden = b.dataset.f === 'mine' ? el.dataset.a !== self : b.dataset.f !== 'alle' && el.dataset.s !== b.dataset.f; });
+  });
+  box.querySelectorAll('textarea[data-nt]').forEach((ta) => ta.onchange = async () => {
+    const x = await api('/api/b2b/leads', { method: 'PATCH', body: JSON.stringify({ id: ta.dataset.nt, notes: ta.value }) });
+    toast(x.ok ? 'Notiz gespeichert.' : x.data?.error || 'Fehler', !x.ok);
   });
   box.querySelectorAll('select[data-as]').forEach((s2) => s2.onchange = async () => {
     const x = await api('/api/b2b/leads', { method: 'PATCH', body: JSON.stringify({ id: s2.dataset.as, assignedTo: s2.value || null }) });
@@ -281,6 +297,12 @@ function vProfil(box) {
       <label class="pt-switch"><input type="checkbox" id="accSub"${a.acceptSubmissions ? ' checked' : ''}> Einreichungen annehmen und im Verzeichnis erscheinen</label></section>` : ''}
     ${me.tier === 'ENTERPRISE' || a.hasWhitelabel ? `<section class="pt-card"><h2>Eigener Hinweistext</h2><p class="form-note">Erscheint auf Ihrer Partnerseite, im Widget und in der Finanzierungsübersicht für Interessenten (z. B. Compliance-Hinweis Ihres Instituts). Max. 600 Zeichen.</p>
       <textarea id="discl" rows="3" maxlength="600" style="width:100%;border:1px solid #CBD5E1;border-radius:6px;padding:8px">${esc(a.customDisclaimer || '')}</textarea><button class="btn btn-ghost" id="disclSave" type="button">Speichern</button></section>` : ''}
+    <section class="pt-card"><h2>Aufbewahrung der Anfragen</h2><p class="form-note">Anfragen werden nach dieser Frist automatisch gelöscht (Speicherbegrenzung, Art. 5 DSGVO). Legen Sie die Frist passend zu Ihren eigenen Pflichten fest.</p>
+      <label class="pt-field">Löschen nach<select id="ret">${[6, 12, 24, 36, 60, 120].map((m) => `<option value="${m}"${(a.leadRetentionMonths || 24) === m ? ' selected' : ''}>${m} Monaten</option>`).join('')}</select></label></section>
+    ${me.limits?.cobranding ? `<section class="pt-card"><h2>Webhook für Ihr CRM</h2><p class="form-note">Bei jeder neuen Anfrage senden wir sie als JSON per POST an Ihre Adresse (https). Prüfen Sie die Signatur: Header <code>X-ImmoAdv-Signature</code> = <code>sha256=</code> HMAC-SHA256 mit dem Geheimnis über <code>Zeitstempel.Body</code> (Header <code>X-ImmoAdv-Timestamp</code>).</p>
+      <label class="pt-field">Adresse<input id="whUrl" value="${esc(a.webhookUrl || '')}" placeholder="https://crm.example.de/hooks/immoadv"></label>
+      ${a.webhookSecret ? `<p class="form-note">Geheimnis: <code>${esc(a.webhookSecret)}</code> <button class="text-btn" id="whRot" type="button">Neu erzeugen</button></p>` : ''}
+      <div class="pt-row"><button class="btn btn-ghost" id="whSave" type="button">Speichern</button>${a.webhookUrl ? '<button class="btn btn-ghost" id="whTest" type="button">Test senden</button>' : ''}</div><div id="whLog"></div></section>` : ''}
     <section class="pt-card"><h2>Support-Zugriff</h2>
       <p class="form-note">Für Rückfragen kann der ImmoAdv-Support Ihr Portal 7 Tage lang <strong>nur lesend</strong> einsehen, einschließlich der Anfragen. Ohne Ihre Freigabe ist das nicht möglich; jeder Zugriff wird protokolliert (Weisung nach Art. 28 DSGVO).</p>
       <p>${a.supportAccessUntil && new Date(a.supportAccessUntil) > new Date() ? `Freigegeben bis ${dtt(a.supportAccessUntil)}. <button class="text-btn del" id="supOff" type="button">Jetzt beenden</button>` : '<button class="btn btn-ghost" id="supOn" type="button">Support-Zugriff für 7 Tage freigeben</button>'}</p></section>`;
@@ -298,6 +320,20 @@ function vProfil(box) {
     me.account = { ...me.account, ...r.data.account }; toast(days ? 'Support-Zugriff freigegeben.' : 'Support-Zugriff beendet.'); vProfil(box);
   };
   if ($('#supOn')) $('#supOn').onclick = () => sup(7);
+  const patch = async (body, okMsg) => {
+    const r = await api('/api/b2b/account', { method: 'PATCH', body: JSON.stringify(body) });
+    if (!r.ok) throw Error(r.data?.error || 'Fehler');
+    me.account = { ...me.account, ...r.data.account }; toast(okMsg);
+  };
+  $('#ret').onchange = (e) => patch({ leadRetentionMonths: Number(e.target.value) }, 'Frist gespeichert.').catch((er) => toast(er.message, true));
+  if ($('#whSave')) $('#whSave').onclick = (e) => busy(e.target, async () => { await patch({ webhookUrl: $('#whUrl').value.trim() }, 'Webhook gespeichert.'); vProfil(box); });
+  if ($('#whRot')) $('#whRot').onclick = () => { if (confirm('Neues Geheimnis erzeugen? Das alte wird sofort ungültig.')) patch({ regenerateWebhookSecret: true }, 'Neues Geheimnis erzeugt.').then(() => vProfil(box), (er) => toast(er.message, true)); };
+  if ($('#whTest')) $('#whTest').onclick = (e) => busy(e.target, async () => {
+    const r = await api('/api/b2b/webhook', { method: 'POST' });
+    toast(r.ok ? `Test zugestellt (HTTP ${r.data.status}).` : `Nicht zugestellt: ${r.data?.error || 'Fehler'}`, !r.ok);
+    const l = await api('/api/b2b/webhook');
+    if (l.ok) $('#whLog').innerHTML = `<table class="bill-table"><tbody>${l.data.log.map((x) => `<tr><td>${dtt(x.created_at)}</td><td>${esc(x.event)}</td><td>${x.status ?? '–'}</td><td>${esc(x.error || 'ok')}</td></tr>`).join('')}</tbody></table>`;
+  });
   if ($('#accSub')) $('#accSub').onchange = async (e) => {
     const r = await api('/api/b2b/account', { method: 'PATCH', body: JSON.stringify({ acceptSubmissions: e.target.checked }) });
     if (r.ok) { me.account = { ...me.account, ...r.data.account }; toast('Gespeichert.'); } else { e.target.checked = !e.target.checked; toast(r.data?.error || 'Fehler', true); }

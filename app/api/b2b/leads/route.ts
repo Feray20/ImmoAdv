@@ -5,7 +5,7 @@ import { json, requireMember } from '@/lib/b2b/http';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const COLS = 'id, source, client_name, client_email, client_phone, message, property_data, metrics, consent_at, consent_text, status, assigned_to, created_at';
+const COLS = 'id, source, client_name, client_email, client_phone, message, property_data, metrics, consent_at, consent_text, status, assigned_to, notes, created_at';
 
 // Anfragen des eigenen Unternehmens (alle Mitglieder sehen die Pipeline).
 export async function GET(req: Request) {
@@ -20,11 +20,11 @@ export async function GET(req: Request) {
   if (error) return json({ error: 'Anfragen konnten nicht geladen werden.' }, 500);
   if (u.searchParams.get('format') === 'csv') {
     const cell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""').replace(/^[=+\-@]/, "'$&")}"`;
-    const rows = [['Eingang', 'Quelle', 'Status', 'Name', 'E-Mail', 'Telefon', 'Objekt', 'Kaufpreis', 'Kaltmiete', 'Eigenkapital', 'Darlehen', 'DSCR', 'Nachricht']];
+    const rows = [['Eingang', 'Quelle', 'Status', 'Name', 'E-Mail', 'Telefon', 'Objekt', 'Kaufpreis', 'Kaltmiete', 'Eigenkapital', 'Darlehen', 'DSCR', 'Nachricht', 'Notizen']];
     for (const l of data ?? []) {
       const p = (l.property_data ?? {}) as Record<string, unknown>;
       const m = (l.metrics ?? {}) as Record<string, unknown>;
-      rows.push([l.created_at, l.source, l.status, l.client_name, l.client_email, l.client_phone, p.address ?? p.ref ?? '', p.price ?? '', p.rent ?? '', p.equity ?? '', m.loan ?? '', m.dscr ?? '', l.message ?? ''].map(String));
+      rows.push([l.created_at, l.source, l.status, l.client_name, l.client_email, l.client_phone, p.address ?? p.ref ?? '', p.price ?? '', p.rent ?? '', p.equity ?? '', m.loan ?? '', m.dscr ?? '', l.message ?? '', l.notes ?? ''].map(String));
     }
     const csv = '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n');
     return new Response(csv, { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="ImmoAdv_Anfragen.csv"', 'Cache-Control': 'no-store' } });
@@ -36,7 +36,8 @@ const Patch = z.object({
   id: z.string().uuid(),
   status: z.enum(['neu', 'in_bearbeitung', 'abgeschlossen', 'abgelehnt']).optional(),
   assignedTo: z.string().uuid().nullable().optional(),
-}).refine((x) => x.status !== undefined || x.assignedTo !== undefined);
+  notes: z.string().max(4000).optional(),
+}).refine((x) => x.status !== undefined || x.assignedTo !== undefined || x.notes !== undefined);
 
 export async function PATCH(req: Request) {
   const ctx = await requireMember(req, { bucket: 'b2b-leads', limit: 60 });
@@ -46,6 +47,7 @@ export async function PATCH(req: Request) {
   const db = supabaseAdmin();
   const up: Record<string, unknown> = {};
   if (p.data.status) up.status = p.data.status;
+  if (p.data.notes !== undefined) up.notes = p.data.notes.trim() || null;
   if (p.data.assignedTo !== undefined) {
     // Zuweisung nur an Mitglieder des eigenen Unternehmens; Berater dürfen nur sich selbst zuweisen oder freigeben.
     if (p.data.assignedTo) {

@@ -8,7 +8,7 @@ export const AVV_SECTIONS: { h: string; p: string[] }[] = [
     h: '1. Parteien und Gegenstand',
     p: [
       'Verantwortlicher ist das im ImmoAdv-Unternehmenskonto registrierte Unternehmen („Auftraggeber“). Auftragsverarbeiter ist ImmoAdv, Inh. Feray Korkmaz, Georg-August-Zinn-Str. 25, 64354 Reinheim („ImmoAdv“).',
-      'Gegenstand ist die Verarbeitung personenbezogener Daten, die der Auftraggeber über ImmoAdv erhebt oder dort ablegt: Anfragen über Partnerseite, Website-Widget und Exposé-QR-Codes, vom Auftraggeber angelegte Objekte, Unterlagen und Kreditmappen sowie deren Übermittlung an Kreditinstitute, die der Auftraggeber im Postkorb auswählt (Einreichung nur auf seine Weisung und nach seiner Bestätigung, dass die Einwilligung des Kunden vorliegt).',
+      'Gegenstand ist die Verarbeitung personenbezogener Daten, die der Auftraggeber über ImmoAdv erhebt oder dort ablegt: Anfragen über Partnerseite, Website-Widget und Exposé-QR-Codes, vom Auftraggeber angelegte Objekte, Unterlagen und Kreditmappen sowie deren Übermittlung an Kreditinstitute, die der Auftraggeber im Postkorb auswählt (Einreichung nur auf seine Weisung und nach seiner Bestätigung, dass die Einwilligung des Kunden vorliegt) sowie die Weiterleitung neuer Anfragen an eine vom Auftraggeber hinterlegte Webhook-Adresse.',
       'Die Laufzeit entspricht der Laufzeit des Nutzungsvertrags über das Unternehmenskonto.',
     ],
   },
@@ -51,7 +51,7 @@ export const AVV_SECTIONS: { h: string; p: string[] }[] = [
     h: '6. Löschung und Rückgabe',
     p: [
       'Nach Vertragsende kann der Auftraggeber seine Anfragen 30 Tage lang exportieren. Danach löscht ImmoAdv die Daten des Auftraggebers, soweit keine gesetzliche Aufbewahrungspflicht besteht. Rechnungen an den Auftraggeber bewahrt ImmoAdv gemäß § 147 AO und § 14b UStG auf; sie enthalten keine Daten der Kunden des Auftraggebers.',
-      'Der Auftraggeber kann einzelne Anfragen jederzeit im Portal löschen.',
+      'Der Auftraggeber kann einzelne Anfragen jederzeit im Portal löschen. Anfragen werden nach der im Portal gewählten Frist (Standard 24 Monate) automatisch gelöscht.',
     ],
   },
   {
