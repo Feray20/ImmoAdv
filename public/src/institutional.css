@@ -61,3 +61,12 @@ strong,b,.metric-grid,.route-prices strong,.compare-result{font-variant-numeric:
 .feat-status.none{color:var(--ia-none);background:var(--ia-none-bg)}
 .route-prices .na{display:block;margin-top:8px;font-weight:600;color:var(--ia-none)}
 button[disabled]{opacity:.6;cursor:not-allowed}
+/* Tarif & Rechnungen im Konto */
+.test-note{border-left:4px solid var(--ia-warn);background:var(--ia-warn-bg);color:var(--ia-warn);padding:10px 14px;border-radius:4px;font-size:13px}
+.bill-table{max-width:520px;margin:12px 0}
+.bill-table td:last-child{font-weight:600;color:var(--ia-navy)}
+.consent{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;margin:14px 0;color:var(--ia-text)}
+.consent input{margin-top:3px;flex:none}
+.bill-plans{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin:12px 0}
+.bill-plans>div{border:1px solid var(--ia-hair);border-radius:6px;padding:14px;display:grid;gap:6px}
+.bill-plans span{font-size:13px;color:var(--ia-muted);font-variant-numeric:tabular-nums}
