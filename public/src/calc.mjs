@@ -287,3 +287,40 @@ export function einstieg({ price, rent, equity, land = 'hessen', ratePa = 0.038,
     rest10: r2(rest10), repaid10: r2(loan - rest10), value10: r2(value10), netWorth10: r2(value10 - rest10),
   };
 }
+
+// ---------- Tilgungsplan ----------
+// Annuitätendarlehen mit optionaler jährlicher Sondertilgung (am Ende jedes Darlehensjahres).
+// Nach Ablauf der Zinsbindung wird – vereinfachend – mit demselben Zins weitergerechnet.
+export function tilgungsplan({ loan, ratePa, repaymentPa, fixedYears = 10, specialPa = 0, maxYears = 60 }) {
+  if (!(loan > 0) || !(ratePa >= 0) || !(repaymentPa > 0)) return null;
+  const i = ratePa / 12;
+  const a = monthlyRate(loan, ratePa, repaymentPa);
+  let bal = loan, month = 0, totalInterest = 0, totalSpecial = 0, restAtFixed = null;
+  const years = [];
+  for (let y = 1; y <= maxYears && bal > 0.005; y++) {
+    let interest = 0, principal = 0, special = 0;
+    for (let m = 0; m < 12 && bal > 0.005; m++) {
+      const zi = bal * i;
+      const ti = Math.min(bal, a - zi);
+      interest += zi; principal += ti; bal -= ti; month++;
+    }
+    if (specialPa > 0 && bal > 0.005) { special = Math.min(bal, specialPa); bal -= special; }
+    totalInterest += interest; totalSpecial += special;
+    years.push({ year: y, interest: r2(interest), principal: r2(principal), special: r2(special), balance: r2(Math.max(0, bal)) });
+    if (y === Math.round(fixedYears)) restAtFixed = r2(Math.max(0, bal));
+  }
+  return {
+    monthly: r2(a),
+    years,
+    months: bal > 0.005 ? null : month,
+    totalInterest: r2(totalInterest),
+    totalSpecial: r2(totalSpecial),
+    restAtFixed: restAtFixed ?? (years.length < fixedYears ? 0 : null),
+  };
+}
+
+export function tilgungsplanCSV(plan) {
+  const f = (x) => String(x.toFixed(2)).replace('.', ',');
+  const head = 'Jahr;Zinsen;Tilgung;Sondertilgung;Restschuld';
+  return [head, ...plan.years.map((r) => [r.year, f(r.interest), f(r.principal), f(r.special), f(r.balance)].join(';'))].join('\r\n');
+}

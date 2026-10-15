@@ -116,3 +116,17 @@ test('Einstieg: Darlehen, Tilgungshebel, Sicherheitsnetz, 10-Jahres-Bild', () =>
   near(e.repaid10 + e.rest10, 181000);
   assert.equal(einstieg({ price: 0, rent: 1, equity: 1 }), null);
 });
+
+test('tilgungsplan: Zinsbindung, Volltilgung, Sondertilgung', async () => {
+  const { tilgungsplan, tilgungsplanCSV, balanceAfterMonths } = await import('../public/src/calc.mjs');
+  const p = tilgungsplan({ loan: 300000, ratePa: 0.035, repaymentPa: 0.02, fixedYears: 10 })!;
+  assert.equal(p.monthly, 1375);
+  assert.ok(Math.abs(p.restAtFixed - balanceAfterMonths(300000, 0.035, 0.02, 120)) < 0.05);
+  assert.equal(p.months, 348);
+  const s = tilgungsplan({ loan: 300000, ratePa: 0.035, repaymentPa: 0.02, fixedYears: 10, specialPa: 5000 })!;
+  assert.ok(s.months! < p.months!);
+  assert.ok(s.totalInterest < p.totalInterest);
+  assert.equal(s.years[0].special, 5000);
+  assert.equal(tilgungsplan({ loan: 0, ratePa: 0.03, repaymentPa: 0.02 }), null);
+  assert.ok(tilgungsplanCSV(p).startsWith('Jahr;Zinsen;Tilgung;Sondertilgung;Restschuld\r\n1;'));
+});

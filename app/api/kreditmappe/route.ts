@@ -7,7 +7,8 @@ import { z } from 'zod';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { userFromRequest } from '@/lib/billing/auth';
 import { billingEnabled, entitlementsFor, findCustomer, stripe } from '@/lib/billing/stripe';
-import { ObjectSchema, ProfileSchema, buildKreditmappe, type UploadedDoc } from '@/lib/kreditmappe/model';
+import { buildKreditmappe } from '@/lib/kreditmappe/model';
+import { loadMappeInput } from '@/lib/kreditmappe/load';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { KreditmappeDocument, type Verification } from '@/lib/kreditmappe/pdf';
 
@@ -32,25 +33,9 @@ export async function POST(req: Request) {
   if (!parsedBody.success) return NextResponse.json({ error: 'Ungültige Anfrage.' }, { status: 400 });
   const { objectId } = parsedBody.data;
 
-  // Daten mit dem Token des Nutzers laden (Row Level Security in Supabase).
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
-  const auth = req.headers.get('authorization') || '';
-  if (!url || !key) return NextResponse.json({ error: 'Datenbank nicht konfiguriert.' }, { status: 503 });
-  const r = await fetch(
-    `${url}/rest/v1/immo_user_data?select=profile,objects&user_id=eq.${encodeURIComponent(user.id)}&limit=1`,
-    { headers: { apikey: key, Authorization: auth }, cache: 'no-store' },
-  );
-  if (!r.ok) return NextResponse.json({ error: 'Daten konnten nicht geladen werden.' }, { status: 502 });
-  const rows = (await r.json()) as Array<{ profile?: unknown; objects?: unknown }>;
-  const objects = Array.isArray(rows[0]?.objects) ? (rows[0]?.objects as unknown[]) : [];
-  const rawObject = objects.find((x) => typeof x === 'object' && x !== null && (x as { id?: unknown }).id === objectId);
-  const obj = ObjectSchema.safeParse(rawObject);
-  if (!obj.success) {
-    return NextResponse.json({ error: 'Objekt nicht gefunden oder unvollständig. Bitte Kaufpreis und Pflichtangaben prüfen.' }, { status: 422 });
-  }
-  const profile = ProfileSchema.safeParse(rows[0]?.profile ?? {});
-  if (!profile.success) return NextResponse.json({ error: 'Profil unvollständig.' }, { status: 422 });
+  const loaded = await loadMappeInput(req, user.id, objectId);
+  if (!loaded.ok) return NextResponse.json({ error: loaded.error }, { status: loaded.status });
+  const { object, profile, uploads } = loaded.data;
 
   // Freischaltung prüfen und Verbrauch vermerken.
   try {
@@ -93,17 +78,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    let uploads: UploadedDoc[] = [];
-    if (adminConfigured()) {
-      const { data: docs } = await supabaseAdmin()
-        .from('immo_documents')
-        .select('filename, category, sha256, created_at')
-        .eq('owner_id', user.id)
-        .eq('object_ref', objectId)
-        .order('category');
-      uploads = (docs ?? []).map((d) => ({ filename: String(d.filename), category: String(d.category ?? ''), sha256: String(d.sha256 ?? ''), createdAt: String(d.created_at) }));
-    }
-    const mappe = buildKreditmappe(obj.data, profile.data, new Date(), uploads);
+    const mappe = buildKreditmappe(object, profile, new Date(), uploads);
 
     // Version und Prüf-QR vorbereiten. Die Prüfsumme kann nicht im PDF selbst stehen;
     // der QR-Code enthält deshalb eine zufällige Versions-Kennung, der Hash wird nach dem Rendern gespeichert.
@@ -142,7 +117,7 @@ export async function POST(req: Request) {
         console.error('kreditmappe_store_error', up.error.message);
       }
     }
-    const filename = `ImmoAdv_Kreditmappe_${obj.data.name.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}.pdf`;
+    const filename = `ImmoAdv_Kreditmappe_${object.name.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}.pdf`;
     return new NextResponse(new Uint8Array(pdf), {
       status: 200,
       headers: {

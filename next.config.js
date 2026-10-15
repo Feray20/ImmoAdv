@@ -55,6 +55,7 @@ module.exports = {
   // pdfkit lädt seine Standardschriften dynamisch; ohne diese Angabe fehlen sie im Serverpaket.
   outputFileTracingIncludes: {
     '/api/kreditmappe': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
+    '/api/kreditmappe/preview': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
     '/api/mustermappe': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
     '/api/unterlagen/[doc]': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
   },
@@ -63,6 +64,8 @@ module.exports = {
       beforeFiles: [
         { source: '/', destination: '/index.html' },
         ...STATIC_PAGES.map((p) => ({ source: `/${p}`, destination: `/${p}/index.html` })),
+        { source: '/wissen/glossar', destination: '/wissen/glossar/index.html' },
+        { source: '/rechner/tilgungsplan', destination: '/rechner/tilgungsplan/index.html' },
         { source: '/rechner/kaufnebenkosten', destination: '/rechner/kaufnebenkosten/index.html' },
         { source: '/rechner/kaufnebenkosten/:land', destination: '/rechner/kaufnebenkosten/:land/index.html' },
         { source: '/verify/:id', destination: '/pruefen/index.html' },

@@ -111,7 +111,7 @@ window.IA_CONTENT = {
     { cat: 'Finanzierung & Bankenpraxis', q: 'Was ist die Kreditmappe?',
       l1: 'Ein strukturiertes PDF mit Vorhaben, Objektdaten, Haushaltsrechnung, Kennzahlen und Unterlagenstatus. Sie hilft Ihnen, gut vorbereitet ins Bankgespräch zu gehen.',
       next: 'Mustermappe ansehen.',
-      l2: 'Die Mappe enthält Rechenwege und den Status jeder Unterlage (liegt vor, angefordert, fehlt, ungeprüft). Sie ist keine Finanzierungszusage und ersetzt nicht die Prüfung durch die Bank. Die Kreditmappe je Nutzer ist technisch fertig und wird buchbar, sobald die Zahlungsabwicklung startet (geplant: 49,00 € je Objekt inkl. 19 % USt). Heute verfügbar ist die fiktive Mustermappe mit Druckansicht.' },
+      l2: 'Die Mappe enthält Rechenwege und den Status jeder Unterlage (liegt vor, angefordert, fehlt, ungeprüft). Sie ist keine Finanzierungszusage und ersetzt nicht die Prüfung durch die Bank. Die Kreditmappe je Nutzer ist technisch fertig und wird buchbar, sobald die Zahlungsabwicklung startet (geplant: 49,00 € je Objekt inkl. 19 % USt). Heute verfügbar sind die fiktive Mustermappe und, nach Anmeldung, eine kostenfreie Vorschau der eigenen Kreditmappe (mit Wasserzeichen, ohne Echtheits-QR).' },
     { cat: 'Finanzierung & Bankenpraxis', q: 'Was gehört in eine Kreditmappe?',
       l1: 'Selbstauskunft, Einkommens- und Eigenkapitalnachweise sowie alle Objektunterlagen. Je vollständiger, desto schneller kann die Bank prüfen.',
       next: 'Unterlagen-Checkliste durchgehen.',

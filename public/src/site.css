@@ -283,3 +283,6 @@ body.menu-open .bottom-nav{display:none}
 .glossar>span{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--ia-navy)}
 @media (max-width:620px){.tipbox{position:fixed;left:16px;right:16px;bottom:88px;top:auto;width:auto;transform:none;z-index:90}}
 .ez-out .btn,.obj-actions .btn{white-space:normal;text-align:center}
+.feat-status.part{color:#0369A1;background:#E0F2FE}
+.glossar{margin:0}.gl-item{padding:14px 0;border-top:1px solid #E2E8F0;scroll-margin-top:90px}.gl-item:first-child{border-top:0}.gl-item[hidden]{display:none}.gl-item dt{font-weight:700;color:var(--ia-navy)}.gl-item dd{margin:4px 0 0;color:#334155;line-height:1.55}.gl-item:target dt{color:var(--ia-link)}.gl-anchor{display:block;position:relative;top:-90px}
+.route-hero h1{overflow-wrap:break-word;hyphens:auto;-webkit-hyphens:auto}.gl-search{grid-template-columns:1fr!important;margin-bottom:10px}.gl-search input{width:100%}.land-links a{min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center}

@@ -62,7 +62,7 @@ function Rows({ rows, head }: { rows: [string, string][]; head?: [string, string
 function Frame({ m, reportId, watermark }: { m: Kreditmappe; reportId: string; watermark?: string }) {
   return (
     <>
-      {watermark ? <Watermark text={watermark} /> : null}
+      {watermark ? <Watermark text={watermark} opacity={watermark.startsWith('VORSCHAU') ? 0.13 : 0.05} /> : null}
       <BrandHeader reportType="Banken-Ready Kreditmappe" reportId={reportId} createdAt={m.createdAt} />
       <BrandFooter hash={m.dataHash} />
     </>

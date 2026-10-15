@@ -79,6 +79,6 @@ export function BrandFooter({ hash }: { hash?: string }) {
   );
 }
 
-export function Watermark({ text }: { text: string }) {
-  return <Text style={s.wm} fixed>{text}</Text>;
+export function Watermark({ text, opacity = 0.05 }: { text: string; opacity?: number }) {
+  return <Text style={[s.wm, { opacity }]} fixed>{text}</Text>;
 }

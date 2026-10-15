@@ -1,5 +1,5 @@
 // Bindet Rechner, Fristen und Szenarien an den gemeinsamen Rechenkern (calc.mjs).
-import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg } from './calc.mjs';
+import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg, tilgungsplan, tilgungsplanCSV } from './calc.mjs';
 
 const $ = (id) => document.getElementById(id);
 const num = (id) => { const v = $(id)?.value; return v === '' || v == null ? 0 : Number(v); };
@@ -125,6 +125,46 @@ if ($('kn_table')) {
   const rows = Object.entries(GREST).sort((a, b) => a[1].pct - b[1].pct || a[1].name.localeCompare(b[1].name, 'de'))
     .map(([slug, g]) => [`<a class="ck-link" href="/rechner/kaufnebenkosten/${slug}">${esc(g.name)}</a>`, P(g.pct, 1), E(300000 * g.pct / 100)]);
   $('kn_table').innerHTML = table(rows, ['Bundesland', 'Grunderwerbsteuer', 'bei 300.000 €']);
+}
+
+// Tilgungsplan
+if ($('tp_out')) {
+  const ids = ['tp_l', 'tp_z', 'tp_t', 'tp_f', 'tp_s'];
+  remember('tilgung', ids);
+  let plan = null;
+  watch(ids, () => {
+    plan = tilgungsplan({ loan: num('tp_l'), ratePa: num('tp_z') / 100, repaymentPa: num('tp_t') / 100, fixedYears: num('tp_f'), specialPa: num('tp_s') });
+    if (!plan) { $('tp_sum').innerHTML = '<p class="form-note">Bitte Darlehensbetrag, Zins und Tilgung eintragen.</p>'; $('tp_out').innerHTML = ''; return; }
+    const dur = plan.months ? `${Math.floor(plan.months / 12)} Jahre${plan.months % 12 ? ` und ${plan.months % 12} Monate` : ''}` : 'über 60 Jahre';
+    $('tp_sum').innerHTML = table([
+      ['Monatsrate (Zins + Tilgung)', `<strong>${E(plan.monthly)}</strong>`],
+      [`Restschuld nach ${num('tp_f')} Jahren Zinsbindung`, `<strong>${E(plan.restAtFixed ?? 0)}</strong>`],
+      ['Laufzeit bis zur Volltilgung (gleicher Zins)', dur],
+      ['Zinsen insgesamt', E(plan.totalInterest)],
+      ...(plan.totalSpecial > 0 ? [['Sondertilgungen insgesamt', E(plan.totalSpecial)]] : []),
+    ]);
+    const fy = Math.round(num('tp_f'));
+    $('tp_out').innerHTML = table(plan.years.map((r) => [r.year === fy ? `<strong>${r.year}</strong>` : r.year, E(r.interest), E(r.principal), r.special ? E(r.special) : '–', r.year === fy ? `<strong>${E(r.balance)}</strong>` : E(r.balance)]), ['Jahr', 'Zinsen', 'Tilgung', 'Sondertilgung', 'Restschuld']);
+  });
+  $('tp_csv')?.addEventListener('click', () => {
+    if (!plan) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\ufeff' + tilgungsplanCSV(plan)], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'ImmoAdv_Tilgungsplan.csv'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  });
+}
+
+// Glossar-Suche
+if ($('gl_q')) {
+  const items = [...document.querySelectorAll('.gl-item')];
+  const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  $('gl_q').addEventListener('input', () => {
+    const q = norm($('gl_q').value.trim());
+    let n = 0;
+    items.forEach((it) => { const hit = !q || norm(it.textContent).includes(q); it.hidden = !hit; if (hit) n++; });
+    $('gl_none').hidden = n > 0;
+  });
 }
 
 // Erklär-Hinweise (Tooltips): Klick oder Tastatur öffnet, Escape oder Klick daneben schließt.

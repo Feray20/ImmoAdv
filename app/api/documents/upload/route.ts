@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { userFromRequest } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { adminConfigured, DOCUMENT_BUCKET, supabaseAdmin } from '@/lib/supabase/admin';
+import { cleanupIncoming } from '@/lib/documents/cleanup';
 import { MAX_DIRECT_BYTES, MAX_DOCUMENTS_PER_USER, checkFile, isCategory, safeFilename } from '@/lib/documents/files';
 
 export const runtime = 'nodejs';
@@ -34,6 +35,8 @@ export async function POST(req: Request) {
   const { count } = await db.from('immo_documents').select('id', { count: 'exact', head: true }).eq('owner_id', user.id);
   if ((count ?? 0) >= MAX_DOCUMENTS_PER_USER) return json({ error: `Maximal ${MAX_DOCUMENTS_PER_USER} Dokumente je Konto.` }, 409);
 
+  // Liegengebliebene, nicht abgeschlossene Uploads dieses Nutzers nebenbei entfernen.
+  await cleanupIncoming(user.id).catch(() => 0);
   const id = randomUUID();
   const { data, error } = await db.storage.from(DOCUMENT_BUCKET).createSignedUploadUrl(incoming(user.id, id));
   if (error || !data) return json({ error: 'Upload konnte nicht vorbereitet werden.' }, 502);

@@ -29,10 +29,12 @@ const PAGES = [
   { path: '/', file: 'index.html', title: 'Immobilie als Kapitalanlage durchrechnen | ImmoAdv', desc: 'Cashflow, DSCR, Stresstest und Haushaltsrechnung für Kapitalanleger in Deutschland – mit Kreditmappe für das Bankgespräch. Analyse kostenfrei.', crumbs: [], extra: ['website', 'app', 'howto', 'homefaq'] },
   { path: '/wissen', title: 'Immobilienfinanzierung verständlich erklärt – 33 Antworten | ImmoAdv', desc: 'Eigenkapital, Nebenkosten, Beleihungswert, AfA, 15-%-Grenze, Anschlusszins: Antworten in zwei Ebenen mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
   { path: '/cockpit', file: null, skip: true, title: '', desc: '' },
+  { path: '/wissen/glossar', title: 'Glossar Immobilienfinanzierung: Begriffe von A bis Z | ImmoAdv', desc: 'Annuität, Beleihungswert, Zinsbindung, Kappungsgrenze, Grundschuld und mehr: die wichtigsten Begriffe zu Kauf, Finanzierung, Miete und Steuer kurz erklärt.', crumbs: ['Wissen', 'Glossar'], extra: ['glossar'] },
   { path: '/start', title: 'Meine erste Immobilie durchrechnen – in drei Schritten | ImmoAdv', desc: 'Kaufpreis, Miete, Eigenkapital: Rate, Tilgungshebel, Cashflow, Notgroschen und das Bild nach zehn Jahren – mit Erklärungen aller Fachbegriffe.', crumbs: ['Meine erste Immobilie'], extra: ['app'] },
   { path: '/rechner', title: 'Mietrecht- und Steuerrechner: Mietpreisbremse, AfA, Indexmiete | ImmoAdv', desc: 'Mietpreisbremse, Kappungsgrenze, Index- und Staffelmiete, AfA linear und degressiv, Kaufpreisaufteilung und 15-%-Grenze – mit offengelegter Formel.', crumbs: ['Rechner'], extra: ['app'] },
   { path: '/fristen', title: 'Fristen nach dem Immobilienkauf berechnen | ImmoAdv', desc: 'Spekulationsfrist (§ 23 EStG), 15-%-Grenze, Zinsbindung, Kündigungsrecht nach § 489 BGB und Mieterhöhung – als Liste und Kalenderdatei.', crumbs: ['Fristen'], extra: ['app'] },
   { path: '/szenarien', title: 'Anschlussfinanzierung und Verkauf durchrechnen | ImmoAdv', desc: 'Restschuld, neue Rate und Kipp-Punkt nach der Zinsbindung; Verkaufsszenario mit Veräußerungsgewinn und Spekulationsfrist.', crumbs: ['Szenarien'], extra: ['app'] },
+  { path: '/rechner/tilgungsplan', file: 'rechner/tilgungsplan/index.html', title: 'Tilgungsplan mit Sondertilgung berechnen | ImmoAdv', desc: 'Tilgungsplan für Ihr Annuitätendarlehen: Zinsen, Tilgung und Restschuld je Jahr, Restschuld nach Zinsbindung, Sondertilgung und CSV-Export.', crumbs: ['Rechner', 'Tilgungsplan'] },
   { path: '/rechner/kaufnebenkosten', file: 'rechner/kaufnebenkosten/index.html', title: 'Kaufnebenkosten nach Bundesland 2026 | ImmoAdv', desc: 'Grunderwerbsteuer von 3,5 % bis 6,5 %: alle 16 Bundesländer im Vergleich, mit Rechner für Notar, Grundbuch und Makler.', crumbs: ['Rechner', 'Kaufnebenkosten'] },
   { path: '/checkliste', title: 'Unterlagen-Checkliste für die Baufinanzierung | ImmoAdv', desc: '21 Unterlagen, die Banken bei Kapitalanlegern typischerweise sehen wollen – gefiltert nach Erwerbsstatus und Objektart, druckbar.', crumbs: ['Checkliste'] },
   { path: '/mustermappe', title: 'Muster-Kreditmappe: DSCR, Stresstest, Haushaltsrechnung | ImmoAdv', desc: 'Fiktiver Beispielfall einer Kreditmappe mit Finanzierung, Anschlusszins-Szenarien, Haushaltsrechnung und Unterlagenindex – als PDF.', crumbs: ['Mustermappe'] },
@@ -61,7 +63,7 @@ for (const [slug, g] of Object.entries(GREST)) {
   });
 }
 
-const CRUMB_PATH = { Rechner: '/rechner', Kaufnebenkosten: '/rechner/kaufnebenkosten' };
+const CRUMB_PATH = { Rechner: '/rechner', Kaufnebenkosten: '/rechner/kaufnebenkosten', Wissen: '/wissen' };
 function breadcrumb(p) {
   if (!p.crumbs?.length) return null;
   const items = [{ name: 'Start', item: `${ORIGIN}/` }];
@@ -76,6 +78,13 @@ function faqLd() {
 function homeFaqLd(html) {
   const qs = [...html.matchAll(/<details[^>]*><summary>(.*?)<span>\+<\/span><\/summary><p>(.*?)<\/p><\/details>/g)];
   return { '@type': 'FAQPage', mainEntity: qs.map((m) => ({ '@type': 'Question', name: m[1].replace(/<[^>]+>/g, ''), acceptedAnswer: { '@type': 'Answer', text: m[2].replace(/<[^>]+>/g, '') } })) };
+}
+function glossarLd() {
+  const src = read('src/routes.js');
+  const m = src.match(/const GLOSSAR=(\{.*?\});/);
+  const g = new Function(`return ${m[1]}`)();
+  return { '@type': 'DefinedTermSet', '@id': `${ORIGIN}/wissen/glossar#set`, name: 'Glossar Immobilienfinanzierung', inLanguage: 'de-DE',
+    hasDefinedTerm: Object.entries(g).map(([k, v]) => ({ '@type': 'DefinedTerm', name: k, description: v, inDefinedTermSet: `${ORIGIN}/wissen/glossar#set` })) };
 }
 const HOWTO = {
   '@type': 'HowTo', name: 'In drei Schritten zur bankfertigen Kreditmappe',
@@ -109,6 +118,7 @@ function headBlock(p, html) {
     if (ex.includes('howto')) graph.push(HOWTO);
     if (ex.includes('faq')) graph.push(faqLd());
     if (ex.includes('homefaq')) graph.push(homeFaqLd(html));
+    if (ex.includes('glossar')) graph.push(glossarLd());
     const bc = breadcrumb(p);
     if (bc) graph.push(bc);
     lines.push(`<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c')}</script>`);
