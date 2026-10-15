@@ -1,0 +1,58 @@
+/* ImmoAdv – Institutionelles Design-System (wird zuletzt geladen und überschreibt ältere Stile). */
+:root{
+  --ia-navy:#0F172A; --ia-slate:#1E293B; --ia-text:#334155; --ia-muted:#64748B;
+  --ia-bg:#F8FAFC; --ia-surface:#FFFFFF; --ia-line:#E2E8F0; --ia-hair:#CBD5E1;
+  --ia-ok:#166534; --ia-ok-bg:#DCFCE7; --ia-warn:#854D0E; --ia-warn-bg:#FEF9C3;
+  --ia-bad:#991B1B; --ia-bad-bg:#FEE2E2; --ia-none:#64748B; --ia-none-bg:#F1F5F9;
+  --ink:var(--ia-navy); --muted:var(--ia-muted); --line:var(--ia-line); --soft:var(--ia-bg);
+  --brand:var(--ia-slate); --brand2:var(--ia-text); --accent:var(--ia-line);
+  --shadow:0 1px 2px rgba(15,23,42,.06);
+}
+html,body{font-family:"Helvetica Neue",Helvetica,Arial,"DIN Next","Segoe UI",sans-serif;color:var(--ia-text);background:var(--ia-surface)}
+h1,h2,h3,h4,strong{color:var(--ia-navy)}
+h1,h2,h3{letter-spacing:-.01em}
+
+/* Keine Verläufe, ruhige Flächen */
+.hero,.route-hero{background:var(--ia-bg)!important}
+.btn{border-radius:6px;box-shadow:none!important;transform:none!important}
+.btn-dark,.btn-primary{background:var(--ia-navy);border-color:var(--ia-navy);color:#fff}
+.btn-dark:hover,.btn-primary:hover{background:var(--ia-slate)}
+.brand-mark{border-radius:4px;background:var(--ia-navy);font-size:13px;font-weight:700;letter-spacing:.04em}
+.brand>span:last-child>span{color:var(--ia-muted)}
+.desktop-nav a.active,.desktop-nav a:hover{color:var(--ia-navy);text-decoration:underline;text-underline-offset:6px}
+.mobile-menu{font-size:13px;font-weight:600;color:var(--ia-navy)}
+
+/* Zahlen: tabellarisch und rechtsbündig */
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--ia-hair);padding:8px 10px;text-align:left}
+th{background:var(--ia-navy);color:#fff;font-weight:600;font-size:13px}
+tbody tr:nth-child(even){background:rgba(15,23,42,.05)}
+td:not(:first-child),th:not(:first-child){text-align:right}
+strong,b,.metric-grid,.route-prices strong,.compare-result{font-variant-numeric:tabular-nums}
+
+/* Gedämpfte Statusfarben */
+.badge.available,.status-ok,.ok{color:var(--ia-ok);background:var(--ia-ok-bg)}
+.status-warn,.warn{color:var(--ia-warn);background:var(--ia-warn-bg)}
+.status-bad,.bad{color:var(--ia-bad);background:var(--ia-bad-bg)}
+
+/* Wissenszentrale: zweite Ebene */
+.route-a .level2{margin-top:12px;border:1px solid var(--ia-hair);border-radius:6px;padding:10px 14px;background:var(--ia-bg)}
+.route-a .level2 summary{cursor:pointer;font-weight:600;color:var(--ia-navy)}
+.route-a .level2 p{margin:10px 0 0;line-height:1.6}
+.faq-disclaimer{margin-top:12px;font-size:12px;color:var(--ia-muted)}
+.callout strong{text-transform:none;letter-spacing:0}
+
+/* Rechtsseiten & Formulare */
+.legal{max-width:820px}
+.legal h2{font-size:18px;margin:28px 0 8px}
+.legal p{line-height:1.65}
+.legal a{text-decoration:underline}
+.price-note{margin-top:20px;font-size:13px;color:var(--ia-muted)}
+.price-note a{text-decoration:underline}
+.cancel-form{display:grid;gap:14px;max-width:520px}
+.cancel-form label{display:grid;gap:6px;font-size:14px;font-weight:600;color:var(--ia-navy)}
+.cancel-form input,.cancel-form select,.cancel-form textarea{border:1px solid var(--ia-hair);border-radius:6px;padding:10px 12px;font-weight:400;color:var(--ia-text);background:#fff}
+.form-note{font-size:13px;color:var(--ia-muted)}
+#cancelDone{border:1px solid var(--ia-hair);border-left:4px solid var(--ia-ok);padding:16px 20px;border-radius:6px;background:var(--ia-bg)}
+
+@media print{.site-header,.footer,.toast,.cancel-form button{display:none!important}}

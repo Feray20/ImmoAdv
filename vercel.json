@@ -1,1 +1,1 @@
-{"cleanUrls":true,"trailingSlash":false,"rewrites":[{"source":"/auth/login","destination":"/auth-login.html"},{"source":"/auth/register","destination":"/auth-login.html"},{"source":"/app/dashboard","destination":"/auth-login.html"},{"source":"/:path*","destination":"/index.html"}],"headers":[{"source":"/(.*)","headers":[{"key":"X-Content-Type-Options","value":"nosniff"},{"key":"Referrer-Policy","value":"strict-origin-when-cross-origin"},{"key":"X-Frame-Options","value":"SAMEORIGIN"}]}]}
+{"$schema":"https://openapi.vercel.sh/vercel.json"}
