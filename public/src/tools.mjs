@@ -1,5 +1,5 @@
 // Bindet Rechner, Fristen und Szenarien an den gemeinsamen Rechenkern (calc.mjs).
-import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg, tilgungsplan, tilgungsplanCSV, budget } from './calc.mjs';
+import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg, tilgungsplan, tilgungsplanCSV, budget, scorecard } from './calc.mjs';
 
 const $ = (id) => document.getElementById(id);
 const num = (id) => { const v = $(id)?.value; return v === '' || v == null ? 0 : Number(v); };
@@ -195,6 +195,31 @@ if ($('bu_out')) {
       ['Restschuld nach 10 Jahren', E(b.restAfter10)],
       ['Laufzeit bis zur Volltilgung (gleicher Zins)', dur],
     ]) + `<p><a class="ck-link" href="/rechner/tilgungsplan#tp_l=${Math.round(b.loan)}&tp_z=${num('bu_z')}&tp_t=${num('bu_t')}">Tilgungsplan zu diesem Darlehen</a> · <a class="ck-link" href="/rechner/kaufnebenkosten/${val('bu_land')}">Nebenkosten im Detail</a></p>`;
+  });
+}
+
+// Deal-Scorecard
+if ($('sc_overall')) {
+  const ids = ['sc_n', 'sc_p', 'sc_o', 'sc_e', 'sc_z', 'sc_t', 'sc_land', 'sc_b', 'sc_k', 'sc_m', 'sc_a', 'sc_i', 'sc_u', 'sc_v', 'sc_b2'];
+  remember('scorecard', ids);
+  const L = { ok: 'Freigegeben', warn: 'In Prüfung', bad: 'Kritisch', na: 'Ungeprüft' };
+  const badge = (st) => `<span class="st ${st}">${L[st]}</span>`;
+  const opt = (id) => ($(id)?.value === '' ? '' : num(id));
+  watch(ids, () => {
+    const s = scorecard({ netIncome: opt('sc_n'), householdSize: num('sc_p'), otherObligations: num('sc_o'), equity: opt('sc_e'), ratePct: num('sc_z'), repaymentPct: num('sc_t'),
+      land: val('sc_land'), brokerPct: num('sc_b'), price: opt('sc_k'), rent: opt('sc_m'), area: opt('sc_a'), maintenanceQm: num('sc_i'), nonRecoverable: num('sc_u'),
+      vergleichsmieteQm: opt('sc_v'), mietpreisbremse: chk('sc_b2') });
+    const h = s.haushalt, e = s.eigenkapital, o = s.objekt;
+    $('sc_h').innerHTML = `<p>${badge(h.status)}</p>` + (h.status === 'na' ? `<p class="form-note">${h.lines[0]}</p>` : table([
+      ['Lebenshaltungspauschale', E(h.living)], ['Monatsrate', E(h.rate)], ['Überschuss nach Rate und Objektkosten', `<strong>${E(h.surplus)}</strong>`]]));
+    $('sc_e_out').innerHTML = `<p>${badge(e.status)}</p>` + (e.status === 'na' ? `<p class="form-note">${e.lines[0]}</p>` : table([
+      ['Kaufnebenkosten', E(e.nebenkosten)], ['Reserve (3 Monatsausgaben)', E(e.reserve)], ['Zielwert Eigenkapital', `<strong>${E(e.target)}</strong>`], ['Darlehen', E(s.loan)]]));
+    $('sc_ob').innerHTML = `<p>${badge(o.status)}</p>` + (o.status === 'na' ? `<p class="form-note">${o.lines[0]}</p>` : table([
+      ['Bruttomietrendite', P(o.yieldPct)], ['Kaufpreisfaktor', String(o.factor).replace('.', ',')], ['Instandhaltung', `${String(num('sc_i')).replace('.', ',')} €/m²${num('sc_i') < 1 ? ' ' + flag(false, '', 'unter 1,00 €/m²') : ''}`],
+      ['Grenze Mietpreisbremse', o.cap == null ? '–' : `${E(o.cap)}${num('sc_m') > o.cap ? ' ' + flag(false, '', 'Miete liegt darüber') : ''}`]]));
+    const t = { ok: 'Alle drei Bereiche im grünen Bereich.', warn: 'Mindestens ein Bereich braucht Aufmerksamkeit.', bad: 'Mindestens ein Bereich ist kritisch.', na: 'Noch nicht alle Bereiche prüfbar – bitte Angaben ergänzen.' };
+    $('sc_overall').className = `sc-overall ${s.overall}`;
+    $('sc_overall').innerHTML = `<strong>Gesamt: ${L[s.overall]}</strong> ${t[s.overall]}`;
   });
 }
 

@@ -64,7 +64,9 @@ module.exports = {
       beforeFiles: [
         { source: '/', destination: '/index.html' },
         ...STATIC_PAGES.map((p) => ({ source: `/${p}`, destination: `/${p}/index.html` })),
+        { source: '/wissen/erwerbsstatus', destination: '/wissen/erwerbsstatus/index.html' },
         { source: '/wissen/glossar', destination: '/wissen/glossar/index.html' },
+        { source: '/rechner/scorecard', destination: '/rechner/scorecard/index.html' },
         { source: '/rechner/budget', destination: '/rechner/budget/index.html' },
         { source: '/rechner/tilgungsplan', destination: '/rechner/tilgungsplan/index.html' },
         { source: '/rechner/kaufnebenkosten', destination: '/rechner/kaufnebenkosten/index.html' },

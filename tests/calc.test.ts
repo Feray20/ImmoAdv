@@ -169,3 +169,36 @@ test('upcoming: nur künftige Termine, sortiert, mit Objektname', async () => {
   assert.ok(u.items.every((x, i, a) => i === 0 || a[i - 1].date <= x.date));
   assert.ok(u.all.every((x) => x.date >= '2026-10-15'));
 });
+
+test('scorecard: Ampel je Bereich, ungeprüft bei fehlenden Angaben', async () => {
+  const { scorecard } = await import('../public/src/calc.mjs');
+  assert.equal(scorecard({}).overall, 'na');
+  const s = scorecard({ netIncome: 5000, householdSize: 2, price: 250000, rent: 900, area: 65, land: 'bayern', equity: 60000, ratePct: 3.5, repaymentPct: 2, maintenanceQm: 1.2 });
+  // Bayern 3,5 + 1,5 + 0,5 = 5,5 % → 13.750 €; Ziel = 13.750 + 25.000 + 3 × 1.350 = 42.800
+  assert.equal(s.eigenkapital.target, 42800);
+  assert.equal(s.eigenkapital.status, 'ok');
+  assert.equal(s.haushalt.living, 1350);
+  assert.equal(s.objekt.status, 'ok');
+  assert.equal(s.objekt.yieldPct, 4.32);
+  const b = scorecard({ netIncome: 2500, householdSize: 1, price: 250000, rent: 1200, area: 65, land: 'berlin', equity: 10000, ratePct: 4, repaymentPct: 2, maintenanceQm: 0.5, vergleichsmieteQm: 12, mietpreisbremse: true });
+  assert.equal(b.eigenkapital.status, 'bad');
+  assert.equal(b.objekt.cap, 858);
+  assert.equal(b.objekt.status, 'bad');
+  assert.equal(b.overall, 'bad');
+});
+
+test('rank: Stufen aus Profil, Bankreife und Bestand', async () => {
+  const { rank } = await import('../public/src/calc.mjs');
+  const today = new Date('2026-10-15T00:00:00Z');
+  assert.equal(rank({}, [], [], today).level, 1);
+  assert.match(rank({}, [], [], today).next!, /Finanzprofil/);
+  const o = { id: 'o', name: 'A', price: 300000, rent: 1000, area: 70, yearBuilt: 1990, nonRecoverable: 50, maintenance: 60, vacancyPct: 2, equity: 50000, loan: 0 };
+  assert.equal(rank({ netIncome: 4000, equity: 50000 }, [o], [], today).level, 1); // 47 % Bankreife
+  const docs = ['objekt', 'miete', 'grundbuch', 'technik', 'finanzen'].map((category) => ({ object_ref: 'o', category }));
+  const full = { ...o, grundbuchAmt: 'AG', grundbuchBlatt: '1', flur: '1', flurstueck: '2', heatingType: 'Gas', energyConsumption: 100 };
+  assert.equal(rank({ netIncome: 4000, equity: 50000 }, [full], [], today).level, 2); // 71 %
+  assert.equal(rank({ netIncome: 4000, equity: 50000 }, [full], docs, today).level, 3);
+  const bh = rank({}, [{ id: 'b', purchaseDate: '2025-01-01', fixedYears: 10 }], [], today);
+  assert.equal(bh.name, 'Bestandshalter');
+  assert.match(bh.next!, /Finanzprofil/); // offene Stufen bleiben sichtbar
+});

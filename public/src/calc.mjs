@@ -384,3 +384,76 @@ export function upcoming(objects, { today = new Date(), limit = 8 } = {}) {
   all.sort((a, b) => a.date.localeCompare(b.date));
   return { items: all.slice(0, limit), all };
 }
+
+// ---------- Deal-Scorecard (Ampel) ----------
+// Status: 'na' (ungeprüft, Angaben fehlen), 'ok', 'warn', 'bad'. Pauschalen und Schwellen sind offengelegte
+// ImmoAdv-Annahmen (Banken setzen eigene Werte an): Lebenshaltung 1.000 € + 350 € je weitere Person,
+// Eigenkapital = Kaufnebenkosten + 10 % Kaufpreis + Reserve von 3 Monatsausgaben, Instandhaltung mind. 1,00 €/m² und Monat.
+export const SCORE_ASSUMPTIONS = { livingBase: 1000, livingPerPerson: 350, rentSharePct: 75, equityPricePct: 10, reserveMonths: 3, maintMinQm: 1.0, surplusOkPct: 10 };
+export function scorecard(i) {
+  const A = SCORE_ASSUMPTIONS, num = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v));
+  const net = num(i.netIncome), other = num(i.otherObligations) ?? 0, size = Math.max(1, num(i.householdSize) ?? 1);
+  const price = num(i.price), rent = num(i.rent), area = num(i.area), equity = num(i.equity);
+  const nk = price > 0 && GREST[i.land] ? kaufnebenkosten({ price, land: i.land, brokerPct: num(i.brokerPct) ?? 0 }) : null;
+  const living = A.livingBase + A.livingPerPerson * (size - 1);
+  const loan = nk && equity != null ? Math.max(0, nk.allIn - equity) : null;
+  const rate = loan != null ? monthlyRate(loan, (num(i.ratePct) ?? 0) / 100, (num(i.repaymentPct) ?? 0) / 100) : null;
+  const maint = area > 0 ? (num(i.maintenanceQm) ?? 0) * area : 0;
+  const nonRec = num(i.nonRecoverable) ?? 0;
+
+  // Haushalt
+  let haushalt = { status: 'na', lines: ['Nettoeinkommen, Kaufpreis und Eigenkapital eintragen.'] };
+  if (net > 0 && rate != null) {
+    const rentIn = ((rent ?? 0) * A.rentSharePct) / 100;
+    const surplus = net - living - other + rentIn - nonRec - maint - rate;
+    haushalt = { status: surplus < 0 ? 'bad' : surplus < (net * A.surplusOkPct) / 100 ? 'warn' : 'ok', surplus: r2(surplus), rate: r2(rate), living,
+      lines: [`Lebenshaltungspauschale: ${living} € (${size} Person${size > 1 ? 'en' : ''})`, `Rate: ${r2(rate)} €`, `Überschuss nach Rate: ${r2(surplus)} €`] };
+  }
+  // Eigenkapital
+  let ek = { status: 'na', lines: ['Kaufpreis, Bundesland und Eigenkapital eintragen.'] };
+  if (nk && equity != null) {
+    const reserve = A.reserveMonths * (living + other);
+    const target = nk.total + (price * A.equityPricePct) / 100 + reserve;
+    ek = { status: equity >= target ? 'ok' : equity >= nk.total ? 'warn' : 'bad', target: r2(target), nebenkosten: nk.total, reserve: r2(reserve),
+      lines: [`Kaufnebenkosten: ${nk.total} €`, `Ziel inkl. 10 % Kaufpreis und ${A.reserveMonths} Monatsausgaben Reserve: ${r2(target)} €`, `Vorhanden: ${equity} €`] };
+  }
+  // Objekt
+  let objekt = { status: 'na', lines: ['Kaufpreis, Miete und Wohnfläche eintragen.'] };
+  if (price > 0 && rent > 0 && area > 0) {
+    const yieldPct = Math.round(((rent * 12) / price) * 10000) / 100;
+    const maintQm = num(i.maintenanceQm) ?? 0;
+    const vq = num(i.vergleichsmieteQm);
+    const cap = i.mietpreisbremse && vq > 0 ? r2(vq * 1.1 * area) : null;
+    const issues = [];
+    if (cap != null && rent > cap) issues.push('bad');
+    if (maintQm < A.maintMinQm) issues.push('warn');
+    objekt = { status: issues.includes('bad') ? 'bad' : issues.includes('warn') ? 'warn' : 'ok', yieldPct, factor: Math.round((price / (rent * 12)) * 10) / 10, cap,
+      lines: [`Bruttomietrendite: ${yieldPct} % (Kaufpreisfaktor ${Math.round((price / (rent * 12)) * 10) / 10})`,
+        `Instandhaltung: ${maintQm} €/m² und Monat${maintQm < A.maintMinQm ? ' – unter 1,00 €/m²' : ''}`,
+        cap != null ? `Mietpreisbremse: höchstens ${cap} € (Vergleichsmiete + 10 %)${rent > cap ? ' – Miete liegt darüber' : ''}` : 'Mietpreisbremse: nicht angegeben'] };
+  }
+  const order = { bad: 3, warn: 2, na: 1, ok: 0 };
+  const overall = [haushalt, ek, objekt].reduce((w, x) => (order[x.status] > order[w] ? x.status : w), 'ok');
+  return { haushalt, eigenkapital: ek, objekt, overall, loan: loan != null ? r2(loan) : null };
+}
+
+// ---------- Zero-to-Pro: Stufe aus echtem Fortschritt ----------
+export const RANKS = ['Orientierender Mieter', 'Banken-Ready Analyst', 'Souveräner Verhandler', 'Bestandshalter'];
+export function rank(profile = {}, objects = [], docs = [], today = new Date()) {
+  const t = today.toISOString().slice(0, 10);
+  const prof = Number(profile.netIncome) > 0 && profile.equity !== undefined && profile.equity !== '';
+  const reads = objects.map((o) => readiness(o, docs.filter((d) => d.object_ref === o.id)));
+  const best = reads.reduce((m, r) => Math.max(m, r.pct), 0);
+  const owned = objects.some((o) => typeof o.purchaseDate === 'string' && o.purchaseDate && o.purchaseDate <= t && Number(o.fixedYears) > 0);
+  const steps = [
+    { done: true, label: 'Konto angelegt' },
+    { done: prof && objects.length > 0 && best >= 60, label: 'Finanzprofil ausgefüllt, ein Objekt erfasst und mindestens 60 % Bankreife', next: !prof ? 'Finanzprofil ausfüllen (Nettoeinkommen, Eigenkapital).' : !objects.length ? 'Ein Objekt anlegen.' : 'Angaben und Unterlagen ergänzen, bis die Bankreife mindestens 60 % erreicht.' },
+    { done: best >= 90, label: 'Ein Objekt mit mindestens 90 % Bankreife – bereit für das Bankgespräch', next: 'Fehlende Unterlagen hochladen (siehe „Bankreife je Objekt“).' },
+    { done: owned, label: 'Gekauftes Objekt mit Kaufdatum und Zinsbindung – Fristen werden überwacht', next: 'Nach dem Kauf Kaufdatum, Auszahlung und Zinsbindung eintragen.' },
+  ];
+  let level = 0;
+  for (let i = 1; i < steps.length; i++) { if (steps[i].done) level = i; else break; }
+  if (owned) level = 3; // Bestandshalter auch ohne vorherige Stufen (z. B. Bestand eingetragen)
+  const nextStep = steps.slice(1).find((s) => !s.done);
+  return { level: level + 1, name: RANKS[level], steps, next: nextStep ? nextStep.next : null, bestReadiness: best };
+}
