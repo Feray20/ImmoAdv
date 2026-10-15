@@ -16,6 +16,8 @@ const STATIC_PAGES = [
   'kuendigen',
   'datenraum',
   'profiler',
+  'pruefen',
+  'rechner',
 ];
 
 const securityHeaders = [

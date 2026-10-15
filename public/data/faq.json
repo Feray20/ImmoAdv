@@ -84,7 +84,7 @@
       "question": "Wie prüfe ich eine Eigentumswohnung?",
       "level1": "In drei Schritten: Lage und Miete, Zustand von Wohnung und Gemeinschaftseigentum, Zahlen der Eigentümergemeinschaft. Erst danach lohnt die Finanzierungsanfrage.",
       "nextStep": "Objektunterlagen in der Checkliste abhaken (Filter „Eigentumswohnung“).",
-      "level2": "Lage: Mietspiegel, Leerstand, Infrastruktur. Zustand: Baujahr, Dach, Fenster, Heizung, Energieausweis (Pflichtangaben nach GEG). WEG: Rücklage, Hausgeld, Sonderumlagen, Protokolle. Rechtliches: Grundbuch Abt. II (Lasten, Wegerechte) und Abt. III (Grundpfandrechte)."
+      "level2": "Lage: Mietspiegel, Leerstand, Infrastruktur. Zustand: Baujahr, Dach, Fenster, Heizung, Energieausweis (seit 29.07.2026 nach dem Gebäudemodernisierungsgesetz, zuvor GEG). WEG: Rücklage, Hausgeld, Sonderumlagen, Protokolle. Rechtliches: Grundbuch Abt. II (Lasten, Wegerechte) und Abt. III (Grundpfandrechte)."
     },
     {
       "id": 11,
@@ -140,7 +140,7 @@
       "question": "Was ist die 15-%-Grenze bei Renovierungen?",
       "level1": "Wer innerhalb von drei Jahren nach dem Kauf mehr als 15 % des Gebäudewerts netto renoviert, kann diese Kosten nicht sofort absetzen. Sie werden dann über die AfA verteilt.",
       "nextStep": "Gebäudeanteil × 15 % selbst berechnen – ein eigener Rechner ist in Entwicklung.",
-      "level2": "Anschaffungsnahe Herstellungskosten nach § 6 Abs. 1 Nr. 1a EStG: Instandsetzungs- und Modernisierungskosten innerhalb von 3 Jahren nach Anschaffung, die ohne USt 15 % der Gebäude-Anschaffungskosten übersteigen. Beispiel (fiktiv): Gebäudeanteil 164.196 € → Grenze 24.629,40 € netto."
+      "level2": "Anschaffungsnahe Herstellungskosten nach § 6 Abs. 1 Nr. 1a EStG: Instandsetzungs- und Modernisierungskosten innerhalb von 3 Jahren nach Anschaffung, die ohne USt 15 % der Gebäude-Anschaffungskosten übersteigen. Beispiel (fiktiv, Mustermappe): Gebäude-Anschaffungskosten 151.826,40 € (80 % von 189.783 €) → Grenze 22.773,96 € netto."
     },
     {
       "id": 18,

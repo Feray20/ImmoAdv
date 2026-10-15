@@ -107,7 +107,7 @@ const DOCS: [string, string, string, string][] = [
   ['Grundbuchauszug', 'erforderlich', 'erforderlich', 'nicht älter als 3 Monate; Abt. II und III prüfen'],
   ['Flurkarte', 'erforderlich', 'erforderlich', ''],
   ['Grundrisse und Wohnflächenberechnung', 'erforderlich', 'erforderlich', 'nach WoFlV'],
-  ['Energieausweis', 'erforderlich', 'erforderlich', 'Pflichtangaben nach GEG'],
+  ['Energieausweis', 'erforderlich', 'erforderlich', 'Pflicht nach GModG (bis 28.07.2026 GEG)'],
   ['Teilungserklärung (ETW)', 'fallweise', 'fallweise', 'nur Eigentumswohnung'],
   ['Protokolle der letzten 3 Eigentümerversammlungen (ETW)', 'fallweise', 'fallweise', 'Sonderumlagen, Sanierungen'],
   ['Wirtschaftsplan, Hausgeldabrechnung, Rücklagenstand (ETW)', 'fallweise', 'fallweise', ''],

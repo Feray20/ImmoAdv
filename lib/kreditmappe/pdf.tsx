@@ -1,4 +1,4 @@
-import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
+import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import type { Kreditmappe } from './model';
 import { LIVING_BASE, LIVING_PER_PERSON, RENT_RECOGNITION } from './model';
 
@@ -77,7 +77,9 @@ function Frame({ m }: { m: Kreditmappe }) {
   );
 }
 
-export function KreditmappeDocument({ m }: { m: Kreditmappe }) {
+export type Verification = { versionNo: number; versionId: string; url: string; qrDataUrl: string };
+
+export function KreditmappeDocument({ m, verify }: { m: Kreditmappe; verify?: Verification }) {
   const { object: o, profile: p, financing: f, metrics: x, household: h } = m;
   const vetoTone: Tone = m.vetoLevel === 'HARD_VETO' ? 'bad' : m.vetoLevel === 'CONDITIONAL_VETO' ? 'warn' : m.vetoLevel === 'WARNING' ? 'warn' : 'ok';
   const vetoLabel = { HARD_VETO: 'Hartes Veto', CONDITIONAL_VETO: 'Bedingtes Veto', WARNING: 'Hinweise', NONE: 'Keine Abweichung' }[m.vetoLevel];
@@ -98,6 +100,17 @@ export function KreditmappeDocument({ m }: { m: Kreditmappe }) {
           <View style={[s.kpi, { marginRight: 0 }]}><Text style={s.muted}>Vorläufiger Score</Text><Text style={s.kpiValue}>{m.score.value} / 100</Text></View>
         </View>
         <Text style={s.small}>{m.score.note}</Text>
+
+        {verify && (
+          <View style={[s.box, { flexDirection: 'row', alignItems: 'center' }]} wrap={false}>
+            <Image src={verify.qrDataUrl} style={{ width: 62, height: 62, marginRight: 10 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: 'Helvetica-Bold', color: C.navy }}>Echtheitsprüfung · Version {verify.versionNo}</Text>
+              <Text>QR-Code scannen oder {verify.url.replace(/^https?:\/\//, '').split('#')[0]} aufrufen und diese PDF-Datei auswählen. Die Prüfsumme (SHA-256) der Datei wird im Browser berechnet und mit der bei Erstellung gespeicherten verglichen.</Text>
+              <Text style={{ fontSize: 7, color: C.muted, marginTop: 2 }}>Kennung: {verify.versionId}</Text>
+            </View>
+          </View>
+        )}
 
         <Text style={s.h2}>1. Zusammenfassung</Text>
         <View style={[s.row, { borderTopWidth: 0.5, borderTopColor: C.hair }]}>
@@ -120,7 +133,7 @@ export function KreditmappeDocument({ m }: { m: Kreditmappe }) {
         <Text style={s.h2}>2. Vorhaben und Finanzierung</Text>
         <Rows head={['Position', 'Betrag']} rows={[
           ['Kaufpreis', eur(o.price)],
-          [`Kaufnebenkosten (${fmt(o.purchaseCostPct)} %)`, eur(f.purchaseCosts)],
+          [o.grestPct + o.notaryPct + o.brokerPct > 0 ? `Kaufnebenkosten (GrESt ${fmt(o.grestPct)} %, Notar/Grundbuch ${fmt(o.notaryPct)} %, Makler ${fmt(o.brokerPct)} %)` : `Kaufnebenkosten (${fmt(o.purchaseCostPct)} %)`, eur(f.purchaseCosts)],
           ['Gesamtaufwand', eur(f.totalCost)],
           ['Eigenkapital', eur(f.equity)],
           ['Darlehen', eur(f.loan)],
@@ -145,6 +158,15 @@ export function KreditmappeDocument({ m }: { m: Kreditmappe }) {
           ['Instandhaltung je m² und Monat', eur(x.maintenancePerSqm)],
           ['Leerstand / Mietausfallwagnis', `${fmt(o.vacancyPct)} %`],
           ['Beleihungswert', o.lendingValue > 0 ? eur(o.lendingValue) : 'nicht angegeben'],
+          ['Marktwert (Angabe)', o.marketValue > 0 ? eur(o.marketValue) : 'nicht angegeben'],
+          ['Grundbuch (Amtsgericht, Blatt)', [o.grundbuchAmt, o.grundbuchBlatt].filter(Boolean).join(', ') || 'nicht angegeben'],
+          ['Flur / Flurstück', [o.flur, o.flurstueck].filter(Boolean).join(' / ') || 'nicht angegeben'],
+          ['Eigentumsstruktur', o.ownership || 'nicht angegeben'],
+          ['Grundstücksfläche / Nutzfläche', `${o.landArea > 0 ? fmt(o.landArea) + ' m²' : '–'} / ${o.usableArea > 0 ? fmt(o.usableArea) + ' m²' : '–'}`],
+          ['Sanierungsjahr', o.renovationYear > 0 ? String(o.renovationYear) : 'nicht angegeben'],
+          ['Heizung (Art, Baujahr)', [o.heatingType, o.heatingYear > 0 ? String(o.heatingYear) : ''].filter(Boolean).join(', ') || 'nicht angegeben'],
+          ['Energie (Verbrauch / Primärenergie, kWh/m²a)', o.energyConsumption > 0 || o.primaryEnergy > 0 ? `${o.energyConsumption > 0 ? fmt(o.energyConsumption, 0) : '–'} / ${o.primaryEnergy > 0 ? fmt(o.primaryEnergy, 0) : '–'}` : 'nicht angegeben'],
+          ['Effizienzklasse', o.efficiencyClass || 'nicht angegeben'],
         ]} />
 
         <Text style={s.h2}>4. Wirtschaftlichkeit</Text>

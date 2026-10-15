@@ -1,3 +1,5 @@
+import { afaRate, balanceAfterYears } from './math';
+export { afaRate, balanceAfterYears } from './math';
 import { z } from 'zod';
 import { underwrite, type StressCase } from '@/lib/underwriting/engine';
 import { bankReadyScore } from '@/lib/underwriting/score';
@@ -6,6 +8,7 @@ import { highestVeto } from '@/lib/domain/veto';
 
 // Eingaben, wie sie im Konto (immo_user_data) gespeichert werden. Alle Beträge in Euro.
 const num = (min = 0, max = 1e9) => z.coerce.number().finite().min(min).max(max);
+const txt = (max = 80) => z.preprocess((v) => (v === null || v === undefined ? '' : String(v)), z.string().trim().max(max));
 
 export const ProfileSchema = z.object({
   employment: z.string().max(60).default('Angestellt'),
@@ -40,6 +43,14 @@ export const ObjectSchema = z.object({
   wegReserveTotal: num().default(0), // Erhaltungsrücklage der Gemeinschaft gesamt
   wegPlannedTotal: num().default(0), // geplante/erwartete Maßnahmen der Gemeinschaft gesamt
   wegSpecialTotal: num().default(0), // beschlossene Sonderumlage gesamt
+  // Kanonisches Objektmodell (optional, für Kreditmappe und Prüfung)
+  flur: txt(), flurstueck: txt(), grundbuchAmt: txt(), grundbuchBlatt: txt(), ownership: txt(),
+  landArea: num(0, 1e7).default(0), usableArea: num(0, 1e6).default(0),
+  renovationYear: z.coerce.number().int().min(0).max(2100).default(0),
+  heatingType: txt(), heatingYear: z.coerce.number().int().min(0).max(2100).default(0),
+  energyConsumption: num(0, 2000).default(0), primaryEnergy: num(0, 2000).default(0), efficiencyClass: txt(4),
+  marketValue: num().default(0),
+  grestPct: num(0, 10).default(0), notaryPct: num(0, 10).default(0), brokerPct: num(0, 10).default(0),
 });
 
 export type UploadedDoc = { filename: string; category: string; sha256: string; createdAt: string };
@@ -85,23 +96,8 @@ export type Kreditmappe = {
   };
 };
 
-// Lineare AfA nach § 7 Abs. 4 EStG nach Fertigstellungsjahr.
-export function afaRate(yearBuilt: number): number {
-  if (yearBuilt >= 2023) return 0.03;
-  if (yearBuilt > 0 && yearBuilt < 1925) return 0.025;
-  return 0.02;
-}
 
-// Restschuld eines Annuitätendarlehens nach n Jahren (monatliche Zahlung).
-export function balanceAfterYears(loan: number, ratePa: number, repaymentPa: number, years: number): number | null {
-  if (loan <= 0) return 0;
-  const i = ratePa / 12;
-  const rate = (loan * (ratePa + repaymentPa)) / 12;
-  const m = years * 12;
-  if (i === 0) return Math.max(0, loan - rate * m);
-  const rest = loan * Math.pow(1 + i, m) - rate * ((Math.pow(1 + i, m) - 1) / i);
-  return Math.max(0, rest);
-}
+
 
 const DOCUMENTS = [
   'Personalausweis / Reisepass (Kopie)', 'Selbstauskunft', 'Einkommensnachweise (letzte 3 Monate)',
@@ -114,7 +110,9 @@ const DOCUMENTS = [
 export function buildKreditmappe(o: PropertyObject, p: Profile, now = new Date(), uploads: UploadedDoc[] = []): Kreditmappe {
   const interest = o.interestPct / 100;
   const repayment = o.repaymentPct / 100;
-  const purchaseCosts = (o.price * o.purchaseCostPct) / 100;
+  const splitPct = o.grestPct + o.notaryPct + o.brokerPct;
+  const costPct = splitPct > 0 ? splitPct : o.purchaseCostPct;
+  const purchaseCosts = (o.price * costPct) / 100;
   const totalCost = o.price + purchaseCosts;
   const equity = o.equity > 0 ? o.equity : p.equity;
   const annualInterest = o.loan * interest;
@@ -312,6 +310,33 @@ function evaluate(x: EvalInput): VetoFinding[] {
       reason: 'Unter 1,00 € je m² und Monat; ältere Gebäude benötigen meist mehr.',
       evidenceIds: ['eingabe:instandhaltung', 'eingabe:wohnflaeche'],
       recommendation: 'Wirtschaftsplan und Rücklagenstand prüfen.',
+    });
+  }
+  if (x.o.marketValue > 0 && x.o.price > x.o.marketValue * 1.1) {
+    const dev = x.o.price / x.o.marketValue - 1;
+    f.push({
+      id: 'PRICE_ABOVE_MARKET', level: dev > 0.25 ? 'HARD_VETO' : 'CONDITIONAL_VETO', title: 'Kaufpreis deutlich über dem angegebenen Marktwert',
+      reason: `Der Kaufpreis liegt ${Math.round(dev * 100)} % über dem angegebenen Marktwert. Banken finanzieren in der Regel auf Basis ihres eigenen, meist niedrigeren Werts.`,
+      evidenceIds: ['eingabe:kaufpreis', 'eingabe:marktwert'],
+      financialImpactEur: eur(x.o.price - x.o.marketValue),
+      recommendation: 'Wertgutachten oder Vergleichswerte einholen; Kaufpreis nachverhandeln.',
+    });
+  }
+  const nowYear = new Date().getFullYear();
+  if (x.o.heatingYear > 0 && nowYear - x.o.heatingYear >= 30) {
+    f.push({
+      id: 'HEATING_AGE', level: 'WARNING', title: 'Heizung älter als 30 Jahre',
+      reason: 'Bei diesem Alter ist mit technischem Erneuerungsbedarf zu rechnen. Seit 29.07.2026 gilt das Gebäudemodernisierungsgesetz (GModG) anstelle des GEG; ob für die konkrete Anlage Austausch- oder Nachrüstpflichten bestehen, ist im aktuellen Gesetzestext zu prüfen.',
+      evidenceIds: ['eingabe:heizung_baujahr'],
+      recommendation: 'Zustand und Restlebensdauer prüfen lassen; Erneuerungskosten im Kaufpreis berücksichtigen.',
+    });
+  }
+  if (['G', 'H'].includes((x.o.efficiencyClass || '').toUpperCase())) {
+    f.push({
+      id: 'ENERGY_CLASS', level: 'WARNING', title: 'Niedrige Energieeffizienzklasse',
+      reason: 'Effizienzklasse G oder H deutet auf erheblichen energetischen Modernisierungsbedarf hin.',
+      evidenceIds: ['eingabe:effizienzklasse'],
+      recommendation: 'Sanierungsfahrplan und Kosten vor dem Kauf einholen.',
     });
   }
   if (x.tax?.exceeds15) {

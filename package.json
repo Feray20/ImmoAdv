@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "export:faq": "node scripts/export-faq.mjs"
+    "export:faq": "node scripts/export-faq.mjs",
+    "test": "node --experimental-strip-types --no-warnings --import ./tests/register.mjs --test 'tests/**/*.test.ts'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",

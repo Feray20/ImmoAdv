@@ -1,4 +1,5 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import QRCode from 'qrcode';
 import { NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { createElement } from 'react';
@@ -8,7 +9,7 @@ import { userFromRequest } from '@/lib/billing/auth';
 import { billingEnabled, entitlementsFor, findCustomer, stripe } from '@/lib/billing/stripe';
 import { ObjectSchema, ProfileSchema, buildKreditmappe, type UploadedDoc } from '@/lib/kreditmappe/model';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
-import { KreditmappeDocument } from '@/lib/kreditmappe/pdf';
+import { KreditmappeDocument, type Verification } from '@/lib/kreditmappe/pdf';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -83,11 +84,44 @@ export async function POST(req: Request) {
       uploads = (docs ?? []).map((d) => ({ filename: String(d.filename), category: String(d.category ?? ''), sha256: String(d.sha256 ?? ''), createdAt: String(d.created_at) }));
     }
     const mappe = buildKreditmappe(obj.data, profile.data, new Date(), uploads);
-    const element = createElement(KreditmappeDocument, { m: mappe }) as unknown as Parameters<typeof renderToBuffer>[0];
+
+    // Version und Prüf-QR vorbereiten. Die Prüfsumme kann nicht im PDF selbst stehen;
+    // der QR-Code enthält deshalb eine zufällige Versions-Kennung, der Hash wird nach dem Rendern gespeichert.
+    let verify: Verification | undefined;
+    if (adminConfigured()) {
+      const { data: last } = await supabaseAdmin()
+        .from('immo_kreditmappe_versions')
+        .select('version_no')
+        .eq('owner_id', user.id)
+        .eq('object_ref', objectId)
+        .order('version_no', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const versionId = randomUUID();
+      const url = `${new URL(req.url).origin}/pruefen#v=${versionId}`;
+      const qrDataUrl = await QRCode.toDataURL(url, { errorCorrectionLevel: 'M', margin: 1, width: 240, color: { dark: '#0F172A', light: '#FFFFFF' } });
+      verify = { versionNo: (Number(last?.version_no) || 0) + 1, versionId, url, qrDataUrl };
+    }
+
+    const element = createElement(KreditmappeDocument, { m: mappe, verify }) as unknown as Parameters<typeof renderToBuffer>[0];
     const pdf = await renderToBuffer(element);
     if (pdf.subarray(0, 5).toString() !== '%PDF-') throw new Error('invalid_pdf_output');
     // Hash erst nach dem Rendern aus den tatsächlichen Bytes berechnen.
     const sha256 = createHash('sha256').update(pdf).digest('hex');
+
+    if (verify) {
+      const db = supabaseAdmin();
+      const path = `${user.id}/${verify.versionId}.pdf`;
+      const up = await db.storage.from('bank-ready-pdf').upload(path, pdf, { contentType: 'application/pdf', upsert: false });
+      if (!up.error) {
+        await db.from('immo_kreditmappe_versions').insert({
+          id: verify.versionId, owner_id: user.id, object_ref: objectId, version_no: verify.versionNo,
+          sha256, byte_size: pdf.length, storage_path: path,
+        });
+      } else {
+        console.error('kreditmappe_store_error', up.error.message);
+      }
+    }
     const filename = `ImmoAdv_Kreditmappe_${obj.data.name.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}.pdf`;
     return new NextResponse(new Uint8Array(pdf), {
       status: 200,
@@ -95,7 +129,8 @@ export async function POST(req: Request) {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
         'X-Document-SHA256': sha256,
-        'Access-Control-Expose-Headers': 'X-Document-SHA256, Content-Disposition',
+        'X-Document-Version': verify ? String(verify.versionNo) : '',
+        'Access-Control-Expose-Headers': 'X-Document-SHA256, X-Document-Version, Content-Disposition',
         'Cache-Control': 'no-store',
       },
     });
