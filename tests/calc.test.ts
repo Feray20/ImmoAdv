@@ -228,3 +228,35 @@ test('angebot und kaufenMieten: Kennzahlen und Plausibilität', async () => {
   const k2 = kaufenMieten({ price: 400000, land: 'hessen', equity: 100000, ratePa: 0.035, repaymentPa: 0.025, ownerCosts: 250, rent: 1400, valueGrowthPct: 0, investPct: 7, years: 25 })!;
   assert.ok(k2.end.buyer < k.end.buyer);
 });
+
+test('afaPlan: linear, degressiv, Sonder-AfA § 7b', async () => {
+  const { afaPlan } = await import('../public/src/calc.mjs');
+  const l = afaPlan({ ak: 300000, linearPct: 2, years: 10 })!;
+  assert.equal(l.rows[0].regular, 6000);
+  assert.equal(l.total, 60000);
+  const d = afaPlan({ ak: 300000, method: 'degressiv', years: 2 })!;
+  assert.equal(d.rows[0].regular, 15000);
+  assert.equal(d.rows[1].regular, 14250);
+  // § 7b: Bemessung höchstens 4.000 €/m² → 70 m² = 280.000; 5 % = 14.000 je Jahr, 4 Jahre
+  const s = afaPlan({ ak: 300000, linearPct: 3, years: 10, sonder: true, area: 70, baukostenQm: 4300 })!;
+  assert.equal(s.rows[0].extra, 14000);
+  assert.equal(s.extra, 56000);
+  assert.equal(s.rows[4].extra, 0);
+  const no = afaPlan({ ak: 400000, linearPct: 3, years: 4, sonder: true, area: 70, baukostenQm: 5700 })!;
+  assert.equal(no.s7b!.eligible, false);
+  assert.equal(no.extra, 0);
+});
+
+test('mieterhoehung: Kappungsgrenze, Vergleichsmiete, Wirksamkeit', async () => {
+  const { mieterhoehung } = await import('../public/src/calc.mjs');
+  const m = mieterhoehung({ rent: 800, area: 70, vergleichQm: 13, rent3y: 750, capPct: 15, lastChange: '2025-06-01', sendDate: '2026-10-20' })!;
+  assert.equal(m.byMarket, 910);
+  assert.equal(m.byCap, 862.5);
+  assert.equal(m.max, 862.5);
+  assert.equal(m.limitedBy, 'kappung');
+  assert.equal(m.earliestRequest, '2026-06-01');
+  assert.equal(m.effective, '2027-01-01'); // Zugang Oktober → Beginn des dritten Monats danach
+  const early = mieterhoehung({ rent: 800, area: 70, vergleichQm: 13, lastChange: '2025-12-15', sendDate: '2026-01-10' })!;
+  assert.equal(early.sendUsed, '2026-12-15');
+  assert.equal(early.effective, '2027-03-15'); // 15 Monate nach letzter Erhöhung
+});

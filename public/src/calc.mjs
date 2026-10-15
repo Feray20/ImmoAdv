@@ -529,3 +529,48 @@ export function kaufenMieten({ price, land, brokerPct = 0, equity, ratePa, repay
   }
   return { loan: r2(loan), rate: r2(rate), nebenkosten: nk.total, rows, breakEven, end: rows[rows.length - 1] };
 }
+
+// ---------- AfA-Plan: linear, degressiv, Sonder-AfA § 7b ----------
+// Linear § 7 Abs. 4 EStG (2 / 2,5 / 3 %), degressiv § 7 Abs. 5a EStG (5 % vom Restwert; Baubeginn bzw. Kaufvertrag
+// 01.10.2023–30.09.2029), Sonder-AfA § 7b EStG (4 Jahre je 5 %; Bemessung höchstens 4.000 €/m², Baukosten
+// höchstens 5.200 €/m², Effizienzhaus 40 mit QNG, Bauantrag 01.01.2023–30.09.2029, 10 Jahre Vermietung).
+// Vereinfachung: volle Jahresbeträge ab Jahr 1 (tatsächlich zeitanteilig im ersten Jahr).
+export function afaPlan({ ak, method = 'linear', linearPct = 2, years = 10, sonder = false, area = 0, baukostenQm = 0 }) {
+  if (!(ak > 0)) return null;
+  const s7b = sonder && area > 0 ? { eligible: baukostenQm > 0 && baukostenQm <= 5200, base: Math.min(ak, 4000 * area) } : null;
+  let rest = ak;
+  const rows = [];
+  for (let y = 1; y <= years && rest > 0.005; y++) {
+    const regular = Math.min(rest, method === 'degressiv' ? rest * 0.05 : (ak * linearPct) / 100);
+    const extra = s7b?.eligible && y <= 4 ? Math.min(rest - regular, s7b.base * 0.05) : 0;
+    rest -= regular + extra;
+    rows.push({ year: y, regular: r2(regular), extra: r2(extra), total: r2(regular + extra), rest: r2(rest) });
+  }
+  const sum = (k) => r2(rows.reduce((s, r) => s + r[k], 0));
+  return { rows, total: sum('total'), regular: sum('regular'), extra: sum('extra'), s7b, rest: r2(rest) };
+}
+
+// ---------- Mieterhöhung bis zur ortsüblichen Vergleichsmiete (§§ 558, 558b BGB) ----------
+// Höchstmiete = min(Vergleichsmiete × Fläche, Miete vor drei Jahren × (1 + Kappungsgrenze)).
+// Verlangen frühestens 12 Monate nach der letzten Erhöhung; wirksam ab Beginn des dritten Kalendermonats nach
+// Zugang, frühestens 15 Monate nach der letzten Erhöhung.
+export function mieterhoehung({ rent, area, vergleichQm, rent3y, capPct = 20, lastChange, sendDate }) {
+  if (!(rent > 0) || !(area > 0) || !(vergleichQm > 0)) return null;
+  const byMarket = vergleichQm * area;
+  const base = rent3y > 0 ? rent3y : rent;
+  const byCap = base * (1 + capPct / 100);
+  const max = Math.min(byMarket, byCap);
+  const out = { byMarket: r2(byMarket), byCap: r2(byCap), max: r2(Math.max(rent, max)), increase: r2(Math.max(0, max - rent)),
+    limitedBy: byCap < byMarket ? 'kappung' : 'vergleich', earliestRequest: null, effective: null };
+  if (lastChange) {
+    const lc = parseDate(lastChange);
+    out.earliestRequest = iso(addMonths(lc, 12));
+    const send = sendDate ? parseDate(sendDate) : addMonths(lc, 12);
+    const sendOk = send < addMonths(lc, 12) ? addMonths(lc, 12) : send;
+    const third = new Date(Date.UTC(sendOk.getUTCFullYear(), sendOk.getUTCMonth() + 3, 1));
+    const min15 = addMonths(lc, 15);
+    out.effective = iso(third > min15 ? third : min15);
+    out.sendUsed = iso(sendOk);
+  }
+  return out;
+}

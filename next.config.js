@@ -66,6 +66,8 @@ module.exports = {
         ...STATIC_PAGES.map((p) => ({ source: `/${p}`, destination: `/${p}/index.html` })),
         { source: '/wissen/erwerbsstatus', destination: '/wissen/erwerbsstatus/index.html' },
         { source: '/wissen/glossar', destination: '/wissen/glossar/index.html' },
+        { source: '/rechner/afa', destination: '/rechner/afa/index.html' },
+        { source: '/rechner/mieterhoehung', destination: '/rechner/mieterhoehung/index.html' },
         { source: '/rechner/cashflow', destination: '/rechner/cashflow/index.html' },
         { source: '/rechner/vergleich', destination: '/rechner/vergleich/index.html' },
         { source: '/rechner/kaufen-mieten', destination: '/rechner/kaufen-mieten/index.html' },

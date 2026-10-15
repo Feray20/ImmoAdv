@@ -1,5 +1,5 @@
 // Bindet Rechner, Fristen und Szenarien an den gemeinsamen Rechenkern (calc.mjs).
-import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg, tilgungsplan, tilgungsplanCSV, budget, scorecard, cashflowSteuer, angebot, kaufenMieten } from './calc.mjs';
+import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg, tilgungsplan, tilgungsplanCSV, budget, scorecard, cashflowSteuer, angebot, kaufenMieten, afaPlan, mieterhoehung } from './calc.mjs';
 
 const $ = (id) => document.getElementById(id);
 const num = (id) => { const v = $(id)?.value; return v === '' || v == null ? 0 : Number(v); };
@@ -285,6 +285,61 @@ if ($('km_out')) {
       table(pick.map((r) => [r.year, E(r.rent), E(r.value), E(r.debt), `<strong>${E(r.buyer)}</strong>`, `<strong>${E(r.renter)}</strong>`]), ['Jahr', 'Miete/Monat', 'Immobilienwert', 'Restschuld', 'Vermögen Käufer', 'Vermögen Mieter']) +
       `<p class="form-note">Monatsrate ${E(k.rate)} plus Eigentümerkosten; Kaufnebenkosten ${E(k.nebenkosten)} sind beim Kauf sofort „verbraucht“.</p>`;
   });
+}
+
+// AfA-Plan
+if ($('af_out')) {
+  const ids = ['af_k', 'af_m', 'af_p', 'af_y', 'af_s', 'af_a', 'af_b'];
+  remember('afa', ids);
+  watch(ids, () => {
+    $('af_p').disabled = val('af_m') === 'degressiv';
+    const a = afaPlan({ ak: num('af_k'), method: val('af_m'), linearPct: Number(val('af_p')), years: Math.min(50, Math.max(1, Math.round(num('af_y')))), sonder: chk('af_s'), area: num('af_a'), baukostenQm: num('af_b') });
+    if (!a) { $('af_out').innerHTML = '<p class="form-note">Bitte die Gebäudekosten eintragen.</p>'; return; }
+    const note = a.s7b ? (a.s7b.eligible ? `<p class="form-note">Sonder-AfA: Bemessungsgrundlage ${E(a.s7b.base)} (höchstens 4.000 €/m²), je Jahr ${E(a.s7b.base * 0.05)}.</p>` : `<p>${flag(false, '', 'Keine Sonder-AfA: Baukosten über 5.200 €/m² oder nicht angegeben')}</p>`) : '';
+    $('af_out').innerHTML = note + table(a.rows.map((r) => [r.year, E(r.regular), r.extra ? E(r.extra) : '–', `<strong>${E(r.total)}</strong>`, E(r.rest)]), ['Jahr', 'Reguläre AfA', 'Sonder-AfA', 'Summe', 'Restwert']) +
+      `<p class="form-note">Summe ${a.rows.length} Jahre: ${E(a.total)}${a.extra ? ` (davon Sonder-AfA ${E(a.extra)})` : ''}. Steuerwirkung ≈ Summe × Grenzsteuersatz – siehe <a class="ck-link" href="/rechner/cashflow">Cashflow nach Steuern</a>.</p>`;
+  });
+}
+
+// Mieterhöhung mit Briefentwurf
+if ($('mh_out')) {
+  const ids = ['mh_r', 'mh_a', 'mh_v', 'mh_3', 'mh_c', 'mh_l', 'mh_s'];
+  remember('mieterhoehung', ids);
+  watch(ids, () => {
+    const m = mieterhoehung({ rent: num('mh_r'), area: num('mh_a'), vergleichQm: num('mh_v'), rent3y: num('mh_3'), capPct: Number(val('mh_c')), lastChange: val('mh_l'), sendDate: val('mh_s') });
+    if (!m) { $('mh_out').innerHTML = '<p class="form-note">Bitte Miete, Fläche und Vergleichsmiete eintragen.</p>'; $('mh_letter').value = ''; return; }
+    $('mh_out').innerHTML = table([
+      ['Grenze ortsübliche Vergleichsmiete', E(m.byMarket)], [`Grenze Kappung (${val('mh_c')} % auf die Miete vor drei Jahren)`, E(m.byCap)],
+      ['Zulässige neue Nettokaltmiete', `<strong>${E(m.max)}</strong> <span class="form-note">(begrenzt durch ${m.limitedBy === 'kappung' ? 'Kappungsgrenze' : 'Vergleichsmiete'})</span>`],
+      ['Erhöhung pro Monat', E(m.increase)],
+      ['Verlangen frühestens (§ 558 Abs. 1 S. 2 BGB)', m.earliestRequest ? D(m.earliestRequest) : 'Datum der letzten Erhöhung eintragen'],
+      ['Neue Miete ab (§ 558b Abs. 1 BGB)', m.effective ? `<strong>${D(m.effective)}</strong>` : '–'],
+      ['Zustimmungsfrist des Mieters', 'bis Ende des zweiten Kalendermonats nach Zugang'],
+    ]);
+    const neu = E(m.max), qm = (m.max / num('mh_a')).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    $('mh_letter').value = `[Name und Anschrift Vermieter]
+
+[Name und Anschrift aller Mieter]
+
+[Ort], [Datum]
+
+Mieterhöhungsverlangen gemäß § 558 BGB – Wohnung [Adresse, Lage im Haus]
+
+Sehr geehrte/r [Name],
+
+die Nettokaltmiete für die oben genannte Wohnung (${String(num('mh_a')).replace('.', ',')} m²) beträgt derzeit ${E(num('mh_r'))} monatlich${val('mh_l') ? ` und ist seit dem ${D(val('mh_l'))} unverändert` : ''}.
+
+Ich bitte Sie, einer Erhöhung der Nettokaltmiete auf ${neu} monatlich (${qm} €/m²) mit Wirkung ab ${m.effective ? D(m.effective) : '[Datum]'} zuzustimmen. Die Betriebskostenvorauszahlung bleibt unverändert.
+
+Begründung: Die ortsübliche Vergleichsmiete für vergleichbaren Wohnraum beträgt nach dem [Mietspiegel der Stadt …, Stand …, Tabellenfeld …] ${num('mh_v').toLocaleString('de-DE', { minimumFractionDigits: 2 })} €/m². Die Kappungsgrenze von ${val('mh_c')} % innerhalb von drei Jahren ist eingehalten.
+
+Bitte erteilen Sie Ihre Zustimmung bis zum Ablauf des zweiten Kalendermonats nach Zugang dieses Schreibens.
+
+Mit freundlichen Grüßen
+
+[Unterschrift / Name]`;
+  });
+  $('mh_copy').onclick = async () => { try { await navigator.clipboard.writeText($('mh_letter').value); $('mh_note').textContent = 'Kopiert.'; } catch { $('mh_letter').select(); $('mh_note').textContent = 'Text markiert – mit Strg+C kopieren.'; } };
 }
 
 // Glossar-Suche
