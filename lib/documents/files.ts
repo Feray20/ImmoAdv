@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { validateUpload } from '@/lib/security/file-validation';
 
-export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // Vercel-Funktionen begrenzen Anfragen auf rund 4,5 MB
+export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // Direkt-Upload über die Funktion (Vercel-Grenze rund 4,5 MB)
+export const MAX_DIRECT_BYTES = 25 * 1024 * 1024; // Upload per signierter URL direkt in den Speicher
 export const MAX_DOCUMENTS_PER_USER = 60;
 
 export const CATEGORIES = ['objekt', 'miete', 'weg', 'grundbuch', 'technik', 'finanzen', 'steuer'] as const;
@@ -29,18 +30,18 @@ export function detectMime(b: Uint8Array): { mime: string; ext: string } | null 
 
 export type CheckedFile = { bytes: Buffer; mime: string; ext: string; sha256: string; size: number };
 
-export function checkFile(bytes: Buffer, declaredMime: string): { ok: true; file: CheckedFile } | { ok: false; reason: string } {
+export function checkFile(bytes: Buffer, declaredMime: string, maxBytes = MAX_UPLOAD_BYTES): { ok: true; file: CheckedFile } | { ok: false; reason: string } {
   const detected = detectMime(bytes);
   const result = validateUpload({
     mimeType: detected?.mime ?? declaredMime,
     sizeBytes: bytes.length,
-    maxBytes: MAX_UPLOAD_BYTES,
+    maxBytes,
     signatureMatches: detected !== null,
   });
   if (!result.valid || !detected) {
     const msg: Record<string, string> = {
       EMPTY_FILE: 'Die Datei ist leer.',
-      TOO_LARGE: 'Die Datei ist größer als 4 MB.',
+      TOO_LARGE: `Die Datei ist größer als ${Math.round(maxBytes / 1048576)} MB.`,
       MIME_NOT_ALLOWED: 'Erlaubt sind PDF, JPG, PNG und TIFF.',
       SIGNATURE_MISMATCH: 'Der Dateiinhalt passt zu keinem erlaubten Format (PDF, JPG, PNG, TIFF).',
     };

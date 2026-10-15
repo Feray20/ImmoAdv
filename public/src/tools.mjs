@@ -1,5 +1,5 @@
 // Bindet Rechner, Fristen und Szenarien an den gemeinsamen Rechenkern (calc.mjs).
-import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten } from './calc.mjs';
+import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg } from './calc.mjs';
 
 const $ = (id) => document.getElementById(id);
 const num = (id) => { const v = $(id)?.value; return v === '' || v == null ? 0 : Number(v); };
@@ -125,4 +125,39 @@ if ($('kn_table')) {
   const rows = Object.entries(GREST).sort((a, b) => a[1].pct - b[1].pct || a[1].name.localeCompare(b[1].name, 'de'))
     .map(([slug, g]) => [`<a class="ck-link" href="/rechner/kaufnebenkosten/${slug}">${esc(g.name)}</a>`, P(g.pct, 1), E(300000 * g.pct / 100)]);
   $('kn_table').innerHTML = table(rows, ['Bundesland', 'Grunderwerbsteuer', 'bei 300.000 €']);
+}
+
+// Erklär-Hinweise (Tooltips): Klick oder Tastatur öffnet, Escape oder Klick daneben schließt.
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.tip');
+  document.querySelectorAll('.tip[aria-expanded="true"]').forEach((x) => { if (x !== b) { x.setAttribute('aria-expanded', 'false'); x.nextElementSibling.hidden = true; } });
+  if (b) { const open = b.getAttribute('aria-expanded') !== 'true'; b.setAttribute('aria-expanded', String(open)); b.nextElementSibling.hidden = !open; }
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.tip[aria-expanded="true"]').forEach((x) => { x.setAttribute('aria-expanded', 'false'); x.nextElementSibling.hidden = true; }); });
+
+// Einstieg „Meine erste Immobilie“
+if ($('ez_out')) {
+  const form = $('wz');
+  form.classList.add('js');
+  const show = (n) => {
+    form.querySelectorAll('fieldset').forEach((f) => { f.hidden = f.dataset.step !== String(n); });
+    document.querySelectorAll('.steps li').forEach((li) => li.classList.toggle('on', Number(li.dataset.step) <= n));
+    form.querySelector(`fieldset[data-step="${n}"] input, fieldset[data-step="${n}"] select`)?.focus({ preventScroll: true });
+  };
+  form.querySelectorAll('[data-next]').forEach((b) => b.addEventListener('click', () => show(Number(b.dataset.next))));
+  show(1);
+  const ids = ['ez_p', 'ez_l', 'ez_m', 'ez_r', 'ez_c', 'ez_e', 'ez_s', 'ez_i', 'ez_t', 'ez_g'];
+  remember('einstieg', ids);
+  watch(ids, () => {
+    const e = einstieg({ price: num('ez_p'), rent: num('ez_r'), equity: num('ez_e'), land: val('ez_l'), ratePa: num('ez_i') / 100, repaymentPa: num('ez_t') / 100, brokerPct: num('ez_m'), costSharePct: num('ez_c'), reserve: num('ez_s'), growthPa: num('ez_g') / 100 });
+    if (!e) { $('ez_out').innerHTML = '<p class="form-note">Bitte einen Kaufpreis eintragen.</p>'; return; }
+    const card = (h, big, txt, tone = '') => `<div class="ez-card ${tone ? 'ez-' + tone : ''}"><h3>${h}</h3><p class="ez-big">${big}</p><p>${txt}</p></div>`;
+    $('ez_out').innerHTML = `<div class="ez-grid">`
+      + card('Darlehen und Rate', E(e.rate) + ' / Monat', `Darlehen ${E(e.loan)} bei Kaufnebenkosten von ${E(e.nk.total)} (${P(e.nk.totalPct)}).${e.equityCoversCosts ? '' : ' <strong>Ihr Eigenkapital deckt die Nebenkosten nicht</strong> – das verteuert die Finanzierung deutlich.'}`, e.equityCoversCosts ? '' : 'warn')
+      + card('Ihr Tilgungshebel', E(e.firstPrincipal) + ' / Monat', `So viel Darlehen zahlen Sie schon im ersten Monat zurück – Vermögen, das Sie aufbauen. Die Miete deckt ${e.rentCoversPct === null ? '–' : P(e.rentCoversPct, 1)} der Rate.`)
+      + card('Monatlicher Cashflow', (e.cashflow >= 0 ? '+' : '') + E(e.cashflow), e.cashflow >= 0 ? 'Die Wohnung trägt sich vor Steuern selbst.' : `Sie zahlen monatlich ${E(-e.cashflow)} zu (vor Steuern; die Steuerwirkung kann einen Teil ausgleichen).`, e.cashflow >= 0 ? 'ok' : 'warn')
+      + card('Sicherheitsnetz', e.reserveMonths === null ? '–' : `${e.reserveMonths} Monate`, `So lange trägt Ihr Notgroschen Rate und Kosten (${E(e.vacantBurden)} pro Monat), falls die Miete ausfällt.`, e.reserveMonths !== null && e.reserveMonths < 6 ? 'warn' : 'ok')
+      + card('In zehn Jahren', E(e.repaid10) + ' getilgt', `Restschuld dann ${E(e.rest10)}. Bei ${P(num('ez_g'), 1)} Wertentwicklung pro Jahr: Immobilie ${E(e.value10)}, Ihr Anteil ${E(e.netWorth10)}. Nach zehn Jahren ist ein Verkaufsgewinn steuerfrei (§ 23 EStG).`)
+      + `</div><p class="obj-actions"><a class="btn btn-dark" href="/auth/register">Objekt speichern und Kreditmappe vorbereiten</a><a class="btn btn-ghost" href="/szenarien">Anschlusszins prüfen</a></p>`;
+  });
 }

@@ -214,3 +214,25 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 .land-links{display:flex;flex-wrap:wrap;gap:6px 14px}.land-links a{color:var(--ia-link);text-decoration:underline;min-height:24px;display:inline-flex;align-items:center}
 .obj-grid label.chk{display:flex;flex-direction:row;align-items:center;gap:8px;color:var(--ia-text);font-size:13px;min-height:44px}
 .obj-grid label.chk input{width:auto}
+/* ---- Einstieg und Erklär-Hinweise ---- */
+.steps{display:flex;gap:8px;list-style:none;margin:0;padding:0;counter-reset:st}
+.steps li{flex:1;padding:10px 12px;border-radius:6px;background:var(--ia-none-bg);color:var(--ia-muted);font-weight:600;font-size:14px;counter-increment:st}
+.steps li::before{content:counter(st) ". "}
+.steps li.on{background:var(--ia-navy);color:#fff}
+.wizard fieldset{border:0;padding:0;margin:0 0 8px}
+.wizard legend{font-size:18px;font-weight:700;color:var(--ia-navy);margin-bottom:10px}
+.wizard:not(.js) fieldset{margin-bottom:20px}
+.ez-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.ez-card{background:#fff;border:1px solid var(--ia-line);border-left:4px solid var(--ia-logo-blue);border-radius:8px;padding:14px 16px}
+.ez-card.ez-ok{border-left-color:var(--ia-ok)}.ez-card.ez-warn{border-left-color:#D97706}
+.ez-card h3{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--ia-muted)}
+.ez-big{font-size:24px;font-weight:800;color:var(--ia-navy);margin:6px 0;font-variant-numeric:tabular-nums}
+.ez-card p:last-child{margin:0;font-size:14px}
+.tipwrap{position:relative;display:inline-block}
+.tip{width:24px;height:24px;border-radius:50%;border:1px solid var(--ia-hair);background:#fff;color:var(--ia-link);font-weight:700;font-size:13px;cursor:pointer;line-height:1;vertical-align:middle}
+.tipbox{position:absolute;z-index:20;left:50%;transform:translateX(-50%);top:30px;width:min(280px,80vw);background:var(--ia-navy);color:#fff;padding:10px 12px;border-radius:6px;font-size:13px;line-height:1.5;box-shadow:0 8px 20px rgba(15,23,42,.2)}
+.tipbox strong{color:#fff;display:block;margin-bottom:2px}
+.glossar{display:flex;flex-wrap:wrap;gap:10px 18px}
+.glossar>span{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--ia-navy)}
+@media (max-width:620px){.tipbox{position:fixed;left:16px;right:16px;bottom:88px;top:auto;width:auto;transform:none;z-index:90}}
+.ez-out .btn,.obj-actions .btn{white-space:normal;text-align:center}

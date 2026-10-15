@@ -104,3 +104,15 @@ test('Kaufnebenkosten Hessen 300.000 € mit Makler 3,57 %', () => {
   near(k.total, 34710); assert.equal(k.totalPct, 11.57); near(k.allIn, 334710);
   assert.equal(kaufnebenkosten({ price: 300000, land: 'atlantis' }), null);
 });
+
+import { einstieg } from '../public/src/calc.mjs';
+
+test('Einstieg: Darlehen, Tilgungshebel, Sicherheitsnetz, 10-Jahres-Bild', () => {
+  const e = einstieg({ price: 200000, rent: 800, equity: 30000, land: 'bayern', ratePa: 0.036, repaymentPa: 0.02, brokerPct: 0, costSharePct: 15, reserve: 10000, growthPa: 0 })!;
+  // Nebenkosten Bayern: 3,5 % + 1,5 % + 0,5 % = 11.000 €; Darlehen 181.000 €
+  near(e.nk.total, 11000); near(e.loan, 181000); assert.equal(e.equityCoversCosts, true);
+  near(e.rate, 844.67); near(e.firstInterest, 543); near(e.firstPrincipal, 301.67);
+  near(e.costs, 120); near(e.cashflow, -164.67); assert.equal(e.reserveMonths, 10); // 10.000 ÷ 964,67
+  near(e.repaid10 + e.rest10, 181000);
+  assert.equal(einstieg({ price: 0, rent: 1, equity: 1 }), null);
+});

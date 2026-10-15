@@ -263,3 +263,27 @@ export function kaufnebenkosten({ price, land, notaryPct = 1.5, landRegistryPct 
   const total = r2(parts.reduce((s, x) => s + x.amount, 0));
   return { land: g.name, parts, total, totalPct: Math.round((total / price) * 10000) / 100, allIn: r2(price + total) };
 }
+
+// ---------- Einstieg „Meine erste Immobilie“ ----------
+// Drei Eingaben plus Annahmen; liefert Darlehen, Rate, Tilgungshebel, Sicherheitsnetz und 10-Jahres-Bild.
+export function einstieg({ price, rent, equity, land = 'hessen', ratePa = 0.038, repaymentPa = 0.02, brokerPct = 3.57, costSharePct = 15, reserve = 0, growthPa = 0 }) {
+  const nk = kaufnebenkosten({ price, land, brokerPct });
+  if (!nk) return null;
+  const loan = Math.max(0, price + nk.total - equity);
+  const rate = monthlyRate(loan, ratePa, repaymentPa);
+  const firstInterest = (loan * ratePa) / 12;
+  const firstPrincipal = rate - firstInterest;
+  const costs = (rent * costSharePct) / 100; // nicht umlagefähige Kosten und Instandhaltung als Anteil der Kaltmiete (Annahme)
+  const cashflow = rent - costs - rate;
+  const vacantBurden = rate + costs; // Monatliche Last ohne Mieteinnahme
+  const rest10 = balanceAfterMonths(loan, ratePa, repaymentPa, 120);
+  const value10 = price * Math.pow(1 + growthPa, 10);
+  return {
+    nk, loan: r2(loan), equityCoversCosts: equity >= nk.total, rate: r2(rate),
+    firstPrincipal: r2(firstPrincipal), firstInterest: r2(firstInterest),
+    rentCoversPct: rate > 0 ? Math.round((rent / rate) * 1000) / 10 : null,
+    costs: r2(costs), cashflow: r2(cashflow),
+    reserveMonths: vacantBurden > 0 ? Math.floor(reserve / vacantBurden) : null, vacantBurden: r2(vacantBurden),
+    rest10: r2(rest10), repaid10: r2(loan - rest10), value10: r2(value10), netWorth10: r2(value10 - rest10),
+  };
+}
