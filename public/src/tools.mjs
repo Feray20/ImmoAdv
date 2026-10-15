@@ -288,15 +288,15 @@ if ($('km_out')) {
 }
 
 // AfA-Plan
-if ($('af_out')) {
-  const ids = ['af_k', 'af_m', 'af_p', 'af_y', 'af_s', 'af_a', 'af_b'];
+if ($('ap_out')) {
+  const ids = ['ap_k', 'ap_m', 'ap_p', 'ap_y', 'ap_s', 'ap_a', 'ap_b'];
   remember('afa', ids);
   watch(ids, () => {
-    $('af_p').disabled = val('af_m') === 'degressiv';
-    const a = afaPlan({ ak: num('af_k'), method: val('af_m'), linearPct: Number(val('af_p')), years: Math.min(50, Math.max(1, Math.round(num('af_y')))), sonder: chk('af_s'), area: num('af_a'), baukostenQm: num('af_b') });
-    if (!a) { $('af_out').innerHTML = '<p class="form-note">Bitte die Gebäudekosten eintragen.</p>'; return; }
+    $('ap_p').disabled = val('ap_m') === 'degressiv';
+    const a = afaPlan({ ak: num('ap_k'), method: val('ap_m'), linearPct: Number(val('ap_p')), years: Math.min(50, Math.max(1, Math.round(num('ap_y')))), sonder: chk('ap_s'), area: num('ap_a'), baukostenQm: num('ap_b') });
+    if (!a) { $('ap_out').innerHTML = '<p class="form-note">Bitte die Gebäudekosten eintragen.</p>'; return; }
     const note = a.s7b ? (a.s7b.eligible ? `<p class="form-note">Sonder-AfA: Bemessungsgrundlage ${E(a.s7b.base)} (höchstens 4.000 €/m²), je Jahr ${E(a.s7b.base * 0.05)}.</p>` : `<p>${flag(false, '', 'Keine Sonder-AfA: Baukosten über 5.200 €/m² oder nicht angegeben')}</p>`) : '';
-    $('af_out').innerHTML = note + table(a.rows.map((r) => [r.year, E(r.regular), r.extra ? E(r.extra) : '–', `<strong>${E(r.total)}</strong>`, E(r.rest)]), ['Jahr', 'Reguläre AfA', 'Sonder-AfA', 'Summe', 'Restwert']) +
+    $('ap_out').innerHTML = note + table(a.rows.map((r) => [r.year, E(r.regular), r.extra ? E(r.extra) : '–', `<strong>${E(r.total)}</strong>`, E(r.rest)]), ['Jahr', 'Reguläre AfA', 'Sonder-AfA', 'Summe', 'Restwert']) +
       `<p class="form-note">Summe ${a.rows.length} Jahre: ${E(a.total)}${a.extra ? ` (davon Sonder-AfA ${E(a.extra)})` : ''}. Steuerwirkung ≈ Summe × Grenzsteuersatz – siehe <a class="ck-link" href="/rechner/cashflow">Cashflow nach Steuern</a>.</p>`;
   });
 }
