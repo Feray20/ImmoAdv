@@ -574,3 +574,106 @@ export function mieterhoehung({ rent, area, vergleichQm, rent3y, capPct = 20, la
   }
   return out;
 }
+
+// ---------- Objekt-Analyse: alle Kennzahlen aus Kernfakten ----------
+// Eingaben sind Nutzerangaben; nichts wird von Portalen geladen. Mietspiegelwert (€/m²) trägt der Nutzer ein.
+export function analyse(i) {
+  const n = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? 0 : Number(v));
+  const price = n(i.price), area = n(i.area), land = i.land;
+  const nk = price > 0 && GREST[land] ? kaufnebenkosten({ price, land, brokerPct: n(i.brokerPct) }) : null;
+  if (!nk) return null;
+  const rentIst = n(i.rent), vq = n(i.vergleichQm), vac = n(i.vacancyPct) / 100;
+  const rentMarket = vq > 0 && area > 0 ? vq * area : 0;
+  const rent = rentIst > 0 ? rentIst : rentMarket;
+  const nonRec = n(i.nonRecoverable), maint = area > 0 ? n(i.maintenanceQm) * area : 0;
+  const equity = n(i.equity), loan = Math.max(0, nk.allIn - equity);
+  const ratePa = n(i.ratePct) / 100, tilg = n(i.repaymentPct) / 100;
+  const rate = monthlyRate(loan, ratePa, tilg);
+  const interestM = (loan * ratePa) / 12, principalM = rate - interestM;
+  const noi = rent * (1 - vac) - nonRec - maint;
+  const cf = noi - rate;
+  const pct = (a, b) => (b > 0 ? Math.round((a / b) * 10000) / 100 : null);
+  const dec = (a, b, d = 2) => (b > 0 ? Math.round((a / b) * 10 ** d) / 10 ** d : null);
+  const needRent = (target) => (1 - vac > 0 ? r2((target + nonRec + maint) / (1 - vac)) : null);
+  const plan = loan > 0 && ratePa + tilg > 0 ? tilgungsplan({ loan, ratePa, repaymentPa: tilg, fixedYears: n(i.fixedYears) || 10 }) : null;
+  // Steuer (Jahr 1)
+  const afa = (nk.allIn * (n(i.buildingSharePct) || 0)) / 100 * ((n(i.afaPct) || 0) / 100);
+  const taxable = rent * 12 * (1 - vac) - (nonRec + maint) * 12 - interestM * 12 - afa;
+  const tax = (taxable * n(i.taxPct)) / 100;
+  // Ertragswert (vereinfacht, ImmoWertV): nur mit Bodenwert, Liegenschaftszins und Restnutzungsdauer
+  const landValue = n(i.landValue), lz = n(i.capRatePct) / 100, rnd = n(i.remainingLife);
+  let ertragswert = null;
+  if (landValue > 0 && lz > 0 && rnd > 0 && rent > 0) {
+    const re = rent * 12 - (nonRec + maint) * 12;
+    const q = 1 + lz, qn = Math.pow(q, rnd), bf = (qn - 1) / (qn * (q - 1));
+    ertragswert = r2(landValue + Math.max(0, re - landValue * lz) * bf);
+  }
+  const yr = n(i.yearBuilt), ec = String(i.energyClass || '').toUpperCase();
+  const hints = [];
+  if (yr > 0 && yr < 1978) hints.push('Baujahr vor der ersten Wärmeschutzverordnung (1977): energetischen Zustand und Sanierungsstand prüfen.');
+  if (['F', 'G', 'H'].includes(ec)) hints.push(`Effizienzklasse ${ec}: höhere Energiekosten und mögliche Modernisierungspflichten nach GEG einplanen.`);
+  if (n(i.maintenanceQm) < 1) hints.push('Instandhaltung unter 1,00 €/m² und Monat angesetzt – eher knapp.');
+  if (rentIst > 0 && rentMarket > 0 && i.mietpreisbremse && rentIst > rentMarket * 1.1) hints.push('Ist-Miete liegt über Vergleichsmiete + 10 %: Mietpreisbremse (§ 556d BGB) und Ausnahmen prüfen.');
+  if (rentIst > 0 && rentMarket > 0 && rentIst < rentMarket * 0.9) hints.push('Ist-Miete liegt deutlich unter dem Mietspiegel: Erhöhungspotenzial nach § 558 BGB (Kappungsgrenze beachten).');
+  if (!(equity >= nk.total)) hints.push('Eigenkapital deckt die Kaufnebenkosten nicht – Banken finanzieren diese selten mit.');
+  if (rate > 0 && noi / rate < 1) hints.push('Die Miete trägt die Rate nicht (DSCR unter 1,0): monatliche Zuzahlung nötig.');
+  return {
+    price, area, nebenkosten: nk.total, nkPct: nk.totalPct, allIn: nk.allIn, pricePerQm: area > 0 ? r2(price / area) : null, allInPerQm: area > 0 ? r2(nk.allIn / area) : null,
+    rent: r2(rent), rentSource: rentIst > 0 ? 'ist' : rentMarket > 0 ? 'mietspiegel' : 'keine', rentPerQm: area > 0 && rent > 0 ? r2(rent / area) : null,
+    rentMarket: rentMarket ? r2(rentMarket) : null, rentCap: rentMarket && i.mietpreisbremse ? r2(rentMarket * 1.1) : null,
+    rentGapPct: rentIst > 0 && rentMarket > 0 ? Math.round(((rentMarket - rentIst) / rentIst) * 1000) / 10 : null,
+    factor: rent > 0 ? Math.round((price / (rent * 12)) * 10) / 10 : null, grossYield: pct(rent * 12, price), netYield: pct(noi * 12, nk.allIn),
+    loan: r2(loan), ltv: pct(loan, price), rate: r2(rate), interestM: r2(interestM), principalM: r2(principalM), noi: r2(noi), cashflow: r2(cf),
+    dscr: dec(noi, rate), icr: dec(noi, interestM), debtYield: pct(noi * 12, loan), cashOnCash: pct(cf * 12, equity), equityReturn: pct((cf + principalM) * 12, equity),
+    kippZins: loan > 0 ? Math.round(((noi * 12) / loan - tilg) * 10000) / 100 : null,
+    rateStress: loan > 0 ? r2(monthlyRate(loan, ratePa + 0.02, tilg)) : null,
+    rentBreakEven: needRent(rate), rentDscr12: needRent(rate * 1.2), rentYield5: r2((nk.allIn * 0.05) / 12 / Math.max(0.0001, 1 - vac) + (nonRec + maint) / Math.max(0.0001, 1 - vac)),
+    restAfterFixed: plan ? plan.restAtFixed : null, payoffYears: plan?.months ? Math.round((plan.months / 12) * 10) / 10 : null,
+    afa: r2(afa), taxable: r2(taxable), tax: r2(tax), cashflowAfterTax: r2(cf - tax / 12),
+    ertragswert, ertragswertGapPct: ertragswert ? Math.round(((price - ertragswert) / ertragswert) * 1000) / 10 : null,
+    hints,
+  };
+}
+
+// ---------- Portal-Links (nur an öffentlich indexierten Portalseiten geprüfte URL-Formate, Stand Oktober 2026) ----------
+// Es wird nichts von den Portalen geladen; die Links öffnen die Suche beim jeweiligen Portal.
+const slug = (t) => String(t).trim().toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+  .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+const CITY_STATES = new Set(['berlin', 'hamburg', 'bremen']);
+
+export function portalLinks({ land, kreis, ort, art, maxPrice, minArea, minRooms }) {
+  const o = slug(ort), k = slug(kreis);
+  const out = [];
+  // ImmoScout24: /Suche/de/{land}[/{kreis}-kreis]/{ort}/{typ}?price=-X.0&livingspace=Y.0-&numberofrooms=Z.0-
+  {
+    let path = `/Suche/de/${land}`;
+    if (CITY_STATES.has(land)) path += `/${land}`;
+    else if (o) path += (k ? `/${k.endsWith('kreis') ? k : `${k}-kreis`}` : '') + `/${o}`;
+    const type = art === 'haus' ? 'haus-kaufen' : art === 'mfh' ? 'mehrfamilienhaeuser' : 'wohnung-kaufen';
+    const q = new URLSearchParams();
+    if (art !== 'mfh') {
+      if (minArea > 0) q.set('livingspace', `${minArea.toFixed(1)}-`);
+      if (minRooms > 0) q.set('numberofrooms', `${minRooms.toFixed(1)}-`);
+      if (maxPrice > 0) q.set('price', `-${maxPrice.toFixed(1)}`);
+    }
+    out.push({ name: 'ImmoScout24', url: `https://www.immobilienscout24.de${path}/${type}${q.toString() ? '?' + q.toString() : ''}`,
+      filters: art === 'mfh' ? 'Ort und Objektart; Preis, Fläche und Zimmer bitte im Portal setzen.' : 'Ort, Objektart, Höchstpreis, Mindestfläche, Mindestzimmer.' });
+  }
+  // Immowelt: /suche/{ort}/{wohnungen|haeuser}/kaufen?roomi=Z  bzw. /suche/bl-{land}/…
+  {
+    const type = art === 'wohnung' ? 'wohnungen' : 'haeuser';
+    const where = o || `bl-${land}`;
+    const q = minRooms > 0 ? `?roomi=${Math.floor(minRooms)}` : '';
+    out.push({ name: 'Immowelt', url: `https://www.immowelt.de/suche/${where}/${type}/kaufen${q}`,
+      filters: `Ort${o ? '' : ' (Bundesland)'}, Objektart${minRooms > 0 ? ', Mindestzimmer' : ''}${art === 'mfh' ? ' (Häuser; Mehrfamilienhaus im Portal wählen)' : ''}; Preis und Fläche bitte im Portal setzen.` });
+  }
+  // Kleinanzeigen: /s-{wohnung|haus}-kaufen/{stichwort}/k0c{196|208}
+  {
+    const cat = art === 'wohnung' ? ['s-wohnung-kaufen', 'c196'] : ['s-haus-kaufen', 'c208'];
+    const kw = [art === 'mfh' ? 'mehrfamilienhaus' : '', ort.trim()].filter(Boolean).join(' ').toLowerCase().replace(/\s+/g, '-');
+    out.push({ name: 'Kleinanzeigen', url: `https://www.kleinanzeigen.de/${cat[0]}/${encodeURIComponent(kw || 'deutschland')}/k0${cat[1]}`,
+      filters: 'Kategorie und Ort als Stichwort; weitere Filter bitte im Portal setzen.' });
+  }
+  return out;
+}
+

@@ -8,5 +8,6 @@ Disallow: /pruefen
 Disallow: /verify/
 Disallow: /p/
 Disallow: /partner
+Disallow: /intern
 
 Sitemap: https://immoadv.de/sitemap.xml

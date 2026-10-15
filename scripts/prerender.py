@@ -13,7 +13,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent / 'public'
 SKIP = {'index.html', 'auth-login.html', 'offline.html'}
-SKIP_DIRS = {'datenraum', 'pruefen', 'partner', 'auth', 'src', 'data', 'brand'}
+SKIP_DIRS = {'intern', 'og', 'datenraum', 'pruefen', 'partner', 'auth', 'src', 'data', 'brand'}
 
 
 def pages():

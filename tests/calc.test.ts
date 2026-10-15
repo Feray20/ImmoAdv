@@ -260,3 +260,39 @@ test('mieterhoehung: Kappungsgrenze, Vergleichsmiete, Wirksamkeit', async () => 
   assert.equal(early.sendUsed, '2026-12-15');
   assert.equal(early.effective, '2027-03-15'); // 15 Monate nach letzter Erhöhung
 });
+
+test('analyse: Kernkennzahlen, Mietspiegel, Break-even, Hinweise', async () => {
+  const { analyse } = await import('../public/src/calc.mjs');
+  const a = analyse({ price: 300000, area: 75, land: 'hessen', brokerPct: 3.57, rent: 1000, vergleichQm: 14, mietpreisbremse: true, vacancyPct: 2,
+    nonRecoverable: 60, maintenanceQm: 1, equity: 60000, ratePct: 3.5, repaymentPct: 2, buildingSharePct: 75, afaPct: 2, taxPct: 42, yearBuilt: 1970, energyClass: 'G' })!;
+  assert.equal(a.pricePerQm, 4000);
+  assert.equal(a.rentMarket, 1050);
+  assert.equal(a.rentCap, 1155);
+  assert.equal(a.factor, 25);
+  assert.equal(a.grossYield, 4);
+  assert.equal(a.loan, 274710);
+  // Break-even-Miete = (Rate + 60 + 75) / 0,98
+  assert.ok(Math.abs(a.rentBreakEven! - (a.rate + 135) / 0.98) < 0.02);
+  assert.ok(a.hints.some((h) => h.includes('1977')));
+  assert.ok(a.hints.some((h) => h.includes('Effizienzklasse G')));
+  const m = analyse({ price: 300000, area: 75, land: 'hessen', vergleichQm: 14, equity: 50000, ratePct: 3.5, repaymentPct: 2 })!;
+  assert.equal(m.rentSource, 'mietspiegel');
+  assert.equal(m.rent, 1050);
+  assert.equal(analyse({ price: 0, land: 'hessen' }), null);
+});
+
+test('portalLinks: geprüfte URL-Formate der Portale', async () => {
+  const { portalLinks } = await import('../public/src/calc.mjs');
+  const w = portalLinks({ land: 'hessen', kreis: '', ort: 'Frankfurt am Main', art: 'wohnung', maxPrice: 300000, minArea: 40, minRooms: 2 });
+  assert.equal(w[0].url, 'https://www.immobilienscout24.de/Suche/de/hessen/frankfurt-am-main/wohnung-kaufen?livingspace=40.0-&numberofrooms=2.0-&price=-300000.0');
+  assert.equal(w[1].url, 'https://www.immowelt.de/suche/frankfurt-am-main/wohnungen/kaufen?roomi=2');
+  assert.equal(w[2].url, 'https://www.kleinanzeigen.de/s-wohnung-kaufen/frankfurt-am-main/k0c196');
+  const h = portalLinks({ land: 'hessen', kreis: 'Offenbach', ort: 'Langen (Hessen)', art: 'haus', maxPrice: 0, minArea: 0, minRooms: 0 });
+  assert.equal(h[0].url, 'https://www.immobilienscout24.de/Suche/de/hessen/offenbach-kreis/langen-hessen/haus-kaufen');
+  assert.equal(h[1].url, 'https://www.immowelt.de/suche/langen-hessen/haeuser/kaufen');
+  const k = portalLinks({ land: 'nordrhein-westfalen', kreis: '', ort: 'Köln', art: 'mfh', maxPrice: 0, minArea: 0, minRooms: 0 });
+  assert.equal(k[0].url, 'https://www.immobilienscout24.de/Suche/de/nordrhein-westfalen/koeln/mehrfamilienhaeuser');
+  assert.equal(k[2].url, 'https://www.kleinanzeigen.de/s-haus-kaufen/mehrfamilienhaus-k%C3%B6ln/k0c208');
+  const b = portalLinks({ land: 'berlin', kreis: '', ort: 'Berlin', art: 'wohnung', maxPrice: 0, minArea: 0, minRooms: 0 });
+  assert.equal(b[0].url, 'https://www.immobilienscout24.de/Suche/de/berlin/berlin/wohnung-kaufen');
+});

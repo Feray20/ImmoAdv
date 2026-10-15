@@ -169,5 +169,5 @@ for (const p of PAGES) {
 const indexable = results.filter((p) => !p.noindex);
 const prio = (p) => (p.path === '/' ? '1.0' : p.path.split('/').length > 3 ? '0.6' : ['/impressum', '/datenschutz', '/nutzungsbedingungen', '/kuendigen'].includes(p.path) ? '0.3' : '0.8');
 write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${indexable.map((p) => `  <url><loc>${ORIGIN}${p.path === '/' ? '/' : p.path}</loc><lastmod>${today}</lastmod><priority>${prio(p)}</priority></url>`).join('\n')}\n</urlset>\n`);
-write('robots.txt', `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app/\nDisallow: /auth/\nDisallow: /datenraum\nDisallow: /pruefen\nDisallow: /verify/\nDisallow: /p/\nDisallow: /partner\n\nSitemap: ${ORIGIN}/sitemap.xml\n`);
+write('robots.txt', `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app/\nDisallow: /auth/\nDisallow: /datenraum\nDisallow: /pruefen\nDisallow: /verify/\nDisallow: /p/\nDisallow: /partner\nDisallow: /intern\n\nSitemap: ${ORIGIN}/sitemap.xml\n`);
 console.log(`SEO: ${results.length} Seiten, ${indexable.length} in der Sitemap`);
