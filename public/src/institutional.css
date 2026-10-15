@@ -104,3 +104,7 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 .calc-pages{display:grid;gap:18px}
 .calc-pages h2{font-size:18px;margin:0 0 6px}
 .calc-out{margin-top:10px}
+
+/* Footer: vier Spalten passen mobil nicht in 1fr 1fr mit 50px Abstand */
+.footer-grid>div{min-width:0}
+@media (max-width:640px){.footer-grid{grid-template-columns:1fr 1fr;gap:24px 16px}.footer-grid>div:first-child{grid-column:1/-1}}
