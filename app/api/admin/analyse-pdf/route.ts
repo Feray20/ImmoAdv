@@ -1,0 +1,45 @@
+import { createHash, randomUUID } from 'node:crypto';
+import { NextResponse } from 'next/server';
+import { renderToBuffer } from '@react-pdf/renderer';
+import { createElement } from 'react';
+import { z } from 'zod';
+import { userFromRequest } from '@/lib/billing/auth';
+import { allowRequest } from '@/lib/security/rate-limit';
+import { ReportDocument } from '@/lib/pdf/report';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const str = (max: number) => z.string().max(max);
+const Pair = z.tuple([str(120), str(120)]);
+const Body = z.object({
+  title: str(160).min(1),
+  subtitle: str(200).optional(),
+  url: z.string().max(600).regex(/^https:\/\/\S+$/).optional().or(z.literal('')),
+  chips: z.array(Pair).max(12),
+  sections: z.array(z.object({ title: str(80), rows: z.array(Pair).max(14) })).max(8),
+  hints: z.array(str(300)).max(10),
+});
+
+const isAdmin = (email: string) => (process.env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).includes(email.toLowerCase());
+
+// Objekt-Analyse als PDF (interner Bereich). Rendert ausschließlich die übergebenen, bereits berechneten Werte.
+export async function POST(req: Request) {
+  const user = await userFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Bitte anmelden.' }, { status: 401 });
+  if (!isAdmin(user.email)) return NextResponse.json({ error: 'Kein Zugriff.' }, { status: 403 });
+  if (!allowRequest(`analyse-pdf:${user.id}`, 10, 60_000)) return NextResponse.json({ error: 'Zu viele Anfragen.' }, { status: 429 });
+  const parsed = Body.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: 'Ungültige Daten.' }, { status: 400 });
+  const r = { ...parsed.data, url: parsed.data.url || undefined };
+  const dataHash = createHash('sha256').update(JSON.stringify(r)).digest('hex');
+  try {
+    const el = createElement(ReportDocument, { r, reportId: randomUUID(), createdAt: new Date().toISOString(), hash: dataHash }) as unknown as Parameters<typeof renderToBuffer>[0];
+    const pdf = await renderToBuffer(el);
+    const name = `ImmoAdv_Analyse_${r.title.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}.pdf`;
+    return new NextResponse(new Uint8Array(pdf), { status: 200, headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(name)}`, 'Cache-Control': 'no-store' } });
+  } catch (e) {
+    console.error('analyse_pdf_error', e instanceof Error ? e.message : e);
+    return NextResponse.json({ error: 'PDF konnte nicht erstellt werden.' }, { status: 500 });
+  }
+}

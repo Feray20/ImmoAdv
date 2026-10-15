@@ -108,10 +108,14 @@ function renderAnalyse() {
   </div><p class="form-note">Bodenwert: Bodenrichtwert × Grundstücksanteil (BORIS des Landes). Liegenschaftszins und Restnutzungsdauer: Grundstücksmarktbericht des Gutachterausschusses.</p></article>
   </div>
   <div class="an-out" id="a_out"></div>
+  <p class="an-actions" id="a_actions" hidden><button class="btn btn-dark" id="a_keep" type="button">In Merkliste</button> <button class="btn btn-outline" id="a_pdf" type="button">Analyse als PDF</button> <button class="btn btn-outline" id="a_save" type="button">Als Objekt im Konto speichern</button> <button class="btn btn-ghost" id="a_print" type="button">Drucken</button> <span class="form-note" id="a_msg" role="status"></span></p>
 </section>`;
 }
 
 const PENDING = 'ia-pending-object';
+const LIST = 'ia-intern-list-v1';
+let last = null;
+const token = () => { try { return JSON.parse(localStorage.getItem(SESSION) || 'null')?.access_token || ''; } catch { return ''; } };
 function updateAnalyse() {
   const ort = val('a_addr');
   $('a_mslink').innerHTML = `Mietspiegel: Wert aus dem offiziellen Mietspiegel der Gemeinde übernehmen${ort ? ` – <a class="ck-link" href="https://www.google.com/search?q=${encodeURIComponent('Mietspiegel ' + ort)}" target="_blank" rel="noopener noreferrer">Mietspiegel ${esc(ort)} suchen ↗</a>` : ''}. Ohne Wert rechnet die Analyse mit der Ist-Miete.`;
@@ -120,32 +124,59 @@ function updateAnalyse() {
     buildingSharePct: num('a_bs'), afaPct: Number(val('a_afa')), taxPct: num('a_tax'), landValue: num('a_lv'), capRatePct: num('a_lz'), remainingLife: num('a_rnd'), yearBuilt: num('a_year'), energyClass: val('a_ec') });
   const url = val('a_url').trim();
   const okUrl = /^https:\/\/[^\s]+$/i.test(url);
-  if (!a) { $('a_bar').innerHTML = '<p class="form-note">Kaufpreis eintragen – die Leiste füllt sich sofort.</p>'; $('a_out').innerHTML = ''; return; }
+  if (!a) { $('a_bar').innerHTML = '<p class="form-note">Kaufpreis eintragen – die Leiste füllt sich sofort.</p>'; $('a_out').innerHTML = ''; $('a_actions').hidden = true; last = null; return; }
   const chip = (label, v, cls = '') => `<div class="an-chip ${cls}"><small>${label}</small><strong>${v}</strong></div>`;
   $('a_bar').innerHTML = `<div class="an-head"><div><strong>${esc(ort || 'Objekt ohne Adresse')}</strong><span>${esc(val('a_art'))}${num('a_area') ? ` · ${D(num('a_area'), 0)} m²` : ''}${num('a_rooms') ? ` · ${D(num('a_rooms'), 1)} Zi.` : ''}${num('a_year') ? ` · Bj. ${num('a_year')}` : ''}</span></div>${okUrl ? `<a class="btn btn-outline" href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow">Inserat öffnen ↗</a>` : ''}</div>
   <div class="an-chips">${chip('Kaufpreis', E(a.price))}${chip('€/m²', a.pricePerQm ? E(a.pricePerQm) : '–')}${chip('Kaufpreisfaktor', a.factor ?? '–', a.factor == null ? 'na' : a.factor <= 22 ? 'ok' : a.factor <= 28 ? 'warn' : 'bad')}
   ${chip('Bruttorendite', P(a.grossYield), a.grossYield == null ? 'na' : '')}${chip('Cashflow v. St.', E2(a.cashflow), a.rent ? (a.cashflow >= 0 ? 'ok' : 'bad') : 'na')}${chip('Cashflow n. St.', E2(a.cashflowAfterTax), a.rent ? (a.cashflowAfterTax >= 0 ? 'ok' : 'warn') : 'na')}
   ${chip('DSCR', a.dscr == null ? '–' : D(a.dscr), tone(a.dscr, 1.2, 1))}${chip('Mindestkapital', E(a.nebenkosten), num('a_eq') >= a.nebenkosten ? 'ok' : 'bad')}</div>
   <p class="form-note an-src">Miete: ${a.rentSource === 'ist' ? 'Ist-Miete' : a.rentSource === 'mietspiegel' ? 'Mietspiegel × Fläche (keine Ist-Miete angegeben)' : 'nicht angegeben – Rendite und Cashflow nicht aussagekräftig'}. Ampelgrenzen beim Faktor (≤ 22 grün, ≤ 28 gelb) sind ImmoAdv-Annahmen.</p>`;
-  const sec = (title, rows) => `<article class="dash-card"><h3>${title}</h3>${table(rows)}</article>`;
-  $('a_out').innerHTML = `<div class="an-grid">
-  ${sec('Kosten und Kapital', [['Kaufnebenkosten', `${E(a.nebenkosten)} (${P(a.nkPct)})`], ['Gesamtkosten', E(a.allIn)], ['Gesamtkosten je m²', a.allInPerQm ? E(a.allInPerQm) : '–'],
-    ['Mindestkapital (Nebenkosten)', E(a.nebenkosten)], ['Empfohlen (+ 10 % Kaufpreis)', E(a.nebenkosten + a.price * 0.1)], ['Darlehen / Beleihung', `${E(a.loan)} · ${P(a.ltv, 1)} vom Kaufpreis`]])}
-  ${sec('Miete und Mietrecht', [['Angesetzte Miete', `${E2(a.rent)} (${a.rentPerQm ? E2(a.rentPerQm) + '/m²' : '–'})`], ['Miete laut Mietspiegel', a.rentMarket ? E2(a.rentMarket) : 'kein Wert eingetragen'],
-    ['Abstand Ist zu Mietspiegel', a.rentGapPct == null ? '–' : `${a.rentGapPct > 0 ? '+' : ''}${D(a.rentGapPct, 1)} % Potenzial`], ['Obergrenze Mietpreisbremse (Neuvermietung)', a.rentCap ? E2(a.rentCap) : 'nicht relevant / keine Angabe'],
-    ['Break-even-Miete (Cashflow 0)', E2(a.rentBreakEven)], ['Miete für DSCR 1,2', E2(a.rentDscr12)], ['Miete für 5 % Nettorendite', E2(a.rentYield5)]])}
-  ${sec('Rendite', [['Bruttomietrendite', P(a.grossYield)], ['Nettomietrendite (auf Gesamtkosten)', P(a.netYield)], ['Kaufpreisfaktor', a.factor ?? '–'], ['Cash-on-Cash (Cashflow / EK)', P(a.cashOnCash)],
-    ['Eigenkapitalrendite inkl. Tilgung', P(a.equityReturn)], ['Reinertrag (NOI) pro Monat', E2(a.noi)]])}
-  ${sec('Finanzierung und Risiko', [['Monatsrate', `${E2(a.rate)} (Zins ${E2(a.interestM)}, Tilgung ${E2(a.principalM)})`], ['DSCR (Kapitaldienstdeckung)', a.dscr == null ? '–' : D(a.dscr)], ['ICR (Zinsdeckung)', a.icr == null ? '–' : D(a.icr)],
-    ['Debt Yield', P(a.debtYield)], ['Kipp-Zins (Cashflow 0 nach Zinsbindung)', P(a.kippZins)], ['Rate bei +2 Prozentpunkten', E2(a.rateStress)], ['Restschuld nach Zinsbindung', E(a.restAfterFixed)], ['Volltilgung nach (gleicher Zins)', a.payoffYears ? `${D(a.payoffYears, 1)} Jahren` : '–']])}
-  ${sec('Steuer (Jahr 1, Modell)', [['AfA pro Jahr', E(a.afa)], ['Steuerliches Ergebnis', E(a.taxable)], [a.tax < 0 ? 'Steuervorteil (Erstattung)' : 'Steuerlast', E(Math.abs(a.tax))], ['Steuereffekt pro Monat', E2(-a.tax / 12)], ['Cashflow nach Steuern pro Monat', E2(a.cashflowAfterTax)]])}
-  ${sec('Wert', [['Ertragswert (vereinfacht, ImmoWertV)', a.ertragswert ? E(a.ertragswert) : 'Bodenwert, Liegenschaftszins und Restnutzungsdauer eintragen'], ['Kaufpreis zum Ertragswert', a.ertragswertGapPct == null ? '–' : `${a.ertragswertGapPct > 0 ? '+' : ''}${D(a.ertragswertGapPct, 1)} %`]])}
-  </div>
+  const SECTIONS = [
+    { title: 'Kosten und Kapital', rows: [['Kaufnebenkosten', `${E(a.nebenkosten)} (${P(a.nkPct)})`], ['Gesamtkosten', E(a.allIn)], ['Gesamtkosten je m²', a.allInPerQm ? E(a.allInPerQm) : '–'],
+      ['Mindestkapital (Nebenkosten)', E(a.nebenkosten)], ['Empfohlen (+ 10 % Kaufpreis)', E(a.nebenkosten + a.price * 0.1)], ['Darlehen / Beleihung', `${E(a.loan)} · ${P(a.ltv, 1)} vom Kaufpreis`]] },
+    { title: 'Miete und Mietrecht', rows: [['Angesetzte Miete', `${E2(a.rent)} (${a.rentPerQm ? E2(a.rentPerQm) + '/m²' : '–'})`], ['Miete laut Mietspiegel', a.rentMarket ? E2(a.rentMarket) : 'kein Wert eingetragen'],
+      ['Abstand Ist zu Mietspiegel', a.rentGapPct == null ? '–' : `${a.rentGapPct > 0 ? '+' : ''}${D(a.rentGapPct, 1)} % Potenzial`], ['Obergrenze Mietpreisbremse', a.rentCap ? E2(a.rentCap) : 'nicht relevant / keine Angabe'],
+      ['Break-even-Miete (Cashflow 0)', E2(a.rentBreakEven)], ['Miete für DSCR 1,2', E2(a.rentDscr12)], ['Miete für 5 % Nettorendite', E2(a.rentYield5)]] },
+    { title: 'Rendite', rows: [['Bruttomietrendite', P(a.grossYield)], ['Nettomietrendite (auf Gesamtkosten)', P(a.netYield)], ['Kaufpreisfaktor', a.factor == null ? '–' : D(a.factor, 1)], ['Cash-on-Cash (Cashflow / EK)', P(a.cashOnCash)],
+      ['Eigenkapitalrendite inkl. Tilgung', P(a.equityReturn)], ['Reinertrag (NOI) pro Monat', E2(a.noi)]] },
+    { title: 'Finanzierung und Risiko', rows: [['Monatsrate', `${E2(a.rate)} (Zins ${E2(a.interestM)}, Tilgung ${E2(a.principalM)})`], ['DSCR (Kapitaldienstdeckung)', a.dscr == null ? '–' : D(a.dscr)], ['ICR (Zinsdeckung)', a.icr == null ? '–' : D(a.icr)],
+      ['Debt Yield', P(a.debtYield)], ['Kipp-Zins (Cashflow 0 nach Zinsbindung)', P(a.kippZins)], ['Rate bei +2 Prozentpunkten', E2(a.rateStress)], ['Restschuld nach Zinsbindung', E(a.restAfterFixed)], ['Volltilgung nach (gleicher Zins)', a.payoffYears ? `${D(a.payoffYears, 1)} Jahren` : '–']] },
+    { title: 'Steuer (Jahr 1, Modell)', rows: [['AfA pro Jahr', E(a.afa)], ['Steuerliches Ergebnis', E(a.taxable)], [a.tax < 0 ? 'Steuervorteil (Erstattung)' : 'Steuerlast', E(Math.abs(a.tax))], ['Steuereffekt pro Monat', E2(-a.tax / 12)], ['Cashflow nach Steuern pro Monat', E2(a.cashflowAfterTax)]] },
+    { title: 'Wert', rows: [['Ertragswert (vereinfacht, ImmoWertV)', a.ertragswert ? E(a.ertragswert) : 'Bodenwert, Liegenschaftszins und RND fehlen'], ['Kaufpreis zum Ertragswert', a.ertragswertGapPct == null ? '–' : `${a.ertragswertGapPct > 0 ? '+' : ''}${D(a.ertragswertGapPct, 1)} %`]] },
+  ];
+  last = { a, ort, url: okUrl ? url : '', sections: SECTIONS,
+    chips: [['Kaufpreis', E(a.price)], ['€/m²', a.pricePerQm ? E(a.pricePerQm) : '–'], ['Kaufpreisfaktor', a.factor == null ? '–' : D(a.factor, 1)], ['Bruttorendite', P(a.grossYield)],
+      ['Cashflow v. St.', E2(a.cashflow)], ['Cashflow n. St.', E2(a.cashflowAfterTax)], ['DSCR', a.dscr == null ? '–' : D(a.dscr)], ['Mindestkapital', E(a.nebenkosten)]],
+    subtitle: `${val('a_art')}${num('a_area') ? ` · ${D(num('a_area'), 0)} m²` : ''}${num('a_rooms') ? ` · ${D(num('a_rooms'), 1)} Zimmer` : ''}${num('a_year') ? ` · Baujahr ${num('a_year')}` : ''} · ${GREST[val('a_land')].name}` };
+  $('a_out').innerHTML = `<div class="an-grid">${SECTIONS.map((x) => `<article class="dash-card"><h3>${x.title}</h3>${table(x.rows.map((r) => [esc(r[0]), esc(r[1])]))}</article>`).join('')}</div>
   ${a.hints.length ? `<article class="dash-card"><h3>Hinweise</h3><ul class="plain-list">${a.hints.map((h) => `<li>${esc(h)}</li>`).join('')}</ul></article>` : ''}
-  <p class="an-actions"><button class="btn btn-dark" id="a_save" type="button">Als Objekt im Konto speichern</button> <button class="btn btn-outline" id="a_print" type="button">Drucken / PDF</button></p>
   <p class="faq-disclaimer">Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Rechts-, Steuer- oder Finanzierungsberatung gem. § 34i GewO / KWG. Alle Werte beruhen auf Ihren Eingaben; Inseratsinhalte werden nicht übernommen.</p>`;
+  $('a_actions').hidden = false;
+}
+
+function bindActions() {
   $('a_print').onclick = () => window.print();
+  $('a_keep').onclick = () => {
+    if (!last) return; const { a, ort } = last;
+    const inputs = {}; root.querySelectorAll('.an input, .an select').forEach((el) => { inputs[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
+    const item = { id: Date.now().toString(36), at: new Date().toISOString(), name: ort || 'Objekt ohne Adresse', url: last.url, inputs,
+      k: { price: a.price, pqm: a.pricePerQm, factor: a.factor, gross: a.grossYield, cf: a.cashflow, cfat: a.cashflowAfterTax, dscr: a.dscr, minCap: a.nebenkosten } };
+    const list = readList(); list.unshift(item); writeList(list.slice(0, 50)); renderList(); $('a_msg').textContent = ' In der Merkliste gespeichert (nur in diesem Browser).';
+  };
+  $('a_pdf').onclick = async () => {
+    if (!last) return; const { a } = last;
+    const b = $('a_pdf'); b.disabled = true; $('a_msg').textContent = ' PDF wird erstellt …';
+    try {
+      const body = { title: last.ort || 'Objekt-Analyse', subtitle: last.subtitle, url: last.url, chips: last.chips, sections: last.sections, hints: a.hints };
+      const r = await fetch('/api/admin/analyse-pdf', { method: 'POST', headers: { Authorization: 'Bearer ' + token(), 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw Error(j.error || 'PDF fehlgeschlagen.'); }
+      const blob = await r.blob(), l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = 'ImmoAdv_Analyse.pdf'; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(l.href), 5000);
+      $('a_msg').textContent = ' PDF erstellt.';
+    } catch (e) { $('a_msg').textContent = ' ' + e.message; }
+    b.disabled = false;
+  };
   $('a_save').onclick = () => {
+    if (!last) return; const { a, ort } = last;
     const nk = kaufnebenkosten({ price: a.price, land: val('a_land'), brokerPct: num('a_broker') });
     const o = { name: (ort || 'Objekt aus Analyse').slice(0, 160), price: a.price, rent: a.rent, area: num('a_area'), yearBuilt: num('a_year'), equity: num('a_eq'), interestPct: num('a_z'), repaymentPct: num('a_t'),
       fixedYears: num('a_fix'), loan: Math.round(a.loan), nonRecoverable: num('a_nonrec'), maintenance: Math.round(num('a_mqm') * num('a_area') * 100) / 100, vacancyPct: num('a_vac'),
@@ -155,14 +186,44 @@ function updateAnalyse() {
   };
 }
 
+const readList = () => { try { return JSON.parse(localStorage.getItem(LIST) || '[]'); } catch { return []; } };
+const writeList = (l) => { try { localStorage.setItem(LIST, JSON.stringify(l)); } catch { /* ohne Speicher */ } };
+function renderList() {
+  const box = $('m_list'); if (!box) return;
+  const l = readList();
+  if (!l.length) { box.innerHTML = '<p class="form-note">Noch keine Objekte gemerkt. Analyse ausfüllen und „In Merkliste“ wählen.</p>'; return; }
+  const best = (k, hi) => { const v = l.map((x) => x.k[k]).filter((x) => x != null); return v.length > 1 ? (hi ? Math.max(...v) : Math.min(...v)) : null; };
+  const cell = (x, k, f, hi) => { const b = best(k, hi); return x.k[k] == null ? '–' : x.k[k] === b ? `<strong>${f(x.k[k])}</strong>` : f(x.k[k]); };
+  box.innerHTML = `<div class="calc-out"><table class="bill-table"><thead><tr><th>Objekt</th><th>Kaufpreis</th><th>€/m²</th><th>Faktor</th><th>Brutto</th><th>CF v. St.</th><th>CF n. St.</th><th>DSCR</th><th>Mindestkapital</th><th></th></tr></thead><tbody>${l.map((x) => `<tr><td>${x.url ? `<a class="ck-link" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer nofollow">${esc(x.name)}</a>` : esc(x.name)}<br><small class="form-note">${new Date(x.at).toLocaleDateString('de-DE')}</small></td><td>${cell(x, 'price', E, false)}</td><td>${cell(x, 'pqm', E, false)}</td><td>${cell(x, 'factor', (v) => D(v, 1), false)}</td><td>${cell(x, 'gross', (v) => P(v), true)}</td><td>${cell(x, 'cf', E2, true)}</td><td>${cell(x, 'cfat', E2, true)}</td><td>${cell(x, 'dscr', (v) => D(v), true)}</td><td>${cell(x, 'minCap', E, false)}</td><td><button class="text-btn" data-load="${x.id}" type="button">Laden</button> <button class="text-btn del" data-drop="${x.id}" type="button">Entfernen</button></td></tr>`).join('')}</tbody></table></div><p class="form-note">Fett: jeweils bester Wert. Die Merkliste liegt nur in diesem Browser.</p>`;
+  box.querySelectorAll('[data-drop]').forEach((b) => b.onclick = () => { writeList(readList().filter((x) => x.id !== b.dataset.drop)); renderList(); });
+  box.querySelectorAll('[data-load]').forEach((b) => b.onclick = () => {
+    const x = readList().find((y) => y.id === b.dataset.load); if (!x) return;
+    Object.entries(x.inputs).forEach(([id, v]) => { const el = $(id); if (!el) return; if (el.type === 'checkbox') el.checked = v; else el.value = v; });
+    updateAnalyse(); $('a_bar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+async function renderStats() {
+  const box = $('st_box'); if (!box) return;
+  try {
+    const r = await fetch('/api/admin/stats', { headers: { Authorization: 'Bearer ' + token() }, cache: 'no-store' });
+    const j = await r.json(); if (!r.ok) throw Error(j.error || 'Nicht verfügbar');
+    const n = (v) => (v == null ? '–' : v.toLocaleString('de-DE'));
+    const tile = (l, v) => `<div class="an-chip"><small>${l}</small><strong>${v}</strong></div>`;
+    const on = (b) => (b ? '<span class="st ok">aktiv</span>' : '<span class="st bad">fehlt</span>');
+    box.innerHTML = `<div class="an-chips">${tile('Konten', n(j.users))}${tile('Neu (7 Tage)', n(j.users7))}${tile('Objekte', n(j.objects))}${tile('Dokumente', n(j.docs))}${tile('Freigaben aktiv', `${n(j.sharesActive)} / ${n(j.shares)}`)}${tile('Kreditmappen', n(j.versions))}${tile('Erinnerungen an', n(j.reminders))}${tile('Offene Anforderungen', n(j.requestsOpen))}</div>
+    <p class="form-note">Einstellungen: Bezahlung ${on(j.config.billing)} · E-Mail-Versand ${on(j.config.mail)} · Täglicher Lauf ${on(j.config.cron)} · Aktive Partner: ${n(j.partners)}</p>`;
+  } catch (e) { box.innerHTML = `<p class="form-note">Übersicht nicht verfügbar: ${esc(e.message)}</p>`; }
+}
+
 (async () => {
   if (!(await gate())) return;
-  root.innerHTML = `<h1>Objektsuche und Analyse</h1><p class="form-note">Interner Bereich. Noch nicht öffentlich – zur Prüfung vor der Freigabe.</p>${renderSearch()}${renderAnalyse()}`;
+  root.innerHTML = `<h1>Interner Bereich</h1><p class="form-note">Nur für Administratoren. Noch nicht öffentlich – zur Prüfung vor der Freigabe.</p><section class="dash-card st-card"><h2>Betreiber-Übersicht</h2><div id="st_box"><p class="form-note">Wird geladen …</p></div></section><h2 class="is-h">Objektsuche</h2>${renderSearch()}${renderAnalyse()}<section class="dash-card"><h2>Merkliste</h2><div id="m_list"></div></section>`;
   const KEY = 'ia-intern-v1';
   const ids = [...root.querySelectorAll('input, select')].map((e) => e.id).filter(Boolean);
   try { const s = JSON.parse(localStorage.getItem(KEY) || '{}'); ids.forEach((id) => { if (s[id] !== undefined) { const el = $(id); if (el.type === 'checkbox') el.checked = s[id]; else el.value = s[id]; } }); } catch { /* ohne Speicher */ }
   const save = () => { try { const o = {}; ids.forEach((id) => { const el = $(id); o[id] = el.type === 'checkbox' ? el.checked : el.value; }); localStorage.setItem(KEY, JSON.stringify(o)); } catch { /* ohne Speicher */ } };
   root.addEventListener('input', (e) => { if (e.target.id?.startsWith('s_')) updateSearch(); else updateAnalyse(); save(); });
-  root.addEventListener('change', (e) => { if (e.target.id?.startsWith('s_')) updateSearch(); else updateAnalyse(); save(); });
-  updateSearch(); updateAnalyse();
+  root.addEventListener('change', (e) => { if (e.target.tagName !== 'SELECT' && e.target.type !== 'checkbox') return; if (e.target.id?.startsWith('s_')) updateSearch(); else updateAnalyse(); save(); });
+  bindActions(); updateSearch(); updateAnalyse(); renderList(); renderStats();
 })();
