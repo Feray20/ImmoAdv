@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase/admin';
+import { panicState } from '@/lib/security/panic';
 import { effectiveTier, type B2BAccount } from '@/lib/b2b/core';
 import { json } from '@/lib/b2b/http';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
+import { leadToken } from '@/lib/b2b/leadtoken';
 // Gleicher Rechenkern wie im Browser.
 import { analyse } from '@/public/src/calc.mjs';
 
@@ -47,6 +49,7 @@ export async function POST(req: Request) {
   }
   const b = parsed.data;
   if (b.website) return json({ ok: true }, 201); // Bot: stillschweigend verwerfen
+  if ((await panicState()).active) return json({ error: 'Anfragen sind vorübergehend nicht möglich (Wartung).' }, 503);
   const db = supabaseAdmin();
   const { data } = await db.from('immo_b2b_accounts').select('*').eq('slug', b.slug).maybeSingle();
   const a = data as B2BAccount | null;
@@ -78,5 +81,5 @@ export async function POST(req: Request) {
       `Verantwortlich für Ihre Daten ist ${a.company_name}; ImmoAdv verarbeitet sie nur im Auftrag. Ihre Einwilligung können Sie jederzeit gegenüber ${a.company_name} widerrufen (Kontakt: ${a.email}).\n\n` +
       'Die angezeigten Werte sind rechnerische Orientierungswerte, keine Kreditzusage.\n\nDiese E-Mail wurde automatisch versendet.');
   }
-  return json({ ok: true, id: ins.data.id }, 201);
+  return json({ ok: true, id: ins.data.id, pdf: p.price ? `/api/b2b/lead/pdf?id=${ins.data.id}&t=${leadToken(ins.data.id)}` : null }, 201);
 }

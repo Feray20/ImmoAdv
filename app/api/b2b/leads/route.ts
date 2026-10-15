@@ -5,7 +5,7 @@ import { json, requireMember } from '@/lib/b2b/http';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const COLS = 'id, source, client_name, client_email, client_phone, message, property_data, metrics, consent_at, consent_text, status, created_at';
+const COLS = 'id, source, client_name, client_email, client_phone, message, property_data, metrics, consent_at, consent_text, status, assigned_to, created_at';
 
 // Anfragen des eigenen Unternehmens (alle Mitglieder sehen die Pipeline).
 export async function GET(req: Request) {
@@ -15,6 +15,7 @@ export async function GET(req: Request) {
   const status = u.searchParams.get('status');
   let q = supabaseAdmin().from('immo_b2b_leads').select(COLS).eq('account_id', ctx.account.id).order('created_at', { ascending: false }).limit(500);
   if (status && ['neu', 'in_bearbeitung', 'abgeschlossen', 'abgelehnt'].includes(status)) q = q.eq('status', status);
+  if (u.searchParams.get('mine') === '1') q = q.eq('assigned_to', ctx.user.id);
   const { data, error } = await q;
   if (error) return json({ error: 'Anfragen konnten nicht geladen werden.' }, 500);
   if (u.searchParams.get('format') === 'csv') {
@@ -31,14 +32,30 @@ export async function GET(req: Request) {
   return json({ leads: data ?? [] });
 }
 
-const Patch = z.object({ id: z.string().uuid(), status: z.enum(['neu', 'in_bearbeitung', 'abgeschlossen', 'abgelehnt']) });
+const Patch = z.object({
+  id: z.string().uuid(),
+  status: z.enum(['neu', 'in_bearbeitung', 'abgeschlossen', 'abgelehnt']).optional(),
+  assignedTo: z.string().uuid().nullable().optional(),
+}).refine((x) => x.status !== undefined || x.assignedTo !== undefined);
 
 export async function PATCH(req: Request) {
   const ctx = await requireMember(req, { bucket: 'b2b-leads', limit: 60 });
   if (ctx instanceof Response) return ctx;
   const p = Patch.safeParse(await req.json().catch(() => null));
   if (!p.success) return json({ error: 'Ungültige Anfrage.' }, 400);
-  const { error } = await supabaseAdmin().from('immo_b2b_leads').update({ status: p.data.status }).eq('id', p.data.id).eq('account_id', ctx.account.id);
+  const db = supabaseAdmin();
+  const up: Record<string, unknown> = {};
+  if (p.data.status) up.status = p.data.status;
+  if (p.data.assignedTo !== undefined) {
+    // Zuweisung nur an Mitglieder des eigenen Unternehmens; Berater dürfen nur sich selbst zuweisen oder freigeben.
+    if (p.data.assignedTo) {
+      if (ctx.role !== 'owner' && p.data.assignedTo !== ctx.user.id) return json({ error: 'Berater können Anfragen nur sich selbst zuweisen.' }, 403);
+      const { data: m } = await db.from('immo_b2b_members').select('user_id').eq('account_id', ctx.account.id).eq('user_id', p.data.assignedTo).maybeSingle();
+      if (!m) return json({ error: 'Kein Mitglied dieses Unternehmens.' }, 400);
+    }
+    up.assigned_to = p.data.assignedTo;
+  }
+  const { error } = await db.from('immo_b2b_leads').update(up).eq('id', p.data.id).eq('account_id', ctx.account.id);
   if (error) return json({ error: 'Speichern fehlgeschlagen.' }, 500);
   return json({ ok: true });
 }

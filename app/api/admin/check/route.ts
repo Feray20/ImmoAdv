@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { userFromRequest } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { adminList, mfaRequired, tokenAal } from '@/lib/security/admin';
+import { ipAllowed, panicState } from '@/lib/security/panic';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,8 +17,10 @@ export async function GET(req: Request) {
   const list = adminList();
   const admin = list.length > 0 && list.includes(user.email.toLowerCase());
   const aal = tokenAal(req);
+  const ip = ipAllowed(req);
+  const panic = admin ? await panicState().catch(() => ({ active: false })) : { active: false };
   return NextResponse.json(
-    { admin, configured: list.length > 0, mfaRequired: mfaRequired(), aal, mfaOk: !mfaRequired() || aal === 'aal2' },
-    { status: admin ? 200 : 403, headers: h },
+    { admin: admin && ip, configured: list.length > 0, ipBlocked: admin && !ip, mfaRequired: mfaRequired(), aal, mfaOk: !mfaRequired() || aal === 'aal2', panic },
+    { status: admin && ip ? 200 : 403, headers: h },
   );
 }

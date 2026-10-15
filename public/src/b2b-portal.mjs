@@ -80,29 +80,39 @@ function vStart(box) {
 
 // ---------- Anfragen ----------
 async function vLeads(box) {
-  const r = await api('/api/b2b/leads');
+  const [r, t] = await Promise.all([api('/api/b2b/leads'), api('/api/b2b/team')]);
   if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
   const leads = r.data.leads;
+  const members = t.ok ? t.data.members : [];
+  const self = members.find((m) => m.self)?.user_id;
+  const who = (id) => members.find((m) => m.user_id === id)?.email || '';
+  const assignSel = (l) => members.length > 1 || me.role === 'owner'
+    ? `<label class="form-note">Zuständig <select data-as="${l.id}"><option value="">– niemand –</option>${members.filter((m) => me.role === 'owner' || m.self || m.user_id === l.assigned_to).map((m) => `<option value="${m.user_id}"${m.user_id === l.assigned_to ? ' selected' : ''}>${esc(m.email)}${m.self ? ' (Sie)' : ''}</option>`).join('')}</select></label>` : '';
   const n = (v) => (v == null || v === '' ? '–' : Number(v).toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' €');
-  box.innerHTML = `<div class="pt-bar"><div class="seg" role="tablist">${['alle', ...Object.keys(STATUS)].map((s, i) => `<button type="button" data-f="${s}" aria-selected="${i === 0}">${s === 'alle' ? 'Alle' : STATUS[s]}</button>`).join('')}</div>
+  box.innerHTML = `<div class="pt-bar"><div class="seg" role="tablist">${['alle', ...Object.keys(STATUS)].map((s, i) => `<button type="button" data-f="${s}" aria-selected="${i === 0}">${s === 'alle' ? 'Alle' : STATUS[s]}</button>`).join('')}<button type="button" data-f="mine" aria-selected="false">Mir zugewiesen</button></div>
     <button class="btn btn-ghost" id="csv" type="button">CSV exportieren</button></div>
     ${leads.length ? '' : '<div class="pt-empty"><strong>Noch keine Anfragen.</strong><p>Binden Sie das <a href="#werkzeuge">Widget</a> ein oder teilen Sie Ihre Partnerseite. Jede Anfrage erscheint hier mit Objektdaten und Kennzahlen.</p></div>'}
     <div class="pt-leads">${leads.map((l) => {
       const p = l.property_data || {}, m = l.metrics || {};
-      return `<article class="pt-lead" data-s="${l.status}" data-id="${l.id}">
+      return `<article class="pt-lead" data-s="${l.status}" data-a="${l.assigned_to || ''}" data-id="${l.id}">
         <header><div><strong>${esc(l.client_name)}</strong><small>${dtt(l.created_at)} · ${{ widget: 'Website-Widget', landing: 'Partnerseite', qr: 'QR-Code' }[l.source]}</small></div>
         <select data-id="${l.id}" aria-label="Status">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}"${k === l.status ? ' selected' : ''}>${v}</option>`).join('')}</select></header>
         <p><a href="mailto:${esc(l.client_email)}">${esc(l.client_email)}</a>${l.client_phone ? ` · <a href="tel:${esc(l.client_phone)}">${esc(l.client_phone)}</a>` : ''}</p>
         <dl class="pt-dl"><div><dt>Objekt</dt><dd>${esc(p.address || p.ref || '–')}</dd></div><div><dt>Kaufpreis</dt><dd>${n(p.price)}</dd></div><div><dt>Kaltmiete</dt><dd>${n(p.rent)}</dd></div><div><dt>Eigenkapital</dt><dd>${n(p.equity)}</dd></div>
         ${m.allIn ? `<div><dt>Gesamtkosten</dt><dd>${n(m.allIn)}</dd></div><div><dt>Darlehen</dt><dd>${n(m.loan)}</dd></div><div><dt>Rate</dt><dd>${n(m.rate)}</dd></div><div><dt>DSCR</dt><dd>${m.dscr ?? '–'}</dd></div>` : ''}</dl>
         ${l.message ? `<p class="pt-msg">${esc(l.message)}</p>` : ''}
+        ${assignSel(l)}${l.assigned_to && !assignSel(l) ? `<p class="form-note">Zuständig: ${esc(who(l.assigned_to))}</p>` : ''}
         <details><summary>Einwilligung</summary><p class="form-note">${dtt(l.consent_at)}: ${esc(l.consent_text)}</p></details>
         ${me.role === 'owner' ? `<button class="text-btn del" data-del="${l.id}" type="button">Löschen</button>` : ''}
       </article>`;
     }).join('')}</div>`;
   box.querySelectorAll('[data-f]').forEach((b) => b.onclick = () => {
     box.querySelectorAll('[data-f]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
-    box.querySelectorAll('.pt-lead').forEach((el) => { el.hidden = b.dataset.f !== 'alle' && el.dataset.s !== b.dataset.f; });
+    box.querySelectorAll('.pt-lead').forEach((el) => { el.hidden = b.dataset.f === 'mine' ? el.dataset.a !== self : b.dataset.f !== 'alle' && el.dataset.s !== b.dataset.f; });
+  });
+  box.querySelectorAll('select[data-as]').forEach((s2) => s2.onchange = async () => {
+    const x = await api('/api/b2b/leads', { method: 'PATCH', body: JSON.stringify({ id: s2.dataset.as, assignedTo: s2.value || null }) });
+    if (x.ok) { s2.closest('.pt-lead').dataset.a = s2.value; toast('Zuständigkeit gespeichert.'); } else toast(x.data?.error || 'Fehler', true);
   });
   box.querySelectorAll('select[data-id]').forEach((s) => s.onchange = async () => {
     const x = await api('/api/b2b/leads', { method: 'PATCH', body: JSON.stringify({ id: s.dataset.id, status: s.value }) });
@@ -223,7 +233,10 @@ function vProfil(box) {
     <section class="pt-card"><h2>Rechtliches</h2>
       <p>Unternehmer nach § 14 BGB bestätigt am ${dtt(a.unternehmerConfirmedAt)}.</p>
       <p>Auftragsverarbeitungsvertrag (Version ${esc(a.avvVersion || '')}) geschlossen am ${dtt(a.avvAcceptedAt)}.</p>
-      <button class="btn btn-ghost" id="avv" type="button">AVV als PDF</button></section>`;
+      <button class="btn btn-ghost" id="avv" type="button">AVV als PDF</button></section>
+    <section class="pt-card"><h2>Support-Zugriff</h2>
+      <p class="form-note">Für Rückfragen kann der ImmoAdv-Support Ihr Portal 7 Tage lang <strong>nur lesend</strong> einsehen, einschließlich der Anfragen. Ohne Ihre Freigabe ist das nicht möglich; jeder Zugriff wird protokolliert (Weisung nach Art. 28 DSGVO).</p>
+      <p>${a.supportAccessUntil && new Date(a.supportAccessUntil) > new Date() ? `Freigegeben bis ${dtt(a.supportAccessUntil)}. <button class="text-btn del" id="supOff" type="button">Jetzt beenden</button>` : '<button class="btn btn-ghost" id="supOn" type="button">Support-Zugriff für 7 Tage freigeben</button>'}</p></section>`;
   $('#prof').onsubmit = (e) => { e.preventDefault(); busy(e.submitter || $('#prof button'), async () => {
     const f = Object.fromEntries(new FormData(e.target));
     const body = { advisorName: f.advisorName, phone: f.phone, street: f.street, postalCode: f.postalCode, city: f.city, bookingUrl: f.bookingUrl, slug: f.slug };
@@ -232,6 +245,13 @@ function vProfil(box) {
     me.account = { ...me.account, ...r.data.account }; toast('Gespeichert.');
   }); };
   $('#avv').onclick = (e) => busy(e.target, () => download('/api/b2b/avv?pdf=1', {}, 'AVV.pdf'));
+  const sup = async (days) => {
+    const r = await api('/api/b2b/account', { method: 'PATCH', body: JSON.stringify({ supportAccessDays: days }) });
+    if (!r.ok) return toast(r.data?.error || 'Fehler', true);
+    me.account = { ...me.account, ...r.data.account }; toast(days ? 'Support-Zugriff freigegeben.' : 'Support-Zugriff beendet.'); vProfil(box);
+  };
+  if ($('#supOn')) $('#supOn').onclick = () => sup(7);
+  if ($('#supOff')) $('#supOff').onclick = () => sup(0);
   if ($('#logo')) $('#logo').onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
     if (f.size > 1024 * 1024) return toast('Das Logo ist größer als 1 MB.', true);

@@ -1,6 +1,6 @@
 // Allgemeiner, gebrandeter Bericht aus bereits formatierten Abschnitten (z. B. Objekt-Analyse).
 import { Document, Link, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
-import { BRAND, BrandFooter, BrandHeader } from '@/lib/pdf/brand';
+import { BRAND, BrandFooter, BrandHeader, type PartnerBrand } from '@/lib/pdf/brand';
 
 export type ReportInput = {
   title: string;
@@ -32,11 +32,11 @@ const s = StyleSheet.create({
   note: { marginTop: 10, fontSize: 7, color: BRAND.muted },
 });
 
-export function ReportDocument({ r, reportId, createdAt, hash }: { r: ReportInput; reportId: string; createdAt: string; hash?: string }) {
+export function ReportDocument({ r, reportId, createdAt, hash, partner, reportType = 'Objekt-Analyse' }: { r: ReportInput; reportId: string; createdAt: string; hash?: string; partner?: PartnerBrand | null; reportType?: string }) {
   return (
     <Document title={`ImmoAdv – ${r.title}`} author="ImmoAdv" language="de">
       <Page size="A4" style={s.page}>
-        <BrandHeader reportType="Objekt-Analyse" reportId={reportId} createdAt={createdAt} />
+        <BrandHeader reportType={reportType} reportId={reportId} createdAt={createdAt} partner={partner} />
         <Text style={s.title}>{r.title}</Text>
         {r.subtitle ? <Text style={s.sub}>{r.subtitle}</Text> : null}
         {r.url ? <Link src={r.url} style={s.link}>Inserat: {r.url.length > 95 ? r.url.slice(0, 95) + '…' : r.url}</Link> : null}

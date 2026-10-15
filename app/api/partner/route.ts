@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase/admin';
+import { panicState } from '@/lib/security/panic';
 import { effectiveTier, publicPartner, type B2BAccount } from '@/lib/b2b/core';
 
 export const runtime = 'nodejs';
@@ -15,6 +16,7 @@ export async function GET(req: Request) {
   if (!SLUG_RE.test(slug)) return NextResponse.json({ error: 'Partner nicht gefunden.' }, { status: 404 });
   if (!allowRequest(`partner:${anonymizedIpHash(req) ?? 'x'}`, 60, 60_000)) return NextResponse.json({ error: 'Zu viele Anfragen.' }, { status: 429 });
   if (!adminConfigured()) return NextResponse.json({ error: 'Nicht verfügbar.' }, { status: 503 });
+  if ((await panicState()).active) return NextResponse.json({ error: 'Vorübergehend nicht verfügbar (Wartung).' }, { status: 503 });
   const db = supabaseAdmin();
   const { data: acc } = await db.from('immo_b2b_accounts').select('*').eq('slug', slug).maybeSingle();
   if (acc) {

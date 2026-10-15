@@ -51,3 +51,14 @@ test('Werktage: Feiertage und Wochenenden werden übersprungen', async () => {
   assert.ok(isHoliday(new Date(Date.UTC(2026, 4, 14)))); // Christi Himmelfahrt 2026
   assert.ok(!isHoliday(new Date(Date.UTC(2026, 4, 15))));
 });
+
+test('Download-Schlüssel für die Finanzierungsübersicht: gültig, gebunden, verfällt', async () => {
+  process.env.LEAD_TOKEN_SECRET = 'test-geheimnis';
+  const { leadToken, checkLeadToken } = await import('../lib/b2b/leadtoken');
+  const id = '11111111-2222-3333-4444-555555555555';
+  const t = leadToken(id, 1_000_000);
+  assert.ok(checkLeadToken(id, t, 1_000_000 + 60_000));
+  assert.ok(!checkLeadToken('11111111-2222-3333-4444-000000000000', t, 1_000_000));
+  assert.ok(!checkLeadToken(id, t, 1_000_000 + 3 * 3600_000), 'nach 2 Stunden ungültig');
+  assert.ok(!checkLeadToken(id, t.replace(/.$/, (c) => (c === 'A' ? 'B' : 'A')), 1_000_000));
+});

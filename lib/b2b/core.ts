@@ -48,6 +48,7 @@ export type B2BAccount = {
   lead_gate: boolean;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
+  support_access_until?: string | null;
   created_at: string;
 };
 

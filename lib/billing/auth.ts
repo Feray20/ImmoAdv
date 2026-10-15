@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { panicState } from '@/lib/security/panic';
 
 // Prüft das Supabase-Zugriffstoken serverseitig und liefert den angemeldeten Nutzer.
 export type AuthUser = { id: string; email: string };
@@ -18,6 +19,18 @@ function remember(key: string, user: AuthUser, now: number) {
 }
 
 export async function userFromRequest(req: Request): Promise<AuthUser | null> {
+  const user = await verifiedUser(req);
+  if (!user) return null;
+  // Not-Aus: nur Administratoren bleiben angemeldet.
+  const panic = await panicState().catch(() => ({ active: false }));
+  if (panic.active) {
+    const admins = (process.env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+    if (!admins.includes(user.email)) return null;
+  }
+  return user;
+}
+
+async function verifiedUser(req: Request): Promise<AuthUser | null> {
   const header = req.headers.get('authorization') || '';
   if (!header.startsWith('Bearer ') || header.length < 20 || header.length > 4096) return null;
   const url = process.env.SUPABASE_URL;

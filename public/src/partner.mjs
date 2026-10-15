@@ -105,7 +105,7 @@ function render(p) {
     const d = await r.json().catch(() => ({}));
     btn.disabled = false;
     if (!r.ok) { msg.textContent = d.error || 'Senden fehlgeschlagen.'; return; }
-    $('leadBox').innerHTML = `<h2>Danke!</h2><p>Ihre Anfrage ist bei ${esc(p.name)} eingegangen. Sie werden direkt kontaktiert.</p>${p.booking ? `<p><a class="btn btn-dark" href="${esc(p.booking)}" target="_blank" rel="noopener">Gleich einen Termin buchen</a></p>` : ''}`;
+    $('leadBox').innerHTML = `<h2>Danke!</h2><p>Ihre Anfrage ist bei ${esc(p.name)} eingegangen. Sie werden direkt kontaktiert.</p>${d.pdf ? `<p><a class="btn btn-ghost" href="${esc(d.pdf)}" download>Ihre Finanzierungsübersicht (PDF)</a></p>` : ''}${p.booking ? `<p><a class="btn btn-dark" href="${esc(p.booking)}" target="_blank" rel="noopener">Gleich einen Termin buchen</a></p>` : ''}`;
     report();
   };
 }

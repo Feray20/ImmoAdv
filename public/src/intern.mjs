@@ -14,6 +14,7 @@ async function gate() {
   if (!token()) { root.innerHTML = '<h1>Interner Bereich</h1><p>Bitte zuerst <a class="ck-link" href="/auth/login?next=/intern/objektsuche">anmelden</a>.</p>'; return false; }
   const r = await api('/api/admin/check');
   if (r.status === 401) { root.innerHTML = '<h1>Interner Bereich</h1><p>Sitzung abgelaufen. Bitte neu <a class="ck-link" href="/auth/login?next=/intern/objektsuche">anmelden</a>.</p>'; return false; }
+  if (r.data?.ipBlocked) { root.innerHTML = '<h1>Kein Zugriff</h1><p>Zugriff von dieser IP-Adresse ist nicht freigegeben (ADMIN_IP_ALLOWLIST in Vercel).</p>'; return false; }
   if (!r.data?.admin) {
     root.innerHTML = `<h1>Kein Zugriff</h1><p>Dieser Bereich ist nur für Administratoren.${r.data?.configured === false ? ' (In Vercel ist noch keine Administrator-Adresse hinterlegt: Variable ADMIN_EMAILS.)' : ''}</p>`;
     return false;
@@ -57,7 +58,7 @@ async function mfa() {
 }
 
 // ---------- Rahmen ----------
-const TABS = [['cockpit', 'Finanz-Cockpit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen'], ['objekt', 'Objektsuche']];
+const TABS = [['cockpit', 'Finanz-Cockpit'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen'], ['objekt', 'Objektsuche']];
 
 function frame() {
   root.innerHTML = `<h1>Admin-Zentrale</h1><p class="form-note">Nur für Administratoren · angemeldet mit zweitem Faktor · alle Aktionen werden protokolliert.</p>
@@ -72,7 +73,7 @@ function show() {
   const v = $('#adView');
   v.innerHTML = '<p class="form-note">Wird geladen …</p>';
   msg('');
-  ({ cockpit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, objekt })[t](v);
+  ({ cockpit, sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, objekt })[t](v);
 }
 
 // ---------- Finanz-Cockpit ----------
@@ -120,6 +121,30 @@ function bindInv(v, reload) {
     const r = await api('/api/admin/invoices', { method: 'POST', body: JSON.stringify({ action: 'paid', invoiceId: b.dataset.paid }) });
     if (r.ok) { msg('Als bezahlt markiert.'); reload(); } else msg(r.data?.error || 'Fehler', true);
   });
+}
+
+// ---------- Sicherheit ----------
+async function sicherheit(v) {
+  const r = await api('/api/admin/check');
+  const p = r.data?.panic || { active: false };
+  v.innerHTML = `<section class="pt-card"><h2>Not-Aus</h2>
+    ${p.active ? `<div class="pt-alert bad"><strong>Aktiv seit ${dtt(p.since)}</strong> (${esc(p.by || '')}${p.reason ? ': ' + esc(p.reason) : ''}). Alle Nutzer außer Administratoren sind abgemeldet; Partnerseiten, Widget und Anfragen sind abgeschaltet.</div><button class="btn btn-dark" id="pOff" type="button">Not-Aus beenden</button>`
+      : `<p>Schaltet sofort alle angemeldeten Zugänge außer Administratoren ab (Anfragen an die Schnittstellen werden abgewiesen, Sitzungen wirken beendet) und stoppt Partnerseiten, Widget und Anfrage-Eingang. Für den Fall eines Sicherheitsvorfalls.</p><button class="btn btn-dark" id="pOn" type="button" style="background:#991B1B;border-color:#991B1B">Not-Aus auslösen</button>`}
+    <p class="form-note">Die Anmelde-Tokens selbst laufen nach spätestens einer Stunde ab. Für einen vollständigen Schlüsseltausch zusätzlich in Supabase den JWT-Schlüssel rotieren.</p></section>
+    <section class="pt-card"><h2>Zugangsschutz Admin</h2><ul class="plain-list">
+      <li>Zweiter Faktor: ${r.data?.mfaRequired ? '<span class="st ok">Pflicht</span>' : '<span class="st bad">abgeschaltet (ADMIN_MFA=off)</span>'}</li>
+      <li>IP-Freigabeliste: in Vercel als ADMIN_IP_ALLOWLIST (z. B. 203.0.113.7, 198.51.100.0/24). Ohne Eintrag ist jede IP zugelassen.</li>
+      <li>Anmeldeversuche: Supabase begrenzt fehlgeschlagene Anmeldungen automatisch; zusätzlich sind alle Schnittstellen je Nutzer und IP gedrosselt.</li>
+      <li>Alle Admin-Aktionen stehen im Reiter Protokoll.</li></ul></section>`;
+  const go = async (on) => {
+    const reason = on ? prompt('Grund (für das Protokoll):', 'Sicherheitsvorfall') : '';
+    if (on && reason === null) return;
+    if (!confirm(on ? 'Not-Aus jetzt auslösen?' : 'Not-Aus beenden?')) return;
+    const x = await api('/api/admin/support', { method: 'POST', body: JSON.stringify({ panic: on, reason }) });
+    if (x.ok) { msg(on ? 'Not-Aus aktiv (wirkt binnen 15 Sekunden überall).' : 'Not-Aus beendet.'); sicherheit(v); } else msg(x.data?.error || 'Fehler', true);
+  };
+  if ($('#pOn')) $('#pOn').onclick = () => go(true);
+  if ($('#pOff')) $('#pOff').onclick = () => go(false);
 }
 
 // ---------- Partner ----------
@@ -190,7 +215,16 @@ async function details(id) {
     <h3>Team</h3><p>${members.map((m) => `${esc(m.email)} (${m.role === 'owner' ? 'Inhaber' : 'Berater'})`).join(' · ') || '–'}</p>
     <h3>Anfragen (nur Anzahl und Status, Inhalte gehören dem Unternehmen)</h3><p>${leads.length} insgesamt · ${['neu', 'in_bearbeitung', 'abgeschlossen', 'abgelehnt'].map((s) => `${s.replace('_', ' ')}: ${leads.filter((l) => l.status === s).length}`).join(' · ')}</p>
     <h3>Rechnungen</h3>${invoices.length ? `<table class="ad-table"><tbody>${invoices.map((i) => `<tr><td>${esc(i.invoice_number)}</td><td>${dt(i.issue_date)}</td><td>${eur(i.gross_cents)}</td><td>${PAY[i.payment_status]}</td></tr>`).join('')}</tbody></table>` : '<p class="form-note">Keine.</p>'}
+    <h3>Support-Ansicht</h3><p class="form-note">${a.support_access_until && new Date(a.support_access_until) > new Date() ? `Vom Unternehmen freigegeben bis ${dtt(a.support_access_until)}.` : 'Nicht freigegeben. Das Unternehmen kann den lesenden Support-Zugriff im Portal unter Profil erteilen.'}</p>
+    ${a.support_access_until && new Date(a.support_access_until) > new Date() ? '<button class="btn btn-ghost" id="supView" type="button">Portal lesend ansehen (wird protokolliert)</button><div id="supOut"></div>' : ''}
     <button class="text-btn" id="detClose" type="button">Schließen</button></section>`;
+  if ($('#supView')) $('#supView').onclick = async () => {
+    const s = await api('/api/admin/support?id=' + id);
+    if (!s.ok) { $('#supOut').innerHTML = `<p class="form-note">${esc(s.data?.error)}</p>`; return; }
+    const d = s.data;
+    $('#supOut').innerHTML = `<p class="form-note">Tarif ${d.account.tier ? TIER[d.account.tier] : '–'} · Widget ${d.account.widgetActive ? 'aktiv' : 'aus'} · Domains: ${esc((d.account.allowedDomains || []).join(', ') || 'alle')}</p>
+      <div class="ad-wrap"><table class="ad-table"><thead><tr><th>Eingang</th><th>Quelle</th><th>Status</th><th>Kontakt</th><th>Objekt</th></tr></thead><tbody>${d.leads.map((l) => `<tr><td>${dtt(l.created_at)}</td><td>${esc(l.source)}</td><td>${esc(l.status)}</td><td>${esc(l.client_name)}<br><small>${esc(l.client_email)}</small></td><td>${esc(l.property_data?.address || l.property_data?.ref || '–')}</td></tr>`).join('') || '<tr><td colspan="5">Keine Anfragen.</td></tr>'}</tbody></table></div>`;
+  };
   $('#detClose').onclick = () => { box.innerHTML = ''; };
   box.scrollIntoView({ behavior: 'smooth' });
 }
