@@ -130,3 +130,17 @@ test('tilgungsplan: Zinsbindung, Volltilgung, Sondertilgung', async () => {
   assert.equal(tilgungsplan({ loan: 0, ratePa: 0.03, repaymentPa: 0.02 }), null);
   assert.ok(tilgungsplanCSV(p).startsWith('Jahr;Zinsen;Tilgung;Sondertilgung;Restschuld\r\n1;'));
 });
+
+test('budget: Rate → Darlehen → Kaufpreis inkl. Nebenkosten', async () => {
+  const { budget } = await import('../public/src/calc.mjs');
+  const b = budget({ netIncome: 4000, expenses: 2500, bufferPct: 20, equity: 60000, ratePa: 0.035, repaymentPa: 0.02, land: 'bayern' })!;
+  assert.equal(b.rate, 1200);
+  assert.ok(Math.abs(b.loan - 261818.18) < 0.01);
+  // Bayern 3,5 + 1,5 + 0,5 = 5,5 %
+  assert.ok(Math.abs(b.price * 1.055 - (b.loan + 60000)) < 0.05);
+  assert.equal(b.equityCoversNk, true);
+  const k = budget({ netIncome: 3000, expenses: 2500, rent: 800, rentSharePct: 75, objectCosts: 100, bufferPct: 0, equity: 0, ratePa: 0.04, repaymentPa: 0.02, land: 'berlin' })!;
+  assert.equal(k.rate, 1000);
+  assert.equal(k.equityCoversNk, false);
+  assert.equal(budget({ ratePa: 0.03, repaymentPa: 0.02, land: 'xx' }), null);
+});

@@ -1,3 +1,4 @@
+if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/auth/reset')!==0)location.replace('/auth/reset'+location.hash);
 // Mobiles Menü für alle Seiten: Vollbild-Blatt unter der Kopfzeile.
 // Ereignis-Delegation, damit es auch auf Seiten funktioniert, die ihren Inhalt erst per Skript aufbauen.
 (() => {

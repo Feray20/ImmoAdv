@@ -324,3 +324,23 @@ export function tilgungsplanCSV(plan) {
   const head = 'Jahr;Zinsen;Tilgung;Sondertilgung;Restschuld';
   return [head, ...plan.years.map((r) => [r.year, f(r.interest), f(r.principal), f(r.special), f(r.balance)].join(';'))].join('\r\n');
 }
+
+// ---------- Budget: Welcher Kaufpreis ist mit meiner Rate darstellbar? ----------
+// Rate = (Überschuss + angerechnete Miete − Objektkosten) × (1 − Puffer); Darlehen = Rate × 12 / (Zins + Tilgung);
+// Kaufpreis so, dass Darlehen + Eigenkapital = Kaufpreis + Kaufnebenkosten.
+export function budget({ netIncome = 0, expenses = 0, rent = 0, rentSharePct = 75, objectCosts = 0, bufferPct = 20, equity = 0, ratePa, repaymentPa, land, notaryPct = 1.5, landRegistryPct = 0.5, brokerPct = 0 }) {
+  const g = GREST[land];
+  if (!g || !(ratePa + repaymentPa > 0)) return null;
+  const surplus = netIncome - expenses + (rent * rentSharePct) / 100 - objectCosts;
+  const rate = Math.max(0, surplus * (1 - bufferPct / 100));
+  const loan = (rate * 12) / (ratePa + repaymentPa);
+  const nkPct = g.pct + notaryPct + landRegistryPct + brokerPct;
+  const price = Math.max(0, (loan + equity) / (1 + nkPct / 100));
+  const nk = (price * nkPct) / 100;
+  const plan = loan > 0 ? tilgungsplan({ loan, ratePa, repaymentPa, fixedYears: 10 }) : null;
+  return {
+    surplus: r2(surplus), rate: r2(rate), loan: r2(loan), price: r2(price), nebenkosten: r2(nk), nkPct: r2(nkPct),
+    equityCoversNk: equity >= nk, equityShare: price > 0 ? r2((equity / (price + nk)) * 100) : 0,
+    loanToPrice: price > 0 ? r2((loan / price) * 100) : 0, restAfter10: plan ? plan.restAtFixed : 0, months: plan ? plan.months : 0,
+  };
+}

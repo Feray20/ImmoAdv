@@ -65,6 +65,7 @@ module.exports = {
         { source: '/', destination: '/index.html' },
         ...STATIC_PAGES.map((p) => ({ source: `/${p}`, destination: `/${p}/index.html` })),
         { source: '/wissen/glossar', destination: '/wissen/glossar/index.html' },
+        { source: '/rechner/budget', destination: '/rechner/budget/index.html' },
         { source: '/rechner/tilgungsplan', destination: '/rechner/tilgungsplan/index.html' },
         { source: '/rechner/kaufnebenkosten', destination: '/rechner/kaufnebenkosten/index.html' },
         { source: '/rechner/kaufnebenkosten/:land', destination: '/rechner/kaufnebenkosten/:land/index.html' },
@@ -72,6 +73,8 @@ module.exports = {
         { source: '/p/:slug', destination: '/partner/index.html' },
         { source: '/auth/login', destination: '/auth-login.html' },
         { source: '/auth/register', destination: '/auth-login.html' },
+        { source: '/auth/forgot', destination: '/auth-login.html' },
+        { source: '/auth/reset', destination: '/auth-login.html' },
         { source: '/app/dashboard', destination: '/auth-login.html' },
       ],
     };

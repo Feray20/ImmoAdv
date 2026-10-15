@@ -1,5 +1,5 @@
 // Bindet Rechner, Fristen und Szenarien an den gemeinsamen Rechenkern (calc.mjs).
-import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg, tilgungsplan, tilgungsplanCSV } from './calc.mjs';
+import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg, tilgungsplan, tilgungsplanCSV, budget } from './calc.mjs';
 
 const $ = (id) => document.getElementById(id);
 const num = (id) => { const v = $(id)?.value; return v === '' || v == null ? 0 : Number(v); };
@@ -152,6 +152,29 @@ if ($('tp_out')) {
     a.href = URL.createObjectURL(new Blob(['\ufeff' + tilgungsplanCSV(plan)], { type: 'text/csv;charset=utf-8' }));
     a.download = 'ImmoAdv_Tilgungsplan.csv'; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  });
+}
+
+// Budget-Rechner
+if ($('bu_out')) {
+  const ids = ['bu_n', 'bu_a', 'bu_p', 'bu_e', 'bu_m', 'bu_s', 'bu_k', 'bu_z', 'bu_t', 'bu_land', 'bu_b'];
+  remember('budget', ids);
+  watch(ids, () => {
+    const b = budget({ netIncome: num('bu_n'), expenses: num('bu_a'), bufferPct: num('bu_p'), equity: num('bu_e'), rent: num('bu_m'), rentSharePct: num('bu_s'), objectCosts: num('bu_k'), ratePa: num('bu_z') / 100, repaymentPa: num('bu_t') / 100, land: val('bu_land'), brokerPct: num('bu_b') });
+    if (!b) { $('bu_out').innerHTML = '<p class="form-note">Bitte Zins und Tilgung eintragen.</p>'; return; }
+    if (b.rate <= 0) { $('bu_out').innerHTML = '<p class="form-note">Nach Ausgaben und Puffer bleibt kein Betrag für eine Rate. Ausgaben prüfen oder Eigenkapital erhöhen.</p>'; return; }
+    const dur = b.months ? `${Math.floor(b.months / 12)} Jahre${b.months % 12 ? ` und ${b.months % 12} Monate` : ''}` : '–';
+    $('bu_out').innerHTML = table([
+      ['Monatlicher Überschuss (inkl. angerechneter Miete)', E(b.surplus)],
+      ['Tragbare Rate nach Puffer', `<strong>${E(b.rate)}</strong>`],
+      ['Darlehen bei dieser Rate', `<strong>${E(b.loan)}</strong>`],
+      ['Kaufpreis, der damit darstellbar ist', `<strong>${E(b.price)}</strong>`],
+      [`Kaufnebenkosten (${P(b.nkPct)})`, E(b.nebenkosten)],
+      ['Eigenkapital deckt die Nebenkosten', b.equityCoversNk ? flag(true, 'ja', '') : flag(false, '', 'nein – Banken finanzieren Nebenkosten selten mit')],
+      ['Darlehen im Verhältnis zum Kaufpreis', P(b.loanToPrice, 1)],
+      ['Restschuld nach 10 Jahren', E(b.restAfter10)],
+      ['Laufzeit bis zur Volltilgung (gleicher Zins)', dur],
+    ]) + `<p><a class="ck-link" href="/rechner/tilgungsplan#tp_l=${Math.round(b.loan)}&tp_z=${num('bu_z')}&tp_t=${num('bu_t')}">Tilgungsplan zu diesem Darlehen</a> · <a class="ck-link" href="/rechner/kaufnebenkosten/${val('bu_land')}">Nebenkosten im Detail</a></p>`;
   });
 }
 
