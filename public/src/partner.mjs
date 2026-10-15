@@ -74,7 +74,7 @@ function render(p) {
           <p class="form-note" id="leadMsg" role="status"></p>
         </form></section>
     </div>
-    <p class="pp-foot">Technik: <a href="/" target="_blank" rel="noopener">ImmoAdv</a> · ${esc(p.name)} und ImmoAdv sind getrennte Unternehmen. ImmoAdv vermittelt keine Darlehen. <a href="/datenschutz" target="_blank" rel="noopener">Datenschutz</a> · <a href="/impressum" target="_blank" rel="noopener">Impressum</a></p>`;
+    ${p.disclaimer ? `<p class="pp-foot">${esc(p.disclaimer)}</p>` : ''}<p class="pp-foot">Technik: <a href="/" target="_blank" rel="noopener">ImmoAdv</a> · ${esc(p.name)} und ImmoAdv sind getrennte Unternehmen. ImmoAdv vermittelt keine Darlehen. <a href="/datenschutz" target="_blank" rel="noopener">Datenschutz</a> · <a href="/impressum" target="_blank" rel="noopener">Impressum</a></p>`;
   const $ = (id) => document.getElementById(id);
   const vals = () => ({ price: num($('c_price').value), rent: num($('c_rent').value), area: num($('c_area').value), equity: num($('c_eq').value), land: $('c_land').value, brokerPct: num($('c_broker').value), ratePct: num($('c_rate').value), repaymentPct: num($('c_tilg').value) });
   const calc = () => {

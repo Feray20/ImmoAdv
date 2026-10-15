@@ -46,6 +46,8 @@ const PatchSchema = z.object({
   widgetActive: z.boolean().optional(),
   regenerateKey: z.literal(true).optional(),
   supportAccessDays: z.union([z.literal(0), z.literal(7)]).optional(),
+  acceptSubmissions: z.boolean().optional(),
+  customDisclaimer: z.string().trim().max(600).optional(),
 });
 
 function view(a: B2BAccount, role: string) {
@@ -63,7 +65,7 @@ function view(a: B2BAccount, role: string) {
       avvAcceptedAt: a.avv_accepted_at, avvVersion: a.avv_version, unternehmerConfirmedAt: a.unternehmer_confirmed_at,
       hasLogo: Boolean(a.logo_path), brandColor: a.brand_color, bookingUrl: a.booking_url, slug: a.slug,
       widgetKey: role === 'owner' ? a.widget_key : null, widgetActive: a.widget_active, allowedDomains: a.allowed_domains, leadGate: a.lead_gate,
-      createdAt: a.created_at, supportAccessUntil: a.support_access_until ?? null,
+      createdAt: a.created_at, supportAccessUntil: a.support_access_until ?? null, acceptSubmissions: Boolean(a.accept_submissions), customDisclaimer: a.custom_disclaimer ?? null,
     },
   };
 }
@@ -173,6 +175,14 @@ export async function PATCH(req: Request) {
   if (p.widgetActive !== undefined) up.widget_active = p.widgetActive;
   if (p.regenerateKey) up.widget_key = newWidgetKey();
   // Support-Zugriff: Betreiber darf das Portal 7 Tage lesend einsehen (Auftragsverarbeitung nur auf Weisung).
+  if (p.acceptSubmissions !== undefined) {
+    if (p.acceptSubmissions && ctx.account.institution_type !== 'BANK') return json({ error: 'Einreichungen empfangen können nur Kreditinstitute.' }, 400);
+    up.accept_submissions = p.acceptSubmissions;
+  }
+  if (p.customDisclaimer !== undefined) {
+    if (p.customDisclaimer && effectiveTier(ctx.account) !== 'ENTERPRISE' && !ctx.account.has_whitelabel) return json({ error: 'Eigene Hinweistexte gibt es im Tarif Enterprise.' }, 402);
+    up.custom_disclaimer = p.customDisclaimer || null;
+  }
   if (p.supportAccessDays !== undefined) up.support_access_until = p.supportAccessDays ? new Date(Date.now() + p.supportAccessDays * 864e5).toISOString() : null;
   const db = supabaseAdmin();
   if (p.slug !== undefined && p.slug !== ctx.account.slug) {

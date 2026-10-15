@@ -49,6 +49,8 @@ export type B2BAccount = {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   support_access_until?: string | null;
+  accept_submissions?: boolean;
+  custom_disclaimer?: string | null;
   created_at: string;
 };
 
@@ -151,6 +153,7 @@ export function publicPartner(a: B2BAccount) {
     booking: tier && TIER_LIMITS[tier].landing ? a.booking_url : null,
     leadGate: a.lead_gate,
     verified: Boolean(a.verified_at),
+    disclaimer: (tier === 'ENTERPRISE' || a.has_whitelabel) && a.custom_disclaimer ? a.custom_disclaimer : null,
   };
 }
 

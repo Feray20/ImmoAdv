@@ -8,7 +8,7 @@ export const AVV_SECTIONS: { h: string; p: string[] }[] = [
     h: '1. Parteien und Gegenstand',
     p: [
       'Verantwortlicher ist das im ImmoAdv-Unternehmenskonto registrierte Unternehmen („Auftraggeber“). Auftragsverarbeiter ist ImmoAdv, Inh. Feray Korkmaz, Georg-August-Zinn-Str. 25, 64354 Reinheim („ImmoAdv“).',
-      'Gegenstand ist die Verarbeitung personenbezogener Daten, die der Auftraggeber über ImmoAdv erhebt oder dort ablegt: Anfragen über Partnerseite, Website-Widget und Exposé-QR-Codes, vom Auftraggeber angelegte Objekte, Unterlagen und Kreditmappen.',
+      'Gegenstand ist die Verarbeitung personenbezogener Daten, die der Auftraggeber über ImmoAdv erhebt oder dort ablegt: Anfragen über Partnerseite, Website-Widget und Exposé-QR-Codes, vom Auftraggeber angelegte Objekte, Unterlagen und Kreditmappen sowie deren Übermittlung an Kreditinstitute, die der Auftraggeber im Postkorb auswählt (Einreichung nur auf seine Weisung und nach seiner Bestätigung, dass die Einwilligung des Kunden vorliegt).',
       'Die Laufzeit entspricht der Laufzeit des Nutzungsvertrags über das Unternehmenskonto.',
     ],
   },

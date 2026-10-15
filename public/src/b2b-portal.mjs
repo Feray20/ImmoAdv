@@ -5,7 +5,7 @@ import { api, download, dt, dtt, esc, eur, session } from './sess.mjs';
 const root = document.getElementById('portal');
 const $ = (s, el = document) => el.querySelector(s);
 const VIEWS = [
-  ['start', 'Übersicht'], ['anfragen', 'Anfragen'], ['werkzeuge', 'Widget & QR'], ['team', 'Team'], ['profil', 'Profil'], ['tarif', 'Tarif & Rechnungen'],
+  ['start', 'Übersicht'], ['anfragen', 'Anfragen'], ['einreichungen', 'Einreichungen'], ['werkzeuge', 'Widget & QR'], ['team', 'Team'], ['profil', 'Profil'], ['tarif', 'Tarif & Rechnungen'],
 ];
 const TYPE = { BANK: 'Kreditinstitut', BROKER: 'Finanzierungsvermittler (§ 34i GewO)', REALTOR: 'Immobilienmakler (§ 34c GewO)', OTHER: 'Sonstiges Unternehmen' };
 const TIER = { BASIC: 'Makler & Vermittler Basic', PRO: 'Kanzlei & Baufi Pro', ENTERPRISE: 'Bank & Filiale Enterprise' };
@@ -36,7 +36,7 @@ function shell() {
     <section class="pt-main"><header class="pt-top"><h1 id="ptTitle"></h1>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
       ${a.status === 'locked' ? `<div class="pt-alert bad"><strong>Konto gesperrt.</strong> ${esc(a.lockReason || '')} Rechnungen und AVV bleiben abrufbar. Fragen an support@immoadv.de.</div>` : ''}
       <div id="ptView"></div></section>
-    <nav class="pt-tabs">${VIEWS.filter(([v]) => me.role === 'owner' || !['tarif', 'profil'].includes(v)).map(([v, l]) => `<a href="#${v}" data-v="${v}">${l.split(' ')[0]}</a>`).join('')}</nav>
+    <nav class="pt-tabs">${VIEWS.filter(([v]) => me.role === 'owner' || !['tarif', 'profil'].includes(v)).map(([v, l]) => `<a href="#${v}" data-v="${v}">${{ start: 'Start', einreichungen: 'Postkorb', werkzeuge: 'Widget' }[v] || l.split(' ')[0]}</a>`).join('')}</nav>
   </div>`;
 }
 
@@ -47,7 +47,7 @@ function route() {
   $('#ptTitle').textContent = VIEWS.find(([k]) => k === view)[1];
   const box = $('#ptView');
   box.innerHTML = '<p class="form-note">Wird geladen …</p>';
-  ({ start: vStart, anfragen: vLeads, werkzeuge: vTools, team: vTeam, profil: vProfil, tarif: vTarif })[view](box);
+  ({ start: vStart, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: vTeam, profil: vProfil, tarif: vTarif })[view](box);
 }
 
 // ---------- Übersicht ----------
@@ -124,6 +124,49 @@ async function vLeads(box) {
     if (x.ok) b.closest('.pt-lead').remove(); else toast(x.data?.error || 'Fehler', true);
   });
   $('#csv').onclick = (e) => busy(e.target, () => download('/api/b2b/leads?format=csv', {}, 'ImmoAdv_Anfragen.csv'));
+}
+
+// ---------- Einreichungen (Vorprüfungs-Postkorb) ----------
+const SUB = { eingegangen: 'Eingegangen', in_pruefung: 'In Prüfung', rueckfrage: 'Rückfrage', abgeschlossen: 'Abgeschlossen', abgelehnt: 'Abgelehnt' };
+async function vSubs(box) {
+  const [r, t, v] = await Promise.all([api('/api/b2b/submissions'), api('/api/b2b/submissions?view=targets'), api('/api/b2b/submissions?view=versions')]);
+  if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  const { inbox, outbox, acceptsSubmissions } = r.data;
+  const targets = t.ok ? t.data.targets : [], versions = v.ok ? v.data.versions : [];
+  const isBank = me.account.institutionType === 'BANK';
+  box.innerHTML = `
+    ${isBank ? `<section class="pt-card"><h2>Postkorb (Eingang)</h2>
+      ${acceptsSubmissions ? '' : '<p class="form-note">Ihr Institut nimmt noch keine Einreichungen an. Einschalten unter <a href="#profil">Profil</a>.</p>'}
+      ${inbox.length ? inbox.map((s) => `<article class="pt-lead"><header><div><strong>${esc(s.object_label)}</strong><small>${esc(s.from)} · ${dtt(s.created_at)}</small></div>
+        <select data-ss="${s.id}" aria-label="Status">${Object.entries(SUB).map(([k, l]) => `<option value="${k}"${k === s.status ? ' selected' : ''}>${l}</option>`).join('')}</select></header>
+        ${s.note ? `<p class="pt-msg">${esc(s.note)}</p>` : ''}
+        <p class="pt-row"><button class="btn btn-dark" data-dl="${s.id}" type="button"${s.version_id ? '' : ' disabled'}>Kreditmappe öffnen</button>${s.sha256 ? `<a class="text-btn" href="/verify/${esc(s.version_id)}" target="_blank" rel="noopener">Echtheit prüfen</a>` : ''}</p>
+        <label class="pt-field">Antwort an den Einreicher<textarea data-rp="${s.id}" rows="2" maxlength="1000">${esc(s.reply || '')}</textarea></label>
+        <button class="btn btn-ghost" data-sv="${s.id}" type="button">Status und Antwort senden</button></article>`).join('') : '<div class="pt-empty">Noch keine Einreichungen.</div>'}</section>` : ''}
+    <section class="pt-card"><h2>Kreditmappe bei einem Institut einreichen</h2>
+      ${!me.tier ? '<p class="form-note">Einreichungen gibt es ab einem gebuchten Tarif.</p>' : !targets.length ? '<p class="form-note">Derzeit nimmt noch kein Institut über ImmoAdv Einreichungen an.</p>' : !versions.length ? '<p class="form-note">Sie haben noch keine registrierte Kreditmappe. Erstellen Sie eine in der <a href="/app/dashboard#objekte">Anwendung</a>.</p>' : `
+      <form id="subF" class="obj-grid">
+        <label>Kreditmappe<select name="versionId" required>${versions.map((x) => `<option value="${x.id}">${esc(x.object_ref)} · Version ${x.version_no} · ${dt(x.created_at)}</option>`).join('')}</select></label>
+        <label>Institut<select name="targetId" required>${targets.map((x) => `<option value="${x.id}">${esc(x.name)} · ${esc(x.city)}${x.verified ? ' ✓' : ''}</option>`).join('')}</select></label>
+        <label>Bezeichnung (optional)<input name="label" maxlength="160" placeholder="z. B. ETW Darmstadt, Familie M."></label>
+        <label>Hinweis an das Institut<input name="note" maxlength="1000"></label>
+      </form>
+      <label class="consent"><input type="checkbox" id="subC"> Die Einwilligung meines Kunden zur Weitergabe dieser Kreditmappe an das gewählte Institut liegt mir vor.</label>
+      <button class="btn btn-dark" id="subGo" type="button">Einreichen</button>`}
+      <p class="form-note">Das Institut erhält die registrierte Kreditmappe (mit Echtheits-QR) und kann Status und Rückfragen setzen. Die Kreditentscheidung trifft allein das Institut.</p></section>
+    <section class="pt-card"><h2>Ihre Einreichungen</h2>${outbox.length ? `<table class="bill-table"><thead><tr><th>Objekt</th><th>Institut</th><th>Datum</th><th>Status</th><th>Antwort</th></tr></thead><tbody>${outbox.map((s) => `<tr><td>${esc(s.object_label)}</td><td>${esc(s.to)}</td><td>${dt(s.created_at)}</td><td>${SUB[s.status]}</td><td>${esc(s.reply || '–')}</td></tr>`).join('')}</tbody></table>` : '<p class="form-note">Noch keine.</p>'}</section>`;
+  box.querySelectorAll('[data-dl]').forEach((b) => b.onclick = () => busy(b, () => download('/api/b2b/submissions?id=' + b.dataset.dl, {}, 'Kreditmappe.pdf')));
+  box.querySelectorAll('[data-sv]').forEach((b) => b.onclick = () => busy(b, async () => {
+    const id = b.dataset.sv;
+    const x = await api('/api/b2b/submissions', { method: 'PATCH', body: JSON.stringify({ id, status: box.querySelector(`[data-ss="${id}"]`).value, reply: box.querySelector(`[data-rp="${id}"]`).value }) });
+    if (!x.ok) throw Error(x.data?.error); toast('Gespeichert, Einreicher wird benachrichtigt.');
+  }));
+  if ($('#subGo')) $('#subGo').onclick = (e) => busy(e.target, async () => {
+    if (!$('#subC').checked) throw Error('Bitte die Einwilligung des Kunden bestätigen.');
+    const f = Object.fromEntries(new FormData($('#subF')));
+    const x = await api('/api/b2b/submissions', { method: 'POST', body: JSON.stringify({ ...f, consent: true }) });
+    if (!x.ok) throw Error(x.data?.error); toast('Eingereicht.'); vSubs(box);
+  });
 }
 
 // ---------- Widget & QR ----------
@@ -234,6 +277,10 @@ function vProfil(box) {
       <p>Unternehmer nach § 14 BGB bestätigt am ${dtt(a.unternehmerConfirmedAt)}.</p>
       <p>Auftragsverarbeitungsvertrag (Version ${esc(a.avvVersion || '')}) geschlossen am ${dtt(a.avvAcceptedAt)}.</p>
       <button class="btn btn-ghost" id="avv" type="button">AVV als PDF</button></section>
+    ${a.institutionType === 'BANK' ? `<section class="pt-card"><h2>Postkorb für Einreichungen</h2><p class="form-note">Vermittler mit ImmoAdv-Konto können Ihrem Institut registrierte Kreditmappen zur Vorprüfung einreichen. Sie setzen Status und Rückfragen im Reiter Einreichungen.</p>
+      <label class="pt-switch"><input type="checkbox" id="accSub"${a.acceptSubmissions ? ' checked' : ''}> Einreichungen annehmen und im Verzeichnis erscheinen</label></section>` : ''}
+    ${me.tier === 'ENTERPRISE' || a.hasWhitelabel ? `<section class="pt-card"><h2>Eigener Hinweistext</h2><p class="form-note">Erscheint auf Ihrer Partnerseite, im Widget und in der Finanzierungsübersicht für Interessenten (z. B. Compliance-Hinweis Ihres Instituts). Max. 600 Zeichen.</p>
+      <textarea id="discl" rows="3" maxlength="600" style="width:100%;border:1px solid #CBD5E1;border-radius:6px;padding:8px">${esc(a.customDisclaimer || '')}</textarea><button class="btn btn-ghost" id="disclSave" type="button">Speichern</button></section>` : ''}
     <section class="pt-card"><h2>Support-Zugriff</h2>
       <p class="form-note">Für Rückfragen kann der ImmoAdv-Support Ihr Portal 7 Tage lang <strong>nur lesend</strong> einsehen, einschließlich der Anfragen. Ohne Ihre Freigabe ist das nicht möglich; jeder Zugriff wird protokolliert (Weisung nach Art. 28 DSGVO).</p>
       <p>${a.supportAccessUntil && new Date(a.supportAccessUntil) > new Date() ? `Freigegeben bis ${dtt(a.supportAccessUntil)}. <button class="text-btn del" id="supOff" type="button">Jetzt beenden</button>` : '<button class="btn btn-ghost" id="supOn" type="button">Support-Zugriff für 7 Tage freigeben</button>'}</p></section>`;
@@ -251,6 +298,14 @@ function vProfil(box) {
     me.account = { ...me.account, ...r.data.account }; toast(days ? 'Support-Zugriff freigegeben.' : 'Support-Zugriff beendet.'); vProfil(box);
   };
   if ($('#supOn')) $('#supOn').onclick = () => sup(7);
+  if ($('#accSub')) $('#accSub').onchange = async (e) => {
+    const r = await api('/api/b2b/account', { method: 'PATCH', body: JSON.stringify({ acceptSubmissions: e.target.checked }) });
+    if (r.ok) { me.account = { ...me.account, ...r.data.account }; toast('Gespeichert.'); } else { e.target.checked = !e.target.checked; toast(r.data?.error || 'Fehler', true); }
+  };
+  if ($('#disclSave')) $('#disclSave').onclick = (e) => busy(e.target, async () => {
+    const r = await api('/api/b2b/account', { method: 'PATCH', body: JSON.stringify({ customDisclaimer: $('#discl').value }) });
+    if (!r.ok) throw Error(r.data?.error); me.account = { ...me.account, ...r.data.account }; toast('Gespeichert.');
+  });
   if ($('#supOff')) $('#supOff').onclick = () => sup(0);
   if ($('#logo')) $('#logo').onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
@@ -278,7 +333,7 @@ async function vTarif(box) {
   box.innerHTML = `
     <section class="pt-card"><h2>Aktueller Tarif</h2>
       <p><strong>${me.tier ? TIER[me.tier] : 'Kein Tarif gebucht'}</strong>${a.planSource === 'manual' ? ' (vom Betreiber freigeschaltet)' : ''}${a.planUntil ? ` · läuft bis ${dt(a.planUntil)}` : ''}</p>
-      ${a.planSource === 'stripe' ? '<button class="btn btn-ghost" id="portal" type="button">Abo verwalten (Zahlungsmittel, Wechsel, Kündigung)</button>' : ''}</section>
+      ${a.planSource === 'stripe' ? '<button class="btn btn-ghost" id="aboPortal" type="button">Abo verwalten (Zahlungsmittel, Wechsel, Kündigung)</button>' : ''}</section>
     <div class="seg" role="tablist" id="ivl"><button type="button" data-i="month" aria-selected="true">Monatlich</button><button type="button" data-i="year" aria-selected="false">Jährlich (2 Monate gespart)</button></div>
     <div class="offers">${tiers.map((t) => b2b.plans.filter((p) => p.tier === t).map((p) => `<div class="offer${t === 'PRO' ? ' rec' : ''}" data-ivl="${p.interval}"${p.interval === 'year' ? ' hidden' : ''}>${t === 'PRO' ? '<span class="offer-rec">Am häufigsten gewählt</span>' : ''}
         <h4>${esc(p.name.replace(' (Jahr)', ''))}</h4><div class="offer-price">${net(p.netto_cents)} <small>netto ${esc(p.intervall)}</small></div>
@@ -300,7 +355,7 @@ async function vTarif(box) {
     if (!r.ok) throw Error(r.data?.error);
     location.href = r.data.url;
   }));
-  if ($('#portal')) $('#portal').onclick = (e) => busy(e.target, async () => {
+  if ($('#aboPortal')) $('#aboPortal').onclick = (e) => busy(e.target, async () => {
     const r = await api('/api/b2b/checkout', { method: 'PUT' });
     if (!r.ok) throw Error(r.data?.error); location.href = r.data.url;
   });

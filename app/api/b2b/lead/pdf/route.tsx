@@ -5,7 +5,7 @@ import { allowRequest } from '@/lib/security/rate-limit';
 import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase/admin';
 import { checkLeadToken } from '@/lib/b2b/leadtoken';
 import { partnerBrandFor } from '@/lib/b2b/brand';
-import type { B2BAccount } from '@/lib/b2b/core';
+import { effectiveTier, type B2BAccount } from '@/lib/b2b/core';
 import { ReportDocument, type ReportInput } from '@/lib/pdf/report';
 import { analyse, kaufnebenkosten } from '@/public/src/calc.mjs';
 
@@ -53,7 +53,7 @@ export async function GET(req: Request) {
       'Annahmen: Notar 1,5 %, Grundbuch 0,5 %, Instandhaltung 1 €/m² im Monat, Mietausfall 2 %.',
       `Ihr Ansprechpartner: ${a.company_name}${a.phone ? `, Tel. ${a.phone}` : ''}, ${a.email}.`,
     ],
-    note: 'Rechnerische Orientierung auf Basis Ihrer Eingaben. Keine Kreditzusage, keine Konditionszusicherung und keine Bonitätsentscheidung. Ersetzt keine Steuer- oder Rechtsberatung.',
+    note: `${(a.has_whitelabel || effectiveTier(a) === 'ENTERPRISE') && a.custom_disclaimer ? a.custom_disclaimer + ' ' : ''}Rechnerische Orientierung auf Basis Ihrer Eingaben. Keine Kreditzusage, keine Konditionszusicherung und keine Bonitätsentscheidung. Ersetzt keine Steuer- oder Rechtsberatung.`,
   };
   const partner = await partnerBrandFor(a);
   const el = createElement(ReportDocument, { r: rep, reportId: id.slice(0, 8), createdAt: new Date().toISOString(), partner, reportType: 'Finanzierungsübersicht' }) as unknown as Parameters<typeof renderToBuffer>[0];
