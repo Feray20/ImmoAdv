@@ -1,0 +1,34 @@
+{
+  "stand": "Oktober 2026",
+  "hinweis": "Preisvorschlag. Alle Preise sind Endpreise inkl. 19 % USt. Abos monatlich kündbar zum Ende des Abrechnungsmonats; 12-Monats-Zugänge enden automatisch ohne Verlängerung.",
+  "kostenlos": {
+    "name": "Kostenlos",
+    "features": ["Immobiliensuche bei ImmoScout24, Immowelt und Kleinanzeigen", "Objekt-Analyse und alle Rechner", "Wissenszentrale, Glossar, Lernpfad", "Konto mit Kreditmappe-Vorschau"]
+  },
+  "modi": {
+    "einsteiger": {
+      "name": "Einsteiger",
+      "zielgruppe": "Für den ersten Kauf: Schritt für Schritt verstehen, vorbereiten, finanzieren.",
+      "plans": [
+        { "id": "starter-monthly", "name": "Einsteiger-Begleitung", "cents": 990, "intervall": "pro Monat", "mode": "subscription",
+          "features": ["Geführter Lernpfad mit Fortschritt", "Bis zu 3 Objekte mit Bankreife-Check", "Fristen-Erinnerungen per E-Mail", "Merkliste und Analyse-PDF"] },
+        { "id": "starter-yearly", "name": "Einsteiger 12 Monate", "cents": 9900, "intervall": "für 12 Monate", "mode": "payment",
+          "features": ["Wie Einsteiger-Begleitung", "Endet automatisch, keine Verlängerung"] },
+        { "id": "credit-map-starter", "name": "Einsteiger-Kreditmappe", "cents": 3900, "intervall": "einmalig je Objekt", "mode": "payment",
+          "features": ["Kreditmappe für die Bank", "Mit Erklärseite „So liest die Bank Ihre Zahlen“", "Echtheits-QR und Prüfsumme"] }
+      ]
+    },
+    "profi": {
+      "name": "Profi",
+      "zielgruppe": "Für Kapitalanleger, Bestandshalter und Berater: Portfolio, Stresstests, Datenraum.",
+      "plans": [
+        { "id": "pro-monthly", "name": "Profi", "cents": 2900, "intervall": "pro Monat", "mode": "subscription",
+          "features": ["Unbegrenzt Objekte und Kreditmappen", "Portfolio mit Zinsschock und CSV", "Datenraum mit Vollständigkeits-Ampel", "Analyse-PDF, Stresstest-Matrix, Ertragswert"] },
+        { "id": "pro-yearly", "name": "Profi 12 Monate", "cents": 29000, "intervall": "für 12 Monate", "mode": "payment",
+          "features": ["Wie Profi", "Endet automatisch, keine Verlängerung"] },
+        { "id": "credit-map", "name": "Profi-Kreditmappe", "cents": 4900, "intervall": "einmalig je Objekt", "mode": "payment",
+          "features": ["Kreditmappe mit Stresstest-Matrix und Ertragswert", "Echtheits-QR und Prüfsumme"] }
+      ]
+    }
+  }
+}

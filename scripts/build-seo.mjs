@@ -26,7 +26,7 @@ const APP = {
 
 // Seitenliste: Pfad, Datei, Titel, Beschreibung, Brotkrumen, Indexierung, Zusatz-JSON-LD.
 const PAGES = [
-  { path: '/', file: 'index.html', title: 'Immobilie als Kapitalanlage durchrechnen | ImmoAdv', desc: 'Cashflow, DSCR, Stresstest und Haushaltsrechnung für Kapitalanleger in Deutschland – mit Kreditmappe für das Bankgespräch. Analyse kostenfrei.', crumbs: [], extra: ['website', 'app', 'howto', 'homefaq'] },
+  { path: '/', file: 'index.html', title: 'Immobilie finden, prüfen, finanzieren | ImmoAdv', desc: 'Immobiliensuche bei ImmoScout24, Immowelt und Kleinanzeigen, Analyse mit Rendite, Cashflow nach Steuern und Bankkennzahlen, Kreditmappe für das Bankgespräch – für Einsteiger und Profis.', crumbs: [], extra: ['website', 'app', 'howto'] },
   { path: '/wissen', title: 'Immobilienfinanzierung verständlich erklärt – 33 Antworten | ImmoAdv', desc: 'Eigenkapital, Nebenkosten, Beleihungswert, AfA, 15-%-Grenze, Anschlusszins: Antworten in zwei Ebenen mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
   { path: '/cockpit', file: null, skip: true, title: '', desc: '' },
   { path: '/suche', file: 'suche/index.html', template: 'wissen/index.html', title: 'Suche | ImmoAdv', desc: 'Rechner, Antworten und Fachbegriffe rund um Immobilienkauf und Finanzierung durchsuchen.', crumbs: ['Suche'] },

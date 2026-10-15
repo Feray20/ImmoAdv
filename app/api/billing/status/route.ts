@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 // Freischaltungen des angemeldeten Nutzers. Wird auch direkt nach der Rückkehr aus dem Checkout aufgerufen.
 export async function GET(req: Request) {
-  const free = { enabled: false, pro: false, proSource: null, proUntil: null, creditMaps: 0, creditMapsUsed: 0, hasCustomer: false };
+  const free = { enabled: false, pro: false, proSource: null, proUntil: null, starter: false, starterUntil: null, tier: 'free', creditMaps: 0, creditMapsUsed: 0, hasCustomer: false };
   if (!billingEnabled()) return NextResponse.json(free, { headers: { 'Cache-Control': 'no-store' } });
   const user = await userFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Bitte zuerst anmelden.' }, { status: 401 });

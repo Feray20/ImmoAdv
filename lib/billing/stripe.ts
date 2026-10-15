@@ -3,7 +3,10 @@ import Stripe from 'stripe';
 // Zentrale Stripe-Logik. Stripe ist die einzige Quelle der Wahrheit für Käufe:
 // Es gibt keine eigene Zahlungsdatenbank, Freischaltungen werden aus Stripe gelesen.
 
-export type Plan = 'credit-map' | 'pro-monthly' | 'pro-yearly';
+import PRICES from '@/public/data/preise.json';
+
+// Angebote kommen aus public/data/preise.json (eine Quelle für Website und Abrechnung).
+export type Plan = 'credit-map' | 'pro-monthly' | 'pro-yearly' | 'starter-monthly' | 'starter-yearly' | 'credit-map-starter';
 
 type PlanDef = {
   lookupKey: string;
@@ -13,29 +16,21 @@ type PlanDef = {
   mode: 'payment' | 'subscription';
 };
 
-export const PLANS: Record<Plan, PlanDef> = {
-  'credit-map': {
-    lookupKey: 'immoadv_credit_map_4900',
-    name: 'ImmoAdv Kreditmappe',
-    description: 'Kreditmappe für ein Objekt (einmalig).',
-    amount: 4900,
-    mode: 'payment',
-  },
-  'pro-monthly': {
-    lookupKey: 'immoadv_pro_monthly_2900',
-    name: 'ImmoAdv Pro (monatlich)',
-    description: 'Pro-Zugang, monatlich kündbar zum Ende des Abrechnungsmonats.',
-    amount: 2900,
-    mode: 'subscription',
-  },
-  'pro-yearly': {
-    lookupKey: 'immoadv_pro_12m_29000',
-    name: 'ImmoAdv Pro (12 Monate)',
-    description: 'Pro-Zugang für 12 Monate. Endet automatisch, keine Verlängerung.',
-    amount: 29000,
-    mode: 'payment',
-  },
+type JsonPlan = { id: string; name: string; cents: number; intervall: string; mode: string; features: string[] };
+const ALL: JsonPlan[] = [...PRICES.modi.einsteiger.plans, ...PRICES.modi.profi.plans];
+const KEYS: Record<Plan, string> = {
+  'credit-map': 'immoadv_credit_map', 'pro-monthly': 'immoadv_pro_monthly', 'pro-yearly': 'immoadv_pro_12m',
+  'starter-monthly': 'immoadv_starter_monthly', 'starter-yearly': 'immoadv_starter_12m', 'credit-map-starter': 'immoadv_credit_map_starter',
 };
+
+export const PLANS = Object.fromEntries(
+  (Object.keys(KEYS) as Plan[]).map((id) => {
+    const p = ALL.find((x) => x.id === id);
+    if (!p) throw new Error(`Preis fehlt in preise.json: ${id}`);
+    // Der Betrag steckt im Lookup-Key: Eine Preisänderung legt bei Stripe automatisch einen neuen Preis an.
+    return [id, { lookupKey: `${KEYS[id]}_${p.cents}`, name: `ImmoAdv ${p.name}`, description: `${p.name} – ${p.intervall}.`, amount: p.cents, mode: p.mode === 'subscription' ? 'subscription' : 'payment' }];
+  }),
+) as Record<Plan, PlanDef>;
 
 export const isPlan = (v: unknown): v is Plan => typeof v === 'string' && v in PLANS;
 
@@ -107,6 +102,9 @@ export type Entitlements = {
   pro: boolean;
   proSource: 'subscription' | 'pass' | null;
   proUntil: string | null;
+  starter: boolean;
+  starterUntil: string | null;
+  tier: 'free' | 'starter' | 'pro';
   creditMaps: number;
   hasCustomer: boolean;
 };
@@ -116,22 +114,32 @@ const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 // Freischaltungen aus Stripe ableiten (bezahlte Checkout-Sessions und aktive Abos).
 export async function entitlementsFor(userId: string, email: string): Promise<Entitlements> {
   const customer = await findCustomer(userId, email);
-  if (!customer) return { pro: false, proSource: null, proUntil: null, creditMaps: 0, hasCustomer: false };
+  if (!customer) return { pro: false, proSource: null, proUntil: null, starter: false, starterUntil: null, tier: 'free', creditMaps: 0, hasCustomer: false };
   const s = stripe();
 
   const subs = await s.subscriptions.list({ customer: customer.id, status: 'all', limit: 20 });
-  const activeSub = subs.data.find((x) => ['active', 'trialing', 'past_due'].includes(x.status));
+  const live = subs.data.filter((x) => ['active', 'trialing', 'past_due'].includes(x.status));
+  const subKey = (x: Stripe.Subscription) => x.items.data[0]?.price?.lookup_key || '';
+  const activeSub = live.find((x) => !subKey(x).startsWith(KEYS['starter-monthly']));
+  const starterSub = live.find((x) => subKey(x).startsWith(KEYS['starter-monthly']));
 
   const sessions = await s.checkout.sessions.list({ customer: customer.id, limit: 100 });
   const paid = sessions.data.filter((x) => x.payment_status === 'paid' && x.metadata?.supabase_user_id === userId);
-  const creditMaps = paid.filter((x) => x.metadata?.plan === 'credit-map').length;
+  const creditMaps = paid.filter((x) => x.metadata?.plan === 'credit-map' || x.metadata?.plan === 'credit-map-starter').length;
+  const starterPass = paid
+    .filter((x) => x.metadata?.plan === 'starter-yearly')
+    .map((x) => x.created * 1000 + YEAR_MS)
+    .filter((until) => until > Date.now())
+    .sort((a, b) => b - a)[0];
+  const starter = Boolean(starterSub || starterPass);
+  const starterUntil = starterSub ? null : starterPass ? new Date(starterPass).toISOString() : null;
   const passes = paid
     .filter((x) => x.metadata?.plan === 'pro-yearly')
     .map((x) => x.created * 1000 + YEAR_MS)
     .filter((until) => until > Date.now())
     .sort((a, b) => b - a);
 
-  if (activeSub) return { pro: true, proSource: 'subscription', proUntil: null, creditMaps, hasCustomer: true };
-  if (passes[0]) return { pro: true, proSource: 'pass', proUntil: new Date(passes[0]).toISOString(), creditMaps, hasCustomer: true };
-  return { pro: false, proSource: null, proUntil: null, creditMaps, hasCustomer: true };
+  if (activeSub) return { pro: true, proSource: 'subscription', proUntil: null, starter, starterUntil, tier: 'pro', creditMaps, hasCustomer: true };
+  if (passes[0]) return { pro: true, proSource: 'pass', proUntil: new Date(passes[0]).toISOString(), starter, starterUntil, tier: 'pro', creditMaps, hasCustomer: true };
+  return { pro: false, proSource: null, proUntil: null, starter, starterUntil, tier: starter ? 'starter' : 'free', creditMaps, hasCustomer: true };
 }

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { userFromRequest } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { ReportDocument } from '@/lib/pdf/report';
+import { billingEnabled, entitlementsFor } from '@/lib/billing/stripe';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,11 +24,19 @@ const Body = z.object({
 
 const isAdmin = (email: string) => (process.env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).includes(email.toLowerCase());
 
-// Objekt-Analyse als PDF (interner Bereich). Rendert ausschließlich die übergebenen, bereits berechneten Werte.
+// Objekt-Analyse als PDF. Rendert ausschließlich die übergebenen, bereits berechneten Werte.
+// Solange die Bezahlung nicht aktiv ist, für alle angemeldeten Nutzer; danach für Einsteiger, Profi und Administratoren.
 export async function POST(req: Request) {
   const user = await userFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Bitte anmelden.' }, { status: 401 });
-  if (!isAdmin(user.email)) return NextResponse.json({ error: 'Kein Zugriff.' }, { status: 403 });
+  if (billingEnabled() && !isAdmin(user.email)) {
+    try {
+      const ent = await entitlementsFor(user.id, user.email);
+      if (ent.tier === 'free') return NextResponse.json({ error: 'Das Analyse-PDF ist in Einsteiger und Profi enthalten.' }, { status: 402 });
+    } catch {
+      return NextResponse.json({ error: 'Freischaltung konnte nicht geprüft werden.' }, { status: 502 });
+    }
+  }
   if (!allowRequest(`analyse-pdf:${user.id}`, 10, 60_000)) return NextResponse.json({ error: 'Zu viele Anfragen.' }, { status: 429 });
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Ungültige Daten.' }, { status: 400 });
