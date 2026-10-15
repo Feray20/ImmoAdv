@@ -457,3 +457,75 @@ export function rank(profile = {}, objects = [], docs = [], today = new Date()) 
   const nextStep = steps.slice(1).find((s) => !s.done);
   return { level: level + 1, name: RANKS[level], steps, next: nextStep ? nextStep.next : null, bestReadiness: best };
 }
+
+// ---------- Cashflow vor und nach Steuern (Vermietung) ----------
+// Modell: Anschaffungsnebenkosten werden anteilig Gebäude/Boden zugeordnet; AfA auf den Gebäudeanteil.
+// Nicht umlagefähige Kosten und Instandhaltung werden als Werbungskosten angesetzt (Modellannahme).
+// Steuerwirkung = steuerliches Ergebnis × Grenzsteuersatz (negativ = Erstattung). Ohne Soli/Kirchensteuer.
+export function cashflowSteuer({ price, land, brokerPct = 0, equity = 0, ratePa, repaymentPa, rent, vacancyPct = 0, nonRecoverable = 0, maintenance = 0,
+  buildingSharePct = 75, afaPct = 2, taxPct = 42, rentGrowthPct = 0, years = 10 }) {
+  const nk = kaufnebenkosten({ price, land, brokerPct });
+  if (!nk || !(rent >= 0)) return null;
+  const loan = Math.max(0, nk.allIn - equity);
+  const plan = loan > 0 ? tilgungsplan({ loan, ratePa, repaymentPa, fixedYears: years, maxYears: Math.max(years, 1) }) : null;
+  const afa = (nk.allIn * buildingSharePct / 100) * afaPct / 100;
+  const rows = [];
+  for (let y = 1; y <= years; y++) {
+    const p = plan?.years[y - 1] ?? { interest: 0, principal: 0, balance: 0 };
+    const rentY = rent * 12 * Math.pow(1 + rentGrowthPct / 100, y - 1) * (1 - vacancyPct / 100);
+    const costs = (nonRecoverable + maintenance) * 12;
+    const before = rentY - costs - p.interest - p.principal;
+    const taxable = rentY - costs - p.interest - afa;
+    const tax = taxable * taxPct / 100;
+    rows.push({ year: y, rent: r2(rentY), costs: r2(costs), interest: r2(p.interest), principal: r2(p.principal), afa: r2(afa), taxable: r2(taxable), tax: r2(tax), before: r2(before), after: r2(before - tax), balance: r2(p.balance) });
+  }
+  const sum = (k) => r2(rows.reduce((s, r) => s + r[k], 0));
+  return { loan: r2(loan), nebenkosten: nk.total, afa: r2(afa), monthlyRate: plan ? plan.monthly : 0, rows, total: { before: sum('before'), after: sum('after'), principal: sum('principal'), tax: sum('tax') } };
+}
+
+// ---------- Angebotsvergleich ----------
+export function angebot({ price, rent, area = 0, land, brokerPct = 0, equity = 0, ratePa, repaymentPa, nonRecoverable = 0, maintenance = 0, vacancyPct = 0 }) {
+  const nk = kaufnebenkosten({ price, land, brokerPct });
+  if (!nk) return null;
+  const loan = Math.max(0, nk.allIn - equity);
+  const rate = monthlyRate(loan, ratePa, repaymentPa);
+  const noi = netOperatingMonthly({ rent, vacancyPct, nonRecoverable, maintenance });
+  return {
+    nebenkosten: nk.total, allIn: nk.allIn, loan: r2(loan), rate: r2(rate), noi: r2(noi), cashflow: r2(noi - rate),
+    grossYieldPct: rent > 0 ? Math.round(((rent * 12) / price) * 10000) / 100 : null,
+    netYieldPct: Math.round(((noi * 12) / nk.allIn) * 10000) / 100,
+    factor: rent > 0 ? Math.round((price / (rent * 12)) * 10) / 10 : null,
+    pricePerQm: area > 0 ? r2(price / area) : null, rentPerQm: area > 0 && rent > 0 ? r2(rent / area) : null,
+    dscr: rate > 0 ? Math.round((noi / rate) * 100) / 100 : null,
+  };
+}
+
+// ---------- Kaufen oder Mieten ----------
+// Monatliche Simulation. Wer monatlich weniger zahlt, legt die Differenz zum Anlagezins an; der Mieter legt
+// zusätzlich das Eigenkapital (inkl. Nebenkosten) an. Ohne Steuern auf Erträge und Verkaufskosten (Modell).
+export function kaufenMieten({ price, land, brokerPct = 0, equity, ratePa, repaymentPa, ownerCosts = 0, rent, rentGrowthPct = 2, valueGrowthPct = 1.5, investPct = 4, years = 20 }) {
+  const nk = kaufnebenkosten({ price, land, brokerPct });
+  if (!nk || !(rent > 0)) return null;
+  const loan = Math.max(0, nk.allIn - equity);
+  const rate = monthlyRate(loan, ratePa, repaymentPa);
+  const i = ratePa / 12, inv = Math.pow(1 + investPct / 100, 1 / 12) - 1;
+  let bal = loan, buyerDepot = Math.max(0, equity - nk.allIn), renterDepot = equity, rentM = rent;
+  const rows = [];
+  let breakEven = null;
+  for (let m = 1; m <= years * 12; m++) {
+    let pay = 0;
+    if (bal > 0.005) { const zi = bal * i; const t = Math.min(bal, rate - zi); bal -= t; pay = zi + t; }
+    const buyerOut = pay + ownerCosts;
+    buyerDepot *= 1 + inv; renterDepot *= 1 + inv;
+    if (buyerOut > rentM) renterDepot += buyerOut - rentM; else buyerDepot += rentM - buyerOut;
+    if (m % 12 === 0) {
+      const y = m / 12;
+      const value = price * Math.pow(1 + valueGrowthPct / 100, y);
+      const buyer = value - bal + buyerDepot;
+      rows.push({ year: y, value: r2(value), debt: r2(Math.max(0, bal)), buyer: r2(buyer), renter: r2(renterDepot), rent: r2(rentM) });
+      if (breakEven === null && buyer >= renterDepot) breakEven = y;
+      rentM *= 1 + rentGrowthPct / 100;
+    }
+  }
+  return { loan: r2(loan), rate: r2(rate), nebenkosten: nk.total, rows, breakEven, end: rows[rows.length - 1] };
+}

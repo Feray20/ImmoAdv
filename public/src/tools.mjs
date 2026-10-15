@@ -1,5 +1,5 @@
 // Bindet Rechner, Fristen und Szenarien an den gemeinsamen Rechenkern (calc.mjs).
-import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg, tilgungsplan, tilgungsplanCSV, budget, scorecard } from './calc.mjs';
+import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg, tilgungsplan, tilgungsplanCSV, budget, scorecard, cashflowSteuer, angebot, kaufenMieten } from './calc.mjs';
 
 const $ = (id) => document.getElementById(id);
 const num = (id) => { const v = $(id)?.value; return v === '' || v == null ? 0 : Number(v); };
@@ -37,7 +37,8 @@ function share(ids) {
     try { await navigator.clipboard.writeText(url); note.textContent = ' Link kopiert.'; }
     catch { history.replaceState(null, '', url); note.textContent = ' Link steht jetzt in der Adresszeile.'; }
   };
-  const wrap = document.createElement('p'); wrap.className = 'share-row'; wrap.append(b, note);
+  const pr = document.createElement('button'); pr.type = 'button'; pr.className = 'btn btn-outline share-btn'; pr.textContent = 'Drucken / als PDF speichern'; pr.onclick = () => window.print();
+  const wrap = document.createElement('p'); wrap.className = 'share-row'; wrap.append(b, ' ', pr, note);
   card.append(wrap);
 }
 document.querySelectorAll('.calc-out').forEach((e) => e.setAttribute('aria-live', 'polite'));
@@ -220,6 +221,69 @@ if ($('sc_overall')) {
     const t = { ok: 'Alle drei Bereiche im grünen Bereich.', warn: 'Mindestens ein Bereich braucht Aufmerksamkeit.', bad: 'Mindestens ein Bereich ist kritisch.', na: 'Noch nicht alle Bereiche prüfbar – bitte Angaben ergänzen.' };
     $('sc_overall').className = `sc-overall ${s.overall}`;
     $('sc_overall').innerHTML = `<strong>Gesamt: ${L[s.overall]}</strong> ${t[s.overall]}`;
+  });
+}
+
+// Cashflow vor und nach Steuern
+if ($('cf_out')) {
+  const ids = ['cf_p', 'cf_land', 'cf_b', 'cf_r', 'cf_v', 'cf_n', 'cf_m', 'cf_g', 'cf_e', 'cf_z', 'cf_t', 'cf_s', 'cf_a', 'cf_x'];
+  remember('cashflow', ids);
+  watch(ids, () => {
+    const c = cashflowSteuer({ price: num('cf_p'), land: val('cf_land'), brokerPct: num('cf_b'), rent: num('cf_r'), vacancyPct: num('cf_v'), nonRecoverable: num('cf_n'), maintenance: num('cf_m'),
+      rentGrowthPct: num('cf_g'), equity: num('cf_e'), ratePa: num('cf_z') / 100, repaymentPa: num('cf_t') / 100, buildingSharePct: num('cf_s'), afaPct: num('cf_a'), taxPct: num('cf_x'), years: 10 });
+    if (!c) { $('cf_out').innerHTML = '<p class="form-note">Bitte Kaufpreis und Miete eintragen.</p>'; $('cf_tab').innerHTML = ''; return; }
+    const y = c.rows[0], sign = (v) => `<span class="${v < 0 ? 'neg' : 'pos'}">${E(v)}</span>`;
+    $('cf_out').innerHTML = table([
+      ['Darlehen', E(c.loan)], ['Monatsrate', E(c.monthlyRate)], ['AfA pro Jahr', E(c.afa)],
+      ['Cashflow vor Steuern (Jahr 1, pro Monat)', `<strong>${sign(y.before / 12)}</strong>`],
+      ['Steuerliches Ergebnis (Jahr 1)', `${E(y.taxable)} ${y.taxable < 0 ? '<span class="form-note">(Verlust mindert die Steuer auf andere Einkünfte)</span>' : ''}`],
+      [y.tax < 0 ? 'Steuererstattung (Jahr 1)' : 'Steuerlast (Jahr 1)', E(Math.abs(y.tax))],
+      ['Cashflow nach Steuern (Jahr 1, pro Monat)', `<strong>${sign(y.after / 12)}</strong>`],
+      ['Vermögensaufbau durch Tilgung (Jahr 1)', E(y.principal)],
+    ]);
+    $('cf_tab').innerHTML = table(c.rows.map((r) => [r.year, E(r.rent), E(r.interest), E(r.afa), E(r.taxable), E(-r.tax), sign(r.before), sign(r.after), E(r.balance)]),
+      ['Jahr', 'Miete', 'Zinsen', 'AfA', 'Steuerl. Ergebnis', 'Steuereffekt', 'CF vor St.', 'CF nach St.', 'Restschuld']) +
+      `<p class="form-note">Summe 10 Jahre: Cashflow nach Steuern ${E(c.total.after)}, Tilgung ${E(c.total.principal)}.</p>`;
+  });
+}
+
+// Angebotsvergleich
+if ($('vg_out')) {
+  const shared = ['vg_land', 'vg_b', 'vg_e', 'vg_z', 'vg_t', 'vg_v'];
+  const per = [1, 2, 3].flatMap((k) => ['name', 'p', 'r', 'a', 'n'].map((f) => `vg${k}_${f}`));
+  remember('vergleich', [...shared, ...per]);
+  watch([...shared, ...per], () => {
+    const res = [1, 2, 3].map((k) => {
+      if (!(num(`vg${k}_p`) > 0)) return null;
+      const a = angebot({ price: num(`vg${k}_p`), rent: num(`vg${k}_r`), area: num(`vg${k}_a`), land: val('vg_land'), brokerPct: num('vg_b'), equity: num('vg_e'),
+        ratePa: num('vg_z') / 100, repaymentPa: num('vg_t') / 100, nonRecoverable: num(`vg${k}_n`), vacancyPct: num('vg_v') });
+      return a && { ...a, name: val(`vg${k}_name`) || `Angebot ${k}` };
+    }).filter(Boolean);
+    if (!res.length) { $('vg_out').innerHTML = '<p class="form-note">Mindestens einen Kaufpreis eintragen.</p>'; return; }
+    const best = (k, hi = true) => { const v = res.map((r) => r[k]).filter((x) => x != null); return v.length > 1 ? (hi ? Math.max(...v) : Math.min(...v)) : null; };
+    const row = (label, k, fmt, hi) => { const b = best(k, hi); return [label, ...res.map((r) => (r[k] == null ? '–' : r[k] === b ? `<strong>${fmt(r[k])}</strong>` : fmt(r[k])))]; };
+    const dn = (v) => String(v).replace('.', ',');
+    $('vg_out').innerHTML = table([
+      row('Kaufnebenkosten', 'nebenkosten', E, false), row('Gesamtkosten', 'allIn', E, false), row('Darlehen', 'loan', E, false), row('Monatsrate', 'rate', E, false),
+      row('Cashflow vor Steuern / Monat', 'cashflow', E, true), row('Bruttomietrendite', 'grossYieldPct', (v) => P(v), true), row('Nettomietrendite (auf Gesamtkosten)', 'netYieldPct', (v) => P(v), true),
+      row('Kaufpreisfaktor', 'factor', dn, false), row('Preis pro m²', 'pricePerQm', E, false), row('Miete pro m²', 'rentPerQm', E, true), row('DSCR', 'dscr', dn, true),
+    ], ['', ...res.map((r) => esc(r.name))]) + '<p class="form-note">Fett: jeweils bester Wert. Ein einzelner Wert entscheidet nicht – Lage, Zustand und WEG-Unterlagen zählen mit.</p>';
+  });
+}
+
+// Kaufen oder mieten
+if ($('km_out')) {
+  const ids = ['km_p', 'km_land', 'km_b', 'km_e', 'km_z', 'km_t', 'km_o', 'km_r', 'km_g', 'km_w', 'km_i', 'km_y'];
+  remember('kaufenmieten', ids);
+  watch(ids, () => {
+    const k = kaufenMieten({ price: num('km_p'), land: val('km_land'), brokerPct: num('km_b'), equity: num('km_e'), ratePa: num('km_z') / 100, repaymentPa: num('km_t') / 100,
+      ownerCosts: num('km_o'), rent: num('km_r'), rentGrowthPct: num('km_g'), valueGrowthPct: num('km_w'), investPct: num('km_i'), years: Math.min(40, Math.max(1, Math.round(num('km_y')))) });
+    if (!k) { $('km_out').innerHTML = '<p class="form-note">Bitte Kaufpreis und Miete eintragen.</p>'; return; }
+    const pick = k.rows.filter((r) => r.year === 1 || r.year % 5 === 0 || r.year === k.rows.length);
+    const e = k.end, diff = e.buyer - e.renter;
+    $('km_out').innerHTML = `<p><strong>Nach ${e.year} Jahren: ${diff >= 0 ? 'Kaufen' : 'Mieten'} liegt um ${E(Math.abs(diff))} vorn.</strong> ${k.breakEven ? `Der Kauf holt den Mieter nach ${k.breakEven} Jahren ein.` : 'Im gewählten Zeitraum holt der Kauf den Mieter nicht ein.'}</p>` +
+      table(pick.map((r) => [r.year, E(r.rent), E(r.value), E(r.debt), `<strong>${E(r.buyer)}</strong>`, `<strong>${E(r.renter)}</strong>`]), ['Jahr', 'Miete/Monat', 'Immobilienwert', 'Restschuld', 'Vermögen Käufer', 'Vermögen Mieter']) +
+      `<p class="form-note">Monatsrate ${E(k.rate)} plus Eigentümerkosten; Kaufnebenkosten ${E(k.nebenkosten)} sind beim Kauf sofort „verbraucht“.</p>`;
   });
 }
 

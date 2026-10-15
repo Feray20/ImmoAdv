@@ -202,3 +202,29 @@ test('rank: Stufen aus Profil, Bankreife und Bestand', async () => {
   assert.equal(bh.name, 'Bestandshalter');
   assert.match(bh.next!, /Finanzprofil/); // offene Stufen bleiben sichtbar
 });
+
+test('cashflowSteuer: AfA, Steuerwirkung, Jahr 1', async () => {
+  const { cashflowSteuer } = await import('../public/src/calc.mjs');
+  const c = cashflowSteuer({ price: 300000, land: 'bayern', equity: 60000, ratePa: 0.035, repaymentPa: 0.02, rent: 1000, nonRecoverable: 50, maintenance: 50, buildingSharePct: 80, afaPct: 2, taxPct: 40, years: 10 })!;
+  // AK 316.500 × 80 % × 2 % = 5.064
+  assert.equal(c.afa, 5064);
+  assert.equal(c.loan, 256500);
+  const y1 = c.rows[0];
+  assert.ok(Math.abs(y1.before - (12000 - 1200 - y1.interest - y1.principal)) < 0.02);
+  assert.ok(Math.abs(y1.tax - (12000 - 1200 - y1.interest - 5064) * 0.4) < 0.02);
+  assert.equal(c.rows.length, 10);
+});
+
+test('angebot und kaufenMieten: Kennzahlen und Plausibilität', async () => {
+  const { angebot, kaufenMieten } = await import('../public/src/calc.mjs');
+  const a = angebot({ price: 200000, rent: 800, area: 60, land: 'hessen', equity: 40000, ratePa: 0.035, repaymentPa: 0.02 })!;
+  assert.equal(a.factor, 20.8);
+  assert.equal(a.grossYieldPct, 4.8);
+  assert.equal(a.pricePerQm, 3333.33);
+  const k = kaufenMieten({ price: 400000, land: 'hessen', equity: 100000, ratePa: 0.035, repaymentPa: 0.025, ownerCosts: 250, rent: 1400, years: 25 })!;
+  assert.equal(k.rows.length, 25);
+  assert.ok(k.rows[24].debt < k.rows[0].debt);
+  // ohne Wertsteigerung und mit hoher Anlagerendite verliert der Käufer eher
+  const k2 = kaufenMieten({ price: 400000, land: 'hessen', equity: 100000, ratePa: 0.035, repaymentPa: 0.025, ownerCosts: 250, rent: 1400, valueGrowthPct: 0, investPct: 7, years: 25 })!;
+  assert.ok(k2.end.buyer < k.end.buyer);
+});
