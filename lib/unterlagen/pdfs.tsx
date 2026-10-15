@@ -1,11 +1,12 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
+import { BRAND, Logo } from '@/lib/pdf/brand';
 
-const C = { navy: '#0F172A', text: '#334155', muted: '#64748B', hair: '#CBD5E1', bg: '#F8FAFC', okBg: '#DCFCE7', ok: '#166534', noneBg: '#F1F5F9', none: '#64748B' };
+const C = { navy: BRAND.navy, text: '#334155', muted: '#64748B', hair: '#CBD5E1', bg: '#F8FAFC', okBg: '#DCFCE7', ok: '#166534', noneBg: '#F1F5F9', none: '#64748B' };
 const DISCLAIMER = 'Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Rechts-, Steuer- oder Finanzierungsberatung gem. § 34i GewO / KWG.';
 const CONTACT = 'ImmoAdv · Feray Korkmaz · Georg-August-Zinn-Str. 25 · 64354 Reinheim · support@immoadv.de · immoadv.de';
 
 const s = StyleSheet.create({
-  page: { padding: 36, fontFamily: 'Helvetica', fontSize: 8.5, color: C.text, lineHeight: 1.35 },
+  page: { paddingTop: 28, paddingBottom: 36, paddingHorizontal: 36, fontFamily: 'Helvetica', fontSize: 8.5, color: C.text, lineHeight: 1.35 },
   bar: { backgroundColor: C.navy, color: '#FFFFFF', padding: 12, marginBottom: 12 },
   barKicker: { fontSize: 7, letterSpacing: 1.2, color: '#CBD5E1' },
   barTitle: { fontSize: 15, fontFamily: 'Helvetica-Bold', marginTop: 3 },
@@ -37,11 +38,12 @@ export function BankOnePager() {
     ['Dokument-Upload (Dateityp- und Prüfsummenprüfung, unveränderbare Originale)', 'Verfügbar', true],
     ['Berater-Datenraum mit QR-Freigabe, Ablauf, Widerruf, Zugriffsprotokoll', 'Verfügbar', true],
     ['Inhaltliche Auswertung (OCR) mit Quellenangabe je Wert', 'In Entwicklung', false],
-    ['Co-Branding-Link für Partnerbanken', 'In Vorbereitung', false],
+    ['Co-Branding-Link für Partnerbanken (immoadv.de/p/…)', 'Verfügbar, Einrichtung auf Anfrage', true],
   ];
   return (
     <Document title="ImmoAdv – Information für Banken und Finanzierungsberater" author="ImmoAdv" language="de">
       <Page size="A4" style={s.page}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}><Logo size={14} /><Text style={{ fontSize: 7, color: C.muted }}>immoadv.de · Stand Oktober 2026</Text></View>
         <View style={s.bar}>
           <Text style={s.barKicker}>INFORMATION FÜR BANKEN, SPARKASSEN UND FINANZIERUNGSBERATER</Text>
           <Text style={s.barTitle}>Ihre Kunden kommen vorbereitet ins Erstgespräch.</Text>
@@ -120,6 +122,7 @@ export function BeraterCheckliste() {
   return (
     <Document title="ImmoAdv – Unterlagen-Checkliste Baufinanzierung" author="ImmoAdv" language="de">
       <Page size="A4" style={s.page}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}><Logo size={14} /><Text style={{ fontSize: 7, color: C.muted }}>immoadv.de · Stand Oktober 2026</Text></View>
         <View style={s.bar}>
           <Text style={s.barKicker}>CHECKLISTE FÜR BERATUNG UND KUNDEN</Text>
           <Text style={s.barTitle}>Unterlagen für die Baufinanzierung</Text>

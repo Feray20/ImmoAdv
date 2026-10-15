@@ -1,5 +1,5 @@
 // Bindet Rechner, Fristen und Szenarien an den gemeinsamen Rechenkern (calc.mjs).
-import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS } from './calc.mjs';
+import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten } from './calc.mjs';
 
 const $ = (id) => document.getElementById(id);
 const num = (id) => { const v = $(id)?.value; return v === '' || v == null ? 0 : Number(v); };
@@ -108,4 +108,21 @@ if ($('vk_out')) {
       ['Einkommensteuer darauf (Modell)', E(v.tax)], ['Restschuld bei Verkauf', E(v.rest)], ['Liquidität nach Verkauf', `<strong>${E(v.cashAfterSale)}</strong>`],
     ]);
   });
+}
+
+// Kaufnebenkosten je Bundesland
+const landEl = document.querySelector('[data-land]');
+if (landEl && $('kn_out')) {
+  const land = landEl.dataset.land, g = GREST[land];
+  if (g && $('kn_rate')) $('kn_rate').innerHTML = `In ${esc(g.name)} beträgt die Grunderwerbsteuer <strong>${P(g.pct, 1)}</strong> des Kaufpreises${g.since ? ` (gültig seit ${D(g.since)})` : ''}.`;
+  watch(['kn_p', 'kn_m', 'kn_n', 'kn_g'], () => {
+    const k = kaufnebenkosten({ price: num('kn_p'), land, notaryPct: num('kn_n'), landRegistryPct: num('kn_g'), brokerPct: num('kn_m') });
+    if (!k) { $('kn_out').innerHTML = '<p class="form-note">Bitte einen Kaufpreis eintragen.</p>'; return; }
+    $('kn_out').innerHTML = table([...k.parts.map((x) => [`${esc(x.label)} (${P(x.pct)})`, E(x.amount)]), ['<strong>Kaufnebenkosten gesamt</strong>', `<strong>${E(k.total)}</strong> (${P(k.totalPct)})`], ['Gesamtkosten inkl. Kaufpreis', E(k.allIn)]]);
+  });
+}
+if ($('kn_table')) {
+  const rows = Object.entries(GREST).sort((a, b) => a[1].pct - b[1].pct || a[1].name.localeCompare(b[1].name, 'de'))
+    .map(([slug, g]) => [`<a class="ck-link" href="/rechner/kaufnebenkosten/${slug}">${esc(g.name)}</a>`, P(g.pct, 1), E(300000 * g.pct / 100)]);
+  $('kn_table').innerHTML = table(rows, ['Bundesland', 'Grunderwerbsteuer', 'bei 300.000 €']);
 }

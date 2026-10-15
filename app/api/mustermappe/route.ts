@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     }),
     ProfileSchema.parse({ employment: 'Angestellt', netIncome: 3650, equity: 40728.6, householdSize: 1 }),
   );
-  const element = createElement(KreditmappeDocument, { m: mappe }) as unknown as Parameters<typeof renderToBuffer>[0];
+  const element = createElement(KreditmappeDocument, { m: mappe, watermark: 'MUSTER — FIKTIVER FALL — IMMOADV.DE' }) as unknown as Parameters<typeof renderToBuffer>[0];
   const pdf = await renderToBuffer(element);
   const sha256 = createHash('sha256').update(pdf).digest('hex');
   return new NextResponse(new Uint8Array(pdf), {

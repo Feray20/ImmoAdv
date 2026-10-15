@@ -1,13 +1,15 @@
 import { afaRate, balanceAfterYears } from './math';
 export { afaRate, balanceAfterYears } from './math';
+import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { underwrite, type StressCase } from '@/lib/underwriting/engine';
+import { underwrite, extraMetrics, ertragswert, type StressCase } from '@/lib/underwriting/engine';
 import { bankReadyScore } from '@/lib/underwriting/score';
 import type { VetoFinding, VetoLevel } from '@/lib/domain/veto';
 import { highestVeto } from '@/lib/domain/veto';
 
 // Eingaben, wie sie im Konto (immo_user_data) gespeichert werden. Alle Beträge in Euro.
 const num = (min = 0, max = 1e9) => z.coerce.number().finite().min(min).max(max);
+const flag = () => z.preprocess((v) => v === true || v === 'true' || v === 1 || v === '1' || v === 'on', z.boolean()).default(false);
 const txt = (max = 80) => z.preprocess((v) => (v === null || v === undefined ? '' : String(v)), z.string().trim().max(max));
 
 export const ProfileSchema = z.object({
@@ -51,6 +53,9 @@ export const ObjectSchema = z.object({
   energyConsumption: num(0, 2000).default(0), primaryEnergy: num(0, 2000).default(0), efficiencyClass: txt(4),
   marketValue: num().default(0),
   grestPct: num(0, 10).default(0), notaryPct: num(0, 10).default(0), brokerPct: num(0, 10).default(0),
+  // Mietrecht, Grundbuch, Bewertung (optional)
+  vergleichsmieteQm: num(0, 200).default(0), mietpreisbremse: flag(), abt2Open: flag(),
+  liegenschaftszinsPct: num(0, 15).default(0), restnutzungsdauer: z.coerce.number().int().min(0).max(100).default(0),
 });
 
 export type UploadedDoc = { filename: string; category: string; sha256: string; createdAt: string };
@@ -67,6 +72,8 @@ export const RENT_RECOGNITION = 0.75;
 export type StressRow = { name: string; assumption: string; cfads: number; debtService: number; dscr: number; cashflow: number };
 
 export type Kreditmappe = {
+  reportId: string;
+  dataHash: string; // SHA-256 der Eingabedaten (Objekt und Profil); die PDF-Prüfsumme steht im Prüfregister
   object: PropertyObject;
   profile: Profile;
   createdAt: string;
@@ -78,7 +85,9 @@ export type Kreditmappe = {
     grossYield: number; noi: number; cfads: number; debtService: number; dscr: number; icr: number;
     ltvPurchase: number; ltvLending: number | null; monthlyCashflow: number; pricePerSqm: number | null;
     maintenancePerSqm: number | null;
+    debtYield: number | null; cashOnCash: number | null; breakEvenRate: number | null; netYield: number | null;
   };
+  valuation: null | { value: number; reinertrag: number; bodenverzinsung: number; faktor: number; capRatePct: number; remainingLife: number; landValue: number; deviation: number };
   household: { income: number; recognizedRent: number; living: number; costs: number; rate: number; surplus: number };
   stress: StressRow[];
   score: { value: number; capped: boolean; note: string };
@@ -134,16 +143,9 @@ export function buildKreditmappe(o: PropertyObject, p: Profile, now = new Date()
     stressCases(o),
   );
 
-  const stressNames = ['Basisfall', 'Moderat', 'Schwer', 'Extrem'];
-  const stressText = [
-    'Eingegebene Werte',
-    'Zins +1,0 Pkt., Leerstand +3 Pkt., Instandhaltung +10 %',
-    'Zins +2,5 Pkt., Leerstand +8 Pkt., Instandhaltung +25 %',
-    'Zins +4,0 Pkt., Leerstand +15 Pkt., Instandhaltung +50 %',
-  ];
   const stress: StressRow[] = uw.stress.map((s, k) => ({
-    name: stressNames[k] ?? s.case.name,
-    assumption: stressText[k] ?? '',
+    name: STRESS_SET[k]?.name ?? s.case.name,
+    assumption: STRESS_SET[k]?.text ?? '',
     cfads: s.annualCashflow + s.debtService,
     debtService: s.debtService,
     dscr: s.dscr,
@@ -187,7 +189,19 @@ export function buildKreditmappe(o: PropertyObject, p: Profile, now = new Date()
     weg = { share, reserveShare, plannedShare, underfunding: Math.max(0, plannedShare - reserveShare), specialShare: o.wegSpecialTotal * share };
   }
 
-  const vetos = evaluate({ o, gap, surplus, dscr: uw.dscr, ltvLending, equity, purchaseCosts, maintenancePerSqm, monthlyCashflow: (uw.cfads - uw.debtService) / 12, tax, weg });
+  const extra = extraMetrics({ noi: uw.noi, cfads: uw.cfads, debtService: uw.debtService, loan: o.loan, equity, totalCost, repaymentRate: repayment });
+  let valuation: Kreditmappe['valuation'] = null;
+  if (o.liegenschaftszinsPct > 0 && o.restnutzungsdauer > 0) {
+    const landValue = o.buildingSharePct > 0 ? o.price * (1 - o.buildingSharePct / 100) : 0;
+    const opCosts = o.nonRecoverable * 12 + o.maintenance * 12 + o.rent * 12 * Math.max(o.vacancyPct, 2) / 100;
+    const ev = ertragswert({ annualRent: o.rent * 12, operatingCosts: opCosts, landValue, capRate: o.liegenschaftszinsPct / 100, remainingLife: o.restnutzungsdauer });
+    if (ev) valuation = { ...ev, capRatePct: o.liegenschaftszinsPct, remainingLife: o.restnutzungsdauer, landValue, deviation: o.price / ev.value - 1 };
+  }
+  // Kern-Stresstests für die Resilienz: Zins +200 bp, 6 Monate Leerstand, Kosten +15 %
+  const coreStress = [2, 5, 7].map((k) => uw.stress[k]?.dscr).filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  const stressDscr = o.loan > 0 && coreStress.length ? Math.min(...coreStress) : null;
+
+  const vetos = evaluate({ o, gap, surplus, dscr: uw.dscr, ltvLending, equity, purchaseCosts, maintenancePerSqm, monthlyCashflow: (uw.cfads - uw.debtService) / 12, tax, weg, stressDscr });
 
   const docCategories = new Set(uploads.map((u) => u.category));
   const rawResult = bankReadyScore({
@@ -199,6 +213,7 @@ export function buildKreditmappe(o: PropertyObject, p: Profile, now = new Date()
     legalRisk: 100, // rechtlich ungeprüft
     technicalRisk: 100, // technisch ungeprüft
     cashReserveMonths: 0,
+    stressDscr,
   });
   const raw = rawResult.score;
   const capped = uw.dscr < 1;
@@ -211,6 +226,8 @@ export function buildKreditmappe(o: PropertyObject, p: Profile, now = new Date()
   };
 
   return {
+    reportId: randomUUID(),
+    dataHash: createHash('sha256').update(JSON.stringify({ object: o, profile: p })).digest('hex'),
     object: o,
     profile: p,
     createdAt: now.toISOString(),
@@ -225,7 +242,9 @@ export function buildKreditmappe(o: PropertyObject, p: Profile, now = new Date()
       monthlyCashflow: (uw.cfads - uw.debtService) / 12,
       pricePerSqm: o.area > 0 ? o.price / o.area : null,
       maintenancePerSqm,
+      ...extra,
     },
+    valuation,
     household: { income: p.netIncome, recognizedRent, living, costs, rate: monthlyRate, surplus },
     stress,
     score,
@@ -239,21 +258,37 @@ export function buildKreditmappe(o: PropertyObject, p: Profile, now = new Date()
   };
 }
 
+// Stresstest-Matrix in Anlehnung an MaRisk-Szenarien: Zinsschock, Leerstand in Monaten, Kostensteigerung, Kombination.
+// Zinsschock wirkt auf den vollen Kapitaldienst (Anschluss bzw. variable Finanzierung); Tilgungssatz bleibt gleich.
+const STRESS_SET: { name: string; text: string; di: number; vacMonths: number; cost: number }[] = [
+  { name: 'Basis', text: 'Eingegebene Werte', di: 0, vacMonths: 0, cost: 1 },
+  { name: 'Zins +100 bp', text: 'Sollzins +1,0 Prozentpunkte', di: 0.01, vacMonths: 0, cost: 1 },
+  { name: 'Zins +200 bp', text: 'Sollzins +2,0 Prozentpunkte', di: 0.02, vacMonths: 0, cost: 1 },
+  { name: 'Zins +300 bp', text: 'Sollzins +3,0 Prozentpunkte', di: 0.03, vacMonths: 0, cost: 1 },
+  { name: 'Leerstand 3 Mon.', text: 'Drei Monate ohne Miete im Jahr', di: 0, vacMonths: 3, cost: 1 },
+  { name: 'Leerstand 6 Mon.', text: 'Sechs Monate ohne Miete im Jahr', di: 0, vacMonths: 6, cost: 1 },
+  { name: 'Leerstand 12 Mon.', text: 'Ein Jahr ohne Miete', di: 0, vacMonths: 12, cost: 1 },
+  { name: 'Kosten +15 %', text: 'Nicht umlagefähige Kosten und Instandhaltung +15 %', di: 0, vacMonths: 0, cost: 1.15 },
+  { name: 'Kosten +30 %', text: 'Nicht umlagefähige Kosten und Instandhaltung +30 %', di: 0, vacMonths: 0, cost: 1.3 },
+  { name: 'Kombination', text: 'Zins +200 bp, 3 Monate Leerstand, Kosten +15 %', di: 0.02, vacMonths: 3, cost: 1.15 },
+];
+
 function stressCases(o: PropertyObject): StressCase[] {
   const i = o.interestPct / 100;
   const v = o.vacancyPct / 100;
-  return [
-    { name: 'base', interestRate: i, vacancyRate: v, maintenanceMultiplier: 1 },
-    { name: 'base', interestRate: i + 0.01, vacancyRate: Math.min(1, v + 0.03), maintenanceMultiplier: 1.1 },
-    { name: 'worst', interestRate: i + 0.025, vacancyRate: Math.min(1, v + 0.08), maintenanceMultiplier: 1.25 },
-    { name: 'worst', interestRate: i + 0.04, vacancyRate: Math.min(1, v + 0.15), maintenanceMultiplier: 1.5 },
-  ];
+  return STRESS_SET.map((x) => ({
+    name: x.name,
+    interestRate: i + x.di,
+    vacancyRate: Math.min(1, x.vacMonths > 0 ? Math.max(v, x.vacMonths / 12) : v),
+    maintenanceMultiplier: x.cost,
+    costMultiplier: x.cost,
+  }));
 }
 
 type EvalInput = {
   o: PropertyObject; gap: number; surplus: number; dscr: number; ltvLending: number | null;
   equity: number; purchaseCosts: number; maintenancePerSqm: number | null; monthlyCashflow: number;
-  tax: Kreditmappe['tax']; weg: Kreditmappe['weg'];
+  tax: Kreditmappe['tax']; weg: Kreditmappe['weg']; stressDscr?: number | null;
 };
 
 // Entscheidungsunterstützung. Keine Aussage über den Eintritt von Rechtsfolgen oder Bankentscheidungen.
@@ -285,6 +320,41 @@ function evaluate(x: EvalInput): VetoFinding[] {
       evidenceIds: ['eingabe:miete', 'eingabe:zins', 'eingabe:tilgung'],
       financialImpactEur: eur(x.monthlyCashflow * 12),
       recommendation: 'Tragfähigkeit in der Haushaltsrechnung belegen oder Finanzierungsstruktur anpassen.',
+    });
+  }
+  if (x.dscr >= 1 && x.dscr < 1.05 && x.o.loan > 0) {
+    f.push({
+      id: 'DSCR_BELOW_105', level: 'CONDITIONAL_VETO', title: 'Kapitaldienstdeckung ohne Puffer',
+      reason: 'Der DSCR liegt zwischen 1,00 und 1,05. Schon kleine Abweichungen bei Miete oder Kosten führen zu einer Unterdeckung.',
+      evidenceIds: ['eingabe:miete', 'eingabe:kosten', 'eingabe:zins', 'eingabe:tilgung'],
+      recommendation: 'Puffer schaffen (Eigenkapital, Tilgung, Kaufpreis) oder Tragfähigkeit über das Einkommen belegen.',
+    });
+  }
+  if (x.tax && x.tax.monthlyCashflowAfterTax < 0) {
+    f.push({
+      id: 'AFTER_TAX_NEGATIVE', level: 'CONDITIONAL_VETO', title: 'Cashflow auch nach Steuern negativ',
+      reason: 'Selbst unter Berücksichtigung der modellierten Steuerwirkung muss monatlich zugezahlt werden.',
+      evidenceIds: ['eingabe:miete', 'eingabe:grenzsteuersatz', 'eingabe:gebaeudeanteil'],
+      financialImpactEur: eur(x.tax.monthlyCashflowAfterTax * 12),
+      recommendation: 'Zuzahlung dauerhaft im Haushalt einplanen oder Annahmen und Kaufpreis prüfen.',
+    });
+  }
+  if (x.o.mietpreisbremse && x.o.vergleichsmieteQm > 0 && x.o.area > 0 && x.o.rent > x.o.vergleichsmieteQm * 1.1 * x.o.area + 0.5) {
+    const cap = x.o.vergleichsmieteQm * 1.1 * x.o.area;
+    f.push({
+      id: 'RENT_CAP', level: 'CONDITIONAL_VETO', title: 'Miete über der Grenze der Mietpreisbremse',
+      reason: `Die angesetzte Miete liegt über 110 % der ortsüblichen Vergleichsmiete (${Math.round(cap)} € pro Monat). Zulässig ist das nur bei einer Ausnahme, z. B. höherer Vormiete, Erstvermietung nach dem 01.10.2014 oder umfassender Modernisierung (§§ 556d–556f BGB).`,
+      evidenceIds: ['eingabe:miete', 'eingabe:vergleichsmiete', 'eingabe:wohnflaeche'],
+      financialImpactEur: eur((cap - x.o.rent) * 12),
+      recommendation: 'Ausnahme belegen oder mit der zulässigen Miete rechnen.',
+    });
+  }
+  if (x.o.abt2Open) {
+    f.push({
+      id: 'GRUNDBUCH_ABT2', level: 'CONDITIONAL_VETO', title: 'Ungeklärte Belastungen in Abteilung II',
+      reason: 'Rechte wie Wegerechte, Nießbrauch, Wohnrechte oder Vorkaufsrechte können Nutzung und Beleihung einschränken.',
+      evidenceIds: ['eingabe:abteilung_ii'],
+      recommendation: 'Eintragungsbewilligungen beim Grundbuchamt anfordern und Auswirkungen vor dem Notartermin klären.',
     });
   }
   if (x.ltvLending !== null && x.ltvLending > 1) {
@@ -359,7 +429,7 @@ function evaluate(x: EvalInput): VetoFinding[] {
   }
   if (x.weg && x.weg.underfunding > 0) {
     f.push({
-      id: 'WEG_RESERVE_GAP', level: 'WARNING', title: 'Erhaltungsrücklage deckt geplante Maßnahmen nicht',
+      id: 'WEG_RESERVE_GAP', level: 'CONDITIONAL_VETO', title: 'Erhaltungsrücklage deckt geplante Maßnahmen nicht',
       reason: 'Auf Ihren Miteigentumsanteil entfallen mehr geplante Kosten als Rücklage vorhanden ist.',
       evidenceIds: ['eingabe:ruecklage', 'eingabe:massnahmen', 'eingabe:mea'],
       financialImpactEur: eur(-x.weg.underfunding),

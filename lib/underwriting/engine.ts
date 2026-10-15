@@ -13,7 +13,8 @@ export type UnderwritingInput = {
   annualTaxEffect?: number;
 };
 
-export type StressCase = { name: 'base'|'worst'|'best'; interestRate: number; vacancyRate: number; maintenanceMultiplier: number };
+// costMultiplier (optional) wirkt zusätzlich auf die nicht umlagefähigen Kosten; maintenanceMultiplier auf die Instandhaltung.
+export type StressCase = { name: string; interestRate: number; vacancyRate: number; maintenanceMultiplier: number; costMultiplier?: number };
 export type UnderwritingResult = {
   grossRent: number; vacancyLoss: number; noi: number; cfads: number;
   debtService: number; dscr: number; icr: number; ltvPurchasePrice: number;
@@ -40,7 +41,7 @@ export function underwrite(i:UnderwritingInput, cases?:StressCase[]):Underwritin
     {name:'best',interestRate:0.025,vacancyRate:Math.min(vacancy,0.02),maintenanceMultiplier:0.9}
   ];
   const stress=baseCases.map(c=>{
-    const sNoi=grossRent*(1-c.vacancyRate)-i.nonRecoverableOperatingCosts-n(i.annualMaintenance)*c.maintenanceMultiplier;
+    const sNoi=grossRent*(1-c.vacancyRate)-i.nonRecoverableOperatingCosts*(c.costMultiplier??1)-n(i.annualMaintenance)*c.maintenanceMultiplier;
     const sCfads=sNoi-n(i.annualOtherCashCosts)-n(i.annualTax);
     const sDebt=annualDebt(i.loanAmount,c.interestRate,i.loanAmount?i.annualPrincipal/i.loanAmount:0);
     // DSCR = CFADS / Kapitaldienst (ImmoAdv-Risikopolitik)
@@ -51,3 +52,25 @@ export function underwrite(i:UnderwritingInput, cases?:StressCase[]):Underwritin
 
 export function classifyDscr(dscr:number):'red'|'amber'|'green' { return dscr<1.10?'red':dscr<=1.25?'amber':'green'; }
 export function classifyLtv(ltv:number):'prime'|'standard'|'high' { return ltv<=0.60?'prime':ltv<=0.80?'standard':'high'; }
+
+// Zusatzkennzahlen für Kapitalanleger und Banken (alle p. a.; null, wenn nicht definiert).
+export function extraMetrics(x:{noi:number;cfads:number;debtService:number;loan:number;equity:number;totalCost:number;repaymentRate:number}){
+  return {
+    debtYield: x.loan>0 ? x.noi/x.loan : null,                       // NOI ÷ Darlehen
+    cashOnCash: x.equity>0 ? (x.cfads-x.debtService)/x.equity : null, // Cashflow vor Steuern ÷ Eigenkapital
+    breakEvenRate: x.loan>0 ? x.cfads/x.loan-x.repaymentRate : null,  // Sollzins, bei dem der Cashflow vor Steuern 0 ist
+    netYield: x.totalCost>0 ? x.noi/x.totalCost : null,              // NOI ÷ Gesamtinvestition
+  };
+}
+
+// Ertragswert nach der Systematik des Ertragswertverfahrens (ImmoWertV): Bodenwert + (Reinertrag − Bodenwertverzinsung) × Barwertfaktor.
+// Liegenschaftszins und Restnutzungsdauer sind Eingaben des Nutzers (Gutachterausschuss); kein Beleihungswert nach BelWertV.
+export function ertragswert(x:{annualRent:number;operatingCosts:number;landValue:number;capRate:number;remainingLife:number}){
+  if(!(x.capRate>0)||!(x.remainingLife>0)||x.annualRent<=0) return null;
+  const reinertrag=x.annualRent-x.operatingCosts;
+  const bodenverzinsung=x.landValue*x.capRate;
+  const q=1+x.capRate, qn=Math.pow(q,x.remainingLife);
+  const faktor=(qn-1)/(qn*(q-1));
+  const gebaeudeertrag=Math.max(0,reinertrag-bodenverzinsung);
+  return { reinertrag, bodenverzinsung, faktor, gebaeudeertragswert:gebaeudeertrag*faktor, value:x.landValue+gebaeudeertrag*faktor };
+}

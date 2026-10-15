@@ -1,5 +1,5 @@
 (()=>{const info=document.getElementById('vfInfo'),out=document.getElementById('vfOut'),file=document.getElementById('vfFile');
-const id=(new URLSearchParams(location.hash.slice(1))).get('v')||'';let expected=null;
+const id=((location.pathname.match(/^\/verify\/([0-9a-f-]{36})\/?$/)||[])[1])||(new URLSearchParams(location.hash.slice(1))).get('v')||'';let expected=null;
 const dt=s=>new Intl.DateTimeFormat('de-DE',{dateStyle:'long',timeStyle:'short'}).format(new Date(s));
 if(!/^[0-9a-f-]{36}$/.test(id)){info.textContent='Keine Kennung im Link. Bitte den QR-Code der Kreditmappe scannen.';file.disabled=true;return}
 fetch('/api/kreditmappe/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({versionId:id})}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error||'Nicht gefunden.');return d}).then(d=>{expected=d;info.innerHTML=`Registriert: Version ${d.versionNo}, erstellt am ${dt(d.createdAt)}.<br><small>Erwartete Prüfsumme: <code style="word-break:break-all">${d.sha256}</code></small>`}).catch(e=>{info.textContent=e.message;file.disabled=true});

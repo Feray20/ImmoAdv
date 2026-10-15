@@ -86,3 +86,21 @@ test('Portfolio: Summen, DSCR und Zinsschock ab Ende der Zinsbindung', () => {
   near(p.rows[0].after!.cashflow, -106.25);
   assert.equal(p.total.afterCashflow, null);
 });
+
+import { GREST, kaufnebenkosten } from '../public/src/calc.mjs';
+
+test('Grunderwerbsteuer: 16 Länder, Stand Oktober 2026', () => {
+  assert.equal(Object.keys(GREST).length, 16);
+  assert.equal(GREST.bayern.pct, 3.5);
+  assert.equal(GREST.bremen.pct, 5.5);
+  assert.equal(GREST.hessen.pct, 6.0);
+  assert.equal(GREST['nordrhein-westfalen'].pct, 6.5);
+  assert.equal(GREST.thueringen.pct, 5.0);
+});
+
+test('Kaufnebenkosten Hessen 300.000 € mit Makler 3,57 %', () => {
+  const k = kaufnebenkosten({ price: 300000, land: 'hessen', brokerPct: 3.57 })!;
+  assert.deepEqual(k.parts.map((p) => p.amount), [18000, 4500, 1500, 10710]);
+  near(k.total, 34710); assert.equal(k.totalPct, 11.57); near(k.allIn, 334710);
+  assert.equal(kaufnebenkosten({ price: 300000, land: 'atlantis' }), null);
+});

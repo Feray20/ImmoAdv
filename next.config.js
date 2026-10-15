@@ -62,6 +62,9 @@ module.exports = {
       beforeFiles: [
         { source: '/', destination: '/index.html' },
         ...STATIC_PAGES.map((p) => ({ source: `/${p}`, destination: `/${p}/index.html` })),
+        { source: '/rechner/kaufnebenkosten', destination: '/rechner/kaufnebenkosten/index.html' },
+        { source: '/rechner/kaufnebenkosten/:land', destination: '/rechner/kaufnebenkosten/:land/index.html' },
+        { source: '/verify/:id', destination: '/pruefen/index.html' },
         { source: '/p/:slug', destination: '/partner/index.html' },
         { source: '/auth/login', destination: '/auth-login.html' },
         { source: '/auth/register', destination: '/auth-login.html' },

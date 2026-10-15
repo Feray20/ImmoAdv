@@ -3,7 +3,7 @@
 /* Institutionelles Design-System – Cockpit */
 :root{
   color-scheme:light;
-  --navy:#0F172A;--slate:#1E293B;--text:#334155;--muted:#64748B;
+  --navy:#0F2C59;--slate:#1E293B;--text:#334155;--muted:#64748B;
   --bg:#F8FAFC;--line:#E2E8F0;--hair:#CBD5E1;
   --ok:#166534;--ok-bg:#DCFCE7;--warn:#854D0E;--warn-bg:#FEF9C3;--bad:#991B1B;--bad-bg:#FEE2E2;--none:#64748B;--none-bg:#F1F5F9;
 }
@@ -18,9 +18,9 @@ h3{font-size:13px;margin:18px 0 8px;text-transform:uppercase;letter-spacing:.06e
 
 .ck-top{display:flex;align-items:center;gap:24px;padding:0 24px;height:60px;background:#fff;border-bottom:1px solid var(--line)}
 .ck-brand{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--navy);text-decoration:none}
-.ck-brand{color:#1B2F66;font-size:18px;letter-spacing:-.02em}
+.ck-brand{color:#0F2C59;font-size:18px;letter-spacing:-.02em}
 .ck-brand img{display:block}
-.ck-brand em{font-style:normal;color:#2B86C5;margin-left:-8px}
+.ck-brand em{font-style:normal;color:#0284C7;margin-left:-8px}
 .ck-top nav{margin-left:auto;display:flex;gap:18px;font-size:13px}
 .ck-top nav a{text-decoration:none;color:var(--text)}
 .ck-top nav a:hover{color:var(--navy);text-decoration:underline}

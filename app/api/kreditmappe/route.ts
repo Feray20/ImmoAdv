@@ -118,7 +118,7 @@ export async function POST(req: Request) {
         .limit(1)
         .maybeSingle();
       const versionId = randomUUID();
-      const url = `${new URL(req.url).origin}/pruefen#v=${versionId}`;
+      const url = `${new URL(req.url).origin}/verify/${versionId}`;
       const qrDataUrl = await QRCode.toDataURL(url, { errorCorrectionLevel: 'M', margin: 1, width: 240, color: { dark: '#0F172A', light: '#FFFFFF' } });
       verify = { versionNo: (Number(last?.version_no) || 0) + 1, versionId, url, qrDataUrl };
     }

@@ -1,17 +1,15 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import type { Kreditmappe } from './model';
 import { LIVING_BASE, LIVING_PER_PERSON, RENT_RECOGNITION } from './model';
+import { BRAND, BrandFooter, BrandHeader, Watermark } from '@/lib/pdf/brand';
 
 const C = {
-  navy: '#0F172A', slate: '#1E293B', text: '#334155', muted: '#64748B', hair: '#CBD5E1', line: '#E2E8F0', bg: '#F8FAFC',
+  navy: BRAND.navy, slate: '#1E3A8A', text: '#334155', muted: '#64748B', hair: '#CBD5E1', line: '#E2E8F0', bg: '#F8FAFC',
   ok: '#166534', okBg: '#DCFCE7', warn: '#854D0E', warnBg: '#FEF9C3', bad: '#991B1B', badBg: '#FEE2E2', none: '#64748B', noneBg: '#F1F5F9',
 };
 
-const DISCLAIMER =
-  'Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Rechts-, Steuer- oder Finanzierungsberatung gem. § 34i GewO / KWG.';
-
 const s = StyleSheet.create({
-  page: { paddingTop: 42, paddingBottom: 54, paddingHorizontal: 42, fontFamily: 'Helvetica', fontSize: 9, color: C.text, lineHeight: 1.35 },
+  page: { paddingTop: 58, paddingBottom: 66, paddingHorizontal: 42, fontFamily: 'Helvetica', fontSize: 9, color: C.text, lineHeight: 1.35 },
   header: { position: 'absolute', top: 16, left: 42, right: 42, flexDirection: 'row', justifyContent: 'space-between', fontSize: 7.5, color: C.muted, borderBottomWidth: 0.5, borderBottomColor: C.hair, paddingBottom: 4 },
   footer: { position: 'absolute', bottom: 18, left: 42, right: 42, fontSize: 7, color: C.muted, borderTopWidth: 0.5, borderTopColor: C.hair, paddingTop: 4, flexDirection: 'row', justifyContent: 'space-between' },
   footerText: { width: '80%' },
@@ -38,7 +36,6 @@ const fmt = (v: number, d = 2) => new Intl.NumberFormat('de-DE', { minimumFracti
 const eur = (v: number | null) => (v === null || !Number.isFinite(v) ? '–' : `${fmt(v)} €`);
 const pct = (v: number | null) => (v === null || !Number.isFinite(v) ? '–' : `${fmt(v * 100)} %`);
 const dec = (v: number | null) => (v === null || !Number.isFinite(v) ? '–' : fmt(v));
-const date = (iso: string) => new Intl.DateTimeFormat('de-DE', { dateStyle: 'long', timeZone: 'Europe/Berlin' }).format(new Date(iso));
 
 type Tone = 'ok' | 'warn' | 'bad' | 'none';
 const toneStyle = (t: Tone) => ({
@@ -62,24 +59,20 @@ function Rows({ rows, head }: { rows: [string, string][]; head?: [string, string
   );
 }
 
-function Frame({ m }: { m: Kreditmappe }) {
+function Frame({ m, reportId, watermark }: { m: Kreditmappe; reportId: string; watermark?: string }) {
   return (
     <>
-      <View style={s.header} fixed>
-        <Text>ImmoAdv · Kreditmappe · {m.object.name}</Text>
-        <Text>Erstellt am {date(m.createdAt)}</Text>
-      </View>
-      <View style={s.footer} fixed>
-        <Text style={s.footerText}>{DISCLAIMER} Alle Werte beruhen auf Eingaben des Nutzers und sind nicht durch Belege geprüft.</Text>
-        <Text render={({ pageNumber, totalPages }) => `Seite ${pageNumber} von ${totalPages}`} />
-      </View>
+      {watermark ? <Watermark text={watermark} /> : null}
+      <BrandHeader reportType="Banken-Ready Kreditmappe" reportId={reportId} createdAt={m.createdAt} />
+      <BrandFooter hash={m.dataHash} />
     </>
   );
 }
 
 export type Verification = { versionNo: number; versionId: string; url: string; qrDataUrl: string };
 
-export function KreditmappeDocument({ m, verify }: { m: Kreditmappe; verify?: Verification }) {
+export function KreditmappeDocument({ m, verify, watermark = 'UNVERIFIZIERTER ENTWURF — IMMOADV.DE' }: { m: Kreditmappe; verify?: Verification; watermark?: string }) {
+  const rid = verify?.versionId ?? m.reportId;
   const { object: o, profile: p, financing: f, metrics: x, household: h } = m;
   const vetoTone: Tone = m.vetoLevel === 'HARD_VETO' ? 'bad' : m.vetoLevel === 'CONDITIONAL_VETO' ? 'warn' : m.vetoLevel === 'WARNING' ? 'warn' : 'ok';
   const vetoLabel = { HARD_VETO: 'Hartes Veto', CONDITIONAL_VETO: 'Bedingtes Veto', WARNING: 'Hinweise', NONE: 'Keine Abweichung' }[m.vetoLevel];
@@ -88,7 +81,7 @@ export function KreditmappeDocument({ m, verify }: { m: Kreditmappe; verify?: Ve
   return (
     <Document title={`Kreditmappe – ${o.name}`} author="ImmoAdv" subject="Kreditmappe zur Vorbereitung des Bankgesprächs" language="de">
       <Page size="A4" style={s.page}>
-        <Frame m={m} />
+        <Frame m={m} reportId={rid} watermark={watermark} />
         <Text style={s.kicker}>KREDITMAPPE · VORBEREITUNG BANKGESPRÄCH</Text>
         <Text style={s.h1}>{o.name}</Text>
         <Text style={s.muted}>Erwerbsstatus: {p.employment} · Haushalt: {p.householdSize} {p.householdSize === 1 ? 'Person' : 'Personen'}</Text>
@@ -106,7 +99,7 @@ export function KreditmappeDocument({ m, verify }: { m: Kreditmappe; verify?: Ve
             <Image src={verify.qrDataUrl} style={{ width: 62, height: 62, marginRight: 10 }} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: 'Helvetica-Bold', color: C.navy }}>Echtheitsprüfung · Version {verify.versionNo}</Text>
-              <Text>QR-Code scannen oder {verify.url.replace(/^https?:\/\//, '').split('#')[0]} aufrufen und diese PDF-Datei auswählen. Die Prüfsumme (SHA-256) der Datei wird im Browser berechnet und mit der bei Erstellung gespeicherten verglichen.</Text>
+              <Text>QR-Code scannen oder {verify.url.replace(/^https?:\/\//, '')} aufrufen und diese PDF-Datei auswählen. Die Prüfsumme (SHA-256) der Datei wird im Browser berechnet und mit der bei Erstellung gespeicherten verglichen.</Text>
               <Text style={{ fontSize: 7, color: C.muted, marginTop: 2 }}>Kennung: {verify.versionId}</Text>
             </View>
           </View>
@@ -145,7 +138,7 @@ export function KreditmappeDocument({ m, verify }: { m: Kreditmappe; verify?: Ve
       </Page>
 
       <Page size="A4" style={s.page}>
-        <Frame m={m} />
+        <Frame m={m} reportId={rid} watermark={watermark} />
         <Text style={s.h2}>3. Objekt</Text>
         <Rows head={['Merkmal', 'Wert']} rows={[
           ['Bezeichnung', o.name],
@@ -180,10 +173,28 @@ export function KreditmappeDocument({ m, verify }: { m: Kreditmappe; verify?: Ve
           ['LTV (Darlehen ÷ Kaufpreis)', pct(x.ltvPurchase)],
           ['Beleihungsauslauf (Darlehen ÷ Beleihungswert)', pct(x.ltvLending)],
           ['Cashflow vor Steuern pro Monat', eur(x.monthlyCashflow)],
+          ['Nettomietrendite (NOI ÷ Gesamtinvestition)', pct(x.netYield)],
+          ['Debt Yield (NOI ÷ Darlehen)', pct(x.debtYield)],
+          ['Cash-on-Cash (Cashflow vor Steuern ÷ Eigenkapital)', pct(x.cashOnCash)],
+          ['Break-even-Zins (Cashflow vor Steuern = 0)', pct(x.breakEvenRate)],
         ]} />
+        {m.valuation && (
+          <>
+            <Text style={[s.h2, { fontSize: 10.5 }]}>Ertragswert (vereinfacht, Systematik ImmoWertV)</Text>
+            <Rows head={['Position', 'Wert']} rows={[
+              ['Reinertrag p. a. (Miete − Bewirtschaftung inkl. mind. 2 % Mietausfall)', eur(m.valuation.reinertrag)],
+              [`Bodenwert (Kaufpreis × ${fmt(100 - o.buildingSharePct, 0)} %)`, eur(m.valuation.landValue)],
+              [`Bodenwertverzinsung (${fmt(m.valuation.capRatePct)} %)`, eur(m.valuation.bodenverzinsung)],
+              [`Barwertfaktor (${fmt(m.valuation.remainingLife, 0)} Jahre Restnutzungsdauer)`, fmt(m.valuation.faktor, 4)],
+              ['Ertragswert', eur(m.valuation.value)],
+              ['Kaufpreis im Verhältnis zum Ertragswert', `${m.valuation.deviation >= 0 ? '+' : ''}${fmt(m.valuation.deviation * 100)} %`],
+            ]} />
+            <Text style={s.small}>Liegenschaftszins und Restnutzungsdauer sind Angaben des Nutzers (Quelle: Gutachterausschuss). Kein Verkehrswertgutachten und kein Beleihungswert nach BelWertV.</Text>
+          </>
+        )}
         <Text style={s.small}>Kennzahlen und Schwellenwerte sind ImmoAdv-interne Risikopolitik, keine gesetzlichen Vorgaben. Bankindividuelle Kreditrichtlinien können abweichen.</Text>
 
-        <Text style={s.h2}>5. Stresstest</Text>
+        <Text style={s.h2}>5. Stresstest (Zins, Leerstand, Kosten)</Text>
         <View style={s.table}>
           <View style={s.head}>
             <Text style={[s.headText, { flex: 1.2 }]}>Szenario</Text>
@@ -202,7 +213,7 @@ export function KreditmappeDocument({ m, verify }: { m: Kreditmappe; verify?: Ve
         </View>
       </Page>
       <Page size="A4" style={s.page}>
-        <Frame m={m} />
+        <Frame m={m} reportId={rid} watermark={watermark} />
         <Text style={s.h2}>Steuerliche Modellrechnung (erstes Jahr)</Text>
         {m.tax ? (
           <>
@@ -256,7 +267,7 @@ export function KreditmappeDocument({ m, verify }: { m: Kreditmappe; verify?: Ve
 
 
       <Page size="A4" style={s.page}>
-        <Frame m={m} />
+        <Frame m={m} reportId={rid} watermark={watermark} />
         <Text style={s.h2}>6. Haushaltsrechnung (monatlich)</Text>
         <Rows head={['Position', 'Betrag']} rows={[
           ['Nettoeinkommen', eur(h.income)],

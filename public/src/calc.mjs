@@ -227,3 +227,39 @@ export function portfolio(objects, { shockPp = 0 } = {}) {
     },
   };
 }
+
+// ---------- Kaufnebenkosten nach Bundesland ----------
+// Grunderwerbsteuersätze, Stand Oktober 2026 (letzte Änderung: Bremen 5,5 % seit 01.07.2025).
+// Notar und Grundbuch sind Richtwerte nach GNotKG; Makler: Käuferanteil nach Vereinbarung (bei Wohnungen und
+// Einfamilienhäusern höchstens die Hälfte der Gesamtprovision, § 656c BGB).
+export const GREST = {
+  'baden-wuerttemberg': { name: 'Baden-Württemberg', pct: 5.0 },
+  bayern: { name: 'Bayern', pct: 3.5 },
+  berlin: { name: 'Berlin', pct: 6.0 },
+  brandenburg: { name: 'Brandenburg', pct: 6.5 },
+  bremen: { name: 'Bremen', pct: 5.5, since: '2025-07-01' },
+  hamburg: { name: 'Hamburg', pct: 5.5, since: '2023-01-01' },
+  hessen: { name: 'Hessen', pct: 6.0 },
+  'mecklenburg-vorpommern': { name: 'Mecklenburg-Vorpommern', pct: 6.0 },
+  niedersachsen: { name: 'Niedersachsen', pct: 5.0 },
+  'nordrhein-westfalen': { name: 'Nordrhein-Westfalen', pct: 6.5 },
+  'rheinland-pfalz': { name: 'Rheinland-Pfalz', pct: 5.0 },
+  saarland: { name: 'Saarland', pct: 6.5 },
+  sachsen: { name: 'Sachsen', pct: 5.5, since: '2023-01-01' },
+  'sachsen-anhalt': { name: 'Sachsen-Anhalt', pct: 5.0 },
+  'schleswig-holstein': { name: 'Schleswig-Holstein', pct: 6.5 },
+  thueringen: { name: 'Thüringen', pct: 5.0, since: '2024-01-01' },
+};
+
+export function kaufnebenkosten({ price, land, notaryPct = 1.5, landRegistryPct = 0.5, brokerPct = 0 }) {
+  const g = GREST[land];
+  if (!g || !(price > 0)) return null;
+  const parts = [
+    { key: 'grest', label: `Grunderwerbsteuer ${g.name}`, pct: g.pct },
+    { key: 'notar', label: 'Notar (Richtwert)', pct: notaryPct },
+    { key: 'grundbuch', label: 'Grundbuchamt (Richtwert)', pct: landRegistryPct },
+    ...(brokerPct > 0 ? [{ key: 'makler', label: 'Makler (Käuferanteil)', pct: brokerPct }] : []),
+  ].map((x) => ({ ...x, amount: r2((price * x.pct) / 100) }));
+  const total = r2(parts.reduce((s, x) => s + x.amount, 0));
+  return { land: g.name, parts, total, totalPct: Math.round((total / price) * 10000) / 100, allIn: r2(price + total) };
+}
