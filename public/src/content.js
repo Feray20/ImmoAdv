@@ -130,7 +130,7 @@ window.IA_CONTENT = {
       next: 'Details auf der Seite „Sicherheit“ ansehen.',
       l2: 'Hosting über Vercel, Konto und Daten über Supabase. Für künftige Zahlungen ist Stripe vorgesehen; Kartendaten würden ImmoAdv dabei nie erreichen. Fortschritt von Checkliste und Pro-Begleiter wird ohne Konto nur im Speicher Ihres Browsers abgelegt. Einzelheiten in der Datenschutzerklärung.' },
     { cat: 'Produkt, Sicherheit & Datenschutz', q: 'Wer kann meine Daten sehen?',
-      l1: 'Nur Sie. Eine Weitergabe an Banken oder Berater erfolgt nur, wenn Sie die Kreditmappe selbst weitergeben.',
+      l1: 'Nur Sie. Banken oder Berater sehen nur, was Sie selbst weitergeben: die Kreditmappe oder eine befristete Freigabe ausgewählter Unterlagen.',
       next: 'Datenschutzerklärung lesen.',
       l2: 'Technische Dienstleister (Hosting, Datenbank, Zahlung) verarbeiten Daten nur im Auftrag. Mit einem befristeten Freigabelink können Sie ausgewählte Kategorien für eine Bank oder einen Berater öffnen; jeder Abruf wird protokolliert, ein Widerruf wirkt sofort. Eine Ende-zu-Ende-Verschlüsselung besteht nicht: Dateien sind verschlüsselt gespeichert, für den Betrieb aber technisch zugänglich.' },
     { cat: 'Produkt, Sicherheit & Datenschutz', q: 'Was kostet ImmoAdv?',

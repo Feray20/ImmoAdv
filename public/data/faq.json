@@ -250,7 +250,7 @@
       "id": 31,
       "category": "Produkt, Sicherheit & Datenschutz",
       "question": "Wer kann meine Daten sehen?",
-      "level1": "Nur Sie. Eine Weitergabe an Banken oder Berater erfolgt nur, wenn Sie die Kreditmappe selbst weitergeben.",
+      "level1": "Nur Sie. Banken oder Berater sehen nur, was Sie selbst weitergeben: die Kreditmappe oder eine befristete Freigabe ausgewählter Unterlagen.",
       "nextStep": "Datenschutzerklärung lesen.",
       "level2": "Technische Dienstleister (Hosting, Datenbank, Zahlung) verarbeiten Daten nur im Auftrag. Mit einem befristeten Freigabelink können Sie ausgewählte Kategorien für eine Bank oder einen Berater öffnen; jeder Abruf wird protokolliert, ein Widerruf wirkt sofort. Eine Ende-zu-Ende-Verschlüsselung besteht nicht: Dateien sind verschlüsselt gespeichert, für den Betrieb aber technisch zugänglich."
     },
