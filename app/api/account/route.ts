@@ -30,6 +30,9 @@ export async function GET(req: Request) {
     own('immo_document_requests', 'object_ref, category, note, status, created_at, resolved_at'),
     db.from('immo_entitlements').select('plan, status, valid_until, created_at').eq('user_id', user.id).maybeSingle(),
   ]);
+  const { data: b2bAcc } = await db.from('immo_b2b_accounts').select('*').eq('owner_id', user.id).maybeSingle();
+  const b2bLeads = b2bAcc ? (await db.from('immo_b2b_leads').select('*').eq('account_id', b2bAcc.id).limit(5000)).data : null;
+  const b2bInvoices = b2bAcc ? (await db.from('immo_invoices').select('invoice_number, kind, issue_date, net_cents, vat_cents, gross_cents, payment_status').eq('account_id', b2bAcc.id).limit(5000)).data : null;
   const body = {
     exportiert_am: new Date().toISOString(),
     hinweis: 'Datenauskunft gem. Art. 15 und Art. 20 DSGVO. Hochgeladene Dateien sind im Konto einzeln abrufbar; Zahlungsdaten liegen bei Stripe.',
@@ -43,6 +46,7 @@ export async function GET(req: Request) {
     kreditmappe_freischaltungen: credits.data ?? [],
     unterlagen_anforderungen: requests.data ?? [],
     tarif: ent.data ?? null,
+    unternehmenskonto: b2bAcc ? { ...b2bAcc, widget_key: undefined, anfragen: b2bLeads ?? [], rechnungen: b2bInvoices ?? [] } : null,
   };
   return new NextResponse(JSON.stringify(body, null, 2), {
     status: 200,
@@ -89,7 +93,13 @@ export async function DELETE(req: Request) {
   }
 
   const db = supabaseAdmin();
+  // Unternehmenskonto mit laufendem Abo: erst kündigen (Rechnungen bleiben nach § 147 AO erhalten).
+  const { data: b2b } = await db.from('immo_b2b_accounts').select('id, plan_source, plan_tier, plan_until, stripe_subscription_id').eq('owner_id', user.id).maybeSingle();
+  if (b2b?.plan_source === 'stripe' && b2b.plan_tier && b2b.stripe_subscription_id && !b2b.plan_until) {
+    return json({ error: 'Bitte zuerst das Abo des Unternehmenskontos kündigen (Unternehmensportal → Tarif & Rechnungen → Abo verwalten).' }, 409);
+  }
   try {
+    if (b2b) await removeFolder('b2b-logos', b2b.id);
     await removeFolder(DOCUMENT_BUCKET, user.id);
     await removeFolder('bank-ready-pdf', user.id);
 
