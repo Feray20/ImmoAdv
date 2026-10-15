@@ -139,7 +139,7 @@
       "category": "Kapitalanlage & Vermögensaufbau",
       "question": "Was ist die 15-%-Grenze bei Renovierungen?",
       "level1": "Wer innerhalb von drei Jahren nach dem Kauf mehr als 15 % des Gebäudewerts netto renoviert, kann diese Kosten nicht sofort absetzen. Sie werden dann über die AfA verteilt.",
-      "nextStep": "Gebäudeanteil × 15 % selbst berechnen – ein eigener Rechner ist in Entwicklung.",
+      "nextStep": "Grenze im Rechner unter „Kaufpreisaufteilung und 15-%-Grenze“ berechnen.",
       "level2": "Anschaffungsnahe Herstellungskosten nach § 6 Abs. 1 Nr. 1a EStG: Instandsetzungs- und Modernisierungskosten innerhalb von 3 Jahren nach Anschaffung, die ohne USt 15 % der Gebäude-Anschaffungskosten übersteigen. Beispiel (fiktiv, Mustermappe): Gebäude-Anschaffungskosten 151.826,40 € (80 % von 189.783 €) → Grenze 22.773,96 € netto."
     },
     {
@@ -147,7 +147,7 @@
       "category": "Kapitalanlage & Vermögensaufbau",
       "question": "Wann ist ein Verkauf steuerfrei?",
       "level1": "Bei vermieteten Immobilien ist der Gewinn aus einem Verkauf nach mehr als zehn Jahren zwischen Kauf und Verkauf in der Regel steuerfrei. Selbstgenutzte Immobilien haben eigene Regeln.",
-      "nextStep": "Kaufdatum notieren; eine Fristenübersicht ist in Entwicklung.",
+      "nextStep": "Kaufdatum unter „Fristen“ eintragen und die Termine als Kalenderdatei speichern.",
       "level2": "Private Veräußerungsgeschäfte nach § 23 Abs. 1 Nr. 1 EStG. Ausnahme bei Selbstnutzung im Verkaufsjahr und den beiden Vorjahren. Bei Verkauf innerhalb der Frist wird der Gewinn mit dem persönlichen Steuersatz versteuert; die AfA erhöht dabei den Gewinn."
     },
     {
@@ -163,7 +163,7 @@
       "category": "Kapitalanlage & Vermögensaufbau",
       "question": "Was ist die Kappungsgrenze?",
       "level1": "Bei bestehenden Mietverhältnissen darf die Miete innerhalb von drei Jahren um höchstens 20 % steigen, in angespannten Märkten um höchstens 15 %. Zusätzlich gilt die ortsübliche Vergleichsmiete als Obergrenze.",
-      "nextStep": "Miete der letzten drei Jahre gegenüberstellen; Mietrecht-Szenarien sind in Entwicklung.",
+      "nextStep": "Kappungsgrenze, Index- und Staffelmiete im Rechner prüfen.",
       "level2": "§ 558 Abs. 3 BGB. Die abgesenkte Grenze von 15 % gilt in Gebieten, die die Länder per Verordnung bestimmen. Modernisierungsmieterhöhungen nach § 559 BGB folgen eigenen Regeln."
     },
     {
@@ -187,7 +187,7 @@
       "category": "Kapitalanlage & Vermögensaufbau",
       "question": "Wie bewerte ich ein Portfolio?",
       "level1": "Ein Portfolio bewerten Sie über Gesamt-Cashflow, gesamte Restschuld und die Termine, an denen Zinsbindungen auslaufen. Ein einzelnes schwaches Objekt kann die ganze Finanzierungsfähigkeit belasten.",
-      "nextStep": "Objekte einzeln im Rechner prüfen; eine Portfolio-Ansicht ist in Entwicklung.",
+      "nextStep": "Objekte im Konto speichern; die Portfolio-Übersicht zeigt Summen und das Zins-Szenario.",
       "level2": "Kennzahlen: Summe Cashflow v./n. St., gewichteter Zins, Gesamt-LTV (Restschuld ÷ Marktwerte), DSCR (Überschuss vor Kapitaldienst ÷ Kapitaldienst), Fälligkeitsprofil der Zinsbindungen. Banken bewerten bei Folgefinanzierungen die Gesamtverschuldung."
     },
     {
@@ -212,7 +212,7 @@
       "question": "Was ist die Kreditmappe?",
       "level1": "Ein strukturiertes PDF mit Vorhaben, Objektdaten, Haushaltsrechnung, Kennzahlen und Unterlagenstatus. Sie hilft Ihnen, gut vorbereitet ins Bankgespräch zu gehen.",
       "nextStep": "Mustermappe ansehen.",
-      "level2": "Die Mappe enthält Rechenwege und den Status jeder Unterlage (liegt vor, angefordert, fehlt, ungeprüft). Sie ist keine Finanzierungszusage und ersetzt nicht die Prüfung durch die Bank. Die Kreditmappe je Nutzer ist in Entwicklung und noch nicht buchbar (geplant: 49,00 € je Objekt inkl. 19 % USt). Heute verfügbar ist die fiktive Mustermappe mit Druckansicht."
+      "level2": "Die Mappe enthält Rechenwege und den Status jeder Unterlage (liegt vor, angefordert, fehlt, ungeprüft). Sie ist keine Finanzierungszusage und ersetzt nicht die Prüfung durch die Bank. Die Kreditmappe je Nutzer ist technisch fertig und wird buchbar, sobald die Zahlungsabwicklung startet (geplant: 49,00 € je Objekt inkl. 19 % USt). Heute verfügbar ist die fiktive Mustermappe mit Druckansicht."
     },
     {
       "id": 27,

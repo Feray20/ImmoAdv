@@ -18,6 +18,8 @@ const STATIC_PAGES = [
   'profiler',
   'pruefen',
   'rechner',
+  'fristen',
+  'szenarien',
 ];
 
 const securityHeaders = [
@@ -60,6 +62,7 @@ module.exports = {
       beforeFiles: [
         { source: '/', destination: '/index.html' },
         ...STATIC_PAGES.map((p) => ({ source: `/${p}`, destination: `/${p}/index.html` })),
+        { source: '/p/:slug', destination: '/partner/index.html' },
         { source: '/auth/login', destination: '/auth-login.html' },
         { source: '/auth/register', destination: '/auth-login.html' },
         { source: '/app/dashboard', destination: '/auth-login.html' },

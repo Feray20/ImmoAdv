@@ -73,11 +73,11 @@ window.IA_CONTENT = {
       l2: 'Linear nach § 7 Abs. 4 EStG: 3 % bei Fertigstellung ab 2023, 2 % bei Fertigstellung 1925–2022, 2,5 % vor 1925. Degressiv nach § 7 Abs. 5a EStG: 5 % vom Restwert für neue Wohngebäude mit Baubeginn zwischen 01.10.2023 und 30.09.2029. Bemessungsgrundlage ist nur der Gebäudeanteil; die Aufteilung kann mit der Arbeitshilfe des BMF erfolgen. Die steuerliche Wirkung hängt vom persönlichen Steuersatz ab – bitte mit Steuerberatung abstimmen.' },
     { cat: 'Kapitalanlage & Vermögensaufbau', q: 'Was ist die 15-%-Grenze bei Renovierungen?',
       l1: 'Wer innerhalb von drei Jahren nach dem Kauf mehr als 15 % des Gebäudewerts netto renoviert, kann diese Kosten nicht sofort absetzen. Sie werden dann über die AfA verteilt.',
-      next: 'Gebäudeanteil × 15 % selbst berechnen – ein eigener Rechner ist in Entwicklung.',
+      next: 'Grenze im Rechner unter „Kaufpreisaufteilung und 15-%-Grenze“ berechnen.',
       l2: 'Anschaffungsnahe Herstellungskosten nach § 6 Abs. 1 Nr. 1a EStG: Instandsetzungs- und Modernisierungskosten innerhalb von 3 Jahren nach Anschaffung, die ohne USt 15 % der Gebäude-Anschaffungskosten übersteigen. Beispiel (fiktiv, Mustermappe): Gebäude-Anschaffungskosten 151.826,40 € (80 % von 189.783 €) → Grenze 22.773,96 € netto.' },
     { cat: 'Kapitalanlage & Vermögensaufbau', q: 'Wann ist ein Verkauf steuerfrei?',
       l1: 'Bei vermieteten Immobilien ist der Gewinn aus einem Verkauf nach mehr als zehn Jahren zwischen Kauf und Verkauf in der Regel steuerfrei. Selbstgenutzte Immobilien haben eigene Regeln.',
-      next: 'Kaufdatum notieren; eine Fristenübersicht ist in Entwicklung.',
+      next: 'Kaufdatum unter „Fristen“ eintragen und die Termine als Kalenderdatei speichern.',
       l2: 'Private Veräußerungsgeschäfte nach § 23 Abs. 1 Nr. 1 EStG. Ausnahme bei Selbstnutzung im Verkaufsjahr und den beiden Vorjahren. Bei Verkauf innerhalb der Frist wird der Gewinn mit dem persönlichen Steuersatz versteuert; die AfA erhöht dabei den Gewinn.' },
     { cat: 'Kapitalanlage & Vermögensaufbau', q: 'Wie funktioniert die Mietpreisbremse?',
       l1: 'In ausgewiesenen Gebieten darf die Miete bei Neuvermietung höchstens 10 % über der ortsüblichen Vergleichsmiete liegen. Es gibt Ausnahmen, etwa für Neubauten und umfassend modernisierte Wohnungen.',
@@ -85,7 +85,7 @@ window.IA_CONTENT = {
       l2: '§ 556d BGB; Ausnahmen in §§ 556e, 556f BGB (höhere Vormiete, Modernisierung, Erstbezug nach dem 01.10.2014). Welche Gemeinden betroffen sind, legen die Landesregierungen per Verordnung fest. Die Grenze ist rechtlich bindend, eine zu hohe Miete kann zurückgefordert werden.' },
     { cat: 'Kapitalanlage & Vermögensaufbau', q: 'Was ist die Kappungsgrenze?',
       l1: 'Bei bestehenden Mietverhältnissen darf die Miete innerhalb von drei Jahren um höchstens 20 % steigen, in angespannten Märkten um höchstens 15 %. Zusätzlich gilt die ortsübliche Vergleichsmiete als Obergrenze.',
-      next: 'Miete der letzten drei Jahre gegenüberstellen; Mietrecht-Szenarien sind in Entwicklung.',
+      next: 'Kappungsgrenze, Index- und Staffelmiete im Rechner prüfen.',
       l2: '§ 558 Abs. 3 BGB. Die abgesenkte Grenze von 15 % gilt in Gebieten, die die Länder per Verordnung bestimmen. Modernisierungsmieterhöhungen nach § 559 BGB folgen eigenen Regeln.' },
     { cat: 'Kapitalanlage & Vermögensaufbau', q: 'Wie funktioniert eine Staffelmiete?',
       l1: 'Die künftigen Mieterhöhungen werden schon im Mietvertrag mit festen Beträgen und Terminen vereinbart. Dazwischen sind weitere Erhöhungen auf die Vergleichsmiete ausgeschlossen.',
@@ -97,7 +97,7 @@ window.IA_CONTENT = {
       l2: 'Üblich sind 2 % der Jahresnettokaltmiete für Wohnraum (angelehnt an § 29 II. BV), bei schwierigen Lagen oder Gewerbe mehr. Beispiel (fiktiv): 9.360 € × 2 % = 187,20 € pro Jahr.' },
     { cat: 'Kapitalanlage & Vermögensaufbau', q: 'Wie bewerte ich ein Portfolio?',
       l1: 'Ein Portfolio bewerten Sie über Gesamt-Cashflow, gesamte Restschuld und die Termine, an denen Zinsbindungen auslaufen. Ein einzelnes schwaches Objekt kann die ganze Finanzierungsfähigkeit belasten.',
-      next: 'Objekte einzeln im Rechner prüfen; eine Portfolio-Ansicht ist in Entwicklung.',
+      next: 'Objekte im Konto speichern; die Portfolio-Übersicht zeigt Summen und das Zins-Szenario.',
       l2: 'Kennzahlen: Summe Cashflow v./n. St., gewichteter Zins, Gesamt-LTV (Restschuld ÷ Marktwerte), DSCR (Überschuss vor Kapitaldienst ÷ Kapitaldienst), Fälligkeitsprofil der Zinsbindungen. Banken bewerten bei Folgefinanzierungen die Gesamtverschuldung.' },
     // 4. Finanzierung, Bankenpraxis & Clearing
     { cat: 'Finanzierung & Bankenpraxis', q: 'Was passiert, wenn die Zinsbindung endet?',
@@ -111,7 +111,7 @@ window.IA_CONTENT = {
     { cat: 'Finanzierung & Bankenpraxis', q: 'Was ist die Kreditmappe?',
       l1: 'Ein strukturiertes PDF mit Vorhaben, Objektdaten, Haushaltsrechnung, Kennzahlen und Unterlagenstatus. Sie hilft Ihnen, gut vorbereitet ins Bankgespräch zu gehen.',
       next: 'Mustermappe ansehen.',
-      l2: 'Die Mappe enthält Rechenwege und den Status jeder Unterlage (liegt vor, angefordert, fehlt, ungeprüft). Sie ist keine Finanzierungszusage und ersetzt nicht die Prüfung durch die Bank. Die Kreditmappe je Nutzer ist in Entwicklung und noch nicht buchbar (geplant: 49,00 € je Objekt inkl. 19 % USt). Heute verfügbar ist die fiktive Mustermappe mit Druckansicht.' },
+      l2: 'Die Mappe enthält Rechenwege und den Status jeder Unterlage (liegt vor, angefordert, fehlt, ungeprüft). Sie ist keine Finanzierungszusage und ersetzt nicht die Prüfung durch die Bank. Die Kreditmappe je Nutzer ist technisch fertig und wird buchbar, sobald die Zahlungsabwicklung startet (geplant: 49,00 € je Objekt inkl. 19 % USt). Heute verfügbar ist die fiktive Mustermappe mit Druckansicht.' },
     { cat: 'Finanzierung & Bankenpraxis', q: 'Was gehört in eine Kreditmappe?',
       l1: 'Selbstauskunft, Einkommens- und Eigenkapitalnachweise sowie alle Objektunterlagen. Je vollständiger, desto schneller kann die Bank prüfen.',
       next: 'Unterlagen-Checkliste durchgehen.',
@@ -169,12 +169,13 @@ window.IA_CONTENT = {
       <p>Kostenpflichtige Angebote sind derzeit nicht buchbar. Sobald sie verfügbar sind, werden Zahlungen über Stripe Payments Europe Ltd., 1 Grand Canal Street Lower, Dublin 2, Irland, abgewickelt. Zahlungsdaten (z. B. Kartennummer) gibt ImmoAdv weder ein noch speichert es sie. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Rechnungsdaten bewahren wir nach § 147 AO und § 257 HGB bis zu 10 Jahre auf (Art. 6 Abs. 1 lit. c DSGVO).</p>
       <h2>5. Hochgeladene Dokumente und Datenraum</h2>
       <p>Wenn Sie Dokumente hochladen, speichern wir die Datei, Dateiname, Kategorie, Größe und eine SHA-256-Prüfsumme bei Supabase (Serverstandort Frankfurt am Main) als Auftragsverarbeiter. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Erstellen Sie eine Freigabe, können Empfänger mit dem Link die gewählten Kategorien bis zum Ablauf oder Widerruf abrufen. Dabei protokollieren wir Zeitpunkt, Aktion, Browserkennung und eine gekürzte, gehashte IP-Adresse (Art. 6 Abs. 1 lit. f DSGVO, Nachvollziehbarkeit und Missbrauchsschutz). Protokolle löschen wir spätestens 12 Monate nach Ablauf der Freigabe. Sie können Dokumente jederzeit selbst löschen. Laden Sie bitte nur Unterlagen hoch, zu deren Weitergabe Sie berechtigt sind; enthalten Unterlagen Daten Dritter (z. B. Mieter), sind Sie dafür verantwortlich.</p>
+      <h3>Unterlagen-Anforderungen</h3><p>Empfänger eines Freigabelinks können fehlende Unterlagen anfordern. Gespeichert werden Kategorie, optionaler Hinweistext (max. 300 Zeichen), Zeitpunkt und Bearbeitungsstatus; im Zugriffsprotokoll zusätzlich die gekürzte, gehashte IP-Adresse. Ist der E-Mail-Versand eingerichtet, erhalten Sie eine Benachrichtigung über den Dienstleister Resend (Resend Inc., USA; Übermittlung auf Grundlage von EU-Standardvertragsklauseln). Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO. Erledigte Anfragen werden mit dem Konto gelöscht.</p><h3>Empfehlung durch Partner</h3><p>Rufen Sie ImmoAdv über den Link eines Partners (z. B. einer Bank) auf und registrieren sich, speichern wir die Kennung dieses Partners in Ihrem Konto, um Empfehlungen zuordnen zu können. Der Partner erhält dadurch keine personenbezogenen Daten. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Auswertung von Kooperationen). Sie können der Zuordnung jederzeit per E-Mail an support@immoadv.de widersprechen.</p><h3>Werkzeuge ohne Konto</h3><p>Eingaben in Rechner, Fristen und Szenarien werden nur in Ihrem Browser (localStorage) gespeichert, damit sie beim nächsten Besuch erhalten bleiben; sie werden nicht übertragen. Sie können sie über die Browser-Einstellungen löschen.</p>
       <h2>6. Speicherung im Browser</h2>
       <p>Der Fortschritt von Checkliste und Pro-Begleiter wird im lokalen Speicher (localStorage) Ihres Browsers abgelegt und nicht an uns übertragen. Die Speicherung ist für die von Ihnen gewünschte Funktion erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Sie können diese Daten jederzeit über Ihren Browser löschen.</p>
       <h2>7. Kein Tracking, keine Werbung, kein KI-Training</h2>
       <p>Wir setzen keine Analyse- oder Werbe-Tracker von Drittanbietern ein. Ihre Finanzdaten werden nicht zum Training von KI-Modellen verwendet.</p>
       <h2>8. Kontakt per E-Mail</h2>
-      <p>Wenn Sie uns schreiben, verarbeiten wir Ihre Angaben zur Bearbeitung der Anfrage (Art. 6 Abs. 1 lit. b bzw. f DSGVO) und löschen sie, wenn sie nicht mehr erforderlich sind.</p>
+      <p>Wenn Sie uns schreiben, verarbeiten wir Ihre Angaben zur Bearbeitung der Anfrage (Art. 6 Abs. 1 lit. b bzw. f DSGVO) und löschen sie, wenn sie nicht mehr erforderlich sind. Automatische E-Mails (Kündigungsbestätigung, Benachrichtigung über Unterlagen-Anforderungen) versenden wir über Resend (Resend Inc., USA) auf Grundlage eines Auftragsverarbeitungsvertrags und der EU-Standardvertragsklauseln.</p>
       <h2>9. Ihre Rechte</h2>
       <p>Sie haben das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO). Eine Einwilligung können Sie jederzeit mit Wirkung für die Zukunft widerrufen. Sie können sich bei einer Aufsichtsbehörde beschweren, z. B. beim Hessischen Beauftragten für Datenschutz und Informationsfreiheit, Gustav-Stresemann-Ring 1, 65189 Wiesbaden.</p>
       <p>Stand: Oktober 2026</p>`,
