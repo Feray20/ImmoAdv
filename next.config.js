@@ -28,6 +28,11 @@ module.exports = {
   reactStrictMode: true,
   poweredByHeader: false,
   serverExternalPackages: ['@react-pdf/renderer'],
+  // pdfkit lädt seine Standardschriften dynamisch; ohne diese Angabe fehlen sie im Serverpaket.
+  outputFileTracingIncludes: {
+    '/api/kreditmappe': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
+    '/api/mustermappe': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
+  },
   async rewrites() {
     return {
       beforeFiles: [
