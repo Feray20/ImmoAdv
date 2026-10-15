@@ -212,7 +212,7 @@
       "question": "Was ist die Kreditmappe?",
       "level1": "Ein strukturiertes PDF mit Vorhaben, Objektdaten, Haushaltsrechnung, Kennzahlen und Unterlagenstatus. Sie hilft Ihnen, gut vorbereitet ins Bankgespräch zu gehen.",
       "nextStep": "Mustermappe ansehen.",
-      "level2": "Die Mappe enthält Rechenwege und den Status jeder Unterlage (liegt vor, angefordert, fehlt, ungeprüft). Sie ist keine Finanzierungszusage und ersetzt nicht die Prüfung durch die Bank. Die Kreditmappe je Nutzer ist technisch fertig und wird buchbar, sobald die Zahlungsabwicklung startet (geplant: 49,00 € je Objekt inkl. 19 % USt). Heute verfügbar sind die fiktive Mustermappe und, nach Anmeldung, eine kostenfreie Vorschau der eigenen Kreditmappe (mit Wasserzeichen, ohne Echtheits-QR)."
+      "level2": "Die Mappe enthält Rechenwege und den Status jeder Unterlage (liegt vor, angefordert, fehlt, ungeprüft). Sie ist keine Finanzierungszusage und ersetzt nicht die Prüfung durch die Bank. Die Kreditmappe ist technisch fertig und wird buchbar, sobald die Zahlungsabwicklung startet (geplant: Einsteiger-Kreditmappe 39,00 €, Profi-Kreditmappe 49,00 € je Objekt, inkl. 19 % USt; im Profi-Abo enthalten). Heute verfügbar sind die fiktive Mustermappe und, nach Anmeldung, eine kostenfreie Vorschau der eigenen Kreditmappe (mit Wasserzeichen, ohne Echtheits-QR)."
     },
     {
       "id": 27,
@@ -258,9 +258,9 @@
       "id": 32,
       "category": "Produkt, Sicherheit & Datenschutz",
       "question": "Was kostet ImmoAdv?",
-      "level1": "Die Analyse ist kostenfrei. Kreditmappe (geplant 49,00 € je Objekt) und Pro (geplant 29,00 € pro Monat oder 290,00 € für 12 Monate) sind in Vorbereitung und noch nicht buchbar; alle Preise verstehen sich inkl. 19 % USt.",
+      "level1": "Suche, Analyse und alle Rechner sind kostenlos. Geplant sind zwei Stufen: Einsteiger-Begleitung 9,90 € pro Monat oder 99,00 € für 12 Monate, Einsteiger-Kreditmappe 39,00 € je Objekt; Profi 29,00 € pro Monat oder 290,00 € für 12 Monate, Profi-Kreditmappe 49,00 € je Objekt. Noch nicht buchbar; alle Preise inkl. 19 % USt.",
       "nextStep": "Angebote ansehen.",
-      "level2": "Pro soll monatlich laufen und jederzeit zum Ende des Abrechnungsmonats kündbar sein, ohne Anmeldung über „Verträge hier kündigen“. Rechenbeispiel zu den geplanten Preisen: 3 Kreditmappen = 147,00 €, 6 Monate Pro = 174,00 €, 12 Monate Pro als Einmalzahlung = 290,00 €."
+      "level2": "Die Monats-Abos sind jederzeit zum Ende des Abrechnungsmonats kündbar, ohne Anmeldung über „Verträge hier kündigen“; 12-Monats-Zugänge enden automatisch. Einsteiger zahlen weniger und erhalten Lernpfad und Begleitung für den ersten Kauf; Profi enthält unbegrenzt Objekte und Kreditmappen, Portfolio, Datenraum und Stresstests. Den Modus wählen Sie frei und können ihn jederzeit wechseln."
     },
     {
       "id": 33,

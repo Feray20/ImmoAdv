@@ -395,6 +395,25 @@ if ($('sres') && window.__IA_IDX) {
   if (!q0) $('sq').focus();
 }
 
+// Öffentliche Angebotsseite aus der zentralen Preisliste
+if ($('pubOffers')) {
+  fetch('/data/preise.json').then((r) => r.json()).then((P) => {
+    const eur = (c) => (c / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+    let shown = new URLSearchParams(location.search).get('modus') === 'profi' ? 'profi' : 'einsteiger';
+    const draw = () => {
+      const m = P.modi[shown];
+      $('pubOffers').innerHTML = `<div class="offer-head"><div><span class="form-note">Stufe</span><strong>${esc(m.name)}</strong></div><div class="seg" role="tablist"><button type="button" role="tab" data-seg="einsteiger" aria-selected="${shown === 'einsteiger'}">Einsteiger</button><button type="button" role="tab" data-seg="profi" aria-selected="${shown === 'profi'}">Profi</button></div></div>
+        <p class="form-note">${esc(m.zielgruppe)}</p>
+        <div class="offers">${m.plans.map((p, i) => `<div class="offer${i === 0 ? ' rec' : ''}">${i === 0 ? '<span class="offer-rec">Am häufigsten passend</span>' : ''}<h4>${esc(p.name)}</h4><div class="offer-price">${eur(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></div>`).join('')}</div>
+        <div class="offer-free"><strong>Immer kostenlos:</strong> ${P.kostenlos.features.map(esc).join(' · ')}</div>
+        <p><a class="btn btn-dark" href="/app/dashboard?modus=${shown}#angebot">In der Anwendung starten</a></p>
+        <p class="form-note">${esc(P.hinweis)} Buchbar, sobald die Zahlungsabwicklung startet. Widerrufsbelehrung: <a class="ck-link" href="/nutzungsbedingungen">Nutzungsbedingungen</a>. Kündigung: <a class="ck-link" href="/kuendigen">Verträge hier kündigen</a>.</p>`;
+      document.querySelectorAll('#pubOffers [data-seg]').forEach((b) => b.onclick = () => { shown = b.dataset.seg; draw(); });
+    };
+    draw();
+  }).catch(() => { $('pubOffers').innerHTML = '<p class="form-note">Preise konnten nicht geladen werden.</p>'; });
+}
+
 // Glossar-Suche
 if ($('gl_q')) {
   const items = [...document.querySelectorAll('.gl-item')];

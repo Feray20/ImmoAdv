@@ -111,7 +111,7 @@ window.IA_CONTENT = {
     { cat: 'Finanzierung & Bankenpraxis', q: 'Was ist die Kreditmappe?',
       l1: 'Ein strukturiertes PDF mit Vorhaben, Objektdaten, Haushaltsrechnung, Kennzahlen und Unterlagenstatus. Sie hilft Ihnen, gut vorbereitet ins Bankgespräch zu gehen.',
       next: 'Mustermappe ansehen.',
-      l2: 'Die Mappe enthält Rechenwege und den Status jeder Unterlage (liegt vor, angefordert, fehlt, ungeprüft). Sie ist keine Finanzierungszusage und ersetzt nicht die Prüfung durch die Bank. Die Kreditmappe je Nutzer ist technisch fertig und wird buchbar, sobald die Zahlungsabwicklung startet (geplant: 49,00 € je Objekt inkl. 19 % USt). Heute verfügbar sind die fiktive Mustermappe und, nach Anmeldung, eine kostenfreie Vorschau der eigenen Kreditmappe (mit Wasserzeichen, ohne Echtheits-QR).' },
+      l2: 'Die Mappe enthält Rechenwege und den Status jeder Unterlage (liegt vor, angefordert, fehlt, ungeprüft). Sie ist keine Finanzierungszusage und ersetzt nicht die Prüfung durch die Bank. Die Kreditmappe ist technisch fertig und wird buchbar, sobald die Zahlungsabwicklung startet (geplant: Einsteiger-Kreditmappe 39,00 €, Profi-Kreditmappe 49,00 € je Objekt, inkl. 19 % USt; im Profi-Abo enthalten). Heute verfügbar sind die fiktive Mustermappe und, nach Anmeldung, eine kostenfreie Vorschau der eigenen Kreditmappe (mit Wasserzeichen, ohne Echtheits-QR).' },
     { cat: 'Finanzierung & Bankenpraxis', q: 'Was gehört in eine Kreditmappe?',
       l1: 'Selbstauskunft, Einkommens- und Eigenkapitalnachweise sowie alle Objektunterlagen. Je vollständiger, desto schneller kann die Bank prüfen.',
       next: 'Unterlagen-Checkliste durchgehen.',
@@ -134,9 +134,9 @@ window.IA_CONTENT = {
       next: 'Datenschutzerklärung lesen.',
       l2: 'Technische Dienstleister (Hosting, Datenbank, Zahlung) verarbeiten Daten nur im Auftrag. Mit einem befristeten Freigabelink können Sie ausgewählte Kategorien für eine Bank oder einen Berater öffnen; jeder Abruf wird protokolliert, ein Widerruf wirkt sofort. Eine Ende-zu-Ende-Verschlüsselung besteht nicht: Dateien sind verschlüsselt gespeichert, für den Betrieb aber technisch zugänglich.' },
     { cat: 'Produkt, Sicherheit & Datenschutz', q: 'Was kostet ImmoAdv?',
-      l1: 'Die Analyse ist kostenfrei. Kreditmappe (geplant 49,00 € je Objekt) und Pro (geplant 29,00 € pro Monat oder 290,00 € für 12 Monate) sind in Vorbereitung und noch nicht buchbar; alle Preise verstehen sich inkl. 19 % USt.',
+      l1: 'Suche, Analyse und alle Rechner sind kostenlos. Geplant sind zwei Stufen: Einsteiger-Begleitung 9,90 € pro Monat oder 99,00 € für 12 Monate, Einsteiger-Kreditmappe 39,00 € je Objekt; Profi 29,00 € pro Monat oder 290,00 € für 12 Monate, Profi-Kreditmappe 49,00 € je Objekt. Noch nicht buchbar; alle Preise inkl. 19 % USt.',
       next: 'Angebote ansehen.',
-      l2: 'Pro soll monatlich laufen und jederzeit zum Ende des Abrechnungsmonats kündbar sein, ohne Anmeldung über „Verträge hier kündigen“. Rechenbeispiel zu den geplanten Preisen: 3 Kreditmappen = 147,00 €, 6 Monate Pro = 174,00 €, 12 Monate Pro als Einmalzahlung = 290,00 €.' },
+      l2: 'Die Monats-Abos sind jederzeit zum Ende des Abrechnungsmonats kündbar, ohne Anmeldung über „Verträge hier kündigen“; 12-Monats-Zugänge enden automatisch. Einsteiger zahlen weniger und erhalten Lernpfad und Begleitung für den ersten Kauf; Profi enthält unbegrenzt Objekte und Kreditmappen, Portfolio, Datenraum und Stresstests. Den Modus wählen Sie frei und können ihn jederzeit wechseln.' },
     { cat: 'Produkt, Sicherheit & Datenschutz', q: 'Wie lösche ich meine Daten?',
       l1: 'Gespeicherte Objekte löschen Sie direkt in Ihrem Konto. Für die Löschung des gesamten Kontos genügt eine E-Mail an support@immoadv.de.',
       next: 'E-Mail an support@immoadv.de senden.',
@@ -186,7 +186,7 @@ window.IA_CONTENT = {
       <h2>2. Leistung</h2>
       <p>ImmoAdv ist ein technisches Analyse-, Informations- und Vorbereitungsinstrument. Es strukturiert die von Ihnen eingegebenen Daten und stellt Rechenwege dar. ImmoAdv vermittelt keine Darlehen, gibt keine Konditionszusagen und erbringt keine Rechts-, Steuer- oder Finanzierungsberatung. Ob und zu welchen Bedingungen eine Bank finanziert, entscheidet allein die Bank.</p>
       <h2>3. Preise und Zahlung</h2>
-      <p>Die Analyse ist kostenfrei. Kostenpflichtige Angebote (Kreditmappe: 49,00 € einmalig je Objekt; Pro monatlich: 29,00 € pro Monat; Pro 12 Monate: 290,00 € einmalig ohne Verlängerung; jeweils Endpreise inkl. 19 % Umsatzsteuer) sind in Vorbereitung und derzeit nicht buchbar. Sobald sie buchbar sind, erfolgt die Zahlung über Stripe; die Regelungen unter Nr. 4 und 5 gelten dann für diese Verträge.</p>
+      <p>Die Analyse ist kostenfrei. Kostenpflichtige Angebote (Einsteiger-Begleitung 9,90 € pro Monat oder 99,00 € für 12 Monate, Einsteiger-Kreditmappe 39,00 € je Objekt; Profi 29,00 € pro Monat oder 290,00 € für 12 Monate, Profi-Kreditmappe 49,00 € je Objekt; 12-Monats-Zugänge einmalig ohne Verlängerung; jeweils Endpreise inkl. 19 % Umsatzsteuer) sind in Vorbereitung und derzeit nicht buchbar. Sobald sie buchbar sind, erfolgt die Zahlung über Stripe; die Regelungen unter Nr. 4 und 5 gelten dann für diese Verträge.</p>
       <h2>4. Laufzeit und Kündigung (Pro)</h2>
       <p>Pro monatlich läuft monatlich und verlängert sich jeweils um einen Monat, wenn es nicht gekündigt wird. Pro 12 Monate endet automatisch nach zwölf Monaten und verlängert sich nicht. Sie können jederzeit zum Ende des laufenden Abrechnungsmonats kündigen – ohne Anmeldung über den Button „Verträge hier kündigen“ unter <a href="/kuendigen">immoadv.de/kuendigen</a> oder per E-Mail.</p>
       <h2>5. Widerrufsbelehrung</h2>
