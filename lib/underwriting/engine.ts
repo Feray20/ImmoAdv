@@ -41,10 +41,12 @@ export function underwrite(i:UnderwritingInput, cases?:StressCase[]):Underwritin
   ];
   const stress=baseCases.map(c=>{
     const sNoi=grossRent*(1-c.vacancyRate)-i.nonRecoverableOperatingCosts-n(i.annualMaintenance)*c.maintenanceMultiplier;
-    const sDebt=annualDebt(i.loanAmount,c.interestRate,i.annualPrincipal/i.loanAmount);
-    return {case:c,noi:sNoi,debtService:sDebt,dscr:ratio(sNoi,sDebt)??0,annualCashflow:sNoi-sDebt-n(i.annualOtherCashCosts)-n(i.annualTax)+n(i.annualTaxEffect)};
+    const sCfads=sNoi-n(i.annualOtherCashCosts)-n(i.annualTax);
+    const sDebt=annualDebt(i.loanAmount,c.interestRate,i.loanAmount?i.annualPrincipal/i.loanAmount:0);
+    // DSCR = CFADS / Kapitaldienst (ImmoAdv-Risikopolitik)
+    return {case:c,noi:sNoi,debtService:sDebt,dscr:ratio(sCfads,sDebt)??0,annualCashflow:sCfads-sDebt+n(i.annualTaxEffect)};
   });
-  return {grossRent,vacancyLoss,noi,cfads,debtService,dscr:ratio(noi,debtService)??0,icr:ratio(noi,i.annualInterest)??0,ltvPurchasePrice:i.loanAmount/i.purchasePrice,ltvLendingValue:i.loanAmount/i.lendingValue,annualAfterTaxCashflow:afterTax,monthlyAfterTaxCashflow:afterTax/12,stress};
+  return {grossRent,vacancyLoss,noi,cfads,debtService,dscr:ratio(cfads,debtService)??0,icr:ratio(noi,i.annualInterest)??0,ltvPurchasePrice:i.loanAmount/i.purchasePrice,ltvLendingValue:i.loanAmount/i.lendingValue,annualAfterTaxCashflow:afterTax,monthlyAfterTaxCashflow:afterTax/12,stress};
 }
 
 export function classifyDscr(dscr:number):'red'|'amber'|'green' { return dscr<1.10?'red':dscr<=1.25?'amber':'green'; }

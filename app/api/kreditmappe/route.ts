@@ -1,0 +1,95 @@
+import { createHash } from 'node:crypto';
+import { NextResponse } from 'next/server';
+import { renderToBuffer } from '@react-pdf/renderer';
+import { createElement } from 'react';
+import { z } from 'zod';
+import { allowRequest } from '@/lib/security/rate-limit';
+import { userFromRequest } from '@/lib/billing/auth';
+import { billingEnabled, entitlementsFor, findCustomer, stripe } from '@/lib/billing/stripe';
+import { ObjectSchema, ProfileSchema, buildKreditmappe } from '@/lib/kreditmappe/model';
+import { KreditmappeDocument } from '@/lib/kreditmappe/pdf';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const BodySchema = z.object({ objectId: z.string().min(4).max(40) });
+const LEDGER_KEY = 'kreditmappe_objects';
+
+// Erstellt die Kreditmappe als PDF für ein gespeichertes Objekt des angemeldeten Nutzers.
+// Freischaltung: Pro oder eine gekaufte Kreditmappe. Verbrauchte Mappen werden je Objekt
+// serverseitig in den Metadaten des Stripe-Kunden vermerkt; erneutes Erstellen desselben Objekts ist kostenfrei.
+export async function POST(req: Request) {
+  if (!billingEnabled()) return NextResponse.json({ error: 'Die Kreditmappe ist noch nicht verfügbar.' }, { status: 503 });
+  const user = await userFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Bitte zuerst anmelden.' }, { status: 401 });
+  if (!allowRequest(`kreditmappe:${user.id}`, 6, 60_000)) {
+    return NextResponse.json({ error: 'Zu viele Anfragen. Bitte kurz warten.' }, { status: 429 });
+  }
+
+  const parsedBody = BodySchema.safeParse(await req.json().catch(() => null));
+  if (!parsedBody.success) return NextResponse.json({ error: 'Ungültige Anfrage.' }, { status: 400 });
+  const { objectId } = parsedBody.data;
+
+  // Daten mit dem Token des Nutzers laden (Row Level Security in Supabase).
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const auth = req.headers.get('authorization') || '';
+  if (!url || !key) return NextResponse.json({ error: 'Datenbank nicht konfiguriert.' }, { status: 503 });
+  const r = await fetch(
+    `${url}/rest/v1/immo_user_data?select=profile,objects&user_id=eq.${encodeURIComponent(user.id)}&limit=1`,
+    { headers: { apikey: key, Authorization: auth }, cache: 'no-store' },
+  );
+  if (!r.ok) return NextResponse.json({ error: 'Daten konnten nicht geladen werden.' }, { status: 502 });
+  const rows = (await r.json()) as Array<{ profile?: unknown; objects?: unknown }>;
+  const objects = Array.isArray(rows[0]?.objects) ? (rows[0]?.objects as unknown[]) : [];
+  const rawObject = objects.find((x) => typeof x === 'object' && x !== null && (x as { id?: unknown }).id === objectId);
+  const obj = ObjectSchema.safeParse(rawObject);
+  if (!obj.success) {
+    return NextResponse.json({ error: 'Objekt nicht gefunden oder unvollständig. Bitte Kaufpreis und Pflichtangaben prüfen.' }, { status: 422 });
+  }
+  const profile = ProfileSchema.safeParse(rows[0]?.profile ?? {});
+  if (!profile.success) return NextResponse.json({ error: 'Profil unvollständig.' }, { status: 422 });
+
+  // Freischaltung prüfen und Verbrauch vermerken.
+  try {
+    const ent = await entitlementsFor(user.id, user.email);
+    if (!ent.pro) {
+      const customer = await findCustomer(user.id, user.email);
+      const used = (customer?.metadata?.[LEDGER_KEY] || '').split(',').filter(Boolean);
+      if (!used.includes(objectId)) {
+        if (!customer || used.length >= ent.creditMaps) {
+          return NextResponse.json({ error: 'Für dieses Objekt ist keine Kreditmappe freigeschaltet.' }, { status: 402 });
+        }
+        const next = [...used, objectId].join(',');
+        if (next.length > 500) return NextResponse.json({ error: 'Kontingent-Speicher voll. Bitte Support kontaktieren.' }, { status: 409 });
+        await stripe().customers.update(customer.id, { metadata: { [LEDGER_KEY]: next } });
+      }
+    }
+  } catch (e) {
+    console.error('kreditmappe_entitlement_error', e instanceof Error ? e.message : e);
+    return NextResponse.json({ error: 'Freischaltung konnte nicht geprüft werden.' }, { status: 502 });
+  }
+
+  try {
+    const mappe = buildKreditmappe(obj.data, profile.data);
+    const element = createElement(KreditmappeDocument, { m: mappe }) as unknown as Parameters<typeof renderToBuffer>[0];
+    const pdf = await renderToBuffer(element);
+    if (pdf.subarray(0, 5).toString() !== '%PDF-') throw new Error('invalid_pdf_output');
+    // Hash erst nach dem Rendern aus den tatsächlichen Bytes berechnen.
+    const sha256 = createHash('sha256').update(pdf).digest('hex');
+    const filename = `ImmoAdv_Kreditmappe_${obj.data.name.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}.pdf`;
+    return new NextResponse(new Uint8Array(pdf), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+        'X-Document-SHA256': sha256,
+        'Access-Control-Expose-Headers': 'X-Document-SHA256, Content-Disposition',
+        'Cache-Control': 'no-store',
+      },
+    });
+  } catch (e) {
+    console.error('kreditmappe_render_error', e instanceof Error ? e.message : e);
+    return NextResponse.json({ error: 'PDF konnte nicht erstellt werden.' }, { status: 500 });
+  }
+}

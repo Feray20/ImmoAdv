@@ -70,3 +70,13 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 .bill-plans{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin:12px 0}
 .bill-plans>div{border:1px solid var(--ia-hair);border-radius:6px;padding:14px;display:grid;gap:6px}
 .bill-plans span{font-size:13px;color:var(--ia-muted);font-variant-numeric:tabular-nums}
+/* Objekte im Konto */
+.object-form{display:grid;gap:10px}
+.obj-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.obj-grid label{display:grid;gap:4px;font-size:12px;color:var(--ia-muted)}
+.obj-grid input{border:1px solid var(--ia-hair);border-radius:4px;padding:8px 10px;font-variant-numeric:tabular-nums;color:var(--ia-navy)}
+.obj-more{border:1px solid var(--ia-line);border-radius:6px;padding:8px 12px;background:var(--ia-bg)}
+.obj-more summary{cursor:pointer;font-weight:600;color:var(--ia-navy);font-size:13px}
+.obj-more .obj-grid{margin-top:10px}
+.obj-actions,.row-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#pdfMsg{word-break:break-all}

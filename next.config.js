@@ -27,6 +27,7 @@ const securityHeaders = [
 module.exports = {
   reactStrictMode: true,
   poweredByHeader: false,
+  serverExternalPackages: ['@react-pdf/renderer'],
   async rewrites() {
     return {
       beforeFiles: [
