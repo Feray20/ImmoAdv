@@ -4,6 +4,7 @@ import { adminConfigured } from '@/lib/supabase/admin';
 import { adminAudit } from '@/lib/b2b/core';
 import { generateMonthlyTaxArchive } from '@/lib/b2b/taxarchive';
 import type { Kontenrahmen } from '@/lib/b2b/datev';
+import { storeExport } from '@/lib/storage/exports';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,9 +26,8 @@ export async function GET(req: Request) {
   try {
     const a = await generateMonthlyTaxArchive(monat, skr);
     await adminAudit(auth.user.email, 'datev_export', monat, { skr, count: a.count, problems: a.problems.length });
-    return new NextResponse(new Uint8Array(a.zip), {
-      headers: { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename="ImmoAdv_Steuerexport_${monat}.zip"`, 'Cache-Control': 'no-store' },
-    });
+    const url = await storeExport('datev', `ImmoAdv_Steuerexport_${monat}.zip`, a.zip, 'application/zip');
+    return j({ url, count: a.count, problems: a.problems });
   } catch (e) {
     return j({ error: e instanceof Error ? e.message : 'Fehler' }, 400);
   }

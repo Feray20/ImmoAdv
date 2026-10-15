@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { validateUpload } from '@/lib/security/file-validation';
 
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // Direkt-Upload über die Funktion (Vercel-Grenze rund 4,5 MB)
-export const MAX_DIRECT_BYTES = 25 * 1024 * 1024; // Upload per signierter URL direkt in den Speicher
+export const MAX_DIRECT_BYTES = 50 * 1024 * 1024; // Upload per signierter URL direkt in den Speicher
 export const MAX_DOCUMENTS_PER_USER = 60;
 
 export const CATEGORIES = ['objekt', 'miete', 'weg', 'grundbuch', 'technik', 'finanzen', 'steuer'] as const;

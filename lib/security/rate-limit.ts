@@ -1,5 +1,5 @@
 // Einfache Begrenzung je Schlüssel und Zeitfenster (pro Serverinstanz).
-type Entry = { count: number; resetAt: number };
+type Entry = { count: number; resetAt: number; logged?: boolean };
 
 const buckets = new Map<string, Entry>();
 const MAX_KEYS = 5000;
@@ -29,7 +29,14 @@ export function allowRequest(key: string, limit = 20, windowMs = 60_000): boolea
     buckets.set(key, { count: 1, resetAt: now + windowMs });
     return true;
   }
-  if (current.count >= limit) return false;
+  if (current.count >= limit) {
+    // Erste Drosselung je Fenster ins Sicherheitsprotokoll (nachgeladen, damit die Begrenzung selbst ohne Datenbank funktioniert).
+    if (!current.logged) {
+      current.logged = true;
+      import('@/lib/security/seclog').then((m) => m.logSecurity('rate_limit', key), () => null);
+    }
+    return false;
+  }
   current.count += 1;
   return true;
 }

@@ -8,13 +8,14 @@ import { adminConfigured, DOCUMENT_BUCKET, supabaseAdmin } from '@/lib/supabase/
 import { TIER_LIMITS, effectiveTier, membershipFor } from '@/lib/b2b/core';
 import { isAdminEmail } from '@/lib/security/admin';
 import { CATEGORIES, CATEGORY_LABEL, type Category } from '@/lib/documents/files';
+import { storeExport } from '@/lib/storage/exports';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const Body = z.object({ versionId: z.string().uuid() });
-const MAX_TOTAL = 60 * 1024 * 1024;
+const MAX_TOTAL = 150 * 1024 * 1024;
 const A4: [number, number] = [595.28, 841.89];
 
 // Gesamtdossier: registrierte Kreditmappe + hochgeladene Unterlagen des Objekts (PDF, JPG, PNG) in einem PDF
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
   const order = (c: string) => CATEGORIES.indexOf(c as Category);
   const list = (docs ?? []).sort((a, b) => order(a.category) - order(b.category));
   if ((list.reduce((s, d) => s + Number(d.size_bytes || 0), 0)) > MAX_TOTAL) {
-    return NextResponse.json({ error: 'Die Unterlagen sind zusammen größer als 60 MB. Bitte große Scans verkleinern.' }, { status: 413 });
+    return NextResponse.json({ error: 'Die Unterlagen sind zusammen größer als 150 MB. Bitte große Scans verkleinern.' }, { status: 413 });
   }
 
   try {
@@ -124,15 +125,8 @@ export async function POST(req: Request) {
 
     const pdf = await out.save();
     const sha = createHash('sha256').update(pdf).digest('hex');
-    return new NextResponse(new Uint8Array(pdf), {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="ImmoAdv_Gesamtdossier_${String(v.object_ref).slice(0, 30)}.pdf"`,
-        'X-Document-SHA256': sha,
-        'Access-Control-Expose-Headers': 'X-Document-SHA256, Content-Disposition',
-        'Cache-Control': 'no-store',
-      },
-    });
+    const url = await storeExport('gesamt', `ImmoAdv_Gesamtdossier_${String(v.object_ref).slice(0, 30)}.pdf`, pdf, 'application/pdf');
+    return NextResponse.json({ url, sha256: sha, pages: total, skipped: skipped.length }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e) {
     console.error('gesamt_error', e instanceof Error ? e.message : e);
     return NextResponse.json({ error: 'Gesamtdossier konnte nicht erstellt werden.' }, { status: 500 });

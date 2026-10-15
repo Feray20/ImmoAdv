@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { userFromRequest, type AuthUser } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { ipAllowed } from '@/lib/security/panic';
+import { logSecurity } from '@/lib/security/seclog';
 
 // Administratoren: E-Mail in ADMIN_EMAILS und – solange ADMIN_MFA nicht "off" ist –
 // eine Sitzung mit zweitem Faktor (Supabase MFA, TOTP-App; Token-Claim aal = aal2).
@@ -29,9 +30,10 @@ export async function requireAdmin(req: Request): Promise<{ user: AuthUser } | N
   const user = await userFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Bitte anmelden.' }, { status: 401, headers: noStore });
   if (!allowRequest(`admin:${user.id}`, 120, 60_000)) return NextResponse.json({ error: 'Zu viele Anfragen.' }, { status: 429, headers: noStore });
-  if (!isAdminEmail(user.email)) return NextResponse.json({ error: 'Kein Zugriff.' }, { status: 403, headers: noStore });
-  if (!ipAllowed(req)) return NextResponse.json({ error: 'Zugriff von dieser IP-Adresse nicht freigegeben (ADMIN_IP_ALLOWLIST).' }, { status: 403, headers: noStore });
+  if (!isAdminEmail(user.email)) { logSecurity('admin_denied', `admin:${user.id}`); return NextResponse.json({ error: 'Kein Zugriff.' }, { status: 403, headers: noStore }); }
+  if (!ipAllowed(req)) { logSecurity('admin_ip_blocked', `admin:${user.id}`); return NextResponse.json({ error: 'Zugriff von dieser IP-Adresse nicht freigegeben (ADMIN_IP_ALLOWLIST).' }, { status: 403, headers: noStore }); }
   if (mfaRequired() && tokenAal(req) !== 'aal2') {
+    logSecurity('admin_mfa_missing', `admin:${user.id}`);
     return NextResponse.json({ error: 'Bitte mit zweitem Faktor bestätigen.', mfa: 'required' }, { status: 403, headers: noStore });
   }
   return { user };

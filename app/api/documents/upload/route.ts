@@ -17,7 +17,7 @@ const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png', 'image/tiff'];
 const incoming = (userId: string, id: string) => `${userId}/incoming/${id}`;
 
 // Schritt 1: signierte Upload-URL ausstellen. Die Datei geht direkt in den privaten Speicher
-// (nicht durch die Funktion), daher sind bis 25 MB möglich.
+// (nicht durch die Funktion), daher sind bis 50 MB möglich.
 export async function POST(req: Request) {
   if (!adminConfigured()) return json({ error: 'Dokumentenspeicher nicht konfiguriert.' }, 503);
   const user = await userFromRequest(req);
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   if (!isCategory(b.category)) return json({ error: 'Bitte eine Kategorie wählen.' }, 400);
   const size = Number(b.size);
   if (!Number.isFinite(size) || size <= 0) return json({ error: 'Die Datei ist leer.' }, 400);
-  if (size > MAX_DIRECT_BYTES) return json({ error: 'Die Datei ist größer als 25 MB.' }, 413);
+  if (size > MAX_DIRECT_BYTES) return json({ error: 'Die Datei ist größer als 50 MB.' }, 413);
   if (typeof b.type !== 'string' || !ALLOWED.includes(b.type)) return json({ error: 'Erlaubt sind PDF, JPG, PNG und TIFF.' }, 415);
 
   const db = supabaseAdmin();

@@ -5,6 +5,7 @@ import { cleanupAllIncoming } from '@/lib/documents/cleanup';
 import { runReminders } from '@/lib/reminders/run';
 import { generateMonthlyTaxArchive, nthWorkday } from '@/lib/b2b/taxarchive';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
+import { cleanupExports } from '@/lib/storage/exports';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,9 +30,10 @@ export async function GET(req: Request) {
   const db = supabaseAdmin();
   const overdue = await db.from('immo_invoices').update({ payment_status: 'OVERDUE' }).eq('payment_status', 'PENDING').lt('due_date', today).select('id').then((r) => r.data?.length ?? 0, () => -1);
   await db.from('immo_b2b_invites').delete().lt('expires_at', new Date(Date.now() - 30 * 864e5).toISOString()).then(() => null, () => null);
+  const exportsRemoved = await cleanupExports().catch(() => -1);
   const retention = await leadRetention().catch((e) => ({ error: String(e instanceof Error ? e.message : e) }));
   const tax = await taxDispatch(today).catch((e) => ({ error: String(e instanceof Error ? e.message : e) }));
-  return NextResponse.json({ ok: true, cleanup, reminders, overdue, retention, tax }, { headers: { 'Cache-Control': 'no-store' } });
+  return NextResponse.json({ ok: true, cleanup, reminders, overdue, retention, exportsRemoved, tax }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 // Monatsarchiv des Vormonats am n-ten Werktag (TAX_DISPATCH_WORKDAY, Standard 3) an TAX_ADVISOR_EMAIL senden. Einmal je Monat.
@@ -67,6 +69,7 @@ async function leadRetention(): Promise<Record<string, number>> {
     const r = await db.from('immo_b2b_leads').delete().eq('account_id', a.id).lt('created_at', cutoff).select('id');
     deleted += r.data?.length ?? 0;
   }
+  await db.from('immo_security_log').delete().lt('created_at', new Date(Date.now() - 30 * 864e5).toISOString());
   await db.from('immo_webhook_log').delete().lt('created_at', new Date(Date.now() - 90 * 864e5).toISOString());
   return { deleted };
 }

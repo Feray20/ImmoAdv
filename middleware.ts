@@ -5,9 +5,21 @@ import { NextResponse, type NextRequest } from 'next/server';
 // Ohne gesetzte Variable ist die Website normal öffentlich.
 const COOKIE = 'ia_preview';
 
+// Subdomains: partner.immoadv.de → Unternehmensportal, admin.immoadv.de → Admin-Zentrale (nur die Startseite wird umgelenkt,
+// alle übrigen Pfade wie Anmeldung und Schnittstellen funktionieren unverändert).
+function hostTarget(req: NextRequest): string | null {
+  const host = (req.headers.get('host') || '').toLowerCase().split(':')[0];
+  if (req.nextUrl.pathname !== '/') return null;
+  if (host.startsWith('partner.')) return '/b2b-portal/index.html';
+  if (host.startsWith('admin.')) return '/intern/objektsuche/index.html';
+  return null;
+}
+
 export function middleware(req: NextRequest) {
+  const target = hostTarget(req);
   const key = process.env.SITE_PREVIEW_KEY;
-  if (!key) return NextResponse.next();
+  const pass = () => (target ? NextResponse.rewrite(new URL(target, req.url)) : NextResponse.next());
+  if (!key) return pass();
   const { pathname, searchParams } = req.nextUrl;
 
   if (pathname === '/zugang') {
@@ -19,7 +31,7 @@ export function middleware(req: NextRequest) {
     }
     return NextResponse.rewrite(new URL('/coming-soon.html', req.url));
   }
-  if (req.cookies.get(COOKIE)?.value === key) return NextResponse.next();
+  if (req.cookies.get(COOKIE)?.value === key) return pass();
   const res = NextResponse.rewrite(new URL('/coming-soon.html', req.url));
   res.headers.set('X-Robots-Tag', 'noindex');
   res.headers.set('Cache-Control', 'no-store');

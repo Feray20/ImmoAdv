@@ -143,7 +143,18 @@ async function sicherheit(v) {
       <li>Zweiter Faktor: ${r.data?.mfaRequired ? '<span class="st ok">Pflicht</span>' : '<span class="st bad">abgeschaltet (ADMIN_MFA=off)</span>'}</li>
       <li>IP-Freigabeliste: in Vercel als ADMIN_IP_ALLOWLIST (z. B. 203.0.113.7, 198.51.100.0/24). Ohne Eintrag ist jede IP zugelassen.</li>
       <li>Anmeldeversuche: Supabase begrenzt fehlgeschlagene Anmeldungen automatisch; zusätzlich sind alle Schnittstellen je Nutzer und IP gedrosselt.</li>
-      <li>Alle Admin-Aktionen stehen im Reiter Protokoll.</li></ul></section>`;
+      <li>Alle Admin-Aktionen stehen im Reiter Protokoll.</li></ul></section>
+    <section class="pt-card"><h2>Sicherheitsprotokoll</h2><p class="form-note">Gedrosselte Zugriffe (zu viele Anfragen je Nutzer oder IP) und abgewiesene Zugriffe auf den Admin-Bereich. Gespeichert werden nur Bereich und ein gekürzter Hash, keine IP-Adressen; Löschung nach 30 Tagen. Die Zählung erfolgt je Serverinstanz, Spitzen können sich verteilen.</p><div id="secLog"><p class="form-note">Wird geladen …</p></div><button class="btn btn-ghost" id="secRe" type="button">Aktualisieren</button></section>`;
+  const KIND = { rate_limit: 'Gedrosselt', admin_denied: 'Admin verweigert', admin_ip_blocked: 'IP nicht freigegeben', admin_mfa_missing: 'Zweiter Faktor fehlt', panic: 'Not-Aus' };
+  const loadLog = async () => {
+    const l = await api('/api/admin/support?log=1');
+    if (!l.ok) { $('#secLog').innerHTML = `<p class="form-note">${esc(l.data?.error)}</p>`; return; }
+    const top = Object.entries(l.data.counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    $('#secLog').innerHTML = `${top.length ? `<p><strong>Letzte 24 Stunden:</strong> ${top.map(([k, n]) => { const [kind, bucket] = k.split(':'); return `${esc(KIND[kind] || kind)} (${esc(bucket)}): ${n}`; }).join(' · ')}</p>` : '<p class="form-note">Keine Auffälligkeiten in den letzten 24 Stunden.</p>'}
+      ${l.data.events.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Zeit</th><th>Ereignis</th><th>Bereich</th><th>Kennung</th></tr></thead><tbody>${l.data.events.slice(0, 60).map((e) => `<tr><td>${dtt(e.created_at)}</td><td>${esc(KIND[e.kind] || e.kind)}</td><td>${esc(e.bucket || '')}</td><td><code>${esc(e.subject || '')}</code></td></tr>`).join('')}</tbody></table></div>` : ''}`;
+  };
+  loadLog();
+  $('#secRe').onclick = loadLog;
   const go = async (on) => {
     const reason = on ? prompt('Grund (für das Protokoll):', 'Sicherheitsvorfall') : '';
     if (on && reason === null) return;
@@ -298,7 +309,7 @@ function steuer(v) {
   });
   $('#zip').onclick = async (e) => {
     e.target.disabled = true;
-    try { await download(`/api/admin/datev?monat=${$('#mon').value}&skr=${$('#skr').value}`, {}, 'Steuerexport.zip'); msg('Export erstellt. Hinweise stehen in LIESMICH.txt.'); } catch (er) { msg(er.message, true); }
+    const r = await api(`/api/admin/datev?monat=${$('#mon').value}&skr=${$('#skr').value}`); if (r.ok) { location.href = r.data.url; msg(`Export mit ${r.data.count} Belegen erstellt.${r.data.problems.length ? ' Hinweise: ' + r.data.problems.join(' · ') : ''}`, r.data.problems.length > 0); } else msg(r.data?.error || 'Fehler', true);
     e.target.disabled = false;
   };
 }
