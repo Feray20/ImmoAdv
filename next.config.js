@@ -65,6 +65,7 @@ module.exports = {
         { source: '/', destination: '/index.html' },
         ...STATIC_PAGES.map((p) => ({ source: `/${p}`, destination: `/${p}/index.html` })),
         { source: '/wissen/erwerbsstatus', destination: '/wissen/erwerbsstatus/index.html' },
+        { source: '/wissen/:slug', destination: '/wissen/:slug/index.html' },
         { source: '/wissen/glossar', destination: '/wissen/glossar/index.html' },
         { source: '/rechner/afa', destination: '/rechner/afa/index.html' },
         { source: '/rechner/mieterhoehung', destination: '/rechner/mieterhoehung/index.html' },

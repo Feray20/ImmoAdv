@@ -199,6 +199,27 @@ if ($('bu_out')) {
   });
 }
 
+// Rechner-Ergebnis als Objekt ins Konto übernehmen (Übergabe über localStorage, Übernahme im Konto nach Bestätigung).
+const PENDING = 'ia-pending-object';
+function objFrom({ name, price, rent, area = 0, land, brokerPct = 0, equity = 0, ratePct = 0, repaymentPct = 0, nonRecoverable = 0, maintenance = 0, vacancyPct = 0, extra = {} }) {
+  const nk = kaufnebenkosten({ price, land, brokerPct });
+  if (!nk) return null;
+  return { name, price, rent, area, equity, interestPct: ratePct, repaymentPct, nonRecoverable: Math.round(nonRecoverable * 100) / 100, maintenance: Math.round(maintenance * 100) / 100, vacancyPct,
+    loan: Math.max(0, Math.round(nk.allIn - equity)), purchaseCostPct: nk.totalPct, grestPct: GREST[land].pct, notaryPct: 2, brokerPct, ...extra };
+}
+function saveButton(card, label, build) {
+  if (!card) return;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-dark save-obj'; b.textContent = label;
+  const note = document.createElement('span'); note.className = 'form-note'; note.setAttribute('role', 'status');
+  b.onclick = () => {
+    const o = build();
+    if (!o || !(o.price > 0)) { note.textContent = ' Bitte zuerst einen Kaufpreis eintragen.'; return; }
+    try { localStorage.setItem(PENDING, JSON.stringify({ ...o, source: location.pathname, at: Date.now() })); } catch { note.textContent = ' Speichern im Browser nicht möglich.'; return; }
+    location.href = '/app/dashboard';
+  };
+  const p = document.createElement('p'); p.className = 'save-row'; p.append(b, note); card.append(p);
+}
+
 // Deal-Scorecard
 if ($('sc_overall')) {
   const ids = ['sc_n', 'sc_p', 'sc_o', 'sc_e', 'sc_z', 'sc_t', 'sc_land', 'sc_b', 'sc_k', 'sc_m', 'sc_a', 'sc_i', 'sc_u', 'sc_v', 'sc_b2'];
@@ -222,6 +243,8 @@ if ($('sc_overall')) {
     $('sc_overall').className = `sc-overall ${s.overall}`;
     $('sc_overall').innerHTML = `<strong>Gesamt: ${L[s.overall]}</strong> ${t[s.overall]}`;
   });
+  saveButton($('sc_ob')?.closest('.dash-card'), 'Als Objekt im Konto speichern', () => objFrom({ name: 'Objekt aus Deal-Scorecard', price: num('sc_k'), rent: num('sc_m'), area: num('sc_a'), land: val('sc_land'), brokerPct: num('sc_b'), equity: num('sc_e'),
+    ratePct: num('sc_z'), repaymentPct: num('sc_t'), nonRecoverable: num('sc_u'), maintenance: num('sc_i') * num('sc_a'), extra: { vergleichsmieteQm: num('sc_v'), mietpreisbremse: chk('sc_b2') } }));
 }
 
 // Cashflow vor und nach Steuern
@@ -245,6 +268,8 @@ if ($('cf_out')) {
       ['Jahr', 'Miete', 'Zinsen', 'AfA', 'Steuerl. Ergebnis', 'Steuereffekt', 'CF vor St.', 'CF nach St.', 'Restschuld']) +
       `<p class="form-note">Summe 10 Jahre: Cashflow nach Steuern ${E(c.total.after)}, Tilgung ${E(c.total.principal)}.</p>`;
   });
+  saveButton($('cf_tab')?.closest('.dash-card'), 'Als Objekt im Konto speichern', () => objFrom({ name: 'Objekt aus Cashflow-Rechner', price: num('cf_p'), rent: num('cf_r'), land: val('cf_land'), brokerPct: num('cf_b'), equity: num('cf_e'),
+    ratePct: num('cf_z'), repaymentPct: num('cf_t'), nonRecoverable: num('cf_n'), maintenance: num('cf_m'), vacancyPct: num('cf_v'), extra: { buildingSharePct: num('cf_s'), marginalTaxPct: num('cf_x') } }));
 }
 
 // Angebotsvergleich
@@ -269,6 +294,8 @@ if ($('vg_out')) {
       row('Kaufpreisfaktor', 'factor', dn, false), row('Preis pro m²', 'pricePerQm', E, false), row('Miete pro m²', 'rentPerQm', E, true), row('DSCR', 'dscr', dn, true),
     ], ['', ...res.map((r) => esc(r.name))]) + '<p class="form-note">Fett: jeweils bester Wert. Ein einzelner Wert entscheidet nicht – Lage, Zustand und WEG-Unterlagen zählen mit.</p>';
   });
+  [1, 2, 3].forEach((k) => saveButton(document.getElementById(`vg${k}_n`)?.closest('.vg-col'), `Angebot ${k} ins Konto`, () => num(`vg${k}_p`) > 0 && objFrom({ name: val(`vg${k}_name`) || `Angebot ${k}`, price: num(`vg${k}_p`), rent: num(`vg${k}_r`), area: num(`vg${k}_a`),
+    land: val('vg_land'), brokerPct: num('vg_b'), equity: num('vg_e'), ratePct: num('vg_z'), repaymentPct: num('vg_t'), nonRecoverable: num(`vg${k}_n`), vacancyPct: num('vg_v') })));
 }
 
 // Kaufen oder mieten

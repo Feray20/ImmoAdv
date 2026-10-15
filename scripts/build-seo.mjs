@@ -71,6 +71,17 @@ for (const [slug, g] of Object.entries(GREST)) {
   });
 }
 
+
+// Eine Seite je Wissensfrage (gleiche Slug-Regel wie SLUG in public/src/routes.js).
+export const slugify = (q) => { let t = q.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); if (t.length > 70) { t = t.slice(0, 70); t = t.slice(0, t.lastIndexOf('-') > 30 ? t.lastIndexOf('-') : 70); } return t; };
+{
+  const faq = JSON.parse(read('data/faq.json'));
+  for (const q of Array.isArray(faq) ? faq : faq.entries) {
+    const slug = slugify(q.question);
+    const desc = q.level1.length > 155 ? q.level1.slice(0, q.level1.lastIndexOf(' ', 152)) + ' …' : q.level1;
+    PAGES.push({ path: `/wissen/${slug}`, file: `wissen/${slug}/index.html`, template: 'wissen/index.html', title: `${q.question} | ImmoAdv`, desc, crumbs: ['Wissen', q.question], faqItem: q });
+  }
+}
 const CRUMB_PATH = { Rechner: '/rechner', Kaufnebenkosten: '/rechner/kaufnebenkosten', Wissen: '/wissen' };
 function breadcrumb(p) {
   if (!p.crumbs?.length) return null;
@@ -127,6 +138,7 @@ function headBlock(p, html) {
     if (ex.includes('faq')) graph.push(faqLd());
     if (ex.includes('homefaq')) graph.push(homeFaqLd(html));
     if (ex.includes('glossar')) graph.push(glossarLd());
+    if (p.faqItem) graph.push({ '@type': 'FAQPage', mainEntity: [{ '@type': 'Question', name: p.faqItem.question, acceptedAnswer: { '@type': 'Answer', text: `${p.faqItem.level1} ${p.faqItem.level2}`.trim() } }] });
     const bc = breadcrumb(p);
     if (bc) graph.push(bc);
     lines.push(`<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c')}</script>`);
@@ -139,7 +151,7 @@ const results = [];
 for (const p of PAGES) {
   if (p.skip) { results.push(p); continue; } // Next.js-Seite: Metadaten in app/layout.tsx
   const file = p.file || `${p.path.slice(1)}/index.html`;
-  let html = existsSync(new URL(file, pub)) ? read(file) : template;
+  let html = existsSync(new URL(file, pub)) ? read(file) : p.template ? read(p.template).replace(/<!--seo:start-->[\s\S]*?<!--seo:end-->/, '').replace(/<!--pre:start-->[\s\S]*?<!--pre:end-->/, '') : template;
   html = html.replace(/<!--seo:start-->[\s\S]*?<!--seo:end-->/, '');
   html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(p.title)}</title>`);
   if (!html.includes(`<title>${esc(p.title)}</title>`)) throw new Error(`Kein <title> in ${file}`);
