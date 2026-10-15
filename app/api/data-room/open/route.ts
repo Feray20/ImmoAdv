@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
+import { sendMail } from '@/lib/notify/mail';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { isValidShareToken, sha256Token } from '@/lib/security/share-token';
 import { adminConfigured, anonymizedIpHash, loadOwnerObject, supabaseAdmin } from '@/lib/supabase/admin';
@@ -50,6 +51,23 @@ export async function POST(req: Request) {
     share_id: share.id, owner_id: share.owner_id, actor_type: 'viewer', action: 'open', ip_hash: ipHash,
     user_agent: (req.headers.get('user-agent') || '').slice(0, 160), metadata: { view: share.view_count },
   });
+
+  // Beim ersten Öffnen den Eigentümer benachrichtigen (nach der Antwort, nur wenn E-Mail-Versand konfiguriert ist).
+  if (share.view_count === 1) {
+    const objName = obj && typeof obj.name === 'string' ? obj.name : null;
+    after(async () => {
+      try {
+        const { data: u } = await db.auth.admin.getUserById(share.owner_id);
+        const to = u?.user?.email;
+        if (to) {
+          await sendMail(to, 'ImmoAdv: Ihr Datenraum wurde geöffnet',
+            `Ihr Freigabelink${objName ? ` für „${objName}“` : ''} wurde soeben zum ersten Mal geöffnet.\n\nGültig bis: ${new Date(share.expires_at).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}\n${share.max_views ? `Verbleibende Aufrufe: ${Math.max(0, share.max_views - share.view_count)}\n` : ''}\nAlle Zugriffe sehen Sie im Konto unter „Unterlagen & Datenraum“. Dort können Sie den Link jederzeit sofort widerrufen:\nhttps://immoadv.de/app/dashboard\n\nWaren Sie das nicht oder haben Sie den Link nicht weitergegeben? Widerrufen Sie ihn bitte umgehend.\n\nDiese Nachricht wurde automatisch versendet.`);
+        }
+      } catch {
+        /* Benachrichtigung ist optional */
+      }
+    });
+  }
 
   return json({
     expiresAt: share.expires_at,
