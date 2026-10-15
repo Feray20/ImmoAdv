@@ -369,6 +369,32 @@ Mit freundlichen Grüßen
   $('mh_copy').onclick = async () => { try { await navigator.clipboard.writeText($('mh_letter').value); $('mh_note').textContent = 'Kopiert.'; } catch { $('mh_letter').select(); $('mh_note').textContent = 'Text markiert – mit Strg+C kopieren.'; } };
 }
 
+// Seitensuche über Werkzeuge, Antworten und Begriffe (Index aus routes.js / content.js).
+if ($('sres') && window.__IA_IDX) {
+  const IDX = window.__IA_IDX;
+  const norm = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss');
+  const pre = IDX.map((e) => ({ e, t: norm(e.t), d: norm(e.d), x: norm(e.x || '') }));
+  const run = () => {
+    const q = norm($('sq').value.trim());
+    const words = q.split(/\s+/).filter((w) => w.length > 1);
+    if (!words.length) { $('sres').innerHTML = ''; $('scount').textContent = `${IDX.length} Einträge durchsuchbar.`; return; }
+    const hits = pre.map((r) => {
+      let sc = 0;
+      for (const w of words) { const a = r.t.includes(w) ? 5 : 0, b = r.d.includes(w) ? 2 : 0, c = r.x.includes(w) ? 1 : 0; if (!a && !b && !c) return null; sc += a + b + c; }
+      if (r.t.startsWith(words[0])) sc += 3;
+      return { ...r.e, sc };
+    }).filter(Boolean).sort((a, b) => b.sc - a.sc).slice(0, 30);
+    $('scount').textContent = hits.length ? `${hits.length} Treffer` : 'Keine Treffer. Andere Schreibweise versuchen oder die Wissenszentrale durchstöbern.';
+    const mark = (t) => { let h = esc(t); for (const w of words) h = h.replace(new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'), '<mark>$1</mark>'); return h; };
+    $('sres').innerHTML = hits.map((h) => `<a class="s-hit" href="${h.u}"><span class="st na">${h.k}</span><strong>${mark(h.t)}</strong><span>${mark(h.d.length > 180 ? h.d.slice(0, h.d.lastIndexOf(' ', 177)) + ' …' : h.d)}</span></a>`).join('');
+  };
+  const q0 = new URLSearchParams(location.search).get('q');
+  if (q0) $('sq').value = q0;
+  $('sq').addEventListener('input', () => { history.replaceState(null, '', $('sq').value ? `/suche?q=${encodeURIComponent($('sq').value)}` : '/suche'); run(); });
+  run();
+  if (!q0) $('sq').focus();
+}
+
 // Glossar-Suche
 if ($('gl_q')) {
   const items = [...document.querySelectorAll('.gl-item')];

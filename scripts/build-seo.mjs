@@ -29,6 +29,7 @@ const PAGES = [
   { path: '/', file: 'index.html', title: 'Immobilie als Kapitalanlage durchrechnen | ImmoAdv', desc: 'Cashflow, DSCR, Stresstest und Haushaltsrechnung für Kapitalanleger in Deutschland – mit Kreditmappe für das Bankgespräch. Analyse kostenfrei.', crumbs: [], extra: ['website', 'app', 'howto', 'homefaq'] },
   { path: '/wissen', title: 'Immobilienfinanzierung verständlich erklärt – 33 Antworten | ImmoAdv', desc: 'Eigenkapital, Nebenkosten, Beleihungswert, AfA, 15-%-Grenze, Anschlusszins: Antworten in zwei Ebenen mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
   { path: '/cockpit', file: null, skip: true, title: '', desc: '' },
+  { path: '/suche', file: 'suche/index.html', template: 'wissen/index.html', title: 'Suche | ImmoAdv', desc: 'Rechner, Antworten und Fachbegriffe rund um Immobilienkauf und Finanzierung durchsuchen.', crumbs: ['Suche'] },
   { path: '/wissen/erwerbsstatus', file: 'wissen/erwerbsstatus/index.html', title: 'Immobilienfinanzierung nach Erwerbsstatus: Angestellt, Beamter, Selbstständig | ImmoAdv', desc: 'Was Banken bei Angestellten, Befristeten, Beamten, Selbstständigen, Berufseinsteigern und Rentnern prüfen – mit typischen Unterlagen je Gruppe.', crumbs: ['Wissen', 'Erwerbsstatus'] },
   { path: '/wissen/glossar', title: 'Glossar Immobilienfinanzierung: Begriffe von A bis Z | ImmoAdv', desc: 'Annuität, Beleihungswert, Zinsbindung, Kappungsgrenze, Grundschuld und mehr: die wichtigsten Begriffe zu Kauf, Finanzierung, Miete und Steuer kurz erklärt.', crumbs: ['Wissen', 'Glossar'], extra: ['glossar'] },
   { path: '/start', title: 'Meine erste Immobilie durchrechnen – in drei Schritten | ImmoAdv', desc: 'Kaufpreis, Miete, Eigenkapital: Rate, Tilgungshebel, Cashflow, Notgroschen und das Bild nach zehn Jahren – mit Erklärungen aller Fachbegriffe.', crumbs: ['Meine erste Immobilie'], extra: ['app'] },
@@ -116,6 +117,8 @@ const HOWTO = {
 
 function headBlock(p, html) {
   const url = `${ORIGIN}${p.path === '/' ? '/' : p.path}`;
+  const ogKey = p.path.replace(/^\//, '').replace(/\//g, '--');
+  const ogImg = ogKey && existsSync(new URL(`og/${ogKey}.png`, pub)) ? `${ORIGIN}/og/${ogKey}.png` : `${ORIGIN}/og-image.png`;
   const lines = [
     `<meta name="description" content="${esc(p.desc)}">`,
     `<meta name="robots" content="${p.noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large'}">`,
@@ -125,14 +128,14 @@ function headBlock(p, html) {
     lines.push(
       '<meta property="og:type" content="website">', '<meta property="og:site_name" content="ImmoAdv">', '<meta property="og:locale" content="de_DE">',
       `<meta property="og:title" content="${esc(p.title)}">`, `<meta property="og:description" content="${esc(p.desc)}">`, `<meta property="og:url" content="${url}">`,
-      `<meta property="og:image" content="${ORIGIN}/og-image.png">`, '<meta property="og:image:width" content="1200">', '<meta property="og:image:height" content="630">',
-      '<meta property="og:image:alt" content="ImmoAdv – Immobilie als Kapitalanlage durchrechnen">',
+      `<meta property="og:image" content="${ogImg}">`, '<meta property="og:image:width" content="1200">', '<meta property="og:image:height" content="630">',
+      `<meta property="og:image:alt" content="${ogImg.includes('/og/') ? esc(p.title.replace(' | ImmoAdv', '')) : 'ImmoAdv – Immobilie als Kapitalanlage durchrechnen'}">`,
       '<meta name="twitter:card" content="summary_large_image">', `<meta name="twitter:title" content="${esc(p.title)}">`,
-      `<meta name="twitter:description" content="${esc(p.desc)}">`, `<meta name="twitter:image" content="${ORIGIN}/og-image.png">`,
+      `<meta name="twitter:description" content="${esc(p.desc)}">`, `<meta name="twitter:image" content="${ogImg}">`,
     );
     const graph = [ORG];
     const ex = p.extra || [];
-    if (ex.includes('website')) graph.push({ '@type': 'WebSite', '@id': `${ORIGIN}/#site`, url: `${ORIGIN}/`, name: 'ImmoAdv', inLanguage: 'de-DE', publisher: { '@id': `${ORIGIN}/#org` } });
+    if (ex.includes('website')) graph.push({ '@type': 'WebSite', '@id': `${ORIGIN}/#site`, url: `${ORIGIN}/`, name: 'ImmoAdv', inLanguage: 'de-DE', publisher: { '@id': `${ORIGIN}/#org` }, potentialAction: { '@type': 'SearchAction', target: { '@type': 'EntryPoint', urlTemplate: `${ORIGIN}/suche?q={search_term_string}` }, 'query-input': 'required name=search_term_string' } });
     if (ex.includes('app')) graph.push(APP);
     if (ex.includes('howto')) graph.push(HOWTO);
     if (ex.includes('faq')) graph.push(faqLd());

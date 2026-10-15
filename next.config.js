@@ -63,6 +63,7 @@ module.exports = {
       beforeFiles: [
         { source: '/', destination: '/index.html' },
         ...STATIC_PAGES.map((p) => ({ source: `/${p}`, destination: `/${p}/index.html` })),
+        { source: '/suche', destination: '/suche/index.html' },
         { source: '/wissen/erwerbsstatus', destination: '/wissen/erwerbsstatus/index.html' },
         { source: '/wissen/:slug', destination: '/wissen/:slug/index.html' },
         { source: '/wissen/glossar', destination: '/wissen/glossar/index.html' },
@@ -96,6 +97,7 @@ module.exports = {
       { source: '/cockpit', headers: [{ key: 'Content-Security-Policy', value: cspValue.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'") }] },
       { source: '/src/:file*', headers: swr },
       { source: '/data/:file*', headers: swr },
+      { source: '/og/:file*', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=2592000' }] },
       { source: '/:icon(icon-192.png|icon-512.png|icon-192-maskable.png|icon-512-maskable.png|apple-touch-icon.png)', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=2592000' }] },
       { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache' }] },
     ];
