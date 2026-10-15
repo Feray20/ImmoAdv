@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Seite nicht gefunden | ImmoAdv',
-  robots: { index: false, follow: true },
+  title: 'Seite nicht gefunden | ImmoAdv', // „noindex“ setzt Next.js für 404-Seiten selbst
 };
 
 const LINKS: [string, string][] = [
