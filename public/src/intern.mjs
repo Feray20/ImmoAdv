@@ -89,7 +89,7 @@ async function cockpit(v, zeitraum = 'monat', von = '', bis = '') {
     <h2>Weiterempfehlung über Kreditmappen</h2>
     <div class="pt-kpis">${tile('Kreditmappen von Unternehmen', String(d.viral.partnerDossiers))}${tile('Aufrufe der Prüfseite', String(d.viral.verifyViews))}${tile('Neue Unternehmenskonten', String(d.viral.newAccounts), `davon über Prüfseite: ${d.viral.viaVerify}`)}${tile('Endkunden-Anfragen', String(d.viral.leads))}</div>
     <h2>Offene Posten</h2>${d.openItems.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Ampel</th><th>Nummer</th><th>Kunde</th><th>Fällig</th><th>Brutto</th><th></th></tr></thead><tbody>
-      ${d.openItems.map((x) => `<tr><td><span class="ad-amp ${x.ampel}"></span>${x.daysOverdue > 0 ? `${x.daysOverdue} Tage` : 'fristgerecht'}</td><td>${esc(x.invoice_number)}</td><td>${esc(x.buyer?.company)}</td><td>${dt(x.due_date)}</td><td>${eur(x.gross_cents)}</td><td><button class="text-btn" data-paid="${x.id}" type="button">Als bezahlt markieren</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine offenen Posten.</p>'}
+      ${d.openItems.map((x) => `<tr><td><span class="ad-amp ${x.ampel}"></span>${x.daysOverdue > 0 ? `${x.daysOverdue} Tage` : 'fristgerecht'}</td><td>${esc(x.invoice_number)}</td><td>${esc(x.buyer?.company)}</td><td>${dt(x.due_date)}</td><td>${eur(x.gross_cents)}</td><td class="ad-actions"><button data-paid="${x.id}" type="button">Als bezahlt markieren</button><button data-remind="${x.id}" type="button">Zahlungserinnerung senden</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine offenen Posten.</p>'}
     <h2>Rechnungen im Zeitraum</h2>${invTable(d.invoices)}`;
   v.querySelectorAll('[data-z]').forEach((b) => b.onclick = () => cockpit(v, b.dataset.z));
   $('#zf').onclick = () => cockpit(v, 'frei', $('#zv').value, $('#zb').value);
@@ -98,7 +98,7 @@ async function cockpit(v, zeitraum = 'monat', von = '', bis = '') {
 
 const invTable = (rows) => rows.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Nummer</th><th>Art</th><th>Datum</th><th>Kunde</th><th>Netto</th><th>USt</th><th>Brutto</th><th>Status</th><th></th></tr></thead><tbody>
   ${rows.map((x) => `<tr><td>${esc(x.invoice_number)}</td><td>${{ invoice: 'Rechnung', storno: 'Storno', credit: 'Gutschrift' }[x.kind]}${x.source === 'stripe' ? ' · Stripe' : ''}</td><td>${dt(x.issue_date)}</td><td>${esc(x.buyer?.company)}</td><td>${eur(x.net_cents)}</td><td>${eur(x.vat_cents)}</td><td>${eur(x.gross_cents)}</td><td>${PAY[x.payment_status]}</td>
-  <td class="ad-actions"><button data-pdf="${x.id}" type="button">PDF</button>${x.kind === 'invoice' && x.source === 'manual' && x.payment_status !== 'CANCELLED' ? `<button data-storno="${x.id}" type="button">Stornieren</button>` : ''}${['PENDING', 'OVERDUE'].includes(x.payment_status) ? `<button data-paid="${x.id}" type="button">Bezahlt</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine Rechnungen.</p>';
+  <td class="ad-actions"><button data-pdf="${x.id}" type="button">PDF</button>${x.kind === 'invoice' && x.source === 'manual' && x.payment_status !== 'CANCELLED' ? `<button data-storno="${x.id}" type="button">Stornieren</button>` : ''}${['PENDING', 'OVERDUE'].includes(x.payment_status) ? `<button data-paid="${x.id}" type="button">Bezahlt</button><button data-remind="${x.id}" type="button">Erinnern</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine Rechnungen.</p>';
 
 function bindInv(v, reload) {
   v.querySelectorAll('[data-pdf]').forEach((b) => b.onclick = async () => {
@@ -108,6 +108,13 @@ function bindInv(v, reload) {
     if (!confirm('Stornorechnung ausstellen? Die ursprüngliche Rechnung bleibt unverändert im Archiv.')) return;
     const r = await api('/api/admin/invoices', { method: 'POST', body: JSON.stringify({ action: 'storno', invoiceId: b.dataset.storno }) });
     if (r.ok) { msg(`Storno ${r.data.invoice.invoice_number} ausgestellt.`); reload(); } else msg(r.data?.error || 'Fehler', true);
+  });
+  v.querySelectorAll('[data-remind]').forEach((b) => b.onclick = async () => {
+    if (!confirm('Zahlungserinnerung mit Rechnung als PDF an das Unternehmen senden?')) return;
+    b.disabled = true;
+    const r = await api('/api/admin/invoices', { method: 'POST', body: JSON.stringify({ action: 'remind', invoiceId: b.dataset.remind }) });
+    b.disabled = false;
+    if (r.ok) msg(`Erinnerung versendet (${r.data.stufe}. Erinnerung).`); else msg(r.data?.error || 'Fehler', true);
   });
   v.querySelectorAll('[data-paid]').forEach((b) => b.onclick = async () => {
     const r = await api('/api/admin/invoices', { method: 'POST', body: JSON.stringify({ action: 'paid', invoiceId: b.dataset.paid }) });
@@ -136,6 +143,7 @@ async function partner(v) {
         <button data-a="invoicePayment" data-on="${!a.allow_invoice_payment}" data-id="${a.id}" type="button">${a.allow_invoice_payment ? 'Rechnungskauf aus' : 'Rechnungskauf an'}</button>
         <button data-a="credits" data-id="${a.id}" type="button">Kontingent +</button>
         <button data-a="invoice" data-id="${a.id}" data-name="${esc(a.company_name)}" type="button">Rechnung</button>
+        <button data-a="details" data-id="${a.id}" type="button">Details</button>
       </td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine Unternehmenskonten.</p>'}
     <div id="invForm"></div>`;
   const filter = () => {
@@ -147,6 +155,7 @@ async function partner(v) {
     const id = b.dataset.id, a = b.dataset.a;
     let body = { action: a, id };
     if (a === 'invoice') return invoiceForm(id, b.dataset.name);
+    if (a === 'details') return details(id);
     if (a === 'verify' || a === 'whitelabel') body.on = b.dataset.on === 'true';
     if (a === 'lock') { const reason = prompt('Grund der Sperre (wird dem Unternehmen angezeigt):'); if (!reason) return; body.reason = reason; }
     if (a === 'unlock' && !confirm('Konto entsperren?')) return;
@@ -163,6 +172,27 @@ async function partner(v) {
     const r = await api('/api/admin/b2b', { method: 'POST', body: JSON.stringify(body) });
     if (r.ok) { msg('Gespeichert.'); partner(v); } else msg(r.data?.error || 'Fehler', true);
   });
+}
+
+// Nur lesende Detailansicht eines Unternehmens (kein Einloggen als Partner).
+async function details(id) {
+  const box = $('#invForm');
+  box.innerHTML = '<p class="form-note">Wird geladen …</p>';
+  const r = await api('/api/admin/b2b?id=' + id);
+  if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  const { account: a, members, leads, invoices } = r.data;
+  const rows = [['Kundennummer', a.customer_number], ['Unternehmen', `${a.company_name} (${a.legal_form})`], ['Art', a.institution_type], ['Registernummer', a.register_number || '–'], ['Steuer-/USt-IdNr.', a.tax_id || '–'],
+    ['Ansprechpartner', a.advisor_name], ['E-Mail', a.email], ['Telefon', a.phone || '–'], ['Anschrift', `${a.street || ''}, ${a.postal_code} ${a.city}`], ['Partnerseite', a.slug ? `/p/${a.slug}` : '–'],
+    ['Tarif', `${a.tier ? TIER[a.tier] : '–'}${a.plan_source ? ` (${a.plan_source === 'manual' ? 'manuell' : 'Stripe'})` : ''}`], ['Kreditmappen diesen Monat', String(a.dossiersThisMonth)],
+    ['§ 14 BGB bestätigt', dtt(a.unternehmer_confirmed_at)], ['AVV', `${a.avv_version || '–'} am ${dtt(a.avv_accepted_at)}`], ['Herkunft', a.referral || '–'], ['Erlaubte Domains', (a.allowed_domains || []).join(', ') || 'alle'], ['Angelegt', dtt(a.created_at)]];
+  box.innerHTML = `<section class="pt-card" style="margin-top:16px"><h2>${esc(a.company_name)}</h2>
+    <dl class="pt-dl">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+    <h3>Team</h3><p>${members.map((m) => `${esc(m.email)} (${m.role === 'owner' ? 'Inhaber' : 'Berater'})`).join(' · ') || '–'}</p>
+    <h3>Anfragen (nur Anzahl und Status, Inhalte gehören dem Unternehmen)</h3><p>${leads.length} insgesamt · ${['neu', 'in_bearbeitung', 'abgeschlossen', 'abgelehnt'].map((s) => `${s.replace('_', ' ')}: ${leads.filter((l) => l.status === s).length}`).join(' · ')}</p>
+    <h3>Rechnungen</h3>${invoices.length ? `<table class="ad-table"><tbody>${invoices.map((i) => `<tr><td>${esc(i.invoice_number)}</td><td>${dt(i.issue_date)}</td><td>${eur(i.gross_cents)}</td><td>${PAY[i.payment_status]}</td></tr>`).join('')}</tbody></table>` : '<p class="form-note">Keine.</p>'}
+    <button class="text-btn" id="detClose" type="button">Schließen</button></section>`;
+  $('#detClose').onclick = () => { box.innerHTML = ''; };
+  box.scrollIntoView({ behavior: 'smooth' });
 }
 
 function invoiceForm(accountId, name) {
@@ -184,7 +214,7 @@ function invoiceForm(accountId, name) {
     if (!confirm('Rechnung jetzt ausstellen? Sie erhält die nächste fortlaufende Nummer und kann danach nur storniert werden.')) return;
     const r = await api('/api/admin/invoices', { method: 'POST', body: JSON.stringify({ action: 'create', accountId, items: it, paymentMethod: $('#pm').value, servicePeriod: $('#sp').value || undefined, paid: $('#paid').checked }) });
     if (!r.ok) return msg(r.data?.error || 'Fehler', true);
-    msg(`Rechnung ${r.data.invoice.invoice_number} ausgestellt und archiviert.`);
+    msg(`Rechnung ${r.data.invoice.invoice_number} ausgestellt und archiviert.${r.data.mailed ? ' PDF per E-Mail an das Unternehmen gesendet.' : ' (Kein E-Mail-Versand eingerichtet: PDF bitte selbst senden; im Portal ist sie abrufbar.)'}`);
     box.innerHTML = '';
   };
   box.scrollIntoView({ behavior: 'smooth' });
@@ -209,7 +239,14 @@ function steuer(v) {
   v.innerHTML = `<section class="pt-card"><h2>Monatsarchiv für die Steuerkanzlei</h2>
     <p>ZIP mit allen Rechnungen (Ordner <code>Rechnungen</code>), Stornos und Gutschriften (<code>Korrekturen</code>), <code>DATEV_Buchungsstapel.csv</code> und <code>Monatsjournal_Umsatzsteuer.csv</code> (Kennzahl 81).</p>
     <div class="pt-row ad-form"><label class="form-note">Monat <input type="month" id="mon" value="${m}"></label><label class="form-note">Kontenrahmen <select id="skr"><option value="SKR03">SKR03 (1400 / 8400)</option><option value="SKR04">SKR04 (1200 / 4400)</option></select></label><button class="btn btn-dark" id="zip" type="button">ZIP herunterladen</button></div>
-    <p class="form-note">Die automatische Monatsmail an die Kanzlei ist nicht eingerichtet: Sie bräuchte einen E-Mail-Dienst mit Anhängen und eine hinterlegte Kanzlei-Adresse. Bis dahin das ZIP hier laden und weitergeben. Bitte die Übernahme in die Umsatzsteuer-Voranmeldung von der Kanzlei prüfen lassen.</p></section>`;
+    <p class="form-note" id="taxAuto">Automatischer Versand wird geprüft …</p>
+    <p class="form-note">Bitte die Übernahme in die Umsatzsteuer-Voranmeldung von der Kanzlei prüfen lassen.</p></section>`;
+  api('/api/admin/datev?info=1').then((r) => {
+    const i = r.data || {};
+    $('#taxAuto').innerHTML = i.advisorEmail && i.mail && i.cron
+      ? `<strong>Automatischer Versand aktiv:</strong> am ${i.workday}. Werktag jedes Monats geht das Archiv des Vormonats (${esc(i.skr)}) an ${esc(i.advisorEmail)}. Versand und Fehler stehen im Protokoll.`
+      : `<strong>Automatischer Versand aus.</strong> Dafür in Vercel setzen: ${[!i.advisorEmail && 'TAX_ADVISOR_EMAIL (Adresse der Kanzlei)', !i.mail && 'RESEND_API_KEY und NOTIFY_FROM_EMAIL', !i.cron && 'CRON_SECRET'].filter(Boolean).join(', ')}. Optional: TAX_DISPATCH_WORKDAY (Standard 3), TAX_SKR (SKR03/SKR04).`;
+  });
   $('#zip').onclick = async (e) => {
     e.target.disabled = true;
     try { await download(`/api/admin/datev?monat=${$('#mon').value}&skr=${$('#skr').value}`, {}, 'Steuerexport.zip'); msg('Export erstellt. Hinweise stehen in LIESMICH.txt.'); } catch (er) { msg(er.message, true); }

@@ -42,3 +42,12 @@ test('USt-Journal: Kennzahl 81 in vollen Euro, Summe netto', () => {
   assert.ok(j.includes('Kennzahl 81 (Bemessungsgrundlage 19 %, volle Euro);148'));
   assert.ok(j.includes('Summe;;;;148,99;28,31;177,30;'));
 });
+
+test('Werktage: Feiertage und Wochenenden werden übersprungen', async () => {
+  const { nthWorkday, isHoliday } = await import('../lib/b2b/workdays');
+  assert.equal(nthWorkday(2026, 11, 3), '2026-11-04'); // 1.11. So, 2.11. Mo, 3.11. Di, 4.11. Mi
+  assert.equal(nthWorkday(2027, 1, 1), '2027-01-04'); // 1.1. Feiertag (Fr), 2./3. Wochenende
+  assert.equal(nthWorkday(2026, 4, 3), '2026-04-07'); // 1.4. Mi, 2.4. Do, 3.4. Karfreitag, 6.4. Ostermontag
+  assert.ok(isHoliday(new Date(Date.UTC(2026, 4, 14)))); // Christi Himmelfahrt 2026
+  assert.ok(!isHoliday(new Date(Date.UTC(2026, 4, 15))));
+});

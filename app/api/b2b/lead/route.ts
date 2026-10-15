@@ -72,6 +72,11 @@ export async function POST(req: Request) {
       `Objekt: ${p.address || p.ref || '–'}\nKaufpreis: ${eur(p.price)} · Kaltmiete: ${eur(p.rent)} · Eigenkapital: ${eur(p.equity)}\n` +
       (metrics ? `Gesamtkosten: ${eur(metrics.allIn)} · Darlehen: ${eur(metrics.loan)} · DSCR: ${metrics.dscr ?? '–'}\n` : '') +
       `\nNachricht: ${b.message || '–'}\n\nAlle Angaben im Portal: https://immoadv.de/b2b-portal#anfragen\n\nRechnerische Orientierungswerte, keine Kreditentscheidung.`);
+    // Eingangsbestätigung an den Interessenten (nicht bei Links im Namen, gegen Missbrauch als Spam-Versand).
+    if (!/https?:|www\.|:\/\/|\.[a-z]{2,}\//i.test(b.name)) await sendMail(b.email, `Ihre Anfrage an ${a.company_name}`,
+      `Guten Tag ${b.name},\n\nIhre Finanzierungsanfrage ist bei ${a.company_name} (${a.postal_code} ${a.city}) eingegangen. ${a.company_name} meldet sich direkt bei Ihnen.\n\n` +
+      `Verantwortlich für Ihre Daten ist ${a.company_name}; ImmoAdv verarbeitet sie nur im Auftrag. Ihre Einwilligung können Sie jederzeit gegenüber ${a.company_name} widerrufen (Kontakt: ${a.email}).\n\n` +
+      'Die angezeigten Werte sind rechnerische Orientierungswerte, keine Kreditzusage.\n\nDiese E-Mail wurde automatisch versendet.');
   }
   return json({ ok: true, id: ins.data.id }, 201);
 }

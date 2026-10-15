@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { adminAudit, type B2BAccount } from '@/lib/b2b/core';
+import { mailConfigured, sendMail } from '@/lib/notify/mail';
 import { bankDetails, buyerFromAccount, issueInvoice, loadInvoicePdf, type InvoiceRow } from '@/lib/b2b/invoice';
 
 export const runtime = 'nodejs';
@@ -50,6 +51,24 @@ const Create = z.object({
 });
 const Storno = z.object({ action: z.literal('storno'), invoiceId: z.string().uuid() });
 const Paid = z.object({ action: z.literal('paid'), invoiceId: z.string().uuid() });
+const Remind = z.object({ action: z.literal('remind'), invoiceId: z.string().uuid() });
+
+const eur = (c: number) => (c / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+const dmy = (d: string | null) => (d ? d.split('-').reverse().join('.') : 'sofort');
+
+// Rechnung bzw. Erinnerung mit PDF an die Konto-E-Mail des Unternehmens senden.
+async function mailInvoice(r: InvoiceRow, kind: 'new' | 'remind'): Promise<boolean> {
+  if (!mailConfigured() || !r.account_id) return false;
+  const { data: a } = await supabaseAdmin().from('immo_b2b_accounts').select('email, advisor_name').eq('id', r.account_id).maybeSingle();
+  if (!a?.email) return false;
+  const f = await loadInvoicePdf(r);
+  if (!f) return false;
+  const title = r.kind === 'storno' ? 'Stornorechnung' : 'Rechnung';
+  const text = kind === 'new'
+    ? `Guten Tag ${a.advisor_name},\n\nanbei erhalten Sie unsere ${title} ${r.invoice_number} über ${eur(r.gross_cents)}.${r.kind === 'invoice' && r.payment_method === 'INVOICE_BANK_TRANSFER' ? `\nZahlbar bis ${dmy(r.due_date)}. Den GiroCode auf der Rechnung können Sie mit Ihrer Banking-App scannen.` : ''}\n\nAlle Rechnungen finden Sie auch im Unternehmensportal: https://immoadv.de/b2b-portal#tarif\n\nMit freundlichen Grüßen\nImmoAdv · Georg-August-Zinn-Str. 25 · 64354 Reinheim`
+    : `Guten Tag ${a.advisor_name},\n\nbei der Durchsicht unserer Buchhaltung haben wir festgestellt, dass die Rechnung ${r.invoice_number} vom ${dmy(r.issue_date)} über ${eur(r.gross_cents)} (fällig am ${dmy(r.due_date)}) noch offen ist.\nSicher handelt es sich um ein Versehen. Bitte überweisen Sie den Betrag in den nächsten 7 Tagen; die Rechnung liegt erneut bei.\nSollte sich Ihre Zahlung mit diesem Schreiben überschnitten haben, betrachten Sie es bitte als gegenstandslos.\n\nMit freundlichen Grüßen\nImmoAdv · support@immoadv.de`;
+  return sendMail(a.email, kind === 'new' ? `${title} ${r.invoice_number}` : `Zahlungserinnerung: Rechnung ${r.invoice_number}`, text, [{ filename: `${r.invoice_number}.pdf`, content: f.pdf }]);
+}
 
 export async function POST(req: Request) {
   const auth = await requireAdmin(req);
@@ -67,8 +86,9 @@ export async function POST(req: Request) {
         kind: 'invoice', buyer: buyerFromAccount(a as B2BAccount), items: p.data.items, accountId: a.id, paymentMethod: p.data.paymentMethod,
         servicePeriod: p.data.servicePeriod, paymentTermsDays: a.payment_terms_days, createdBy: auth.user.email, paid: p.data.paid,
       });
-      await adminAudit(auth.user.email, 'invoice_create', row.id, { number: row.invoice_number, gross: row.gross_cents });
-      return j({ ok: true, invoice: row }, 201);
+      const mailed = await mailInvoice(row, 'new');
+      await adminAudit(auth.user.email, 'invoice_create', row.id, { number: row.invoice_number, gross: row.gross_cents, mailed });
+      return j({ ok: true, invoice: row, mailed }, 201);
     }
     if (body?.action === 'storno') {
       const p = Storno.safeParse(body);
@@ -79,8 +99,9 @@ export async function POST(req: Request) {
       if (o.kind !== 'invoice' || o.payment_status === 'CANCELLED') return j({ error: 'Diese Rechnung kann nicht (mehr) storniert werden.' }, 409);
       if (o.source === 'stripe') return j({ error: 'Stripe-Rechnungen bitte in Stripe stornieren (Gutschrift); sie wird automatisch archiviert.' }, 409);
       const row = await issueInvoice({ kind: 'storno', buyer: o.buyer, items: o.items, accountId: o.account_id, paymentMethod: o.payment_method, refersTo: o, createdBy: auth.user.email });
-      await adminAudit(auth.user.email, 'invoice_storno', row.id, { number: row.invoice_number, refers: o.invoice_number });
-      return j({ ok: true, invoice: row }, 201);
+      const mailed = await mailInvoice(row, 'new');
+      await adminAudit(auth.user.email, 'invoice_storno', row.id, { number: row.invoice_number, refers: o.invoice_number, mailed });
+      return j({ ok: true, invoice: row, mailed }, 201);
     }
     if (body?.action === 'paid') {
       const p = Paid.safeParse(body);
@@ -89,6 +110,19 @@ export async function POST(req: Request) {
       if (r.error) return j({ error: r.error.message }, 500);
       await adminAudit(auth.user.email, 'invoice_paid', p.data.invoiceId);
       return j({ ok: true });
+    }
+    if (body?.action === 'remind') {
+      const p = Remind.safeParse(body);
+      if (!p.success) return j({ error: 'Ungültig.' }, 400);
+      if (!mailConfigured()) return j({ error: 'E-Mail-Versand ist nicht eingerichtet (RESEND_API_KEY, NOTIFY_FROM_EMAIL).' }, 409);
+      const { data } = await db.from('immo_invoices').select('*').eq('id', p.data.invoiceId).maybeSingle();
+      const r = data as InvoiceRow | null;
+      if (!r || !['PENDING', 'OVERDUE'].includes(r.payment_status)) return j({ error: 'Rechnung ist nicht offen.' }, 409);
+      const { count } = await db.from('immo_admin_audit').select('id', { count: 'exact', head: true }).eq('action', 'invoice_remind').eq('target', r.id);
+      const ok = await mailInvoice(r, 'remind');
+      if (!ok) return j({ error: 'Versand fehlgeschlagen (keine Konto-E-Mail oder PDF fehlt).' }, 502);
+      await adminAudit(auth.user.email, 'invoice_remind', r.id, { number: r.invoice_number, stufe: (count ?? 0) + 1 });
+      return j({ ok: true, stufe: (count ?? 0) + 1 });
     }
     return j({ error: 'Unbekannte Aktion.' }, 400);
   } catch (e) {

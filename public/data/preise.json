@@ -7,7 +7,8 @@
       "Immobiliensuche bei ImmoScout24, Immowelt und Kleinanzeigen",
       "Objekt-Analyse und alle Rechner",
       "Wissenszentrale, Glossar, Lernpfad",
-      "Konto mit Kreditmappe-Vorschau"
+      "Konto mit Kreditmappe-Vorschau",
+      "Bis zu 3 Objekte im Konto"
     ]
   },
   "modi": {
@@ -22,10 +23,10 @@
           "intervall": "pro Monat",
           "mode": "subscription",
           "features": [
-            "Geführter Lernpfad mit Fortschritt",
-            "Bis zu 3 Objekte mit Bankreife-Check",
-            "Fristen-Erinnerungen per E-Mail",
-            "Merkliste und Analyse-PDF"
+            "Alles aus Kostenlos, dazu:",
+            "Bis zu 10 Objekte statt 3",
+            "Analyse-PDF für jedes Objekt",
+            "Kreditmappe zum Einsteigerpreis (39 € statt 49 €)"
           ]
         },
         {
@@ -46,6 +47,7 @@
           "intervall": "einmalig je Objekt",
           "mode": "payment",
           "features": [
+            "Nur mit Einsteiger-Begleitung buchbar",
             "Kreditmappe für die Bank",
             "Mit Erklärseite „So liest die Bank Ihre Zahlen“",
             "Echtheits-QR und Prüfsumme"
