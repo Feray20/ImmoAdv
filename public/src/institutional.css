@@ -88,3 +88,16 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 .qr-box svg{width:160px;height:160px}
 .qr-box input{width:100%;font-size:12px;padding:6px;border:1px solid var(--ia-hair);border-radius:4px}
 .share-cats{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px}
+/* Investor-Profiler */
+.prof-form{display:grid;gap:16px}
+.prof-form fieldset{border:1px solid var(--ia-hair);border-radius:6px;padding:12px 16px}
+.prof-form legend{font-weight:600;color:var(--ia-navy);padding:0 6px}
+.prof-form label{display:block;padding:6px 0;font-size:14px}
+#profOut{margin-top:20px}
+/* Untere Navigation auf dem Handy (Daumenzone) */
+.bottom-nav{display:none}
+@media (max-width:760px){
+  .bottom-nav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;background:#fff;border-top:1px solid var(--ia-hair);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  .bottom-nav a{flex:1;text-align:center;font-size:12px;font-weight:600;color:var(--ia-navy);padding:10px 2px;min-height:44px}
+  body:has(.bottom-nav){padding-bottom:72px}
+}

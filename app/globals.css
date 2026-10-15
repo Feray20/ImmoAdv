@@ -61,3 +61,14 @@ h3{font-size:13px;margin:18px 0 8px;text-transform:uppercase;letter-spacing:.06e
 .ck-foot p{margin:4px 0}
 
 @media (max-width:1100px){.ck-grid{grid-template-columns:1fr}.ck-top nav{display:none}.ck-wrap{padding:16px}}
+.ck-head{display:flex;gap:16px;justify-content:space-between;align-items:flex-end;flex-wrap:wrap}
+.ck-tabs{display:flex;border:1px solid var(--hair);border-radius:6px;overflow:hidden;background:#fff}
+.ck-tabs button{border:0;background:#fff;padding:8px 14px;font-size:13px;color:var(--text);cursor:pointer;border-right:1px solid var(--line)}
+.ck-tabs button:last-child{border-right:0}
+.ck-tabs button.on{background:var(--navy);color:#fff;font-weight:600}
+.ck-explain{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-bottom:12px}
+.ck-explain div{border:1px solid var(--line);border-radius:6px;padding:12px;background:var(--bg)}
+.ck-explain strong{color:var(--navy)}
+.ck-explain p{margin:6px 0 0}
+.ck-radar{display:block;width:100%;max-width:300px;margin:12px auto 0}
+.ck-link{color:var(--navy);font-weight:600}

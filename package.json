@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "export:faq": "node scripts/export-faq.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",

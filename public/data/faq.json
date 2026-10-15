@@ -1,0 +1,274 @@
+{
+  "version": "2026-10-15",
+  "disclaimer": "Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Rechts-, Steuer- oder Finanzierungsberatung gem. § 34i GewO / KWG.",
+  "levels": {
+    "l1": "Ich brauche Orientierung",
+    "l2": "Ich möchte alle Details wissen"
+  },
+  "entries": [
+    {
+      "id": 1,
+      "category": "Orientierung & Leistbarkeit",
+      "question": "Wie viel Immobilie kann ich mir leisten?",
+      "level1": "Entscheidend ist nicht der Kaufpreis, sondern die monatliche Rate, die nach allen Lebenshaltungskosten dauerhaft übrig bleibt. Banken rechnen dafür mit Pauschalen, nicht mit Ihrem Wunschbudget.",
+      "nextStep": "Nettoeinkommen und Eigenkapital im kostenlosen Konto hinterlegen; die Haushaltsrechnung der Mustermappe zeigt das Schema.",
+      "level2": "Bankpraxis: Nettoeinkommen minus Lebenshaltungspauschale (häufig 800–1.200 € für die erste Person, 300–400 € je weitere Person), minus Warmmiete bzw. künftige Bewirtschaftungskosten, minus bestehende Raten = maximal tragbare Rate. Daraus ergibt sich über die Annuität das Darlehen: Darlehen = Rate × 12 ÷ (Sollzins + anfängliche Tilgung). Beispiel (fiktiv): 900 € Rate, 3,8 % Zins, 2 % Tilgung → 900 × 12 ÷ 0,058 ≈ 186.207 € Darlehen. Die genauen Pauschalen legt jede Bank selbst fest."
+    },
+    {
+      "id": 2,
+      "category": "Orientierung & Leistbarkeit",
+      "question": "Wie viel Eigenkapital brauche ich?",
+      "level1": "Als Faustregel sollten mindestens die Kaufnebenkosten aus Eigenkapital bezahlt werden, besser zusätzlich 10–20 % des Kaufpreises. Eine Notfallreserve von 3–6 Monatsausgaben gehört nicht in die Finanzierung.",
+      "nextStep": "Eigenkapital im Rechner auf der Startseite eintragen und die Reserve getrennt einplanen.",
+      "level2": "Je höher der Beleihungsauslauf (Darlehen ÷ Beleihungswert), desto höher meist der Zinsaufschlag. Vollfinanzierungen (110 %) sind möglich, verlangen aber in der Regel sehr gute Bonität und kosten spürbar mehr Zins. ImmoAdv-Scorecard: Grün nur, wenn Nebenkosten + 10 % Kaufpreis gedeckt sind und die Reserve erhalten bleibt."
+    },
+    {
+      "id": 3,
+      "category": "Orientierung & Leistbarkeit",
+      "question": "Welche Nebenkosten kommen zum Kaufpreis dazu?",
+      "level1": "Grunderwerbsteuer, Notar und Grundbuch sowie ggf. Maklerprovision. Je nach Bundesland sind das zusammen rund 7–15 % des Kaufpreises.",
+      "nextStep": "Den Nebenkosten-Prozentsatz Ihres Bundeslands im Rechner auf der Startseite eintragen.",
+      "level2": "Grunderwerbsteuer: 3,5–6,5 % je nach Bundesland (z. B. Hessen 6,0 %, Bayern 3,5 %). Notar und Grundbuch: rund 1,5–2,0 %. Maklerprovision bei Wohnungen und Einfamilienhäusern für Verbraucher: höchstens hälftige Teilung (§§ 656a ff. BGB), üblich bis 3,57 % inkl. USt je Seite. Beispiel (fiktiv, Hessen, ohne Makler): 300.000 € × (6,0 % + 1,8 %) = 23.400 €."
+    },
+    {
+      "id": 4,
+      "category": "Orientierung & Leistbarkeit",
+      "question": "Was bedeuten Zins, Tilgung, Annuität und Zinsbindung?",
+      "level1": "Die Annuität ist Ihre gleichbleibende Rate aus Zins und Tilgung. Mit jeder Rate sinkt die Restschuld, dadurch wird der Zinsanteil kleiner und der Tilgungsanteil größer.",
+      "nextStep": "Zins und Tilgung im Rechner auf der Startseite variieren.",
+      "level2": "Jahresrate = Darlehen × (Sollzins + anfängliche Tilgung). Die Zinsbindung (z. B. 10 oder 15 Jahre) legt fest, wie lange der Zins fest ist; danach wird die Restschuld zu neuen Konditionen weiterfinanziert. Restschuld nach n Jahren (monatlich): K·(1+i)^m − R·((1+i)^m − 1)/i mit i = Monatszins, m = Monate, R = Monatsrate."
+    },
+    {
+      "id": 5,
+      "category": "Orientierung & Leistbarkeit",
+      "question": "Warum unterscheidet die Bank nach Beruf und Einkommensart?",
+      "level1": "Die Bank bewertet, wie sicher Ihr Einkommen in den nächsten Jahren ist. Beamte und unbefristet Angestellte gelten als planbar, Selbstständige und Befristete als schwankender.",
+      "nextStep": "In der Unterlagen-Checkliste nach Ihrem Erwerbsstatus filtern.",
+      "level2": "Angestellte: Probezeit beendet, variable Anteile nur mit Historie. Befristete: oft zweiter Darlehensnehmer nötig. Beamte: PKV-Beiträge werden abgezogen. Selbstständige: in der Regel 2–3 Jahresabschlüsse/Steuerbescheide und aktuelle BWA, Mindestbestehensdauer meist 2–3 Jahre. Studierende/Arbeitslose: ohne solventen Mitantragsteller in der Regel nicht finanzierbar. Rentner: Altersgrenzen und Restlaufzeit begrenzen Laufzeit und Höhe."
+    },
+    {
+      "id": 6,
+      "category": "Orientierung & Leistbarkeit",
+      "question": "Was ist eine Haushaltsrechnung und was gehört hinein?",
+      "level1": "Eine Gegenüberstellung aller monatlichen Einnahmen und Ausgaben nach Bankschema. Sie zeigt, ob die neue Rate dauerhaft tragbar ist.",
+      "nextStep": "Haushaltsrechnung der Mustermappe als Vorlage nutzen.",
+      "level2": "Einnahmen: Nettogehälter (12 oder 13/14 Gehälter laut Bank), Kindergeld, künftige Mieteinnahmen (meist nur 70–80 % angesetzt). Ausgaben: Lebenshaltungspauschale, Warmmiete oder Hausgeld, Versicherungen, PKV, Kfz, bestehende Kredite, neue Rate. Der Überschuss sollte deutlich positiv bleiben; die genaue Mindestgröße legt jede Bank selbst fest."
+    },
+    {
+      "id": 7,
+      "category": "Orientierung & Leistbarkeit",
+      "question": "Wie hoch darf die monatliche Belastung sein?",
+      "level1": "Als grobe Orientierung gilt: Die Rate sollte nicht mehr als etwa 35–40 % des Haushaltsnettos betragen. Entscheidend bleibt aber der Überschuss nach der Haushaltsrechnung.",
+      "nextStep": "Rate im Rechner ermitteln und durch Ihr Haushaltsnetto teilen.",
+      "level2": "Belastungsquote = Monatsrate ÷ Haushaltsnetto. Eine Quote ist nur eine Faustregel; bei hohem Einkommen ist mehr tragbar, bei Familien mit Kindern weniger. Banken prüfen zusätzlich den Anschlusszins (siehe Anschlusszins-Kipp-Punkt)."
+    },
+    {
+      "id": 8,
+      "category": "Objektauswahl & Kaufentscheidung",
+      "question": "Was ist der Beleihungswert?",
+      "level1": "Der Wert, den die Bank dauerhaft für sicher hält. Er liegt meist unter dem Kaufpreis und bestimmt, wie viel Kredit zu guten Konditionen möglich ist.",
+      "nextStep": "Darlehen und Beleihungswert im Cockpit eintragen – der Beleihungsauslauf wird berechnet.",
+      "level2": "Grundlage ist die Beleihungswertermittlungsverordnung (BelWertV) bzw. bankinterne Verfahren. Typisch sind Abschläge von 10–20 % auf den Marktwert. Beleihungsauslauf = Darlehen ÷ Beleihungswert. Bis 60 % gilt als erstrangig (Pfandbrief-fähig), darüber wird es teurer; der Teil über dem Beleihungswert heißt Blankoanteil."
+    },
+    {
+      "id": 9,
+      "category": "Objektauswahl & Kaufentscheidung",
+      "question": "Eigentumswohnung: Was sagen Teilungserklärung, Protokolle und Rücklage?",
+      "level1": "Diese Unterlagen zeigen, was Ihnen gehört, welche Sanierungen anstehen und ob genug Geld dafür da ist. Sie sind für die Bank und für Sie Pflichtlektüre.",
+      "nextStep": "WEG-Unterlagen in der Checkliste abhaken.",
+      "level2": "Teilungserklärung: Sondereigentum, Sondernutzungsrechte, Kostenverteilung. Protokolle der letzten 3 Eigentümerversammlungen: beschlossene Sonderumlagen, Streit, Sanierungsstau. Wirtschaftsplan und Erhaltungsrücklage: Als grobe Orientierung gelten mindestens 1,00–1,50 € je m² Wohnfläche und Monat, bei älteren Gebäuden mehr."
+    },
+    {
+      "id": 10,
+      "category": "Objektauswahl & Kaufentscheidung",
+      "question": "Wie prüfe ich eine Eigentumswohnung?",
+      "level1": "In drei Schritten: Lage und Miete, Zustand von Wohnung und Gemeinschaftseigentum, Zahlen der Eigentümergemeinschaft. Erst danach lohnt die Finanzierungsanfrage.",
+      "nextStep": "Objektunterlagen in der Checkliste abhaken (Filter „Eigentumswohnung“).",
+      "level2": "Lage: Mietspiegel, Leerstand, Infrastruktur. Zustand: Baujahr, Dach, Fenster, Heizung, Energieausweis (Pflichtangaben nach GEG). WEG: Rücklage, Hausgeld, Sonderumlagen, Protokolle. Rechtliches: Grundbuch Abt. II (Lasten, Wegerechte) und Abt. III (Grundpfandrechte)."
+    },
+    {
+      "id": 11,
+      "category": "Objektauswahl & Kaufentscheidung",
+      "question": "Wie kann ich mehrere Objekte vergleichen?",
+      "level1": "Vergleichen Sie nie nur Kaufpreise, sondern Kaufpreis je m², Mietrendite und Cashflow nach allen Kosten. Erfassen Sie alle Objekte mit denselben Annahmen.",
+      "nextStep": "Bis zu 3 Objekte im kostenlosen Konto speichern und jeweils im Rechner prüfen.",
+      "level2": "Vergleichsgrößen: Kaufpreis je m², Kaufpreisfaktor (Kaufpreis ÷ Jahreskaltmiete), Nettomietrendite, Cashflow vor/nach Steuern, Instandhaltungsbedarf, Rücklage je m². Gleiche Annahmen für Zins, Leerstand und Instandhaltung sind Voraussetzung für einen fairen Vergleich."
+    },
+    {
+      "id": 12,
+      "category": "Objektauswahl & Kaufentscheidung",
+      "question": "Welche Unterlagen fehlen typischerweise?",
+      "level1": "Am häufigsten fehlen aktuelle Grundbuchauszüge, Wohnflächenberechnungen, WEG-Protokolle und bei Selbstständigen die aktuelle BWA. Fehlende Unterlagen verzögern die Bankprüfung.",
+      "nextStep": "Unterlagen-Checkliste nach Ihrem Erwerbsstatus filtern.",
+      "level2": "Die Checkliste unterscheidet „erforderlich“ und „fallweise“. Grundbuchauszug: meist nicht älter als 3 Monate. Gehaltsnachweise: die letzten 3 Monate. Steuerbescheide: die letzten 2–3 Jahre. Was eine Bank konkret verlangt, entscheidet sie selbst."
+    },
+    {
+      "id": 13,
+      "category": "Kapitalanlage & Vermögensaufbau",
+      "question": "Brutto-, Netto- und Eigenkapitalrendite: Was ist der Unterschied?",
+      "level1": "Die Bruttorendite schaut nur auf Miete und Kaufpreis. Die Nettorendite zieht Kosten ab, die Eigenkapitalrendite zeigt, was Ihr eingesetztes Geld verdient.",
+      "nextStep": "Alle drei Werte im Rechner vergleichen.",
+      "level2": "Bruttomietrendite = Jahreskaltmiete ÷ Kaufpreis. Nettomietrendite = (Jahreskaltmiete − nicht umlagefähige Kosten − Instandhaltung − Mietausfall) ÷ (Kaufpreis + Nebenkosten). Eigenkapitalrendite = jährlicher Überschuss nach Zins (ggf. nach Steuern, ggf. inkl. Tilgung) ÷ eingesetztes Eigenkapital."
+    },
+    {
+      "id": 14,
+      "category": "Kapitalanlage & Vermögensaufbau",
+      "question": "Was ist die Nettomietrendite?",
+      "level1": "Die Rendite nach den Kosten, die Sie als Vermieter selbst tragen. Sie liegt immer unter der Bruttorendite aus dem Exposé.",
+      "nextStep": "Bewirtschaftungskosten und Leerstand im Rechner auf der Startseite eintragen.",
+      "level2": "Formel: (Jahreskaltmiete − nicht umlagefähige Bewirtschaftungskosten − Instandhaltung − Mietausfallwagnis) ÷ Gesamtinvestition inkl. Nebenkosten. Beispiel (fiktiv): (9.360 − 576 − 1.020 − 187) ÷ 189.783 ≈ 3,99 %."
+    },
+    {
+      "id": 15,
+      "category": "Kapitalanlage & Vermögensaufbau",
+      "question": "Was bedeutet Cashflow vor und nach Steuern?",
+      "level1": "Cashflow vor Steuern ist, was nach Miete, Kosten und Kreditrate monatlich übrig bleibt oder fehlt. Nach Steuern kommt die Steuerwirkung aus AfA und Zinsen hinzu.",
+      "nextStep": "Grenzsteuersatz, Gebäudeanteil und AfA-Satz im Rechner eintragen.",
+      "level2": "Cashflow v. St. = Miete − Bewirtschaftung − Instandhaltung − Mietausfall − Zins − Tilgung. Steuerliches Ergebnis = Miete − Werbungskosten (Zins, Bewirtschaftung, AfA). Ist es negativ, mindert es das zu versteuernde Einkommen. Cashflow n. St. = Cashflow v. St. − (steuerliches Ergebnis × persönlicher Grenzsteuersatz). Tilgung ist nicht steuerlich abziehbar, AfA nicht liquiditätswirksam."
+    },
+    {
+      "id": 16,
+      "category": "Kapitalanlage & Vermögensaufbau",
+      "question": "Wie funktioniert die AfA?",
+      "level1": "Die Absetzung für Abnutzung verteilt die Gebäudekosten über die Nutzungsdauer und mindert jährlich Ihre Steuerlast. Grund und Boden wird nicht abgeschrieben.",
+      "nextStep": "Gebäudeanteil und AfA-Satz im Rechner eintragen; Details mit Steuerberatung klären.",
+      "level2": "Linear nach § 7 Abs. 4 EStG: 3 % bei Fertigstellung ab 2023, 2 % bei Fertigstellung 1925–2022, 2,5 % vor 1925. Degressiv nach § 7 Abs. 5a EStG: 5 % vom Restwert für neue Wohngebäude mit Baubeginn zwischen 01.10.2023 und 30.09.2029. Bemessungsgrundlage ist nur der Gebäudeanteil; die Aufteilung kann mit der Arbeitshilfe des BMF erfolgen. Die steuerliche Wirkung hängt vom persönlichen Steuersatz ab – bitte mit Steuerberatung abstimmen."
+    },
+    {
+      "id": 17,
+      "category": "Kapitalanlage & Vermögensaufbau",
+      "question": "Was ist die 15-%-Grenze bei Renovierungen?",
+      "level1": "Wer innerhalb von drei Jahren nach dem Kauf mehr als 15 % des Gebäudewerts netto renoviert, kann diese Kosten nicht sofort absetzen. Sie werden dann über die AfA verteilt.",
+      "nextStep": "Gebäudeanteil × 15 % selbst berechnen – ein eigener Rechner ist in Entwicklung.",
+      "level2": "Anschaffungsnahe Herstellungskosten nach § 6 Abs. 1 Nr. 1a EStG: Instandsetzungs- und Modernisierungskosten innerhalb von 3 Jahren nach Anschaffung, die ohne USt 15 % der Gebäude-Anschaffungskosten übersteigen. Beispiel (fiktiv): Gebäudeanteil 164.196 € → Grenze 24.629,40 € netto."
+    },
+    {
+      "id": 18,
+      "category": "Kapitalanlage & Vermögensaufbau",
+      "question": "Wann ist ein Verkauf steuerfrei?",
+      "level1": "Bei vermieteten Immobilien ist der Gewinn aus einem Verkauf nach mehr als zehn Jahren zwischen Kauf und Verkauf in der Regel steuerfrei. Selbstgenutzte Immobilien haben eigene Regeln.",
+      "nextStep": "Kaufdatum notieren; eine Fristenübersicht ist in Entwicklung.",
+      "level2": "Private Veräußerungsgeschäfte nach § 23 Abs. 1 Nr. 1 EStG. Ausnahme bei Selbstnutzung im Verkaufsjahr und den beiden Vorjahren. Bei Verkauf innerhalb der Frist wird der Gewinn mit dem persönlichen Steuersatz versteuert; die AfA erhöht dabei den Gewinn."
+    },
+    {
+      "id": 19,
+      "category": "Kapitalanlage & Vermögensaufbau",
+      "question": "Wie funktioniert die Mietpreisbremse?",
+      "level1": "In ausgewiesenen Gebieten darf die Miete bei Neuvermietung höchstens 10 % über der ortsüblichen Vergleichsmiete liegen. Es gibt Ausnahmen, etwa für Neubauten und umfassend modernisierte Wohnungen.",
+      "nextStep": "Ortsübliche Vergleichsmiete im Mietspiegel Ihrer Gemeinde nachschlagen.",
+      "level2": "§ 556d BGB; Ausnahmen in §§ 556e, 556f BGB (höhere Vormiete, Modernisierung, Erstbezug nach dem 01.10.2014). Welche Gemeinden betroffen sind, legen die Landesregierungen per Verordnung fest. Die Grenze ist rechtlich bindend, eine zu hohe Miete kann zurückgefordert werden."
+    },
+    {
+      "id": 20,
+      "category": "Kapitalanlage & Vermögensaufbau",
+      "question": "Was ist die Kappungsgrenze?",
+      "level1": "Bei bestehenden Mietverhältnissen darf die Miete innerhalb von drei Jahren um höchstens 20 % steigen, in angespannten Märkten um höchstens 15 %. Zusätzlich gilt die ortsübliche Vergleichsmiete als Obergrenze.",
+      "nextStep": "Miete der letzten drei Jahre gegenüberstellen; Mietrecht-Szenarien sind in Entwicklung.",
+      "level2": "§ 558 Abs. 3 BGB. Die abgesenkte Grenze von 15 % gilt in Gebieten, die die Länder per Verordnung bestimmen. Modernisierungsmieterhöhungen nach § 559 BGB folgen eigenen Regeln."
+    },
+    {
+      "id": 21,
+      "category": "Kapitalanlage & Vermögensaufbau",
+      "question": "Wie funktioniert eine Staffelmiete?",
+      "level1": "Die künftigen Mieterhöhungen werden schon im Mietvertrag mit festen Beträgen und Terminen vereinbart. Dazwischen sind weitere Erhöhungen auf die Vergleichsmiete ausgeschlossen.",
+      "nextStep": "Staffeln aus dem Mietvertrag mit dem Mietspiegel abgleichen.",
+      "level2": "§ 557a BGB: Die Miete muss jeweils mindestens ein Jahr unverändert bleiben und die Erhöhung als Geldbetrag ausgewiesen sein. In Gebieten mit Mietpreisbremse muss jede Staffel für sich die Grenze des § 556d BGB einhalten."
+    },
+    {
+      "id": 22,
+      "category": "Kapitalanlage & Vermögensaufbau",
+      "question": "Was ist ein Mietausfallwagnis?",
+      "level1": "Ein kalkulatorischer Abschlag für Leerstand und ausbleibende Mietzahlungen. Er gehört in jede seriöse Renditerechnung, auch wenn die Wohnung aktuell vermietet ist.",
+      "nextStep": "Leerstand in Prozent im Rechner auf der Startseite eintragen.",
+      "level2": "Üblich sind 2 % der Jahresnettokaltmiete für Wohnraum (angelehnt an § 29 II. BV), bei schwierigen Lagen oder Gewerbe mehr. Beispiel (fiktiv): 9.360 € × 2 % = 187,20 € pro Jahr."
+    },
+    {
+      "id": 23,
+      "category": "Kapitalanlage & Vermögensaufbau",
+      "question": "Wie bewerte ich ein Portfolio?",
+      "level1": "Ein Portfolio bewerten Sie über Gesamt-Cashflow, gesamte Restschuld und die Termine, an denen Zinsbindungen auslaufen. Ein einzelnes schwaches Objekt kann die ganze Finanzierungsfähigkeit belasten.",
+      "nextStep": "Objekte einzeln im Rechner prüfen; eine Portfolio-Ansicht ist in Entwicklung.",
+      "level2": "Kennzahlen: Summe Cashflow v./n. St., gewichteter Zins, Gesamt-LTV (Restschuld ÷ Marktwerte), DSCR (Überschuss vor Kapitaldienst ÷ Kapitaldienst), Fälligkeitsprofil der Zinsbindungen. Banken bewerten bei Folgefinanzierungen die Gesamtverschuldung."
+    },
+    {
+      "id": 24,
+      "category": "Finanzierung & Bankenpraxis",
+      "question": "Was passiert, wenn die Zinsbindung endet?",
+      "level1": "Die Restschuld muss zu den dann gültigen Zinsen weiterfinanziert werden. Steigen die Zinsen, steigt Ihre Rate oder die Laufzeit verlängert sich.",
+      "nextStep": "Anschlusszins-Tabelle in der Mustermappe ansehen.",
+      "level2": "Optionen: Prolongation bei der bisherigen Bank, Umschuldung zu einer anderen Bank, Forward-Darlehen (bis zu ca. 5 Jahre vorher gegen Zinsaufschlag). Nach 10 Jahren ab Vollauszahlung besteht ein gesetzliches Kündigungsrecht mit 6 Monaten Frist (§ 489 Abs. 1 Nr. 2 BGB)."
+    },
+    {
+      "id": 25,
+      "category": "Finanzierung & Bankenpraxis",
+      "question": "Was ist ein Anschlusszins-Kipp-Punkt?",
+      "level1": "Der Zinssatz, ab dem Ihr Objekt nach Ende der Zinsbindung keinen positiven Cashflow mehr erwirtschaftet. Je weiter er über dem heutigen Zins liegt, desto robuster ist die Finanzierung.",
+      "nextStep": "Stresstest im Cockpit nutzen.",
+      "level2": "Berechnung: Restschuld nach Zinsbindung × (Anschlusszins + Tilgung) = verfügbarer Überschuss vor Kapitaldienst, aufgelöst nach dem Zins. In der fiktiven Mustermappe kippt der Cashflow zwischen 4 % und 5 %."
+    },
+    {
+      "id": 26,
+      "category": "Finanzierung & Bankenpraxis",
+      "question": "Was ist die Kreditmappe?",
+      "level1": "Ein strukturiertes PDF mit Vorhaben, Objektdaten, Haushaltsrechnung, Kennzahlen und Unterlagenstatus. Sie hilft Ihnen, gut vorbereitet ins Bankgespräch zu gehen.",
+      "nextStep": "Mustermappe ansehen.",
+      "level2": "Die Mappe enthält Rechenwege und den Status jeder Unterlage (liegt vor, angefordert, fehlt, ungeprüft). Sie ist keine Finanzierungszusage und ersetzt nicht die Prüfung durch die Bank. Die Kreditmappe je Nutzer ist in Entwicklung und noch nicht buchbar (geplant: 49,00 € je Objekt inkl. 19 % USt). Heute verfügbar ist die fiktive Mustermappe mit Druckansicht."
+    },
+    {
+      "id": 27,
+      "category": "Finanzierung & Bankenpraxis",
+      "question": "Was gehört in eine Kreditmappe?",
+      "level1": "Selbstauskunft, Einkommens- und Eigenkapitalnachweise sowie alle Objektunterlagen. Je vollständiger, desto schneller kann die Bank prüfen.",
+      "nextStep": "Unterlagen-Checkliste durchgehen.",
+      "level2": "Person: Ausweis, Selbstauskunft, Gehaltsnachweise, Steuerbescheide, Eigenkapitalnachweis, bestehende Kredite. Objekt: Exposé, Grundbuchauszug, Flurkarte, Grundrisse, Wohnflächenberechnung, Energieausweis, bei ETW Teilungserklärung, Protokolle, Wirtschaftsplan, Rücklagenstand, Kaufvertragsentwurf."
+    },
+    {
+      "id": 28,
+      "category": "Finanzierung & Bankenpraxis",
+      "question": "Was macht der Banken-Ready-Score?",
+      "level1": "Er fasst zusammen, wie vollständig und plausibel Ihr Fall für ein Bankgespräch vorbereitet ist. Er ist eine interne ImmoAdv-Einstufung, keine Bankbewertung und keine Zusage.",
+      "nextStep": "Score im Cockpit prüfen und offene Punkte abarbeiten.",
+      "level2": "Gewichtet werden Kapitaldienstdeckung (DSCR), Zinsdeckung, Beleihungsauslauf, Dokumentationsstand, rechtliche und technische Risiken sowie die Liquiditätsreserve. Liegt der DSCR unter 1,00 (die Miete deckt den Kapitaldienst nicht), wird der Score gedeckelt und ein Veto angezeigt."
+    },
+    {
+      "id": 29,
+      "category": "Finanzierung & Bankenpraxis",
+      "question": "Vermittelt ImmoAdv Kredite?",
+      "level1": "Nein. ImmoAdv ist ein technisches Analyse- und Vorbereitungswerkzeug und hat keine Erlaubnis nach § 34i oder § 34c GewO. Wir vermitteln keine Darlehen und sagen keine Konditionen zu.",
+      "nextStep": "Mit der vorbereiteten Mappe zur Bank oder zum Berater Ihrer Wahl gehen.",
+      "level2": "ImmoAdv erhält keine erfolgsabhängigen Provisionen von Banken. Mögliche Kooperationen mit Banken beschränken sich auf Empfehlungen (Co-Branding) oder feste technische Servicepauschalen für die Aufbereitung von Unterlagen. Es bestehen keine Partnerschaften mit Plattformen wie Europace, eHyp oder Finmas."
+    },
+    {
+      "id": 30,
+      "category": "Produkt, Sicherheit & Datenschutz",
+      "question": "Welche Daten speichert ImmoAdv?",
+      "level1": "Mit Konto speichern wir E-Mail, Passwort-Hash sowie die Finanz- und Objektwerte, die Sie eingeben. Dateien werden nur gespeichert, wenn Sie sie selbst im Konto hochladen.",
+      "nextStep": "Details auf der Seite „Sicherheit“ ansehen.",
+      "level2": "Hosting über Vercel, Konto und Daten über Supabase. Für künftige Zahlungen ist Stripe vorgesehen; Kartendaten würden ImmoAdv dabei nie erreichen. Fortschritt von Checkliste und Pro-Begleiter wird ohne Konto nur im Speicher Ihres Browsers abgelegt. Einzelheiten in der Datenschutzerklärung."
+    },
+    {
+      "id": 31,
+      "category": "Produkt, Sicherheit & Datenschutz",
+      "question": "Wer kann meine Daten sehen?",
+      "level1": "Nur Sie. Eine Weitergabe an Banken oder Berater erfolgt nur, wenn Sie die Kreditmappe selbst weitergeben.",
+      "nextStep": "Datenschutzerklärung lesen.",
+      "level2": "Technische Dienstleister (Hosting, Datenbank, Zahlung) verarbeiten Daten nur im Auftrag. Mit einem befristeten Freigabelink können Sie ausgewählte Kategorien für eine Bank oder einen Berater öffnen; jeder Abruf wird protokolliert, ein Widerruf wirkt sofort. Eine Ende-zu-Ende-Verschlüsselung besteht nicht: Dateien sind verschlüsselt gespeichert, für den Betrieb aber technisch zugänglich."
+    },
+    {
+      "id": 32,
+      "category": "Produkt, Sicherheit & Datenschutz",
+      "question": "Was kostet ImmoAdv?",
+      "level1": "Die Analyse ist kostenfrei. Kreditmappe (geplant 49,00 € je Objekt) und Pro (geplant 29,00 € pro Monat oder 290,00 € für 12 Monate) sind in Vorbereitung und noch nicht buchbar; alle Preise verstehen sich inkl. 19 % USt.",
+      "nextStep": "Angebote ansehen.",
+      "level2": "Pro soll monatlich laufen und jederzeit zum Ende des Abrechnungsmonats kündbar sein, ohne Anmeldung über „Verträge hier kündigen“. Rechenbeispiel zu den geplanten Preisen: 3 Kreditmappen = 147,00 €, 6 Monate Pro = 174,00 €, 12 Monate Pro als Einmalzahlung = 290,00 €."
+    },
+    {
+      "id": 33,
+      "category": "Produkt, Sicherheit & Datenschutz",
+      "question": "Wie lösche ich meine Daten?",
+      "level1": "Gespeicherte Objekte löschen Sie direkt in Ihrem Konto. Für die Löschung des gesamten Kontos genügt eine E-Mail an support@immoadv.de.",
+      "nextStep": "E-Mail an support@immoadv.de senden.",
+      "level2": "Recht auf Löschung nach Art. 17 DSGVO und auf Datenübertragbarkeit nach Art. 20 DSGVO. Gesetzliche Aufbewahrungspflichten (z. B. Rechnungen, 10 Jahre nach § 147 AO) bleiben unberührt. Browser-Daten löschen Sie über die Einstellungen Ihres Browsers."
+    }
+  ]
+}
