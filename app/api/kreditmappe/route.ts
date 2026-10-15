@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { userFromRequest } from '@/lib/billing/auth';
 import { billingEnabled, entitlementsFor, findCustomer, stripe } from '@/lib/billing/stripe';
-import { ObjectSchema, ProfileSchema, buildKreditmappe } from '@/lib/kreditmappe/model';
+import { ObjectSchema, ProfileSchema, buildKreditmappe, type UploadedDoc } from '@/lib/kreditmappe/model';
+import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { KreditmappeDocument } from '@/lib/kreditmappe/pdf';
 
 export const runtime = 'nodejs';
@@ -71,7 +72,17 @@ export async function POST(req: Request) {
   }
 
   try {
-    const mappe = buildKreditmappe(obj.data, profile.data);
+    let uploads: UploadedDoc[] = [];
+    if (adminConfigured()) {
+      const { data: docs } = await supabaseAdmin()
+        .from('immo_documents')
+        .select('filename, category, sha256, created_at')
+        .eq('owner_id', user.id)
+        .eq('object_ref', objectId)
+        .order('category');
+      uploads = (docs ?? []).map((d) => ({ filename: String(d.filename), category: String(d.category ?? ''), sha256: String(d.sha256 ?? ''), createdAt: String(d.created_at) }));
+    }
+    const mappe = buildKreditmappe(obj.data, profile.data, new Date(), uploads);
     const element = createElement(KreditmappeDocument, { m: mappe }) as unknown as Parameters<typeof renderToBuffer>[0];
     const pdf = await renderToBuffer(element);
     if (pdf.subarray(0, 5).toString() !== '%PDF-') throw new Error('invalid_pdf_output');

@@ -14,6 +14,7 @@ const STATIC_PAGES = [
   'datenschutz',
   'nutzungsbedingungen',
   'kuendigen',
+  'datenraum',
 ];
 
 const securityHeaders = [

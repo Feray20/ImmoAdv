@@ -22,6 +22,8 @@ export async function GET(req: Request) {
       price: 178200, rent: 780, area: 68, yearBuilt: 1998, purchaseCostPct: 6.5,
       nonRecoverable: 48, maintenance: 85, vacancyPct: 2,
       loan: 149054.4, interestPct: 3.85, repaymentPct: 2, lendingValue: 167120, equity: 40728.6,
+      buildingSharePct: 80, marginalTaxPct: 35, renovationNet3y: 0,
+      meaShare: 85, meaTotal: 1000, wegReserveTotal: 120000, wegPlannedTotal: 150000, wegSpecialTotal: 0,
     },
     { employment: 'Angestellt', netIncome: 3650, equity: 40728.6, householdSize: 1 },
   );

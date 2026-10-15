@@ -126,13 +126,13 @@ window.IA_CONTENT = {
       l2: 'ImmoAdv erhält keine erfolgsabhängigen Provisionen von Banken. Mögliche Kooperationen mit Banken beschränken sich auf Empfehlungen (Co-Branding) oder feste technische Servicepauschalen für die Aufbereitung von Unterlagen. Es bestehen keine Partnerschaften mit Plattformen wie Europace, eHyp oder Finmas.' },
     // 5. Produkt, Preise, Sicherheit & DSGVO
     { cat: 'Produkt, Sicherheit & Datenschutz', q: 'Welche Daten speichert ImmoAdv?',
-      l1: 'Mit Konto speichern wir E-Mail, Passwort-Hash sowie die Finanz- und Objektwerte, die Sie eingeben. Einen Datei-Upload gibt es nicht; Ausweise oder Kontoauszüge werden nicht gespeichert.',
+      l1: 'Mit Konto speichern wir E-Mail, Passwort-Hash sowie die Finanz- und Objektwerte, die Sie eingeben. Dateien werden nur gespeichert, wenn Sie sie selbst im Konto hochladen.',
       next: 'Details auf der Seite „Sicherheit“ ansehen.',
       l2: 'Hosting über Vercel, Konto und Daten über Supabase. Für künftige Zahlungen ist Stripe vorgesehen; Kartendaten würden ImmoAdv dabei nie erreichen. Fortschritt von Checkliste und Pro-Begleiter wird ohne Konto nur im Speicher Ihres Browsers abgelegt. Einzelheiten in der Datenschutzerklärung.' },
     { cat: 'Produkt, Sicherheit & Datenschutz', q: 'Wer kann meine Daten sehen?',
       l1: 'Nur Sie. Eine Weitergabe an Banken oder Berater erfolgt nur, wenn Sie die Kreditmappe selbst weitergeben.',
       next: 'Datenschutzerklärung lesen.',
-      l2: 'Technische Dienstleister (Hosting, Datenbank, Zahlung) verarbeiten Daten nur im Auftrag. Eine Ende-zu-Ende-Verschlüsselung im Browser und befristete Berater-Freigabelinks sind geplant, aber noch nicht umgesetzt; der aktuelle Stand steht auf der Seite „Sicherheit“.' },
+      l2: 'Technische Dienstleister (Hosting, Datenbank, Zahlung) verarbeiten Daten nur im Auftrag. Mit einem befristeten Freigabelink können Sie ausgewählte Kategorien für eine Bank oder einen Berater öffnen; jeder Abruf wird protokolliert, ein Widerruf wirkt sofort. Eine Ende-zu-Ende-Verschlüsselung besteht nicht: Dateien sind verschlüsselt gespeichert, für den Betrieb aber technisch zugänglich.' },
     { cat: 'Produkt, Sicherheit & Datenschutz', q: 'Was kostet ImmoAdv?',
       l1: 'Die Analyse ist kostenfrei. Kreditmappe (geplant 49,00 € je Objekt) und Pro (geplant 29,00 € pro Monat oder 290,00 € für 12 Monate) sind in Vorbereitung und noch nicht buchbar; alle Preise verstehen sich inkl. 19 % USt.',
       next: 'Angebote ansehen.',
@@ -167,13 +167,15 @@ window.IA_CONTENT = {
       <p>Wenn Sie ein Konto anlegen, verarbeiten wir Ihre E-Mail-Adresse, einen Passwort-Hash sowie die Finanz- und Objektwerte, die Sie eingeben. Die Speicherung erfolgt bei Supabase Inc. als Auftragsverarbeiter. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertrag). Die Daten werden gelöscht, sobald Sie Ihr Konto löschen, soweit keine gesetzlichen Aufbewahrungspflichten bestehen.</p>
       <h2>4. Zahlungen</h2>
       <p>Kostenpflichtige Angebote sind derzeit nicht buchbar. Sobald sie verfügbar sind, werden Zahlungen über Stripe Payments Europe Ltd., 1 Grand Canal Street Lower, Dublin 2, Irland, abgewickelt. Zahlungsdaten (z. B. Kartennummer) gibt ImmoAdv weder ein noch speichert es sie. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Rechnungsdaten bewahren wir nach § 147 AO und § 257 HGB bis zu 10 Jahre auf (Art. 6 Abs. 1 lit. c DSGVO).</p>
-      <h2>5. Speicherung im Browser</h2>
+      <h2>5. Hochgeladene Dokumente und Datenraum</h2>
+      <p>Wenn Sie Dokumente hochladen, speichern wir die Datei, Dateiname, Kategorie, Größe und eine SHA-256-Prüfsumme bei Supabase (Serverstandort Frankfurt am Main) als Auftragsverarbeiter. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO. Erstellen Sie eine Freigabe, können Empfänger mit dem Link die gewählten Kategorien bis zum Ablauf oder Widerruf abrufen. Dabei protokollieren wir Zeitpunkt, Aktion, Browserkennung und eine gekürzte, gehashte IP-Adresse (Art. 6 Abs. 1 lit. f DSGVO, Nachvollziehbarkeit und Missbrauchsschutz). Protokolle löschen wir spätestens 12 Monate nach Ablauf der Freigabe. Sie können Dokumente jederzeit selbst löschen. Laden Sie bitte nur Unterlagen hoch, zu deren Weitergabe Sie berechtigt sind; enthalten Unterlagen Daten Dritter (z. B. Mieter), sind Sie dafür verantwortlich.</p>
+      <h2>6. Speicherung im Browser</h2>
       <p>Der Fortschritt von Checkliste und Pro-Begleiter wird im lokalen Speicher (localStorage) Ihres Browsers abgelegt und nicht an uns übertragen. Die Speicherung ist für die von Ihnen gewünschte Funktion erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Sie können diese Daten jederzeit über Ihren Browser löschen.</p>
-      <h2>6. Kein Tracking, keine Werbung, kein KI-Training</h2>
+      <h2>7. Kein Tracking, keine Werbung, kein KI-Training</h2>
       <p>Wir setzen keine Analyse- oder Werbe-Tracker von Drittanbietern ein. Ihre Finanzdaten werden nicht zum Training von KI-Modellen verwendet.</p>
-      <h2>7. Kontakt per E-Mail</h2>
+      <h2>8. Kontakt per E-Mail</h2>
       <p>Wenn Sie uns schreiben, verarbeiten wir Ihre Angaben zur Bearbeitung der Anfrage (Art. 6 Abs. 1 lit. b bzw. f DSGVO) und löschen sie, wenn sie nicht mehr erforderlich sind.</p>
-      <h2>8. Ihre Rechte</h2>
+      <h2>9. Ihre Rechte</h2>
       <p>Sie haben das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21 DSGVO). Eine Einwilligung können Sie jederzeit mit Wirkung für die Zukunft widerrufen. Sie können sich bei einer Aufsichtsbehörde beschweren, z. B. beim Hessischen Beauftragten für Datenschutz und Informationsfreiheit, Gustav-Stresemann-Ring 1, 65189 Wiesbaden.</p>
       <p>Stand: Oktober 2026</p>`,
 

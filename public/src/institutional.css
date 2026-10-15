@@ -80,3 +80,11 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 .obj-more .obj-grid{margin-top:10px}
 .obj-actions,.row-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 #pdfMsg{word-break:break-all}
+/* Datenraum */
+.dr-badge{margin-left:auto;font-size:12px;font-weight:600;color:var(--ia-none);background:var(--ia-none-bg);padding:4px 10px;border-radius:3px}
+.dr-docs td:last-child{white-space:nowrap}
+.doc-list td{vertical-align:top}
+.qr-box{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;border:1px solid var(--ia-hair);border-radius:6px;padding:12px;margin-top:10px}
+.qr-box svg{width:160px;height:160px}
+.qr-box input{width:100%;font-size:12px;padding:6px;border:1px solid var(--ia-hair);border-radius:4px}
+.share-cats{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px}

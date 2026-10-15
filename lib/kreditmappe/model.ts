@@ -30,7 +30,19 @@ export const ObjectSchema = z.object({
   repaymentPct: num(0, 20).default(0),
   lendingValue: num().default(0),
   equity: num().default(0),
+  // Steuer (optional)
+  buildingSharePct: num(0, 100).default(0), // Gebäudeanteil am Kaufpreis in %
+  marginalTaxPct: num(0, 50).default(0), // persönlicher Grenzsteuersatz in %
+  renovationNet3y: num().default(0), // geplante Instandsetzung/Modernisierung netto in den ersten 3 Jahren
+  // WEG (optional, nur Eigentumswohnungen)
+  meaShare: num().default(0), // Miteigentumsanteil Zähler
+  meaTotal: num().default(0), // Miteigentumsanteil Nenner
+  wegReserveTotal: num().default(0), // Erhaltungsrücklage der Gemeinschaft gesamt
+  wegPlannedTotal: num().default(0), // geplante/erwartete Maßnahmen der Gemeinschaft gesamt
+  wegSpecialTotal: num().default(0), // beschlossene Sonderumlage gesamt
 });
+
+export type UploadedDoc = { filename: string; category: string; sha256: string; createdAt: string };
 
 export type Profile = z.infer<typeof ProfileSchema>;
 export type PropertyObject = z.infer<typeof ObjectSchema>;
@@ -62,7 +74,23 @@ export type Kreditmappe = {
   vetos: VetoFinding[];
   vetoLevel: VetoLevel;
   documents: { name: string; status: 'Ungeprüft' }[];
+  uploads: UploadedDoc[];
+  scoreDrivers: { label: string; value: number; points: number; max: number }[];
+  tax: null | {
+    afaRatePct: number; afaBasis: number; buildingValue: number; landValue: number; annualAfa: number;
+    taxableResult: number; taxEffect: number; monthlyCashflowAfterTax: number; threshold15: number; renovationNet3y: number; exceeds15: boolean;
+  };
+  weg: null | {
+    share: number; reserveShare: number; plannedShare: number; underfunding: number; specialShare: number;
+  };
 };
+
+// Lineare AfA nach § 7 Abs. 4 EStG nach Fertigstellungsjahr.
+export function afaRate(yearBuilt: number): number {
+  if (yearBuilt >= 2023) return 0.03;
+  if (yearBuilt > 0 && yearBuilt < 1925) return 0.025;
+  return 0.02;
+}
 
 // Restschuld eines Annuitätendarlehens nach n Jahren (monatliche Zahlung).
 export function balanceAfterYears(loan: number, ratePa: number, repaymentPa: number, years: number): number | null {
@@ -83,7 +111,7 @@ const DOCUMENTS = [
   'Wirtschaftsplan und Rücklagenstand (bei ETW)', 'Mietvertrag (bei Vermietung)', 'Kaufvertragsentwurf',
 ];
 
-export function buildKreditmappe(o: PropertyObject, p: Profile, now = new Date()): Kreditmappe {
+export function buildKreditmappe(o: PropertyObject, p: Profile, now = new Date(), uploads: UploadedDoc[] = []): Kreditmappe {
   const interest = o.interestPct / 100;
   const repayment = o.repaymentPct / 100;
   const purchaseCosts = (o.price * o.purchaseCostPct) / 100;
@@ -133,24 +161,55 @@ export function buildKreditmappe(o: PropertyObject, p: Profile, now = new Date()
   const ltvLending = o.lendingValue > 0 ? o.loan / o.lendingValue : null;
   const maintenancePerSqm = o.area > 0 ? o.maintenance / o.area : null;
 
-  const vetos = evaluate({ o, gap, surplus, dscr: uw.dscr, ltvLending, equity, purchaseCosts, maintenancePerSqm, monthlyCashflow: (uw.cfads - uw.debtService) / 12 });
+  // Steuer: Kaufpreisaufteilung, AfA, Werbungskostenüberschuss, 15-%-Prüfung (§ 6 Abs. 1 Nr. 1a EStG).
+  let tax: Kreditmappe['tax'] = null;
+  if (o.buildingSharePct > 0) {
+    const share = o.buildingSharePct / 100;
+    const buildingValue = o.price * share;
+    const afaBasis = (o.price + purchaseCosts) * share; // Anschaffungsnebenkosten anteilig
+    const rate = afaRate(o.yearBuilt);
+    const annualAfa = afaBasis * rate;
+    const effectiveRent = o.rent * 12 * (1 - o.vacancyPct / 100);
+    const taxableResult = effectiveRent - o.nonRecoverable * 12 - o.maintenance * 12 - annualInterest - annualAfa;
+    const taxEffect = -taxableResult * (o.marginalTaxPct / 100);
+    const threshold15 = (afaBasis * 0.15) / 1; // 15 % der Gebäude-Anschaffungskosten (netto zu vergleichen)
+    tax = {
+      afaRatePct: rate * 100, afaBasis, buildingValue, landValue: o.price - buildingValue, annualAfa, taxableResult, taxEffect,
+      monthlyCashflowAfterTax: (uw.cfads - uw.debtService + taxEffect) / 12,
+      threshold15, renovationNet3y: o.renovationNet3y, exceeds15: o.renovationNet3y > threshold15,
+    };
+  }
 
-  const raw = bankReadyScore({
+  // WEG: Objektanteil = Gesamtbetrag × MEA; Unterdeckung = erwartete Maßnahmen − verfügbare Rücklage (je Anteil).
+  let weg: Kreditmappe['weg'] = null;
+  if (o.meaShare > 0 && o.meaTotal > 0) {
+    const share = o.meaShare / o.meaTotal;
+    const reserveShare = o.wegReserveTotal * share;
+    const plannedShare = o.wegPlannedTotal * share;
+    weg = { share, reserveShare, plannedShare, underfunding: Math.max(0, plannedShare - reserveShare), specialShare: o.wegSpecialTotal * share };
+  }
+
+  const vetos = evaluate({ o, gap, surplus, dscr: uw.dscr, ltvLending, equity, purchaseCosts, maintenancePerSqm, monthlyCashflow: (uw.cfads - uw.debtService) / 12, tax, weg });
+
+  const docCategories = new Set(uploads.map((u) => u.category));
+  const rawResult = bankReadyScore({
     dscr: uw.dscr,
     icr: uw.icr,
     ltv: uw.ltvPurchasePrice,
-    documentCompleteness: 0, // keine geprüften Unterlagen
+    // Nur formal vorhandene Unterlagen zählen, inhaltlich ist nichts geprüft: höchstens 50 Punkte.
+    documentCompleteness: Math.min(50, (docCategories.size / 5) * 50),
     legalRisk: 100, // rechtlich ungeprüft
     technicalRisk: 100, // technisch ungeprüft
     cashReserveMonths: 0,
-  }).score;
+  });
+  const raw = rawResult.score;
   const capped = uw.dscr < 1;
   const score = {
     value: capped ? Math.min(raw, 49) : raw,
     capped,
     note: capped
-      ? 'Vorläufig und auf höchstens 49 gedeckelt, weil der DSCR unter 1,00 liegt. Unterlagen, Recht und Technik sind ungeprüft und fließen mit 0 Punkten ein.'
-      : 'Vorläufig: Unterlagen, Recht, Technik und Liquiditätsreserve sind ungeprüft und fließen mit 0 Punkten ein.',
+      ? 'Vorläufig und auf höchstens 49 gedeckelt, weil der DSCR unter 1,00 liegt. Recht und Technik sind ungeprüft und fließen mit 0 Punkten ein.'
+      : 'Vorläufig: Recht, Technik und Liquiditätsreserve sind ungeprüft und fließen mit 0 Punkten ein; hochgeladene Unterlagen zählen höchstens zur Hälfte, solange ihr Inhalt nicht geprüft ist.',
   };
 
   return {
@@ -175,6 +234,10 @@ export function buildKreditmappe(o: PropertyObject, p: Profile, now = new Date()
     vetos,
     vetoLevel: highestVeto(vetos),
     documents: DOCUMENTS.map((name) => ({ name, status: 'Ungeprüft' as const })),
+    uploads,
+    scoreDrivers: rawResult.components.map((c) => ({ label: c.label, value: c.value, points: c.points, max: c.max })),
+    tax,
+    weg,
   };
 }
 
@@ -192,6 +255,7 @@ function stressCases(o: PropertyObject): StressCase[] {
 type EvalInput = {
   o: PropertyObject; gap: number; surplus: number; dscr: number; ltvLending: number | null;
   equity: number; purchaseCosts: number; maintenancePerSqm: number | null; monthlyCashflow: number;
+  tax: Kreditmappe['tax']; weg: Kreditmappe['weg'];
 };
 
 // Entscheidungsunterstützung. Keine Aussage über den Eintritt von Rechtsfolgen oder Bankentscheidungen.
@@ -248,6 +312,33 @@ function evaluate(x: EvalInput): VetoFinding[] {
       reason: 'Unter 1,00 € je m² und Monat; ältere Gebäude benötigen meist mehr.',
       evidenceIds: ['eingabe:instandhaltung', 'eingabe:wohnflaeche'],
       recommendation: 'Wirtschaftsplan und Rücklagenstand prüfen.',
+    });
+  }
+  if (x.tax?.exceeds15) {
+    f.push({
+      id: 'EStG_6_1_1A', level: 'CONDITIONAL_VETO', title: '15-%-Grenze für Instandsetzung überschritten',
+      reason: 'Die geplanten Instandsetzungs- und Modernisierungskosten der ersten drei Jahre (netto) übersteigen 15 % der Gebäude-Anschaffungskosten. Sie wären dann voraussichtlich nicht sofort abziehbar, sondern über die AfA zu verteilen (§ 6 Abs. 1 Nr. 1a EStG).',
+      evidenceIds: ['eingabe:renovierung', 'eingabe:gebaeudeanteil'],
+      financialImpactEur: eur(x.tax.renovationNet3y - x.tax.threshold15),
+      recommendation: 'Zeitliche Planung der Maßnahmen mit Steuerberatung abstimmen.',
+    });
+  }
+  if (x.weg && x.weg.specialShare > 0) {
+    f.push({
+      id: 'WEG_SPECIAL_ASSESSMENT', level: 'CONDITIONAL_VETO', title: 'Sonderumlage der Eigentümergemeinschaft',
+      reason: 'Eine Sonderumlage ist angegeben. Sie ist kein automatischer Kaufstopp, muss aber in Kaufpreis und Liquidität berücksichtigt werden.',
+      evidenceIds: ['eingabe:sonderumlage', 'eingabe:mea'],
+      financialImpactEur: eur(-x.weg.specialShare),
+      recommendation: 'Beschluss, Fälligkeit und Kostentragung (Käufer/Verkäufer) vor dem Notartermin klären.',
+    });
+  }
+  if (x.weg && x.weg.underfunding > 0) {
+    f.push({
+      id: 'WEG_RESERVE_GAP', level: 'WARNING', title: 'Erhaltungsrücklage deckt geplante Maßnahmen nicht',
+      reason: 'Auf Ihren Miteigentumsanteil entfallen mehr geplante Kosten als Rücklage vorhanden ist.',
+      evidenceIds: ['eingabe:ruecklage', 'eingabe:massnahmen', 'eingabe:mea'],
+      financialImpactEur: eur(-x.weg.underfunding),
+      recommendation: 'Protokolle und Wirtschaftsplan prüfen; mögliche künftige Sonderumlagen einplanen.',
     });
   }
   if (x.o.vacancyPct === 0) {

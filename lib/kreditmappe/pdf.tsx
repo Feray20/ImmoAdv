@@ -179,6 +179,59 @@ export function KreditmappeDocument({ m }: { m: Kreditmappe }) {
           ))}
         </View>
       </Page>
+      <Page size="A4" style={s.page}>
+        <Frame m={m} />
+        <Text style={s.h2}>Steuerliche Modellrechnung (erstes Jahr)</Text>
+        {m.tax ? (
+          <>
+            <Rows head={['Position', 'Betrag']} rows={[
+              ['Gebäudeanteil am Kaufpreis', eur(m.tax.buildingValue)],
+              ['Bodenanteil (nicht abschreibbar)', eur(m.tax.landValue)],
+              ['AfA-Bemessungsgrundlage (inkl. anteiliger Nebenkosten)', eur(m.tax.afaBasis)],
+              [`Lineare AfA ${fmt(m.tax.afaRatePct)} % (§ 7 Abs. 4 EStG)`, eur(m.tax.annualAfa)],
+              ['Einkünfte aus Vermietung (Modell)', eur(m.tax.taxableResult)],
+              [`Steuerwirkung bei ${fmt(o.marginalTaxPct)} % Grenzsteuersatz`, eur(m.tax.taxEffect)],
+              ['Cashflow nach Steuern pro Monat', eur(m.tax.monthlyCashflowAfterTax)],
+              ['15-%-Grenze (Instandsetzung netto, 3 Jahre)', eur(m.tax.threshold15)],
+              ['Geplante Instandsetzung netto (3 Jahre)', eur(m.tax.renovationNet3y)],
+            ]} />
+            <Text style={s.small}>Vereinfachtes Modell: Zinsen des ersten Jahres, keine Sonder-AfA, keine Verlustverrechnungsgrenzen. Die Kaufpreisaufteilung sollte mit der Arbeitshilfe des BMF oder einem Gutachten belegt werden. Keine Steuerberatung.</Text>
+          </>
+        ) : (
+          <Text style={s.muted}>Nicht berechnet: Gebäudeanteil und Grenzsteuersatz wurden nicht angegeben.</Text>
+        )}
+
+        <Text style={s.h2}>Eigentümergemeinschaft (WEG)</Text>
+        {m.weg ? (
+          <Rows head={['Position', 'Ihr Anteil']} rows={[
+            ['Miteigentumsanteil', `${fmt(o.meaShare, 0)} / ${fmt(o.meaTotal, 0)} (${fmt(m.weg.share * 100)} %)`],
+            ['Erhaltungsrücklage (anteilig)', eur(m.weg.reserveShare)],
+            ['Geplante Maßnahmen (anteilig)', eur(m.weg.plannedShare)],
+            ['Rechnerische Unterdeckung', eur(m.weg.underfunding)],
+            ['Beschlossene Sonderumlage (anteilig)', eur(m.weg.specialShare)],
+          ]} />
+        ) : (
+          <Text style={s.muted}>Nicht berechnet: keine Angaben zum Miteigentumsanteil (nur bei Eigentumswohnungen relevant).</Text>
+        )}
+
+        <Text style={s.h2}>Score-Treiber (vorläufiger Score {m.score.value} / 100)</Text>
+        <View style={s.table}>
+          <View style={s.head}>
+            <Text style={[s.headText, { flex: 3 }]}>Komponente</Text>
+            <Text style={[s.headText, { flex: 1, textAlign: 'right' }]}>Teilwert</Text>
+            <Text style={[s.headText, { flex: 1.4, textAlign: 'right' }]}>Punkte</Text>
+          </View>
+          {m.scoreDrivers.map((d, i) => (
+            <View key={d.label} style={[s.row, i % 2 ? s.zebra : {}]} wrap={false}>
+              <Text style={{ flex: 3 }}>{d.label}</Text>
+              <Text style={{ flex: 1, textAlign: 'right' }}>{fmt(d.value, 0)} / 100</Text>
+              <Text style={{ flex: 1.4, textAlign: 'right' }}>{fmt(d.points, 1)} von {fmt(d.max, 0)}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={s.small}>Gewichtung nach ImmoAdv-Risikopolitik; kein Bankscore.</Text>
+      </Page>
+
 
       <Page size="A4" style={s.page}>
         <Frame m={m} />
@@ -219,7 +272,20 @@ export function KreditmappeDocument({ m }: { m: Kreditmappe }) {
             </View>
           ))}
         </View>
-        <Text style={s.small}>Die Unterlagen werden derzeit nicht hochgeladen oder geprüft. Bitte legen Sie sie dem Bankgespräch selbst bei.</Text>
+        <Text style={s.small}>Status bezieht sich auf die inhaltliche Prüfung. Hochgeladene Dateien sind in Abschnitt 9 mit Prüfsumme aufgeführt.</Text>
+
+        <Text style={s.h2}>9. Hochgeladene Unterlagen</Text>
+        {m.uploads.length === 0 && <Text style={s.muted}>Keine Unterlagen im Konto hochgeladen.</Text>}
+        {m.uploads.length > 0 && (
+          <View style={s.table}>
+            {m.uploads.map((u, i) => (
+              <View key={u.sha256 + i} style={[s.row, i % 2 ? s.zebra : {}]} wrap={false}>
+                <Text style={{ flex: 3 }}>{u.filename} ({u.category})</Text>
+                <Text style={{ flex: 2, textAlign: 'right', fontSize: 7 }}>SHA-256 {u.sha256.slice(0, 24)}…</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </Page>
     </Document>
   );
