@@ -1,44 +1,262 @@
-// Interner Bereich: Zugangsprüfung, Betreiber-Übersicht, dazu Suche und Analyse aus objekt-ui.mjs.
+// Admin-Zentrale (nur ADMIN_EMAILS, mit zweitem Faktor): Finanz-Cockpit, Partner, Rechnungsarchiv,
+// Steuer-Export, Anfragen und Codes, Protokoll, Betreiber-Kennzahlen sowie Objektsuche und Analyse.
 import { mountObjekt } from './objekt-ui.mjs';
+import { api, download, dt, dtt, esc, eur, session, setSession, supa, token } from './sess.mjs';
 
-const SESSION = 'immoadv-auth-session-v1';
-const $ = (id) => document.getElementById(id);
-const root = $('intern');
-const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const token = () => { try { return JSON.parse(localStorage.getItem(SESSION) || 'null')?.access_token || ''; } catch { return ''; } };
+const root = document.getElementById('intern');
+const $ = (s, el = document) => el.querySelector(s);
+const TIER = { BASIC: 'Basic', PRO: 'Pro', ENTERPRISE: 'Enterprise' };
+const PAY = { PAID: 'bezahlt', PENDING: 'offen', OVERDUE: 'überfällig', CANCELLED: 'storniert' };
+const msg = (t, bad = false) => { const el = $('#adMsg'); if (el) { el.textContent = t; el.className = 'form-note ' + (bad ? 'st bad' : ''); } };
 
+// ---------- Zugang ----------
 async function gate() {
-  let s = null;
-  try { s = JSON.parse(localStorage.getItem(SESSION) || 'null'); } catch { s = null; }
-  if (!s?.access_token) { root.innerHTML = '<h1>Interner Bereich</h1><p>Bitte zuerst <a class="ck-link" href="/auth/login">anmelden</a>.</p>'; return false; }
-  let r;
-  try { r = await fetch('/api/admin/check', { headers: { Authorization: 'Bearer ' + s.access_token }, cache: 'no-store' }); } catch { r = null; }
-  if (!r) { root.innerHTML = '<h1>Interner Bereich</h1><p>Zugang konnte nicht geprüft werden.</p>'; return false; }
-  const j = await r.json().catch(() => ({}));
-  if (r.status === 401) { root.innerHTML = '<h1>Interner Bereich</h1><p>Sitzung abgelaufen. Bitte neu <a class="ck-link" href="/auth/login">anmelden</a>.</p>'; return false; }
-  if (!j.admin) {
-    root.innerHTML = `<h1>Kein Zugriff</h1><p>Dieser Bereich ist nur für Administratoren.${j.configured === false ? ' (In Vercel ist noch keine Administrator-Adresse hinterlegt: Variable ADMIN_EMAILS.)' : ''}</p>`;
+  if (!token()) { root.innerHTML = '<h1>Interner Bereich</h1><p>Bitte zuerst <a class="ck-link" href="/auth/login?next=/intern/objektsuche">anmelden</a>.</p>'; return false; }
+  const r = await api('/api/admin/check');
+  if (r.status === 401) { root.innerHTML = '<h1>Interner Bereich</h1><p>Sitzung abgelaufen. Bitte neu <a class="ck-link" href="/auth/login?next=/intern/objektsuche">anmelden</a>.</p>'; return false; }
+  if (!r.data?.admin) {
+    root.innerHTML = `<h1>Kein Zugriff</h1><p>Dieser Bereich ist nur für Administratoren.${r.data?.configured === false ? ' (In Vercel ist noch keine Administrator-Adresse hinterlegt: Variable ADMIN_EMAILS.)' : ''}</p>`;
     return false;
   }
+  if (!r.data.mfaOk) { await mfa(); return false; }
   return true;
 }
 
-async function renderStats() {
-  const box = $('st_box'); if (!box) return;
-  try {
-    const r = await fetch('/api/admin/stats', { headers: { Authorization: 'Bearer ' + token() }, cache: 'no-store' });
-    const j = await r.json(); if (!r.ok) throw Error(j.error || 'Nicht verfügbar');
-    const n = (v) => (v == null ? '–' : v.toLocaleString('de-DE'));
-    const tile = (l, v) => `<div class="an-chip"><small>${l}</small><strong>${v}</strong></div>`;
-    const on = (b) => (b ? '<span class="st ok">aktiv</span>' : '<span class="st bad">fehlt</span>');
-    box.innerHTML = `<div class="an-chips">${tile('Konten', n(j.users))}${tile('Neu (7 Tage)', n(j.users7))}${tile('Objekte', n(j.objects))}${tile('Dokumente', n(j.docs))}${tile('Freigaben aktiv', `${n(j.sharesActive)} / ${n(j.shares)}`)}${tile('Kreditmappen', n(j.versions))}${tile('Erinnerungen an', n(j.reminders))}${tile('Offene Anforderungen', n(j.requestsOpen))}</div>
-    <p class="form-note">Einstellungen: Bezahlung ${on(j.config.billing)} · E-Mail-Versand ${on(j.config.mail)} · Täglicher Lauf ${on(j.config.cron)} · Aktive Partner: ${n(j.partners)}</p>`;
-  } catch (e) { box.innerHTML = `<p class="form-note">Übersicht nicht verfügbar: ${esc(e.message)}</p>`; }
+// Zweiter Faktor über Supabase MFA (TOTP-App wie Google Authenticator, 1Password).
+async function mfa() {
+  const auth = { Authorization: 'Bearer ' + token() };
+  const u = await supa('/auth/v1/user', { headers: auth }).then((x) => x.json()).catch(() => ({}));
+  const verified = (u.factors || []).find((f) => f.factor_type === 'totp' && f.status === 'verified');
+  let factorId = verified?.id;
+  let enrollHtml = '';
+  if (!factorId) {
+    // Unbestätigte Altfaktoren entfernen, dann neu einrichten.
+    for (const f of (u.factors || []).filter((x) => x.status !== 'verified')) await supa(`/auth/v1/factors/${f.id}`, { method: 'DELETE', headers: auth });
+    const e = await supa('/auth/v1/factors', { method: 'POST', headers: auth, body: JSON.stringify({ factor_type: 'totp', friendly_name: 'ImmoAdv Admin ' + new Date().toISOString().slice(0, 10) }) });
+    const ej = await e.json().catch(() => ({}));
+    if (!e.ok) { root.innerHTML = `<h1>Zweiter Faktor</h1><p>Einrichtung nicht möglich: ${esc(ej.msg || ej.error_description || e.status)}. In Supabase unter Authentication → Multi-Factor muss TOTP aktiviert sein.</p>`; return; }
+    factorId = ej.id;
+    enrollHtml = `<p>1. Diesen Code mit einer Authenticator-App scannen (Google Authenticator, 1Password, Authy):</p>
+      <img src="${esc(ej.totp.qr_code)}" alt="QR-Code für die Authenticator-App" width="200" height="200">
+      <p class="form-note">Oder Schlüssel manuell eingeben: <code>${esc(ej.totp.secret)}</code></p><p>2. Den 6-stelligen Code aus der App eingeben:</p>`;
+  }
+  root.innerHTML = `<div class="ad-mfa pt-card"><h1>Zweiter Faktor</h1>${enrollHtml || '<p>Bitte den 6-stelligen Code aus Ihrer Authenticator-App eingeben.</p>'}
+    <form id="mfaF" class="pt-row"><input id="mfaC" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required aria-label="Code" style="font-size:22px;letter-spacing:.2em;width:9ch;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px"><button class="btn btn-dark" type="submit">Bestätigen</button></form>
+    <p class="form-note" id="mfaMsg" role="status"></p></div>`;
+  $('#mfaF').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const c = await supa(`/auth/v1/factors/${factorId}/challenge`, { method: 'POST', headers: auth });
+    const cj = await c.json().catch(() => ({}));
+    if (!c.ok) { $('#mfaMsg').textContent = cj.msg || 'Fehler beim Anfordern.'; return; }
+    const v = await supa(`/auth/v1/factors/${factorId}/verify`, { method: 'POST', headers: auth, body: JSON.stringify({ challenge_id: cj.id, code: $('#mfaC').value.trim() }) });
+    const vj = await v.json().catch(() => ({}));
+    if (!v.ok || !vj.access_token) { $('#mfaMsg').textContent = vj.msg || 'Code falsch oder abgelaufen.'; return; }
+    setSession({ ...session(), ...vj });
+    location.reload();
+  };
 }
+
+// ---------- Rahmen ----------
+const TABS = [['cockpit', 'Finanz-Cockpit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen'], ['objekt', 'Objektsuche']];
+
+function frame() {
+  root.innerHTML = `<h1>Admin-Zentrale</h1><p class="form-note">Nur für Administratoren · angemeldet mit zweitem Faktor · alle Aktionen werden protokolliert.</p>
+    <div class="ad-tabs" role="tablist">${TABS.map(([k, l]) => `<button type="button" role="tab" data-t="${k}">${l}</button>`).join('')}</div>
+    <p id="adMsg" class="form-note" role="status"></p><div id="adView"></div>`;
+  root.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { location.hash = b.dataset.t; });
+}
+
+function show() {
+  const t = TABS.find(([k]) => k === location.hash.slice(1))?.[0] || 'cockpit';
+  root.querySelectorAll('[data-t]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.t === t)));
+  const v = $('#adView');
+  v.innerHTML = '<p class="form-note">Wird geladen …</p>';
+  msg('');
+  ({ cockpit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, objekt })[t](v);
+}
+
+// ---------- Finanz-Cockpit ----------
+async function cockpit(v, zeitraum = 'monat', von = '', bis = '') {
+  const r = await api(`/api/admin/finance?zeitraum=${zeitraum}&von=${von}&bis=${bis}`);
+  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  const d = r.data;
+  const tile = (l, x, s = '') => `<div class="pt-kpi"><small>${l}</small><strong>${x}</strong>${s ? `<span class="form-note">${s}</span>` : ''}</div>`;
+  v.innerHTML = `<div class="pt-row" style="margin-bottom:12px"><div class="seg" role="tablist">${[['heute', 'Heute'], ['woche', 'Woche'], ['monat', 'Monat'], ['jahr', 'Jahr'], ['gesamt', 'Gesamt']].map(([k, l]) => `<button type="button" data-z="${k}" aria-selected="${k === zeitraum}">${l}</button>`).join('')}</div>
+      <label class="form-note">von <input type="date" id="zv" value="${esc(von)}"></label><label class="form-note">bis <input type="date" id="zb" value="${esc(bis)}"></label><button class="btn btn-ghost" id="zf" type="button">Zeitraum</button></div>
+    <h2>${esc(d.range.label)}</h2>
+    <div class="pt-kpis">${tile('Umsatz netto', eur(d.revenue.net), `${d.revenue.count} Rechnungen${d.revenue.stornos ? `, ${d.revenue.stornos} Korrekturen` : ''}`)}${tile('Umsatzsteuer 19 %', eur(d.revenue.vat))}${tile('Umsatz brutto', eur(d.revenue.gross))}${tile('Offene Posten', String(d.openItems.length), eur(d.openItems.reduce((s, x) => s + Number(x.gross_cents), 0)))}</div>
+    <div class="pt-kpis">${tile('MRR netto', eur(d.recurring.mrrNet), 'aus Stripe-Abos zum Listenpreis')}${tile('ARR netto', eur(d.recurring.arrNet))}${tile('Aktive Tarife', String(d.recurring.activeAccounts), `Basic ${d.recurring.byTier.BASIC} · Pro ${d.recurring.byTier.PRO} · Enterprise ${d.recurring.byTier.ENTERPRISE}${d.recurring.manualWithoutPrice ? ` · ${d.recurring.manualWithoutPrice} manuell` : ''}`)}${tile('Abgelaufen im Zeitraum', String(d.recurring.expiredInRange))}</div>
+    <h2>Weiterempfehlung über Kreditmappen</h2>
+    <div class="pt-kpis">${tile('Kreditmappen von Unternehmen', String(d.viral.partnerDossiers))}${tile('Aufrufe der Prüfseite', String(d.viral.verifyViews))}${tile('Neue Unternehmenskonten', String(d.viral.newAccounts), `davon über Prüfseite: ${d.viral.viaVerify}`)}${tile('Endkunden-Anfragen', String(d.viral.leads))}</div>
+    <h2>Offene Posten</h2>${d.openItems.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Ampel</th><th>Nummer</th><th>Kunde</th><th>Fällig</th><th>Brutto</th><th></th></tr></thead><tbody>
+      ${d.openItems.map((x) => `<tr><td><span class="ad-amp ${x.ampel}"></span>${x.daysOverdue > 0 ? `${x.daysOverdue} Tage` : 'fristgerecht'}</td><td>${esc(x.invoice_number)}</td><td>${esc(x.buyer?.company)}</td><td>${dt(x.due_date)}</td><td>${eur(x.gross_cents)}</td><td><button class="text-btn" data-paid="${x.id}" type="button">Als bezahlt markieren</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine offenen Posten.</p>'}
+    <h2>Rechnungen im Zeitraum</h2>${invTable(d.invoices)}`;
+  v.querySelectorAll('[data-z]').forEach((b) => b.onclick = () => cockpit(v, b.dataset.z));
+  $('#zf').onclick = () => cockpit(v, 'frei', $('#zv').value, $('#zb').value);
+  bindInv(v, () => cockpit(v, zeitraum, von, bis));
+}
+
+const invTable = (rows) => rows.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Nummer</th><th>Art</th><th>Datum</th><th>Kunde</th><th>Netto</th><th>USt</th><th>Brutto</th><th>Status</th><th></th></tr></thead><tbody>
+  ${rows.map((x) => `<tr><td>${esc(x.invoice_number)}</td><td>${{ invoice: 'Rechnung', storno: 'Storno', credit: 'Gutschrift' }[x.kind]}${x.source === 'stripe' ? ' · Stripe' : ''}</td><td>${dt(x.issue_date)}</td><td>${esc(x.buyer?.company)}</td><td>${eur(x.net_cents)}</td><td>${eur(x.vat_cents)}</td><td>${eur(x.gross_cents)}</td><td>${PAY[x.payment_status]}</td>
+  <td class="ad-actions"><button data-pdf="${x.id}" type="button">PDF</button>${x.kind === 'invoice' && x.source === 'manual' && x.payment_status !== 'CANCELLED' ? `<button data-storno="${x.id}" type="button">Stornieren</button>` : ''}${['PENDING', 'OVERDUE'].includes(x.payment_status) ? `<button data-paid="${x.id}" type="button">Bezahlt</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine Rechnungen.</p>';
+
+function bindInv(v, reload) {
+  v.querySelectorAll('[data-pdf]').forEach((b) => b.onclick = async () => {
+    try { const res = await download('/api/admin/invoices?id=' + b.dataset.pdf, {}, 'Rechnung.pdf'); if (res.headers.get('x-integrity') === 'mismatch') msg('Achtung: Prüfsumme des PDFs weicht ab!', true); else msg('PDF geladen, Prüfsumme in Ordnung.'); } catch (e) { msg(e.message, true); }
+  });
+  v.querySelectorAll('[data-storno]').forEach((b) => b.onclick = async () => {
+    if (!confirm('Stornorechnung ausstellen? Die ursprüngliche Rechnung bleibt unverändert im Archiv.')) return;
+    const r = await api('/api/admin/invoices', { method: 'POST', body: JSON.stringify({ action: 'storno', invoiceId: b.dataset.storno }) });
+    if (r.ok) { msg(`Storno ${r.data.invoice.invoice_number} ausgestellt.`); reload(); } else msg(r.data?.error || 'Fehler', true);
+  });
+  v.querySelectorAll('[data-paid]').forEach((b) => b.onclick = async () => {
+    const r = await api('/api/admin/invoices', { method: 'POST', body: JSON.stringify({ action: 'paid', invoiceId: b.dataset.paid }) });
+    if (r.ok) { msg('Als bezahlt markiert.'); reload(); } else msg(r.data?.error || 'Fehler', true);
+  });
+}
+
+// ---------- Partner ----------
+async function partner(v) {
+  const r = await api('/api/admin/b2b');
+  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  const list = r.data.accounts;
+  v.innerHTML = `<div class="pt-row" style="margin-bottom:10px"><input id="pq" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><select id="ps" style="border:1px solid #CBD5E1;border-radius:6px;padding:8px"><option value="">Alle</option><option value="active">Aktiv</option><option value="locked">Gesperrt</option><option value="unverified">Ungeprüft</option></select></div>
+    ${list.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Unternehmen</th><th>Art</th><th>Register / Steuer</th><th>Tarif</th><th>Status</th><th>Anfragen</th><th>Aktionen</th></tr></thead><tbody>
+    ${list.map((a) => `<tr data-row="${a.id}" data-s="${a.status}${a.verified_at ? '' : ' unverified'}" data-q="${esc((a.company_name + ' ' + a.city + ' ' + a.customer_number + ' ' + a.email).toLowerCase())}">
+      <td><strong>${esc(a.company_name)}</strong> ${esc(a.legal_form)}<br><small>${esc(a.customer_number)} · ${esc(a.postal_code)} ${esc(a.city)} · ${esc(a.email)}</small></td>
+      <td>${esc(a.institution_type)}</td><td><small>${esc(a.register_number || '–')}<br>${esc(a.tax_id || '–')}</small></td>
+      <td>${a.tier ? TIER[a.tier] : '–'}${a.plan_source === 'manual' ? ' (manuell)' : ''}${a.plan_until ? `<br><small>bis ${dt(a.plan_until)}</small>` : ''}${a.dossier_bonus ? `<br><small>+${a.dossier_bonus} Mappen</small>` : ''}</td>
+      <td>${a.status === 'locked' ? `<span class="st bad">gesperrt</span><br><small>${esc(a.lock_reason)}</small>` : '<span class="st ok">aktiv</span>'}<br>${a.verified_at ? '<small>geprüft</small>' : '<small class="st warn">ungeprüft</small>'}${a.has_whitelabel ? '<br><small>Whitelabel frei</small>' : ''}${a.allow_invoice_payment ? '<br><small>Kauf auf Rechnung</small>' : ''}</td>
+      <td>${a.leads}</td>
+      <td class="ad-actions">
+        <button data-a="verify" data-on="${!a.verified_at}" data-id="${a.id}" type="button">${a.verified_at ? 'Prüfung zurücknehmen' : 'Als geprüft markieren'}</button>
+        ${a.status === 'locked' ? `<button data-a="unlock" data-id="${a.id}" type="button">Entsperren</button>` : `<button data-a="lock" data-id="${a.id}" type="button">Sperren</button>`}
+        <button data-a="plan" data-id="${a.id}" type="button">Tarif setzen</button>
+        <button data-a="whitelabel" data-on="${!a.has_whitelabel}" data-id="${a.id}" type="button">${a.has_whitelabel ? 'Whitelabel entziehen' : 'Whitelabel freischalten'}</button>
+        <button data-a="invoicePayment" data-on="${!a.allow_invoice_payment}" data-id="${a.id}" type="button">${a.allow_invoice_payment ? 'Rechnungskauf aus' : 'Rechnungskauf an'}</button>
+        <button data-a="credits" data-id="${a.id}" type="button">Kontingent +</button>
+        <button data-a="invoice" data-id="${a.id}" data-name="${esc(a.company_name)}" type="button">Rechnung</button>
+      </td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine Unternehmenskonten.</p>'}
+    <div id="invForm"></div>`;
+  const filter = () => {
+    const q = $('#pq').value.toLowerCase(), s = $('#ps').value;
+    v.querySelectorAll('[data-row]').forEach((tr) => { tr.hidden = (q && !tr.dataset.q.includes(q)) || (s && !tr.dataset.s.split(' ').includes(s)); });
+  };
+  $('#pq').oninput = filter; $('#ps').onchange = filter;
+  v.querySelectorAll('[data-a]').forEach((b) => b.onclick = async () => {
+    const id = b.dataset.id, a = b.dataset.a;
+    let body = { action: a, id };
+    if (a === 'invoice') return invoiceForm(id, b.dataset.name);
+    if (a === 'verify' || a === 'whitelabel') body.on = b.dataset.on === 'true';
+    if (a === 'lock') { const reason = prompt('Grund der Sperre (wird dem Unternehmen angezeigt):'); if (!reason) return; body.reason = reason; }
+    if (a === 'unlock' && !confirm('Konto entsperren?')) return;
+    if (a === 'invoicePayment') {
+      body.on = b.dataset.on === 'true';
+      if (body.on) { const lim = prompt('Kreditlimit in Euro (leer = ohne Limit):', ''); const days = prompt('Zahlungsziel in Tagen:', '14'); if (days === null) return; body.limitCents = lim ? Math.round(Number(lim.replace(',', '.')) * 100) : null; body.termsDays = Number(days) || 14; }
+    }
+    if (a === 'credits') { const n = prompt('Zusätzliche Kreditmappen pro Monat (negativ zum Abziehen):', '10'); if (!n) return; body.add = Math.trunc(Number(n)); }
+    if (a === 'plan') {
+      const t = prompt('Tarif: BASIC, PRO, ENTERPRISE oder leer zum Entfernen', 'PRO'); if (t === null) return;
+      const until = t ? prompt('Gültig bis (JJJJ-MM-TT, leer = unbefristet):', '') : '';
+      body.tier = t ? t.trim().toUpperCase() : null; body.until = until || null;
+    }
+    const r = await api('/api/admin/b2b', { method: 'POST', body: JSON.stringify(body) });
+    if (r.ok) { msg('Gespeichert.'); partner(v); } else msg(r.data?.error || 'Fehler', true);
+  });
+}
+
+function invoiceForm(accountId, name) {
+  const box = $('#invForm');
+  const row = () => '<div class="row"><input placeholder="Leistung" class="d"><input placeholder="Menge" class="q" value="1" inputmode="decimal"><input placeholder="Einzelpreis netto €" class="p" inputmode="decimal"><button type="button" class="text-btn del x">×</button></div>';
+  box.innerHTML = `<section class="pt-card" style="margin-top:16px"><h2>Rechnung an ${esc(name)}</h2>
+    <div class="ad-items" id="items">${row()}</div><button class="text-btn" id="addRow" type="button">+ Position</button>
+    <div class="pt-row ad-form" style="margin-top:10px"><label class="form-note">Zahlungsart <select id="pm"><option value="INVOICE_BANK_TRANSFER">Überweisung (mit GiroCode)</option><option value="SEPA_B2B">SEPA-Firmenlastschrift</option><option value="STRIPE_CARD">Karte (bereits bezahlt)</option></select></label>
+    <label class="form-note">Leistungszeitraum <input id="sp" placeholder="z. B. 01.10.2026–31.10.2026"></label><label class="form-note"><input type="checkbox" id="paid"> bereits bezahlt</label></div>
+    <p id="sum" class="form-note"></p><button class="btn btn-dark" id="issue" type="button">Rechnung ausstellen (unveränderbar)</button></section>`;
+  const items = () => [...box.querySelectorAll('.row')].map((r) => ({ description: r.querySelector('.d').value.trim(), quantity: Number(r.querySelector('.q').value.replace(',', '.')), unitNetCents: Math.round(Number(r.querySelector('.p').value.replace(/\./g, '').replace(',', '.')) * 100) })).filter((i) => i.description && i.quantity > 0 && i.unitNetCents >= 0);
+  const sum = () => { const n = items().reduce((s, i) => s + Math.round(i.quantity * i.unitNetCents), 0); const vat = Math.round(n * 0.19); $('#sum').textContent = `Netto ${eur(n)} · USt 19 % ${eur(vat)} · Brutto ${eur(n + vat)}`; };
+  box.oninput = sum;
+  box.onclick = (e) => { if (e.target.classList.contains('x') && box.querySelectorAll('.row').length > 1) { e.target.parentElement.remove(); sum(); } };
+  $('#addRow').onclick = () => { $('#items').insertAdjacentHTML('beforeend', row()); };
+  $('#issue').onclick = async () => {
+    const it = items();
+    if (!it.length) return msg('Bitte mindestens eine Position mit Preis angeben.', true);
+    if (!confirm('Rechnung jetzt ausstellen? Sie erhält die nächste fortlaufende Nummer und kann danach nur storniert werden.')) return;
+    const r = await api('/api/admin/invoices', { method: 'POST', body: JSON.stringify({ action: 'create', accountId, items: it, paymentMethod: $('#pm').value, servicePeriod: $('#sp').value || undefined, paid: $('#paid').checked }) });
+    if (!r.ok) return msg(r.data?.error || 'Fehler', true);
+    msg(`Rechnung ${r.data.invoice.invoice_number} ausgestellt und archiviert.`);
+    box.innerHTML = '';
+  };
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ---------- Rechnungsarchiv ----------
+async function rechnungen(v, q = '') {
+  const r = await api('/api/admin/invoices' + (q ? '?q=' + encodeURIComponent(q) : ''));
+  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  v.innerHTML = `<p class="form-note">GoBD-Archiv: Rechnungen sind in der Datenbank gegen Ändern und Löschen gesperrt; jede PDF-Datei wird beim Abruf gegen ihre SHA-256-Prüfsumme geprüft. Korrekturen nur per Storno.${r.data.bankConfigured ? '' : ' <strong>Bankverbindung fehlt:</strong> INVOICE_IBAN, INVOICE_BIC, INVOICE_BANK_NAME in Vercel setzen, sonst sind Überweisungsrechnungen gesperrt.'}</p>
+    <div class="pt-row" style="margin-bottom:10px"><input id="iq" value="${esc(q)}" placeholder="Rechnungsnummer" style="border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-ghost" id="is" type="button">Suchen</button></div>${invTable(r.data.invoices)}
+    <p class="form-note">Neue Rechnung: unter „Partner“ beim Unternehmen auf „Rechnung“ klicken.</p>`;
+  $('#is').onclick = () => rechnungen(v, $('#iq').value.trim());
+  bindInv(v, () => rechnungen(v, q));
+}
+
+// ---------- Steuer-Export ----------
+function steuer(v) {
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const m = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+  v.innerHTML = `<section class="pt-card"><h2>Monatsarchiv für die Steuerkanzlei</h2>
+    <p>ZIP mit allen Rechnungen (Ordner <code>Rechnungen</code>), Stornos und Gutschriften (<code>Korrekturen</code>), <code>DATEV_Buchungsstapel.csv</code> und <code>Monatsjournal_Umsatzsteuer.csv</code> (Kennzahl 81).</p>
+    <div class="pt-row ad-form"><label class="form-note">Monat <input type="month" id="mon" value="${m}"></label><label class="form-note">Kontenrahmen <select id="skr"><option value="SKR03">SKR03 (1400 / 8400)</option><option value="SKR04">SKR04 (1200 / 4400)</option></select></label><button class="btn btn-dark" id="zip" type="button">ZIP herunterladen</button></div>
+    <p class="form-note">Die automatische Monatsmail an die Kanzlei ist nicht eingerichtet: Sie bräuchte einen E-Mail-Dienst mit Anhängen und eine hinterlegte Kanzlei-Adresse. Bis dahin das ZIP hier laden und weitergeben. Bitte die Übernahme in die Umsatzsteuer-Voranmeldung von der Kanzlei prüfen lassen.</p></section>`;
+  $('#zip').onclick = async (e) => {
+    e.target.disabled = true;
+    try { await download(`/api/admin/datev?monat=${$('#mon').value}&skr=${$('#skr').value}`, {}, 'Steuerexport.zip'); msg('Export erstellt. Hinweise stehen in LIESMICH.txt.'); } catch (er) { msg(er.message, true); }
+    e.target.disabled = false;
+  };
+}
+
+// ---------- Anfragen & Codes ----------
+async function anfragen(v) {
+  const r = await api('/api/admin/misc');
+  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  const { contacts, codes } = r.data;
+  v.innerHTML = `<section class="pt-card"><h2>B2B-Anfragen (Demo, Enterprise, Kooperation)</h2>${contacts.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Eingang</th><th>Anliegen</th><th>Kontakt</th><th>Nachricht</th><th></th></tr></thead><tbody>
+    ${contacts.map((c) => `<tr><td>${dtt(c.created_at)}</td><td>${esc(c.kind)}</td><td><strong>${esc(c.company)}</strong><br>${esc(c.name)}<br><a href="mailto:${esc(c.email)}">${esc(c.email)}</a> ${esc(c.phone || '')}</td><td>${esc(c.message || '')}</td><td>${c.status === 'offen' ? `<button class="text-btn" data-done="${c.id}" type="button">Erledigt</button>` : 'erledigt'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine Anfragen.</p>'}</section>
+    <section class="pt-card"><h2>Partnercodes</h2><p class="form-note">Kampagnen-Codes für die Registrierung von Unternehmen. Der Code wird am Konto gespeichert; Rabatte vergibt Stripe über Aktionscodes im Bezahlvorgang.</p>
+    <div class="pt-row ad-form"><input id="cc" placeholder="CODE-2026" style="text-transform:uppercase"><input id="cd" placeholder="Beschreibung"><input id="cm" placeholder="max. Einlösungen" inputmode="numeric" style="width:150px"><button class="btn btn-dark" id="cAdd" type="button">Anlegen</button></div>
+    ${codes.length ? `<table class="ad-table" style="margin-top:10px"><thead><tr><th>Code</th><th>Beschreibung</th><th>Eingelöst</th><th>Quote</th><th></th></tr></thead><tbody>${codes.map((c) => `<tr><td>${esc(c.code)}</td><td>${esc(c.description || '')}</td><td>${c.redeemed}${c.max_redemptions ? ' / ' + c.max_redemptions : ''}</td><td>${c.max_redemptions ? Math.round((c.redeemed / c.max_redemptions) * 100) + ' %' : '–'}</td><td><button class="text-btn" data-code="${esc(c.code)}" data-on="${!c.active}" type="button">${c.active ? 'Deaktivieren' : 'Aktivieren'}</button></td></tr>`).join('')}</tbody></table>` : ''}</section>`;
+  v.querySelectorAll('[data-done]').forEach((b) => b.onclick = async () => { await api('/api/admin/misc', { method: 'POST', body: JSON.stringify({ action: 'contactDone', id: b.dataset.done }) }); anfragen(v); });
+  v.querySelectorAll('[data-code]').forEach((b) => b.onclick = async () => { await api('/api/admin/misc', { method: 'POST', body: JSON.stringify({ action: 'codeActive', code: b.dataset.code, on: b.dataset.on === 'true' }) }); anfragen(v); });
+  $('#cAdd').onclick = async () => {
+    const r2 = await api('/api/admin/misc', { method: 'POST', body: JSON.stringify({ action: 'codeCreate', code: $('#cc').value, description: $('#cd').value, maxRedemptions: $('#cm').value ? Number($('#cm').value) : null }) });
+    if (r2.ok) anfragen(v); else msg(r2.data?.error || 'Fehler', true);
+  };
+}
+
+async function protokoll(v) {
+  const r = await api('/api/admin/misc');
+  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  v.innerHTML = r.data.audit.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Zeit</th><th>Wer</th><th>Aktion</th><th>Ziel</th><th>Details</th></tr></thead><tbody>${r.data.audit.map((a) => `<tr><td>${dtt(a.created_at)}</td><td>${esc(a.actor_email)}</td><td>${esc(a.action)}</td><td><small>${esc(a.target || '')}</small></td><td><small>${esc(JSON.stringify(a.meta))}</small></td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine Einträge.</p>';
+}
+
+async function kennzahlen(v) {
+  const r = await api('/api/admin/stats');
+  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  const j = r.data;
+  const n = (x) => (x == null ? '–' : x.toLocaleString('de-DE'));
+  const tile = (l, x) => `<div class="an-chip"><small>${l}</small><strong>${x}</strong></div>`;
+  const on = (b) => (b ? '<span class="st ok">aktiv</span>' : '<span class="st bad">fehlt</span>');
+  v.innerHTML = `<div class="an-chips">${tile('Konten', n(j.users))}${tile('Neu (7 Tage)', n(j.users7))}${tile('Objekte', n(j.objects))}${tile('Dokumente', n(j.docs))}${tile('Freigaben aktiv', `${n(j.sharesActive)} / ${n(j.shares)}`)}${tile('Kreditmappen', n(j.versions))}${tile('Erinnerungen an', n(j.reminders))}${tile('Offene Unterlagen-Anforderungen', n(j.requestsOpen))}${tile('Unternehmenskonten', `${n(j.b2bActive)} aktiv / ${n(j.b2b)}`)}${tile('Endkunden-Anfragen', n(j.leads))}${tile('Offene B2B-Anfragen', n(j.contactsOpen))}</div>
+    <p class="form-note">Einstellungen: Bezahlung ${on(j.config.billing)} · E-Mail-Versand ${on(j.config.mail)} · Täglicher Lauf ${on(j.config.cron)} · Aktive Co-Branding-Partner (alt): ${n(j.partners)}</p>`;
+}
+
+function objekt(v) { v.innerHTML = ''; mountObjekt(v, { pdf: true }); }
 
 (async () => {
   if (!(await gate())) return;
-  root.innerHTML = '<h1>Interner Bereich</h1><p class="form-note">Nur für Administratoren.</p><section class="dash-card st-card"><h2>Betreiber-Übersicht</h2><div id="st_box"><p class="form-note">Wird geladen …</p></div></section>';
-  mountObjekt(root, { pdf: true });
-  renderStats();
+  frame();
+  show();
+  window.addEventListener('hashchange', show);
 })();

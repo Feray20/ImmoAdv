@@ -1,0 +1,77 @@
+import { z } from 'zod';
+import { allowRequest } from '@/lib/security/rate-limit';
+import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase/admin';
+import { effectiveTier, type B2BAccount } from '@/lib/b2b/core';
+import { json } from '@/lib/b2b/http';
+import { mailConfigured, sendMail } from '@/lib/notify/mail';
+// Gleicher Rechenkern wie im Browser.
+import { analyse } from '@/public/src/calc.mjs';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const num = (max: number) => z.coerce.number().min(0).max(max).optional();
+const Schema = z.object({
+  slug: z.string().regex(/^[a-z0-9-]{3,40}$/),
+  source: z.enum(['widget', 'landing', 'qr']).default('landing'),
+  name: z.string().trim().min(2).max(120),
+  email: z.string().trim().toLowerCase().email().max(200),
+  phone: z.string().trim().max(40).optional().default(''),
+  message: z.string().trim().max(2000).optional().default(''),
+  consent: z.literal(true),
+  website: z.string().max(0).optional().default(''), // Honigtopf-Feld, bleibt bei Menschen leer
+  property: z.object({
+    ref: z.string().trim().max(80).optional(),
+    address: z.string().trim().max(160).optional(),
+    land: z.string().max(40).optional(),
+    price: num(50_000_000), rent: num(1_000_000), area: num(100_000), equity: num(50_000_000),
+    ratePct: num(20), repaymentPct: num(20), brokerPct: num(10), income: num(1_000_000),
+  }).default({}),
+});
+
+const consentText = (company: string) =>
+  `Ich willige ein, dass meine Angaben (Name, Kontaktdaten, Objekt- und Finanzierungsdaten) an ${company} übermittelt werden, ` +
+  `damit ${company} mich zu meiner Anfrage kontaktiert. ImmoAdv verarbeitet die Daten im Auftrag von ${company}. ` +
+  `Ich kann die Einwilligung jederzeit gegenüber ${company} widerrufen.`;
+
+// Öffentliche Anfrage über Partnerseite, Widget oder Exposé-QR. Geht ausschließlich an das jeweilige Unternehmen.
+export async function POST(req: Request) {
+  if (!adminConfigured()) return json({ error: 'Nicht verfügbar.' }, 503);
+  const ip = anonymizedIpHash(req) ?? 'x';
+  if (!allowRequest(`lead:${ip}`, 5, 10 * 60_000)) return json({ error: 'Zu viele Anfragen. Bitte später erneut versuchen.' }, 429);
+  const parsed = Schema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    const f = String(parsed.error.issues[0]?.path[0] ?? '');
+    const msg: Record<string, string> = { consent: 'Bitte der Weitergabe an den Partner zustimmen.', email: 'Bitte eine gültige E-Mail-Adresse angeben.', name: 'Bitte Ihren Namen angeben.' };
+    return json({ error: msg[f] ?? 'Bitte die Angaben prüfen.' }, 400);
+  }
+  const b = parsed.data;
+  if (b.website) return json({ ok: true }, 201); // Bot: stillschweigend verwerfen
+  const db = supabaseAdmin();
+  const { data } = await db.from('immo_b2b_accounts').select('*').eq('slug', b.slug).maybeSingle();
+  const a = data as B2BAccount | null;
+  if (!a || a.status !== 'active' || !a.widget_active || !effectiveTier(a)) return json({ error: 'Dieser Partner nimmt derzeit keine Anfragen an.' }, 404);
+
+  const p = b.property;
+  let metrics: Record<string, unknown> | null = null;
+  if (p.price && p.land) {
+    const r = analyse({ price: p.price, rent: p.rent ?? 0, area: p.area ?? 0, land: p.land, equity: p.equity ?? 0, ratePct: p.ratePct ?? 3.8, repaymentPct: p.repaymentPct ?? 2, brokerPct: p.brokerPct ?? 0, maintenanceQm: 1, vacancyPct: 2 });
+    if (r) metrics = { allIn: r.allIn, nebenkosten: r.nebenkosten, loan: r.loan, ltv: r.ltv, rate: r.rate, noi: r.noi, cashflow: r.cashflow, dscr: r.dscr, grossYield: r.grossYield, netYield: r.netYield };
+  }
+  const ct = consentText(a.company_name);
+  const ins = await db.from('immo_b2b_leads').insert({
+    account_id: a.id, source: b.source, client_name: b.name, client_email: b.email, client_phone: b.phone || null, message: b.message || null,
+    property_data: p, metrics, consent_at: new Date().toISOString(), consent_text: ct, ip_hash: ip,
+  }).select('id').single();
+  if (ins.error) return json({ error: 'Anfrage konnte nicht gespeichert werden.' }, 500);
+
+  if (mailConfigured()) {
+    const eur = (v: unknown) => (typeof v === 'number' ? v.toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' €' : '–');
+    await sendMail(a.email, `Neue Finanzierungsanfrage über ImmoAdv (${b.source})`,
+      `Neue Anfrage für ${a.company_name}\n\nName: ${b.name}\nE-Mail: ${b.email}\nTelefon: ${b.phone || '–'}\n` +
+      `Objekt: ${p.address || p.ref || '–'}\nKaufpreis: ${eur(p.price)} · Kaltmiete: ${eur(p.rent)} · Eigenkapital: ${eur(p.equity)}\n` +
+      (metrics ? `Gesamtkosten: ${eur(metrics.allIn)} · Darlehen: ${eur(metrics.loan)} · DSCR: ${metrics.dscr ?? '–'}\n` : '') +
+      `\nNachricht: ${b.message || '–'}\n\nAlle Angaben im Portal: https://immoadv.de/b2b-portal#anfragen\n\nRechnerische Orientierungswerte, keine Kreditentscheidung.`);
+  }
+  return json({ ok: true, id: ins.data.id }, 201);
+}

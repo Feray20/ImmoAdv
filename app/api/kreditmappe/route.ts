@@ -11,6 +11,8 @@ import { buildKreditmappe } from '@/lib/kreditmappe/model';
 import { loadMappeInput } from '@/lib/kreditmappe/load';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { KreditmappeDocument, type Verification } from '@/lib/kreditmappe/pdf';
+import { b2bDossierAllowance, membershipFor } from '@/lib/b2b/core';
+import { partnerBrandFor } from '@/lib/b2b/brand';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,9 +24,9 @@ const LEDGER_KEY = 'kreditmappe_objects';
 // Freischaltung: Pro oder eine gekaufte Kreditmappe. Verbrauchte Mappen werden je Objekt
 // serverseitig in den Metadaten des Stripe-Kunden vermerkt; erneutes Erstellen desselben Objekts ist kostenfrei.
 export async function POST(req: Request) {
-  if (!billingEnabled()) return NextResponse.json({ error: 'Die Kreditmappe ist noch nicht verfügbar.' }, { status: 503 });
   const user = await userFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Bitte zuerst anmelden.' }, { status: 401 });
+
   if (!allowRequest(`kreditmappe:${user.id}`, 6, 60_000)) {
     return NextResponse.json({ error: 'Zu viele Anfragen. Bitte kurz warten.' }, { status: 429 });
   }
@@ -33,12 +35,17 @@ export async function POST(req: Request) {
   if (!parsedBody.success) return NextResponse.json({ error: 'Ungültige Anfrage.' }, { status: 400 });
   const { objectId } = parsedBody.data;
 
+  // Unternehmenskonten: Kontingent des Tarifs (auch manuell freigeschaltete Tarife ohne Stripe).
+  const b2b = adminConfigured() ? await b2bDossierAllowance(user.id, objectId).catch(() => null) : null;
+  if (b2b && !b2b.allowed) return NextResponse.json({ error: b2b.reason ?? 'Kontingent erreicht.' }, { status: 402 });
+  if (!billingEnabled() && !b2b?.allowed) return NextResponse.json({ error: 'Die Kreditmappe ist noch nicht verfügbar.' }, { status: 503 });
+
   const loaded = await loadMappeInput(req, user.id, objectId);
   if (!loaded.ok) return NextResponse.json({ error: loaded.error }, { status: loaded.status });
   const { object, profile, uploads } = loaded.data;
 
-  // Freischaltung prüfen und Verbrauch vermerken.
-  try {
+  // Freischaltung prüfen und Verbrauch vermerken (entfällt bei Unternehmenskonten mit Tarif).
+  if (!b2b?.allowed) try {
     const ent = await entitlementsFor(user.id, user.email);
     if (!ent.pro && adminConfigured()) {
       // Atomar über den Primärschlüssel (owner_id, object_ref): parallele Anfragen können
@@ -98,7 +105,8 @@ export async function POST(req: Request) {
       verify = { versionNo: (Number(last?.version_no) || 0) + 1, versionId, url, qrDataUrl };
     }
 
-    const element = createElement(KreditmappeDocument, { m: mappe, verify }) as unknown as Parameters<typeof renderToBuffer>[0];
+    const partner = b2b?.allowed ? await partnerBrandFor((await membershipFor(user.id))?.account) : null;
+    const element = createElement(KreditmappeDocument, { m: mappe, verify, partner }) as unknown as Parameters<typeof renderToBuffer>[0];
     const pdf = await renderToBuffer(element);
     if (pdf.subarray(0, 5).toString() !== '%PDF-') throw new Error('invalid_pdf_output');
     // Hash erst nach dem Rendern aus den tatsächlichen Bytes berechnen.
@@ -111,7 +119,7 @@ export async function POST(req: Request) {
       if (!up.error) {
         await db.from('immo_kreditmappe_versions').insert({
           id: verify.versionId, owner_id: user.id, object_ref: objectId, version_no: verify.versionNo,
-          sha256, byte_size: pdf.length, storage_path: path,
+          sha256, byte_size: pdf.length, storage_path: path, b2b_account_id: b2b?.accountId ?? null,
         });
       } else {
         console.error('kreditmappe_store_error', up.error.message);
@@ -125,7 +133,8 @@ export async function POST(req: Request) {
         'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
         'X-Document-SHA256': sha256,
         'X-Document-Version': verify ? String(verify.versionNo) : '',
-        'Access-Control-Expose-Headers': 'X-Document-SHA256, X-Document-Version, Content-Disposition',
+        'X-Version-Id': verify ? verify.versionId : '',
+        'Access-Control-Expose-Headers': 'X-Document-SHA256, X-Document-Version, X-Version-Id, Content-Disposition',
         'Cache-Control': 'no-store',
       },
     });

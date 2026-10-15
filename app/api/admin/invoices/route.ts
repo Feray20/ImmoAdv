@@ -1,0 +1,97 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { requireAdmin } from '@/lib/security/admin';
+import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
+import { adminAudit, type B2BAccount } from '@/lib/b2b/core';
+import { bankDetails, buyerFromAccount, issueInvoice, loadInvoicePdf, type InvoiceRow } from '@/lib/b2b/invoice';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
+const j = (b: unknown, s = 200) => NextResponse.json(b, { status: s, headers: { 'Cache-Control': 'no-store' } });
+
+// GoBD-Archiv: alle Rechnungen (unlöschbar), Abruf des PDFs mit Prüfsummen-Kontrolle.
+export async function GET(req: Request) {
+  const auth = await requireAdmin(req);
+  if (auth instanceof NextResponse) return auth;
+  if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
+  const u = new URL(req.url);
+  const db = supabaseAdmin();
+  const id = u.searchParams.get('id');
+  if (id) {
+    if (!/^[0-9a-f-]{36}$/.test(id)) return j({ error: 'Ungültig.' }, 400);
+    const { data } = await db.from('immo_invoices').select('*').eq('id', id).maybeSingle();
+    if (!data) return j({ error: 'Nicht gefunden.' }, 404);
+    const r = data as InvoiceRow;
+    if (r.stripe_pdf_url) return NextResponse.redirect(r.stripe_pdf_url, 302);
+    const f = await loadInvoicePdf(r);
+    if (!f) return j({ error: 'PDF nicht verfügbar.' }, 404);
+    return new NextResponse(new Uint8Array(f.pdf), {
+      headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${r.invoice_number}.pdf"`, 'X-Integrity': f.intact ? 'ok' : 'mismatch', 'Access-Control-Expose-Headers': 'X-Integrity', 'Cache-Control': 'no-store' },
+    });
+  }
+  const q = (u.searchParams.get('q') || '').trim();
+  let query = db.from('immo_invoices').select('id, invoice_number, kind, refers_to, source, account_id, buyer, net_cents, vat_cents, gross_cents, payment_method, payment_status, issue_date, due_date, paid_at, pdf_sha256, stripe_pdf_url, created_at').order('created_at', { ascending: false }).limit(1000);
+  if (q) query = query.ilike('invoice_number', `%${q.replace(/[%_]/g, '')}%`);
+  const { data, error } = await query;
+  if (error) return j({ error: error.message }, 500);
+  return j({ invoices: data ?? [], bankConfigured: Boolean(bankDetails()) });
+}
+
+const Item = z.object({ description: z.string().trim().min(2).max(300), quantity: z.number().positive().max(10_000), unitNetCents: z.number().int().min(0).max(100_000_000) });
+const Create = z.object({
+  action: z.literal('create'),
+  accountId: z.string().uuid(),
+  items: z.array(Item).min(1).max(30),
+  paymentMethod: z.enum(['INVOICE_BANK_TRANSFER', 'SEPA_B2B', 'STRIPE_CARD']),
+  servicePeriod: z.string().trim().max(60).optional(),
+  paid: z.boolean().optional(),
+});
+const Storno = z.object({ action: z.literal('storno'), invoiceId: z.string().uuid() });
+const Paid = z.object({ action: z.literal('paid'), invoiceId: z.string().uuid() });
+
+export async function POST(req: Request) {
+  const auth = await requireAdmin(req);
+  if (auth instanceof NextResponse) return auth;
+  const body = await req.json().catch(() => null);
+  const db = supabaseAdmin();
+  try {
+    if (body?.action === 'create') {
+      const p = Create.safeParse(body);
+      if (!p.success) return j({ error: 'Bitte Positionen und Zahlungsart prüfen.' }, 400);
+      const { data: a } = await db.from('immo_b2b_accounts').select('*').eq('id', p.data.accountId).maybeSingle();
+      if (!a) return j({ error: 'Konto nicht gefunden.' }, 404);
+      if (p.data.paymentMethod === 'INVOICE_BANK_TRANSFER' && !a.allow_invoice_payment) return j({ error: 'Kauf auf Rechnung ist für dieses Konto nicht freigeschaltet.' }, 409);
+      const row = await issueInvoice({
+        kind: 'invoice', buyer: buyerFromAccount(a as B2BAccount), items: p.data.items, accountId: a.id, paymentMethod: p.data.paymentMethod,
+        servicePeriod: p.data.servicePeriod, paymentTermsDays: a.payment_terms_days, createdBy: auth.user.email, paid: p.data.paid,
+      });
+      await adminAudit(auth.user.email, 'invoice_create', row.id, { number: row.invoice_number, gross: row.gross_cents });
+      return j({ ok: true, invoice: row }, 201);
+    }
+    if (body?.action === 'storno') {
+      const p = Storno.safeParse(body);
+      if (!p.success) return j({ error: 'Ungültig.' }, 400);
+      const { data: orig } = await db.from('immo_invoices').select('*').eq('id', p.data.invoiceId).maybeSingle();
+      if (!orig) return j({ error: 'Rechnung nicht gefunden.' }, 404);
+      const o = orig as InvoiceRow;
+      if (o.kind !== 'invoice' || o.payment_status === 'CANCELLED') return j({ error: 'Diese Rechnung kann nicht (mehr) storniert werden.' }, 409);
+      if (o.source === 'stripe') return j({ error: 'Stripe-Rechnungen bitte in Stripe stornieren (Gutschrift); sie wird automatisch archiviert.' }, 409);
+      const row = await issueInvoice({ kind: 'storno', buyer: o.buyer, items: o.items, accountId: o.account_id, paymentMethod: o.payment_method, refersTo: o, createdBy: auth.user.email });
+      await adminAudit(auth.user.email, 'invoice_storno', row.id, { number: row.invoice_number, refers: o.invoice_number });
+      return j({ ok: true, invoice: row }, 201);
+    }
+    if (body?.action === 'paid') {
+      const p = Paid.safeParse(body);
+      if (!p.success) return j({ error: 'Ungültig.' }, 400);
+      const r = await db.from('immo_invoices').update({ payment_status: 'PAID', paid_at: new Date().toISOString() }).eq('id', p.data.invoiceId).in('payment_status', ['PENDING', 'OVERDUE']);
+      if (r.error) return j({ error: r.error.message }, 500);
+      await adminAudit(auth.user.email, 'invoice_paid', p.data.invoiceId);
+      return j({ ok: true });
+    }
+    return j({ error: 'Unbekannte Aktion.' }, 400);
+  } catch (e) {
+    return j({ error: e instanceof Error ? e.message : 'Fehler' }, 500);
+  }
+}

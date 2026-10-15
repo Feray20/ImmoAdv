@@ -3,31 +3,176 @@
   "hinweis": "Preisvorschlag. Alle Preise sind Endpreise inkl. 19 % USt. Abos monatlich kündbar zum Ende des Abrechnungsmonats; 12-Monats-Zugänge enden automatisch ohne Verlängerung.",
   "kostenlos": {
     "name": "Kostenlos",
-    "features": ["Immobiliensuche bei ImmoScout24, Immowelt und Kleinanzeigen", "Objekt-Analyse und alle Rechner", "Wissenszentrale, Glossar, Lernpfad", "Konto mit Kreditmappe-Vorschau"]
+    "features": [
+      "Immobiliensuche bei ImmoScout24, Immowelt und Kleinanzeigen",
+      "Objekt-Analyse und alle Rechner",
+      "Wissenszentrale, Glossar, Lernpfad",
+      "Konto mit Kreditmappe-Vorschau"
+    ]
   },
   "modi": {
     "einsteiger": {
       "name": "Einsteiger",
       "zielgruppe": "Für den ersten Kauf: Schritt für Schritt verstehen, vorbereiten, finanzieren.",
       "plans": [
-        { "id": "starter-monthly", "name": "Einsteiger-Begleitung", "cents": 990, "intervall": "pro Monat", "mode": "subscription",
-          "features": ["Geführter Lernpfad mit Fortschritt", "Bis zu 3 Objekte mit Bankreife-Check", "Fristen-Erinnerungen per E-Mail", "Merkliste und Analyse-PDF"] },
-        { "id": "starter-yearly", "name": "Einsteiger 12 Monate", "cents": 9900, "intervall": "für 12 Monate", "mode": "payment",
-          "features": ["Wie Einsteiger-Begleitung", "Endet automatisch, keine Verlängerung"] },
-        { "id": "credit-map-starter", "name": "Einsteiger-Kreditmappe", "cents": 3900, "intervall": "einmalig je Objekt", "mode": "payment",
-          "features": ["Kreditmappe für die Bank", "Mit Erklärseite „So liest die Bank Ihre Zahlen“", "Echtheits-QR und Prüfsumme"] }
+        {
+          "id": "starter-monthly",
+          "name": "Einsteiger-Begleitung",
+          "cents": 990,
+          "intervall": "pro Monat",
+          "mode": "subscription",
+          "features": [
+            "Geführter Lernpfad mit Fortschritt",
+            "Bis zu 3 Objekte mit Bankreife-Check",
+            "Fristen-Erinnerungen per E-Mail",
+            "Merkliste und Analyse-PDF"
+          ]
+        },
+        {
+          "id": "starter-yearly",
+          "name": "Einsteiger 12 Monate",
+          "cents": 9900,
+          "intervall": "für 12 Monate",
+          "mode": "payment",
+          "features": [
+            "Wie Einsteiger-Begleitung",
+            "Endet automatisch, keine Verlängerung"
+          ]
+        },
+        {
+          "id": "credit-map-starter",
+          "name": "Einsteiger-Kreditmappe",
+          "cents": 3900,
+          "intervall": "einmalig je Objekt",
+          "mode": "payment",
+          "features": [
+            "Kreditmappe für die Bank",
+            "Mit Erklärseite „So liest die Bank Ihre Zahlen“",
+            "Echtheits-QR und Prüfsumme"
+          ]
+        }
       ]
     },
     "profi": {
       "name": "Profi",
       "zielgruppe": "Für Kapitalanleger, Bestandshalter und Berater: Portfolio, Stresstests, Datenraum.",
       "plans": [
-        { "id": "pro-monthly", "name": "Profi", "cents": 2900, "intervall": "pro Monat", "mode": "subscription",
-          "features": ["Unbegrenzt Objekte und Kreditmappen", "Portfolio mit Zinsschock und CSV", "Datenraum mit Vollständigkeits-Ampel", "Analyse-PDF, Stresstest-Matrix, Ertragswert"] },
-        { "id": "pro-yearly", "name": "Profi 12 Monate", "cents": 29000, "intervall": "für 12 Monate", "mode": "payment",
-          "features": ["Wie Profi", "Endet automatisch, keine Verlängerung"] },
-        { "id": "credit-map", "name": "Profi-Kreditmappe", "cents": 4900, "intervall": "einmalig je Objekt", "mode": "payment",
-          "features": ["Kreditmappe mit Stresstest-Matrix und Ertragswert", "Echtheits-QR und Prüfsumme"] }
+        {
+          "id": "pro-monthly",
+          "name": "Profi",
+          "cents": 2900,
+          "intervall": "pro Monat",
+          "mode": "subscription",
+          "features": [
+            "Unbegrenzt Objekte und Kreditmappen",
+            "Portfolio mit Zinsschock und CSV",
+            "Datenraum mit Vollständigkeits-Ampel",
+            "Analyse-PDF, Stresstest-Matrix, Ertragswert"
+          ]
+        },
+        {
+          "id": "pro-yearly",
+          "name": "Profi 12 Monate",
+          "cents": 29000,
+          "intervall": "für 12 Monate",
+          "mode": "payment",
+          "features": [
+            "Wie Profi",
+            "Endet automatisch, keine Verlängerung"
+          ]
+        },
+        {
+          "id": "credit-map",
+          "name": "Profi-Kreditmappe",
+          "cents": 4900,
+          "intervall": "einmalig je Objekt",
+          "mode": "payment",
+          "features": [
+            "Kreditmappe mit Stresstest-Matrix und Ertragswert",
+            "Echtheits-QR und Prüfsumme"
+          ]
+        }
+      ]
+    }
+  },
+  "b2b": {
+    "name": "Für Unternehmen",
+    "hinweis": "Nur für Unternehmer im Sinne des § 14 BGB. Alle Preise netto zzgl. 19 % USt. Monatsabos monatlich kündbar, Jahresabos zum Ende der Laufzeit. Kein Widerrufsrecht für Unternehmer.",
+    "plans": [
+      {
+        "id": "b2b-basic-monthly",
+        "tier": "BASIC",
+        "name": "Makler & Vermittler Basic",
+        "netto_cents": 4900,
+        "intervall": "pro Monat",
+        "interval": "month",
+        "seats": 1,
+        "dossiers": 20,
+        "features": [
+          "1 Berater-Zugang",
+          "Unbegrenzte Schnell-Kalkulationen (Cashflow, DSCR, Zins/Tilgung)",
+          "20 Kreditmappen (Prüfdossiers) pro Monat",
+          "Website-Widget und Exposé-QR-Codes",
+          "Anfragen im Portal und per E-Mail"
+        ]
+      },
+      {
+        "id": "b2b-basic-yearly",
+        "tier": "BASIC",
+        "name": "Makler & Vermittler Basic (Jahr)",
+        "netto_cents": 47000,
+        "intervall": "pro Jahr",
+        "interval": "year",
+        "seats": 1,
+        "dossiers": 20,
+        "features": [
+          "Wie Basic",
+          "Entspricht ca. 39 € netto pro Monat"
+        ]
+      },
+      {
+        "id": "b2b-pro-monthly",
+        "tier": "PRO",
+        "name": "Kanzlei & Baufi Pro",
+        "netto_cents": 9900,
+        "intervall": "pro Monat",
+        "interval": "month",
+        "seats": 3,
+        "dossiers": null,
+        "features": [
+          "Bis zu 3 Berater-Zugänge",
+          "Kreditmappen ohne Monatslimit",
+          "Co-Branding: eigenes Logo im Kopf der Kreditmappe",
+          "Gesamtdossier: Kreditmappe plus Unterlagen in einem PDF",
+          "Eigene Partnerseite immoadv.de/p/ihr-name mit Terminlink"
+        ]
+      },
+      {
+        "id": "b2b-pro-yearly",
+        "tier": "PRO",
+        "name": "Kanzlei & Baufi Pro (Jahr)",
+        "netto_cents": 95000,
+        "intervall": "pro Jahr",
+        "interval": "year",
+        "seats": 3,
+        "dossiers": null,
+        "features": [
+          "Wie Pro",
+          "Entspricht ca. 79 € netto pro Monat"
+        ]
+      }
+    ],
+    "enterprise": {
+      "tier": "ENTERPRISE",
+      "name": "Bank & Filiale Enterprise",
+      "preis": "ab 199 € netto pro Monat",
+      "seats": 10,
+      "features": [
+        "Bis zu 10 Berater-Zugänge (erweiterbar)",
+        "Teamverwaltung mit Berater-Zuordnung",
+        "Eigene Farben und Logo auf Partnerseite und Kreditmappe",
+        "Kauf auf Rechnung möglich",
+        "Individuelles Angebot nach Filialgröße"
       ]
     }
   }

@@ -81,6 +81,8 @@ module.exports = {
         { source: '/rechner/kaufnebenkosten/:land', destination: '/rechner/kaufnebenkosten/:land/index.html' },
         { source: '/verify/:id', destination: '/pruefen/index.html' },
         { source: '/p/:slug', destination: '/partner/index.html' },
+        { source: '/b2b', destination: '/b2b/index.html' },
+        { source: '/b2b-portal', destination: '/b2b-portal/index.html' },
         { source: '/auth/login', destination: '/auth-login.html' },
         { source: '/auth/register', destination: '/auth-login.html' },
         { source: '/auth/forgot', destination: '/auth-login.html' },
@@ -97,6 +99,9 @@ module.exports = {
       { source: '/(.*)', headers: securityHeaders },
       // Next.js-Seiten (Cockpit) brauchen Inline-Skripte für die Hydrierung; alle übrigen Seiten laufen ohne.
       { source: '/cockpit', headers: [{ key: 'Content-Security-Policy', value: cspValue.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'") }] },
+      // Partnerseite darf als Widget auf fremden Websites eingebettet werden (Freigabe je Domain prüft die Schnittstelle).
+      { source: '/p/:slug', headers: [{ key: 'Content-Security-Policy', value: cspValue.replace("frame-ancestors 'none'", 'frame-ancestors *') }, { key: 'X-Frame-Options', value: 'SAMEORIGIN' }] },
+      { source: '/widget.js', headers: [{ key: 'Cache-Control', value: 'public, max-age=3600' }, { key: 'Access-Control-Allow-Origin', value: '*' }] },
       { source: '/src/:file*', headers: swr },
       { source: '/data/:file*', headers: swr },
       { source: '/og/:file*', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=2592000' }] },

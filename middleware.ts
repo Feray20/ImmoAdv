@@ -29,5 +29,5 @@ export function middleware(req: NextRequest) {
 export const config = {
   // Nicht gesperrt: Impressum und Datenschutz (Pflichtangaben), deren Skripte/Styles, Schnittstellen (täglicher Lauf, Zahlungsrückmeldungen, Konto-Aufrufe prüfen selbst),
   // Next.js-Interna und die Dateien, die die „Coming soon“-Seite braucht.
-  matcher: ['/((?!api/|_next/|src/|data/|brand/|impressum|datenschutz|coming-soon\\.html|logo-icon\\.svg|favicon\\.svg|favicon\\.ico|favicon-32x32\\.png|apple-touch-icon\\.png|og-image\\.png|robots\\.txt).*)'],
+  matcher: ['/((?!api/|_next/|src/|data/|brand/|impressum|datenschutz|coming-soon\\.html|logo-icon\\.svg|favicon\\.svg|favicon\\.ico|favicon-32x32\\.png|apple-touch-icon\\.png|og-image\\.png|robots\\.txt|widget\\.js).*)'],
 };

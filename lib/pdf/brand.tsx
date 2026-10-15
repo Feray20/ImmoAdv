@@ -1,5 +1,5 @@
 // Einheitliches PDF-Branding: Logo, Kopfzeile, Fußzeile, Wasserzeichen.
-import { Defs, LinearGradient, Polygon, Stop, Svg, Text, View, StyleSheet, G } from '@react-pdf/renderer';
+import { Defs, Image, LinearGradient, Polygon, Stop, Svg, Text, View, StyleSheet, G } from '@react-pdf/renderer';
 
 export const BRAND = {
   navy: '#0F2C59', blue: '#0284C7', sky: '#38BDF8', text: '#334155', muted: '#64748B', hair: '#CBD5E1',
@@ -57,13 +57,25 @@ export function stamp(iso: string): string {
   return `${get('day')}.${get('month')}.${get('year')} ${get('hour')}:${get('minute')} ${zone}`;
 }
 
-export function BrandHeader({ reportType, reportId, createdAt }: { reportType: string; reportId?: string; createdAt: string }) {
+export type PartnerBrand = { name: string; logo?: string | null; color?: string | null };
+
+// Mit Partner (Co-Branding): Partnerlogo und -name dominant links, dezenter ImmoAdv-Hinweis rechts.
+export function BrandHeader({ reportType, reportId, createdAt, partner }: { reportType: string; reportId?: string; createdAt: string; partner?: PartnerBrand | null }) {
+  const line = partner?.color ? { borderBottomColor: partner.color } : {};
   return (
-    <View style={s.header} fixed>
-      <Logo />
+    <View style={[s.header, line]} fixed>
+      {partner ? (
+        <View style={s.logoRow}>
+          {partner.logo ? <Image src={partner.logo} style={{ height: 22, maxWidth: 120, objectFit: 'contain', marginRight: 6 }} /> : null}
+          <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: partner.color || BRAND.navy }}>{partner.name}</Text>
+        </View>
+      ) : (
+        <Logo />
+      )}
       <View>
         <Text style={[s.meta, s.metaStrong]}>{reportType}</Text>
         <Text style={s.meta}>{stamp(createdAt)}{reportId ? ` · ID ${reportId}` : ''}</Text>
+        {partner ? <Text style={s.meta}>Strukturiert mit ImmoAdv-Software</Text> : null}
       </View>
     </View>
   );

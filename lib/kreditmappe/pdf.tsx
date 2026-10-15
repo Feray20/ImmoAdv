@@ -1,7 +1,7 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import type { Kreditmappe } from './model';
 import { LIVING_BASE, LIVING_PER_PERSON, RENT_RECOGNITION } from './model';
-import { BRAND, BrandFooter, BrandHeader, Watermark } from '@/lib/pdf/brand';
+import { BRAND, BrandFooter, BrandHeader, Watermark, type PartnerBrand } from '@/lib/pdf/brand';
 
 const C = {
   navy: BRAND.navy, slate: '#1E3A8A', text: '#334155', muted: '#64748B', hair: '#CBD5E1', line: '#E2E8F0', bg: '#F8FAFC',
@@ -59,11 +59,11 @@ function Rows({ rows, head }: { rows: [string, string][]; head?: [string, string
   );
 }
 
-function Frame({ m, reportId, watermark }: { m: Kreditmappe; reportId: string; watermark?: string }) {
+function Frame({ m, reportId, watermark, partner }: { m: Kreditmappe; reportId: string; watermark?: string; partner?: PartnerBrand | null }) {
   return (
     <>
       {watermark ? <Watermark text={watermark} opacity={watermark.startsWith('VORSCHAU') ? 0.13 : 0.05} /> : null}
-      <BrandHeader reportType="Banken-Ready Kreditmappe" reportId={reportId} createdAt={m.createdAt} />
+      <BrandHeader reportType="Banken-Ready Kreditmappe" reportId={reportId} createdAt={m.createdAt} partner={partner} />
       <BrandFooter hash={m.dataHash} />
     </>
   );
@@ -71,7 +71,7 @@ function Frame({ m, reportId, watermark }: { m: Kreditmappe; reportId: string; w
 
 export type Verification = { versionNo: number; versionId: string; url: string; qrDataUrl: string };
 
-export function KreditmappeDocument({ m, verify, watermark = 'UNVERIFIZIERTER ENTWURF — IMMOADV.DE' }: { m: Kreditmappe; verify?: Verification; watermark?: string }) {
+export function KreditmappeDocument({ m, verify, watermark = 'UNVERIFIZIERTER ENTWURF — IMMOADV.DE', partner }: { m: Kreditmappe; verify?: Verification; watermark?: string; partner?: PartnerBrand | null }) {
   const rid = verify?.versionId ?? m.reportId;
   const { object: o, profile: p, financing: f, metrics: x, household: h } = m;
   const vetoTone: Tone = m.vetoLevel === 'HARD_VETO' ? 'bad' : m.vetoLevel === 'CONDITIONAL_VETO' ? 'warn' : m.vetoLevel === 'WARNING' ? 'warn' : 'ok';
@@ -81,7 +81,7 @@ export function KreditmappeDocument({ m, verify, watermark = 'UNVERIFIZIERTER EN
   return (
     <Document title={`Kreditmappe – ${o.name}`} author="ImmoAdv" subject="Kreditmappe zur Vorbereitung des Bankgesprächs" language="de">
       <Page size="A4" style={s.page}>
-        <Frame m={m} reportId={rid} watermark={watermark} />
+        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} />
         <Text style={s.kicker}>KREDITMAPPE · VORBEREITUNG BANKGESPRÄCH</Text>
         <Text style={s.h1}>{o.name}</Text>
         <Text style={s.muted}>Erwerbsstatus: {p.employment} · Haushalt: {p.householdSize} {p.householdSize === 1 ? 'Person' : 'Personen'}</Text>
@@ -100,7 +100,7 @@ export function KreditmappeDocument({ m, verify, watermark = 'UNVERIFIZIERTER EN
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: 'Helvetica-Bold', color: C.navy }}>Echtheitsprüfung · Version {verify.versionNo}</Text>
               <Text>QR-Code scannen oder {verify.url.replace(/^https?:\/\//, '')} aufrufen und diese PDF-Datei auswählen. Die Prüfsumme (SHA-256) der Datei wird im Browser berechnet und mit der bei Erstellung gespeicherten verglichen.</Text>
-              <Text style={{ fontSize: 7, color: C.muted, marginTop: 2 }}>Kennung: {verify.versionId}</Text>
+              <Text style={{ fontSize: 7, color: C.muted, marginTop: 2 }}>Kennung: {verify.versionId} · Strukturiert mit ImmoAdv-Software. Die Prüfseite zeigt keine Kunden- oder Finanzdaten.</Text>
             </View>
           </View>
         )}
@@ -138,7 +138,7 @@ export function KreditmappeDocument({ m, verify, watermark = 'UNVERIFIZIERTER EN
       </Page>
 
       <Page size="A4" style={s.page}>
-        <Frame m={m} reportId={rid} watermark={watermark} />
+        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} />
         <Text style={s.h2}>3. Objekt</Text>
         <Rows head={['Merkmal', 'Wert']} rows={[
           ['Bezeichnung', o.name],
@@ -213,7 +213,7 @@ export function KreditmappeDocument({ m, verify, watermark = 'UNVERIFIZIERTER EN
         </View>
       </Page>
       <Page size="A4" style={s.page}>
-        <Frame m={m} reportId={rid} watermark={watermark} />
+        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} />
         <Text style={s.h2}>Steuerliche Modellrechnung (erstes Jahr)</Text>
         {m.tax ? (
           <>
@@ -267,7 +267,7 @@ export function KreditmappeDocument({ m, verify, watermark = 'UNVERIFIZIERTER EN
 
 
       <Page size="A4" style={s.page}>
-        <Frame m={m} reportId={rid} watermark={watermark} />
+        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} />
         <Text style={s.h2}>6. Haushaltsrechnung (monatlich)</Text>
         <Rows head={['Position', 'Betrag']} rows={[
           ['Nettoeinkommen', eur(h.income)],

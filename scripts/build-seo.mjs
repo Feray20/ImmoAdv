@@ -59,6 +59,7 @@ const PAGES = [
   // Nicht indexieren: persönliche oder tokengebundene Seiten
   { path: '/datenraum', title: 'Datenraum | ImmoAdv', desc: 'Freigegebene Unterlagen.', noindex: true },
   { path: '/pruefen', title: 'Kreditmappe prüfen | ImmoAdv', desc: 'Echtheitsprüfung einer ImmoAdv-Kreditmappe.', noindex: true },
+  { path: '/b2b', title: 'Für Makler, Vermittler und Banken: Tarife | ImmoAdv', desc: 'Kreditmappen nach Bankstandard, Website-Widget, Exposé-QR und Anfragen-Pipeline für Makler, Finanzierungsvermittler und Banken. Ab 49 € netto im Monat.', crumbs: ['Für Unternehmen'] },
   { path: '/partner', title: 'Partner | ImmoAdv', desc: 'Partnerseite.', noindex: true },
   { path: '/app/dashboard', file: 'auth-login.html', title: 'Konto | ImmoAdv', desc: 'Ihr ImmoAdv-Konto.', noindex: true, noCanonical: true },
   { path: '/offline', file: 'offline.html', title: 'Offline | ImmoAdv', desc: 'Keine Verbindung.', noindex: true, noCanonical: true },
