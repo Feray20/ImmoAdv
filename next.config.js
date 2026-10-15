@@ -67,6 +67,15 @@ module.exports = {
     };
   },
   async headers() {
-    return [{ source: '/(.*)', headers: securityHeaders }];
+    // Statische Dateien tragen keinen Inhalts-Hash im Namen: kurze Frische, danach im Hintergrund
+    // aktualisieren. Spart den Rundweg je Datei bei jedem Seitenwechsel; ein Deploy wirkt spätestens nach 10 Minuten.
+    const swr = [{ key: 'Cache-Control', value: 'public, max-age=600, stale-while-revalidate=604800' }];
+    return [
+      { source: '/(.*)', headers: securityHeaders },
+      { source: '/src/:file*', headers: swr },
+      { source: '/data/:file*', headers: swr },
+      { source: '/:icon(icon-192.png|icon-512.png|icon-192-maskable.png|icon-512-maskable.png|apple-touch-icon.png)', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=2592000' }] },
+      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache' }] },
+    ];
   },
 };

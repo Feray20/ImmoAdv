@@ -108,3 +108,30 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 /* Footer: vier Spalten passen mobil nicht in 1fr 1fr mit 50px Abstand */
 .footer-grid>div{min-width:0}
 @media (max-width:640px){.footer-grid{grid-template-columns:1fr 1fr;gap:24px 16px}.footer-grid>div:first-child{grid-column:1/-1}}
+
+/* ---- Logo und Kopfzeile (einheitlich, deckend, lesbar) ---- */
+:root{--ia-logo-ink:#1B2F66;--ia-logo-blue:#2B86C5}
+.brand{gap:10px;color:var(--ia-logo-ink)}
+.brand-logo{display:block;flex:none;width:38px;height:32px}
+.brand>span:last-child{color:var(--ia-logo-ink)}
+.brand>span:last-child>span{color:var(--ia-logo-blue)}
+.footer .brand>span:last-child{color:#fff}
+.footer .brand>span:last-child>span{color:#7CC4EA}
+.footer .brand-logo{box-sizing:content-box;padding:4px;background:#fff;border-radius:8px}
+/* Deckender Hintergrund statt Unschärfe: Menü überlagert den Inhalt nicht mehr durchscheinend, Scrollen wird flüssiger. */
+.site-header,.route-header{background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none;color:var(--ia-navy);border-bottom:1px solid var(--ia-line)}
+.route-header .desktop-nav a{color:var(--ia-text)}
+.route-header .desktop-nav a.active,.route-header .desktop-nav a:hover{color:var(--ia-navy);text-decoration:underline;text-underline-offset:6px}
+.route-header .btn-ghost{color:var(--ia-navy);border-color:var(--ia-hair)}
+.mobile-nav,.route-mobile{background:#fff;color:var(--ia-navy)}
+.mobile-nav a{color:var(--ia-navy);min-height:44px;display:flex;align-items:center}
+@media (max-width:900px){
+  .mobile-menu{width:auto!important;min-width:44px;padding:0 14px;white-space:nowrap}
+  .mobile-nav:not([hidden]){max-height:calc(100vh - 64px);overflow-y:auto;box-shadow:0 12px 24px rgba(15,23,42,.08)}
+  .brand-logo{width:32px;height:27px}
+}
+.route-header .brand>span:last-child>span{color:var(--ia-logo-blue)}
+.dot{background:var(--ia-logo-blue)}
+/* Tippflächen mind. 24 px (WCAG 2.2, 2.5.8) für Textlinks in Listen und Fußzeile */
+.footer-grid a,.result-box a,.dr-foot a,footer a{display:inline-block;min-height:24px;padding:3px 0;line-height:18px}
+.result-box a{margin:2px 0}

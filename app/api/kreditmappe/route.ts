@@ -55,7 +55,27 @@ export async function POST(req: Request) {
   // Freischaltung prüfen und Verbrauch vermerken.
   try {
     const ent = await entitlementsFor(user.id, user.email);
-    if (!ent.pro) {
+    if (!ent.pro && adminConfigured()) {
+      // Atomar über den Primärschlüssel (owner_id, object_ref): parallele Anfragen können
+      // ein Guthaben nicht doppelt verbrauchen; erneutes Erstellen desselben Objekts bleibt kostenfrei.
+      const db = supabaseAdmin();
+      const ins = await db
+        .from('immo_kreditmappe_credits')
+        .upsert({ owner_id: user.id, object_ref: objectId }, { onConflict: 'owner_id,object_ref', ignoreDuplicates: true })
+        .select('object_ref');
+      if (ins.error) throw new Error(ins.error.message);
+      if (ins.data && ins.data.length > 0) {
+        const { count, error: cErr } = await db
+          .from('immo_kreditmappe_credits')
+          .select('object_ref', { count: 'exact', head: true })
+          .eq('owner_id', user.id);
+        if (cErr) throw new Error(cErr.message);
+        if ((count ?? 0) > ent.creditMaps) {
+          await db.from('immo_kreditmappe_credits').delete().eq('owner_id', user.id).eq('object_ref', objectId);
+          return NextResponse.json({ error: 'Für dieses Objekt ist keine Kreditmappe freigeschaltet.' }, { status: 402 });
+        }
+      }
+    } else if (!ent.pro) {
       const customer = await findCustomer(user.id, user.email);
       const used = (customer?.metadata?.[LEDGER_KEY] || '').split(',').filter(Boolean);
       if (!used.includes(objectId)) {

@@ -22,10 +22,11 @@ export async function POST(req: Request) {
   const db = supabaseAdmin();
   const { data: share } = await db
     .from('immo_data_room_shares')
-    .select('id, owner_id, object_ref, permissions, expires_at, revoked_at')
+    .select('id, owner_id, object_ref, permissions, expires_at, revoked_at, view_count')
     .eq('token_hash', sha256Token(token))
     .maybeSingle();
-  if (!share || share.revoked_at || new Date(share.expires_at).getTime() <= Date.now()) {
+  // Download nur nach geöffnetem Datenraum (Abruf gezählt) und nur innerhalb der Laufzeit.
+  if (!share || !share.object_ref || share.revoked_at || new Date(share.expires_at).getTime() <= Date.now() || !(Number(share.view_count) >= 1)) {
     return json({ error: 'Link ungültig, widerrufen oder abgelaufen.' }, 404);
   }
   const categories = Array.isArray((share.permissions as { categories?: unknown })?.categories)

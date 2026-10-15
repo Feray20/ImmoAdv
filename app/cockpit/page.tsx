@@ -127,7 +127,7 @@ export default function Cockpit() {
   return (
     <div className="ck">
       <header className="ck-top">
-        <a className="ck-brand" href="/"><span>IA</span>ImmoAdv</a>
+        <a className="ck-brand" href="/"><img src="/logo-icon.svg" alt="" width={34} height={29} />Immo<em>Adv</em></a>
         <nav><a href="/wissen">Wissen</a><a href="/checkliste">Checkliste</a><a href="/profiler">Profiler</a><a href="/mustermappe">Mustermappe</a></nav>
       </header>
 
