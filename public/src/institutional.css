@@ -56,3 +56,8 @@ strong,b,.metric-grid,.route-prices strong,.compare-result{font-variant-numeric:
 #cancelDone{border:1px solid var(--ia-hair);border-left:4px solid var(--ia-ok);padding:16px 20px;border-radius:6px;background:var(--ia-bg)}
 
 @media print{.site-header,.footer,.toast,.cancel-form button{display:none!important}}
+.feat-status{display:inline-block;margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:3px}
+.feat-status.ok{color:var(--ia-ok);background:var(--ia-ok-bg)}
+.feat-status.none{color:var(--ia-none);background:var(--ia-none-bg)}
+.route-prices .na{display:block;margin-top:8px;font-weight:600;color:var(--ia-none)}
+button[disabled]{opacity:.6;cursor:not-allowed}

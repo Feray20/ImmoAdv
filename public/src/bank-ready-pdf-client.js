@@ -1,7 +1,0 @@
-(()=>{
-const SESSION='immoadv-auth-session-v1';
-const auth=()=>{try{return JSON.parse(localStorage.getItem(SESSION)||'null')}catch{return null}};
-async function cfg(){const r=await fetch('/api/supabase-config');if(!r.ok)throw Error('Supabase-Konfiguration nicht verfügbar.');return r.json()}
-async function exportBankReady(packageId){if(!packageId)throw Error('package_id_required');const s=auth();if(!s?.access_token)throw Error('Bitte anmelden.');const c=await cfg();const r=await fetch(`${c.url}/functions/v1/bank-package-render`,{method:'POST',headers:{'Content-Type':'application/json',apikey:c.key,Authorization:`Bearer ${s.access_token}`},body:JSON.stringify({package_id:packageId})});if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(d.error||'Bank-Ready-Rendering fehlgeschlagen.')}const html=await r.text();const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`ImmoAdv-Bank-Ready-${packageId}.html`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return {ok:true,format:'A4 HTML',note:'Für PDF-Druck/Headless-PDF-Renderer vorbereitet'};}
-window.ImmoAdvBankReady={exportBankReady};
-})();
