@@ -40,10 +40,10 @@ export function LogoMark({ size = 18 }: { size?: number }) {
 }
 
 // Einfarbige Bildmarke (ohne Verlauf) für das Wasserzeichen-Raster – vermeidet doppelte Verlaufs-IDs je Seite.
-export function LogoMarkFlat({ size = 18, color = BRAND.navy }: { size?: number; color?: string }) {
+export function LogoMarkFlat({ size = 18, color = BRAND.navy, opacity = 1 }: { size?: number; color?: string; opacity?: number }) {
   return (
     <Svg viewBox="-2 -2 104 88" style={{ width: size * 1.18, height: size }}>
-      <G fill={color}>
+      <G fill={color} fillOpacity={opacity}>
         <Polygon points="50,8.3 63.1,19.4 62.6,22.5 49,34 45.2,31.1 5.3,68.9 2.5,70 3.1,51.7" />
         <Polygon points="98.8,0.7 93.4,37.3 83.6,29.8 50.8,62.3 43.7,57.9 17.2,82.6 0.2,82.6 42.2,38.4 50.3,40.1 69.6,19.5 64.6,8.1" />
         <Polygon points="82.3,37.6 99.5,53.6 99.6,84 88.6,83.6 62.5,57" />
@@ -124,8 +124,8 @@ export function SecureWatermark({ docId, label, partner, strong = false }: { doc
     <>
       <View style={wmGrid} fixed>
         {rows.map((y, ri) => cols.map((x, ci) => (
-          <View key={`${ri}-${ci}`} style={{ position: 'absolute', top: y, left: x + (ri % 2 ? 85 : 0), opacity: op, transform: 'rotate(-28deg)' }}>
-            <LogoMarkFlat size={26} />
+          <View key={`${ri}-${ci}`} style={{ position: 'absolute', top: y, left: x + (ri % 2 ? 85 : 0), transform: 'rotate(-28deg)' }}>
+            <LogoMarkFlat size={26} opacity={op} />
           </View>
         )))}
       </View>

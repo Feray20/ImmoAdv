@@ -7,6 +7,11 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 export type Tier = 'BASIC' | 'PRO' | 'ENTERPRISE';
 export type InstitutionType = 'BANK' | 'BROKER' | 'REALTOR' | 'OTHER';
 
+// Geschäftsfunktionen (Kreditmappen-Kontingent, Partnerseite/Widget, Anfragen, Tarifbuchung) erst nach geprüftem
+// Gewerbenachweis (Freischaltung durch ImmoAdv im Admin-Bereich).
+export const isVerified = (a: { verified_at?: string | null } | null | undefined): boolean => Boolean(a?.verified_at);
+export const VERIFY_MSG = 'Ihr Unternehmenskonto ist noch nicht freigeschaltet. Bitte laden Sie im Portal unter „Verifizierung“ Ihren Gewerbenachweis hoch – nach der Prüfung schalten wir alle Funktionen frei.';
+
 export type B2BAccount = {
   id: string;
   owner_id: string;
@@ -29,6 +34,10 @@ export type B2BAccount = {
   status: 'pending' | 'active' | 'locked';
   lock_reason: string | null;
   verified_at: string | null;
+  verification_status?: 'offen' | 'eingereicht' | 'geprueft' | 'abgelehnt';
+  verification_note?: string | null;
+  verification_submitted_at?: string | null;
+  verification_decided_at?: string | null;
   dossier_bonus: number;
   has_whitelabel: boolean;
   allow_invoice_payment: boolean;
@@ -117,6 +126,7 @@ export async function b2bDossierAllowance(userId: string, objectRef?: string): P
   if (!m) return null;
   const a = m.account;
   if (a.status === 'locked') return { allowed: false, accountId: a.id, reason: 'Das Unternehmenskonto ist gesperrt.' };
+  if (!isVerified(a)) return { allowed: false, accountId: a.id, reason: VERIFY_MSG };
   const tier = effectiveTier(a);
   if (!tier) return null;
   const limit = TIER_LIMITS[tier].dossiersPerMonth;

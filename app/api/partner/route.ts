@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   const { data: acc } = await db.from('immo_b2b_accounts').select('*').eq('slug', slug).maybeSingle();
   if (acc) {
     const a = acc as B2BAccount;
-    const live = a.status === 'active' && Boolean(effectiveTier(a)) && a.widget_active;
+    const live = a.status === 'active' && Boolean(a.verified_at) && Boolean(effectiveTier(a)) && a.widget_active;
     if (!live) return NextResponse.json({ error: 'Partner nicht gefunden.' }, { status: 404 });
     // Widget nur auf freigegebenen Websites (Herkunft aus dem einbettenden Dokument; ergänzt den Einwilligungsschutz).
     const host = (new URL(req.url).searchParams.get('host') ?? '').toLowerCase();

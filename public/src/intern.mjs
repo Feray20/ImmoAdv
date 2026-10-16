@@ -171,16 +171,17 @@ async function partner(v) {
   const r = await api('/api/admin/b2b');
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
   const list = r.data.accounts;
-  v.innerHTML = `<div class="pt-row" style="margin-bottom:10px"><input id="pq" aria-label="Unternehmen suchen" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><select id="ps" aria-label="Status filtern" style="border:1px solid #CBD5E1;border-radius:6px;padding:8px"><option value="">Alle</option><option value="active">Aktiv</option><option value="locked">Gesperrt</option><option value="unverified">Ungeprüft</option></select><button class="btn btn-ghost" id="pCsv" type="button">CSV</button></div>
+  const pend = list.filter((a) => a.verification_status === 'eingereicht').length;
+  v.innerHTML = `${pend ? `<p class="auth-message" style="margin-bottom:10px"><strong>${pend} Unternehmen</strong> ${pend === 1 ? 'wartet' : 'warten'} auf Prüfung und Freischaltung. Filter „Zur Prüfung eingereicht“ wählen und „Prüfen“ öffnen.</p>` : ''}<div class="pt-row" style="margin-bottom:10px"><input id="pq" aria-label="Unternehmen suchen" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><select id="ps" aria-label="Status filtern" style="border:1px solid #CBD5E1;border-radius:6px;padding:8px"><option value="">Alle</option><option value="active">Aktiv</option><option value="locked">Gesperrt</option><option value="unverified">Ungeprüft</option><option value="pruefen">Zur Prüfung eingereicht</option></select><button class="btn btn-ghost" id="pCsv" type="button">CSV</button></div>
     ${list.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Unternehmen</th><th>Art</th><th>Register / Steuer</th><th>Tarif</th><th>Status</th><th>Anfragen</th><th>Aktionen</th></tr></thead><tbody>
-    ${list.map((a) => `<tr data-row="${a.id}" data-s="${a.status}${a.verified_at ? '' : ' unverified'}" data-q="${esc((a.company_name + ' ' + a.city + ' ' + a.customer_number + ' ' + a.email).toLowerCase())}">
+    ${list.map((a) => `<tr data-row="${a.id}" data-s="${a.status}${a.verified_at ? '' : ' unverified'}${a.verification_status === 'eingereicht' ? ' pruefen' : ''}" data-q="${esc((a.company_name + ' ' + a.city + ' ' + a.customer_number + ' ' + a.email).toLowerCase())}">
       <td><strong>${esc(a.company_name)}</strong> ${esc(a.legal_form)}<br><small>${esc(a.customer_number)} · ${esc(a.postal_code)} ${esc(a.city)} · ${esc(a.email)}</small></td>
       <td>${esc(a.institution_type)}</td><td><small>${esc(a.register_number || '–')}<br>${esc(a.tax_id || '–')}</small></td>
       <td>${a.tier ? TIER[a.tier] : '–'}${a.plan_source === 'manual' ? ' (manuell)' : ''}${a.plan_until ? `<br><small>bis ${dt(a.plan_until)}</small>` : ''}${a.dossier_bonus ? `<br><small>+${a.dossier_bonus} Mappen</small>` : ''}</td>
-      <td>${a.status === 'locked' ? `<span class="st bad">gesperrt</span><br><small>${esc(a.lock_reason)}</small>` : '<span class="st ok">aktiv</span>'}<br>${a.verified_at ? '<small>geprüft</small>' : '<small class="st warn">ungeprüft</small>'}${a.has_whitelabel ? '<br><small>Whitelabel frei</small>' : ''}${a.allow_invoice_payment ? '<br><small>Kauf auf Rechnung</small>' : ''}</td>
+      <td>${a.status === 'locked' ? `<span class="st bad">gesperrt</span><br><small>${esc(a.lock_reason)}</small>` : '<span class="st ok">aktiv</span>'}<br>${a.verified_at ? '<small>geprüft</small>' : a.verification_status === 'eingereicht' ? '<small class="st warn">zur Prüfung eingereicht</small>' : a.verification_status === 'abgelehnt' ? '<small class="st bad">abgelehnt – wartet auf Unterlagen</small>' : '<small class="st warn">noch keine Unterlagen</small>'}${a.has_whitelabel ? '<br><small>Whitelabel frei</small>' : ''}${a.allow_invoice_payment ? '<br><small>Kauf auf Rechnung</small>' : ''}</td>
       <td>${a.leads}</td>
       <td class="ad-actions">
-        <button data-a="verify" data-on="${!a.verified_at}" data-id="${a.id}" type="button">${a.verified_at ? 'Prüfung zurücknehmen' : 'Als geprüft markieren'}</button>
+        ${a.verified_at ? `<button data-a="verify" data-on="false" data-id="${a.id}" type="button">Freischaltung zurücknehmen</button>` : `<button data-a="details" data-id="${a.id}" type="button"${a.verification_status === 'eingereicht' ? ' class="ad-primary"' : ''}>Prüfen</button>`}
         ${a.status === 'locked' ? `<button data-a="unlock" data-id="${a.id}" type="button">Entsperren</button>` : `<button data-a="lock" data-id="${a.id}" type="button">Sperren</button>`}
         <button data-a="plan" data-id="${a.id}" type="button">Tarif setzen</button>
         <button data-a="whitelabel" data-on="${!a.has_whitelabel}" data-id="${a.id}" type="button">${a.has_whitelabel ? 'Whitelabel entziehen' : 'Whitelabel freischalten'}</button>
@@ -231,13 +232,17 @@ async function details(id) {
   box.innerHTML = '<p class="form-note">Wird geladen …</p>';
   const r = await api('/api/admin/b2b?id=' + id);
   if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
-  const { account: a, members, leads, invoices } = r.data;
+  const { account: a, members, leads, invoices, verificationDocs: vd = [] } = r.data;
   const rows = [['Kundennummer', a.customer_number], ['Unternehmen', `${a.company_name} (${a.legal_form})`], ['Art', a.institution_type], ['Registernummer', a.register_number || '–'], ['Steuer-/USt-IdNr.', a.tax_id || '–'],
     ['Ansprechpartner', a.advisor_name], ['E-Mail', a.email], ['Telefon', a.phone || '–'], ['Anschrift', `${a.street || ''}, ${a.postal_code} ${a.city}`], ['Partnerseite', a.slug ? `/p/${a.slug}` : '–'],
     ['Tarif', `${a.tier ? TIER[a.tier] : '–'}${a.plan_source ? ` (${a.plan_source === 'manual' ? 'manuell' : 'Stripe'})` : ''}`], ['Kreditmappen diesen Monat', String(a.dossiersThisMonth)],
     ['§ 14 BGB bestätigt', dtt(a.unternehmer_confirmed_at)], ['AVV', `${a.avv_version || '–'} am ${dtt(a.avv_accepted_at)}`], ['Herkunft', a.referral || '–'], ['Erlaubte Domains', (a.allowed_domains || []).join(', ') || 'alle'], ['Angelegt', dtt(a.created_at)]];
   box.innerHTML = `<section class="pt-card" style="margin-top:16px"><h2>${esc(a.company_name)}</h2>
     <dl class="pt-dl">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+    <h3>Verifizierung</h3>
+    <p>Status: <strong>${{ offen: 'noch keine Unterlagen eingereicht', eingereicht: 'zur Prüfung eingereicht', geprueft: 'geprüft und freigeschaltet', abgelehnt: 'abgelehnt' }[a.verification_status] || (a.verified_at ? 'geprüft' : 'offen')}</strong>${a.verification_submitted_at ? ` · eingereicht ${dtt(a.verification_submitted_at)}` : ''}${a.verification_note ? `<br><small>Begründung: ${esc(a.verification_note)}</small>` : ''}</p>
+    ${vd.length ? `<ul class="plain-list">${vd.map((d) => `<li>${d.url ? `<a class="ck-link" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">${esc({ gewerbe: 'Gewerbeanmeldung', handelsregister: 'Handelsregisterauszug', erlaubnis: 'Erlaubnis § 34c/§ 34i', sonstiges: 'Sonstiger Nachweis' }[d.kind] || d.kind)}: ${esc(d.file_name)}</a>` : esc(d.file_name)} <small>(${Math.max(1, Math.round(d.byte_size / 1024))} KB · ${dtt(d.created_at)} · SHA ${esc(d.sha256.slice(0, 10))}…)</small></li>`).join('')}</ul><p class="form-note">Links sind 5 Minuten gültig (Abruf wird protokolliert). Prüfen: Firmenname, Anschrift und Register-/Steuernummer stimmen mit den Angaben überein; bei Maklern/Vermittlern ggf. Erlaubnis.</p>` : '<p class="form-note">Noch keine Nachweise hochgeladen.</p>'}
+    ${a.verified_at ? '' : `<p><button class="btn btn-dark" id="vApprove" type="button"${vd.length ? '' : ' disabled'}>Freischalten</button> <button class="btn btn-outline" id="vReject" type="button">Ablehnen mit Begründung</button></p>`}
     <h3>Team</h3><p>${members.map((m) => `${esc(m.email)} (${m.role === 'owner' ? 'Inhaber' : 'Berater'})`).join(' · ') || '–'}</p>
     <h3>Anfragen (nur Anzahl und Status, Inhalte gehören dem Unternehmen)</h3><p>${leads.length} insgesamt · ${['neu', 'in_bearbeitung', 'abgeschlossen', 'abgelehnt'].map((s) => `${s.replace('_', ' ')}: ${leads.filter((l) => l.status === s).length}`).join(' · ')}</p>
     <h3>Rechnungen</h3>${invoices.length ? `<table class="ad-table"><tbody>${invoices.map((i) => `<tr><td>${esc(i.invoice_number)}</td><td>${dt(i.issue_date)}</td><td>${eur(i.gross_cents)}</td><td>${PAY[i.payment_status]}</td></tr>`).join('')}</tbody></table>` : '<p class="form-note">Keine.</p>'}
@@ -250,6 +255,17 @@ async function details(id) {
     const d = s.data;
     $('#supOut').innerHTML = `<p class="form-note">Tarif ${d.account.tier ? TIER[d.account.tier] : '–'} · Widget ${d.account.widgetActive ? 'aktiv' : 'aus'} · Domains: ${esc((d.account.allowedDomains || []).join(', ') || 'alle')}</p>
       <div class="ad-wrap"><table class="ad-table"><thead><tr><th>Eingang</th><th>Quelle</th><th>Status</th><th>Kontakt</th><th>Objekt</th></tr></thead><tbody>${d.leads.map((l) => `<tr><td>${dtt(l.created_at)}</td><td>${esc(l.source)}</td><td>${esc(l.status)}</td><td>${esc(l.client_name)}<br><small>${esc(l.client_email)}</small></td><td>${esc(l.property_data?.address || l.property_data?.ref || '–')}</td></tr>`).join('') || '<tr><td colspan="5">Keine Anfragen.</td></tr>'}</tbody></table></div>`;
+  };
+  if ($('#vApprove')) $('#vApprove').onclick = async () => {
+    if (!confirm(`${a.company_name} freischalten? Das Unternehmen erhält eine E-Mail.`)) return;
+    const x = await api('/api/admin/b2b', { method: 'POST', body: JSON.stringify({ action: 'approve', id }) });
+    if (x.ok) { await partner($('#adView')); msg('Freigeschaltet.'); details(id); } else msg(x.data?.error || 'Fehler', true);
+  };
+  if ($('#vReject')) $('#vReject').onclick = async () => {
+    const reason = prompt('Begründung (wird dem Unternehmen per E-Mail mitgeteilt), z. B. „Gewerbeanmeldung unleserlich“:');
+    if (!reason || reason.trim().length < 5) return;
+    const x = await api('/api/admin/b2b', { method: 'POST', body: JSON.stringify({ action: 'reject', id, reason: reason.trim() }) });
+    if (x.ok) { await partner($('#adView')); msg('Abgelehnt, Unternehmen informiert.'); details(id); } else msg(x.data?.error || 'Fehler', true);
   };
   $('#detClose').onclick = () => { box.innerHTML = ''; };
   box.scrollIntoView({ behavior: 'smooth' });

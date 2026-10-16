@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   const db = supabaseAdmin();
   const { data } = await db.from('immo_b2b_accounts').select('*').eq('slug', b.slug).maybeSingle();
   const a = data as B2BAccount | null;
-  if (!a || a.status !== 'active' || !a.widget_active || !effectiveTier(a)) return json({ error: 'Dieser Partner nimmt derzeit keine Anfragen an.' }, 404);
+  if (!a || a.status !== 'active' || !a.verified_at || !a.widget_active || !effectiveTier(a)) return json({ error: 'Dieser Partner nimmt derzeit keine Anfragen an.' }, 404);
 
   const p = b.property;
   let metrics: Record<string, unknown> | null = null;

@@ -71,5 +71,16 @@ async function leadRetention(): Promise<Record<string, number>> {
   }
   await db.from('immo_security_log').delete().lt('created_at', new Date(Date.now() - 30 * 864e5).toISOString());
   await db.from('immo_webhook_log').delete().lt('created_at', new Date(Date.now() - 90 * 864e5).toISOString());
-  return { deleted };
+  // Verifizierungsnachweise 90 Tage nach der Entscheidung (freigeschaltet oder abgelehnt) löschen.
+  let verifDocs = 0;
+  const cutoff90 = new Date(Date.now() - 90 * 864e5).toISOString();
+  const { data: decided } = await db.from('immo_b2b_accounts').select('id').in('verification_status', ['geprueft', 'abgelehnt']).lt('verification_decided_at', cutoff90).limit(2000);
+  for (const a of decided ?? []) {
+    const { data: docs } = await db.from('immo_b2b_verification_docs').select('id, storage_path').eq('account_id', a.id);
+    if (!docs?.length) continue;
+    await db.storage.from('b2b-verify').remove(docs.map((d) => d.storage_path));
+    await db.from('immo_b2b_verification_docs').delete().in('id', docs.map((d) => d.id));
+    verifDocs += docs.length;
+  }
+  return { deleted, verifDocs };
 }

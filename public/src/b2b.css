@@ -114,3 +114,10 @@ body.intern>main,body.intern #intern{min-width:0}
 .ad-bar-f{align-self:end;background:#0284C7;border-radius:4px 4px 0 0;width:70%;margin:0 auto}
 .ad-bar-v{font-size:10px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ad-bar-l{font-size:10px;color:#64748B;padding-top:4px;white-space:nowrap}
 @media (max-width:620px){.ad-bar-v{display:none}}
+.ad-actions button.ad-primary{background:#0F2C59;border-color:#0F2C59;color:#fff;font-weight:700}
+.pt-alert.warn{border-color:#FDE68A;background:#FFFBEB;color:#78350F}
+.pt-alert .btn{margin-left:8px;vertical-align:middle}
+.pt-up{display:grid;grid-template-columns:1fr 1.4fr auto;gap:10px;align-items:end;margin:12px 0}
+.pt-up label{display:grid;gap:4px;font-size:13px;font-weight:600;color:#475569}
+.pt-up select,.pt-up input{border:1px solid #CBD5E1;border-radius:6px;padding:8px;font:inherit;min-width:0}
+@media(max-width:700px){.pt-up{grid-template-columns:1fr}.pt-alert .btn{display:flex;margin:10px 0 0;justify-content:center}}

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { billingEnabled, stripe } from '@/lib/billing/stripe';
-import { B2B_PLANS } from '@/lib/b2b/core';
+import { B2B_PLANS, VERIFY_MSG } from '@/lib/b2b/core';
 import { json, requireMember } from '@/lib/b2b/http';
 import { ensureB2BCustomer, ensureB2BPrice, ensureTaxRateExclusive } from '@/lib/b2b/stripe-b2b';
 
@@ -19,6 +19,7 @@ export async function POST(req: Request) {
   const plan = B2B_PLANS.find((x) => x.id === p.data.plan);
   if (!plan) return json({ error: 'Unbekannter Tarif.' }, 400);
   const a = ctx.account;
+  if (!a.verified_at) return json({ error: VERIFY_MSG }, 403);
   if (a.plan_source === 'stripe' && a.plan_tier && a.stripe_subscription_id) {
     return json({ error: 'Es besteht bereits ein Abo. Wechsel und Kündigung über „Abo verwalten“.' }, 409);
   }

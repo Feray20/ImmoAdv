@@ -5,7 +5,7 @@ import { api, download, dt, dtt, esc, eur, session } from './sess.mjs';
 const root = document.getElementById('portal');
 const $ = (s, el = document) => el.querySelector(s);
 const VIEWS = [
-  ['start', 'Übersicht'], ['anfragen', 'Anfragen'], ['einreichungen', 'Einreichungen'], ['werkzeuge', 'Widget & QR'], ['team', 'Team'], ['profil', 'Profil'], ['tarif', 'Tarif & Rechnungen'],
+  ['start', 'Übersicht'], ['verifizierung', 'Verifizierung'], ['anfragen', 'Anfragen'], ['einreichungen', 'Einreichungen'], ['werkzeuge', 'Widget & QR'], ['team', 'Team'], ['profil', 'Profil'], ['tarif', 'Tarif & Rechnungen'],
 ];
 const TYPE = { BANK: 'Kreditinstitut', BROKER: 'Finanzierungsvermittler (§ 34i GewO)', REALTOR: 'Immobilienmakler (§ 34c GewO)', OTHER: 'Sonstiges Unternehmen' };
 const TIER = { BASIC: 'Makler & Vermittler Basic', PRO: 'Kanzlei & Baufi Pro', ENTERPRISE: 'Bank & Filiale Enterprise' };
@@ -47,7 +47,7 @@ function route() {
   $('#ptTitle').textContent = VIEWS.find(([k]) => k === view)[1];
   const box = $('#ptView');
   box.innerHTML = '<p class="form-note">Wird geladen …</p>';
-  ({ start: vStart, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: vTeam, profil: vProfil, tarif: vTarif })[view](box);
+  ({ start: vStart, verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: vTeam, profil: vProfil, tarif: vTarif })[view](box);
 }
 
 // ---------- Übersicht ----------
@@ -71,7 +71,7 @@ function vStart(box) {
     [Boolean(a.bookingUrl), 'Terminlink eingetragen', '#profil'],
     [u.leadsNew > 0 || false, 'Widget oder QR-Code im Einsatz', '#werkzeuge'],
   ];
-  box.innerHTML = `
+  box.innerHTML = `${a.verified ? '' : `<div class="pt-alert warn"><strong>Ihr Konto ist noch nicht freigeschaltet.</strong> Bitte laden Sie Ihre Gewerbeanmeldung oder einen Handelsregisterauszug hoch und reichen Sie ihn ein. Nach unserer Prüfung schalten wir Partnerseite, Widget, Anfragen, Kreditmappen und Tarife frei. <a class="btn btn-dark" href="#verifizierung">Zur Verifizierung</a></div>`}
     <div class="pt-kpis">
       <div class="pt-kpi"><small>Neue Anfragen</small><strong>${u.leadsNew}</strong><a href="#anfragen">Ansehen</a></div>
       <div class="pt-kpi"><small>Kreditmappen diesen Monat</small><strong>${quota}</strong><a href="/app/dashboard#objekte">Erstellen</a></div>
@@ -87,6 +87,46 @@ function vStart(box) {
         <p class="form-note">Rechnerische Orientierungswerte nach einem strukturierten Datenmodell. Keine Kreditzusage und keine Bonitätsentscheidung; die Entscheidung trifft das finanzierende Institut.</p></section>
     </div><section class="pt-card" id="stats30"></section>`;
   startStats($('#stats30'));
+}
+
+// ---------- Verifizierung (Gewerbenachweis) ----------
+const VKIND = { gewerbe: 'Gewerbeanmeldung', handelsregister: 'Handelsregisterauszug', erlaubnis: 'Erlaubnis § 34c / § 34i GewO', sonstiges: 'Sonstiger Nachweis' };
+async function vVerify(box) {
+  const r = await api('/api/b2b/verification');
+  if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  const v = r.data, locked = v.verified || v.status === 'eingereicht', owner = v.isOwner;
+  const stat = { offen: ['warn', 'Noch nicht eingereicht'], eingereicht: ['warn', 'Eingereicht – wird geprüft'], geprueft: ['ok', 'Geprüft und freigeschaltet'], abgelehnt: ['bad', 'Bitte Unterlagen ergänzen'] }[v.status] || ['warn', v.status];
+  box.innerHTML = `<section class="pt-card"><h2>Unternehmen verifizieren</h2>
+    <p>Status: <span class="st ${stat[0]}">${stat[1]}</span>${v.submittedAt ? ` <small class="form-note">eingereicht ${dtt(v.submittedAt)}</small>` : ''}</p>
+    ${v.note ? `<div class="pt-alert bad"><strong>Hinweis aus der Prüfung:</strong> ${esc(v.note)}</div>` : ''}
+    ${v.verified ? '<p>Ihr Konto ist freigeschaltet. Vielen Dank!</p>' : `<p class="form-note">Wir schalten ausschließlich Unternehmen frei (§ 14 BGB). Benötigt: <strong>Gewerbeanmeldung oder Handelsregisterauszug</strong> (nicht älter als 12 Monate). Für Makler und Finanzierungsvermittler zusätzlich hilfreich: Erlaubnis nach § 34c bzw. § 34i GewO. Bitte keine Ausweiskopien hochladen. Die Nachweise werden nur für die Prüfung verwendet, vertraulich gespeichert und 90 Tage nach der Entscheidung gelöscht.</p>`}
+    <h3>Hochgeladene Nachweise</h3>
+    ${v.docs.length ? `<ul class="pt-check">${v.docs.map((d) => `<li class="done"><span>${esc(d.label)}: ${esc(d.file_name)} <small class="form-note">(${Math.max(1, Math.round(d.byte_size / 1024))} KB · ${dtt(d.created_at)})</small></span>${!locked && owner ? ` <button class="text-btn del" type="button" data-vdel="${d.id}">Entfernen</button>` : ''}</li>`).join('')}</ul>` : '<p class="form-note">Noch keine Nachweise.</p>'}
+    ${!locked && owner ? `<div class="pt-up"><label>Art des Nachweises<select id="vKind">${Object.entries(VKIND).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <label>Datei (PDF, JPG oder PNG, max. 10 MB)<input id="vFile" type="file" accept="application/pdf,image/jpeg,image/png"></label>
+      <button class="btn btn-outline" id="vUp" type="button">Hochladen</button></div>
+      <p><button class="btn btn-dark" id="vSubmit" type="button"${v.docs.some((d) => d.kind === 'gewerbe' || d.kind === 'handelsregister') ? '' : ' disabled'}>Zur Prüfung einreichen</button></p>
+      <p class="form-note">Nach dem Einreichen prüfen wir in der Regel innerhalb von 1–2 Werktagen und informieren Sie per E-Mail.</p>` : ''}
+    ${!owner && !v.verified ? '<p class="form-note">Die Verifizierung kann nur der Kontoinhaber einreichen.</p>' : ''}</section>`;
+  $('#vUp') && ($('#vUp').onclick = (e) => busy(e.target, async () => {
+    const f = $('#vFile').files[0];
+    if (!f) throw new Error('Bitte eine Datei auswählen.');
+    if (f.size > 10 * 1024 * 1024) throw new Error('Die Datei ist größer als 10 MB.');
+    const q = new URLSearchParams({ kind: $('#vKind').value, name: f.name.slice(0, 120) });
+    const x = await api('/api/b2b/verification?' + q, { method: 'POST', body: f, headers: { 'content-type': f.type || 'application/octet-stream' } });
+    if (!x.ok) throw new Error(x.data?.error || 'Hochladen fehlgeschlagen.');
+    toast('Nachweis hochgeladen.'); vVerify(box);
+  }));
+  box.querySelectorAll('[data-vdel]').forEach((b) => b.onclick = () => busy(b, async () => {
+    const x = await api('/api/b2b/verification?id=' + b.dataset.vdel, { method: 'DELETE' });
+    if (!x.ok) throw new Error(x.data?.error || 'Entfernen fehlgeschlagen.');
+    vVerify(box);
+  }));
+  $('#vSubmit') && ($('#vSubmit').onclick = (e) => busy(e.target, async () => {
+    const x = await api('/api/b2b/verification', { method: 'PUT' });
+    if (!x.ok) throw new Error(x.data?.error || 'Einreichen fehlgeschlagen.');
+    toast('Eingereicht. Wir melden uns per E-Mail.'); vVerify(box);
+  }));
 }
 
 // ---------- Anfragen ----------
