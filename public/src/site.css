@@ -698,3 +698,12 @@ body.ia-pdfv-open{overflow:hidden}
 .demo-box .btn{min-height:44px}
 .demo-hint{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:#FFFBEB;border:1px solid #FDE68A;color:#78350F;font-size:14px}
 @media (max-width:600px){.demo-box .btn{width:100%;justify-content:center}}
+.sso{display:grid;gap:10px;margin:0 0 14px}
+.sso-btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;border-radius:10px;font:inherit;font-size:16px;font-weight:600;cursor:pointer;width:100%}
+.sso-apple{background:#000;color:#fff;border:1px solid #000}
+.sso-apple:hover{background:#1f1f1f}
+.sso-google{background:#fff;color:#1F1F1F;border:1px solid #747775}
+.sso-google:hover{background:#F8FAFC}
+.sso-btn:focus-visible{outline:3px solid #38BDF8;outline-offset:2px}
+.sso-or{display:flex;align-items:center;gap:12px;color:#64748B;font-size:13px;margin:4px 0 14px}
+.sso-or::before,.sso-or::after{content:"";flex:1;height:1px;background:#E2E8F0}

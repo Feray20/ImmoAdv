@@ -88,6 +88,7 @@ module.exports = {
         { source: '/b2b', destination: '/b2b/index.html' },
         { source: '/b2b-portal', destination: '/b2b-portal/index.html' },
         { source: '/auth/login', destination: '/auth-login.html' },
+        { source: '/auth/callback', destination: '/auth-login.html' },
         { source: '/auth/register', destination: '/auth-login.html' },
         { source: '/auth/forgot', destination: '/auth-login.html' },
         { source: '/auth/reset', destination: '/auth-login.html' },
