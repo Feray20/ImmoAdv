@@ -71,7 +71,8 @@ module.exports = {
         { source: '/suche', destination: '/suche/index.html' },
         { source: '/intern/web-admin', destination: '/intern/web-admin/index.html' },
         { source: '/wissen/erwerbsstatus', destination: '/wissen/erwerbsstatus/index.html' },
-        { source: '/wissen/:slug', destination: '/wissen/:slug/index.html' },
+        // Nur echte Seitennamen (ohne Punkt) – sonst würde die Regel ihr eigenes Ziel „…/index.html“ erneut umschreiben (404).
+        { source: '/wissen/:slug([a-z0-9-]+)', destination: '/wissen/:slug/index.html' },
         { source: '/wissen/glossar', destination: '/wissen/glossar/index.html' },
         { source: '/rechner/afa', destination: '/rechner/afa/index.html' },
         { source: '/rechner/mieterhoehung', destination: '/rechner/mieterhoehung/index.html' },
@@ -82,7 +83,7 @@ module.exports = {
         { source: '/rechner/budget', destination: '/rechner/budget/index.html' },
         { source: '/rechner/tilgungsplan', destination: '/rechner/tilgungsplan/index.html' },
         { source: '/rechner/kaufnebenkosten', destination: '/rechner/kaufnebenkosten/index.html' },
-        { source: '/rechner/kaufnebenkosten/:land', destination: '/rechner/kaufnebenkosten/:land/index.html' },
+        { source: '/rechner/kaufnebenkosten/:land([a-z0-9-]+)', destination: '/rechner/kaufnebenkosten/:land/index.html' },
         { source: '/verify/:id', destination: '/pruefen/index.html' },
         { source: '/p/:slug', destination: '/partner/index.html' },
         { source: '/b2b', destination: '/b2b/index.html' },
