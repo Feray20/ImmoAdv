@@ -60,6 +60,7 @@ export async function GET(req: Request) {
     { key: 'billing', label: 'Zahlungen (Stripe)', ok: billingEnabled(), info: has('STRIPE_SECRET_KEY') ? (String(process.env.STRIPE_SECRET_KEY).startsWith('sk_live') ? 'Live-Schlüssel' : 'Test-Schlüssel') : 'kein Schlüssel', fix: 'BILLING_ENABLED, STRIPE_SECRET_KEY (live) und STRIPE_WEBHOOK_SECRET setzen.' },
     { key: 'webhook', label: 'Stripe-Webhook', ok: has('STRIPE_WEBHOOK_SECRET'), fix: 'Webhook in Stripe anlegen und STRIPE_WEBHOOK_SECRET setzen.' },
     { key: 'invoice', label: 'Bankverbindung auf Rechnungen', ok: has('INVOICE_IBAN') && has('INVOICE_BIC'), fix: 'INVOICE_IBAN, INVOICE_BIC, INVOICE_BANK_NAME setzen.' },
+    { key: 'b2bmail', label: 'Geschäfts-E-Mail für B2B-Registrierungsnachweise', ok: has('B2B_NOTIFY_EMAIL'), info: has('B2B_NOTIFY_EMAIL') ? 'eingetragen' : 'Nachweise gehen an ADMIN_EMAILS', optional: true, fix: 'B2B_NOTIFY_EMAIL mit Ihrer Geschäftsadresse setzen.' },
     { key: 'tax', label: 'Steuerkanzlei (monatlicher Export)', ok: has('TAX_ADVISOR_EMAIL'), fix: 'TAX_ADVISOR_EMAIL setzen.' },
     { key: 'leadtoken', label: 'Eigener Schlüssel für Anfrage-PDFs', ok: has('LEAD_TOKEN_SECRET'), optional: true, fix: 'Optional: LEAD_TOKEN_SECRET setzen.' },
     { key: 'ip', label: 'IP-Freigabe für Admin', ok: has('ADMIN_IP_ALLOWLIST'), optional: true, fix: 'Optional: ADMIN_IP_ALLOWLIST setzen.' },
