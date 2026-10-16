@@ -38,12 +38,21 @@ const MIND = [
   { t: 'Regulatorik', c: 'e', k: ['Kreditwürdigkeitsprüfung §§ 505a–505e BGB (WIKR)', 'ESIS-Merkblatt, vorvertragliche Information', 'CRR (Basel III): Risikogewichte, Eigenmittel', 'MaRisk BTO 1.2: Trennung Markt / Marktfolge; § 18 KWG'] },
   { t: 'Unterlagen', c: 'f', k: ['Selbstauskunft, Ausweis, Einkommensnachweise', 'Exposé, Grundbuchauszug, Flurkarte, Baubeschreibung', 'WEG: Teilungserklärung, Protokolle, Wirtschaftsplan, Rücklage', 'Kaufvertragsentwurf, Wohnflächenberechnung, Energieausweis'] },
 ];
-function mindmap() {
-  return `<div class="bw-mind" role="img" aria-label="Mindmap: Einflussfaktoren der Kreditentscheidung">
-    <div class="bw-mind-core"><span>Kredit&shy;entscheidung</span><small>Wohnimmobilienfinanzierung</small></div>
-    ${MIND.map((b, i) => `<div class="bw-mind-b bw-c-${b.c}" style="--i:${i}"><strong>${b.t}</strong><ul>${b.k.map((k) => `<li>${esc(k)}</li>`).join('')}</ul></div>`).join('')}
+function mindmap(data = MIND, core = 'Kredit&shy;entscheidung', sub = 'Wohnimmobilienfinanzierung', label = 'Mindmap: Einflussfaktoren der Kreditentscheidung') {
+  return `<div class="bw-mind" role="img" aria-label="${label}">
+    <div class="bw-mind-core"><span>${core}</span><small>${sub}</small></div>
+    ${data.map((b, i) => `<div class="bw-mind-b bw-c-${b.c}" style="--i:${i}"><strong>${b.t}</strong><ul>${b.k.map((k) => `<li>${esc(k)}</li>`).join('')}</ul></div>`).join('')}
   </div>`;
 }
+// Zweite Mindmap: Welche Unterlagen die Bank je Kundentyp erwartet.
+const MIND2 = [
+  { t: 'Angestellte', c: 'a', k: ['letzte 3 Gehaltsabrechnungen', 'Dezember-Abrechnung des Vorjahres', 'Arbeitsvertrag (bei Probezeit / Befristung)', 'Einkommensteuerbescheid, falls vorhanden'] },
+  { t: 'Selbstständige', c: 'b', k: ['Jahresabschlüsse bzw. EÜR der letzten 2–3 Jahre', 'Einkommensteuerbescheide und -erklärungen', 'aktuelle BWA mit Summen- und Saldenliste', 'Nachweis Kranken- und Altersvorsorge'] },
+  { t: 'Kapitalanleger', c: 'c', k: ['Mietverträge und Mieterliste', 'Anlage V der letzten Jahre', 'Aufstellung der Bestandsimmobilien mit Restschulden', 'Nachweise zu Instandhaltung und Rücklagen'] },
+  { t: 'Objekt', c: 'd', k: ['Grundbuchauszug (aktuell), Flurkarte', 'Wohnflächenberechnung, Baubeschreibung, Grundrisse', 'Energieausweis, Fotos, Exposé', 'Kaufvertragsentwurf'] },
+  { t: 'Eigentumswohnung', c: 'e', k: ['Teilungserklärung mit Aufteilungsplan', 'Protokolle der letzten 3 Eigentümerversammlungen', 'Wirtschaftsplan und Hausgeldabrechnung', 'Stand der Erhaltungsrücklage'] },
+  { t: 'Persönliches', c: 'f', k: ['Ausweis, Selbstauskunft', 'Eigenkapitalnachweise (Kontoauszüge, Depot)', 'bestehende Kredite und Leasingverträge', 'bei Paaren: Unterlagen beider Darlehensnehmer'] },
+];
 
 // ---------- 2. Struktogramm (Nassi-Shneiderman): Kreditvorprüfung ----------
 function ns() {
@@ -64,6 +73,27 @@ function ns() {
     ifb('Beleihungsauslauf ≤ 80 %?', seq('Regelfall: Bankanfrage vorbereiten'), seq('Eigenkapital erhöhen, Zusatzsicherheit oder höhere Tilgung prüfen')),
     seq('Ablehnungsgrund dokumentieren; Alternativen: längere Laufzeit, niedrigerer Kaufpreis, Mitdarlehensnehmer'))}
     ${seq('Kreditmappe (BankReady) mit Prüfsumme erzeugen → Einreichung an Bank / Partner')}
+  </div>`;
+}
+
+// Zweites Struktogramm: Anschlussfinanzierung (Prolongation, Forward, Umschuldung).
+function ns2() {
+  const seq = (t) => `<div class="ns-s">${t}</div>`;
+  const ifb = (cond, yes, no) => `<div class="ns-if"><div class="ns-cond"><span class="ns-tri" aria-hidden="true"></span><b>${cond}</b><i class="ns-j">ja</i><i class="ns-n">nein</i></div><div class="ns-br"><div class="ns-yes">${yes}</div><div class="ns-no">${no}</div></div></div>`;
+  const loop = (cond, body) => `<div class="ns-loop"><div class="ns-lh">${cond}</div><div class="ns-lb">${body}</div></div>`;
+  return `<div class="ns" role="img" aria-label="Struktogramm der Anschlussfinanzierung">
+    <div class="ns-title">Algorithmus „Anschlussfinanzierung“</div>
+    ${seq('Restschuld zum Ende der Sollzinsbindung und Restlaufzeit ermitteln (Tilgungsplan)')}
+    ${ifb('Zinsbindung endet in höchstens 60 Monaten?',
+    ifb('Endet sie in höchstens 6 Monaten?',
+      seq('Prolongationsangebot der Hausbank einholen und mit Marktangeboten vergleichen'),
+      seq('Forward-Darlehen kalkulieren: heutiger Zins plus Forward-Aufschlag, Zinsrisiko gegen Aufschlag abwägen')),
+    seq('Beobachten; nach 10 Jahren seit Vollauszahlung gilt das Kündigungsrecht nach § 489 Abs. 1 Nr. 2 BGB (6 Monate Frist)'))}
+    ${loop('für jedes Angebot', seq('Effektivzins, Sondertilgung, Bereitstellungszinsen, Tilgungssatzwechsel und Gebühren vergleichen'))}
+    ${ifb('Wechsel zu einer anderen Bank?',
+    seq('Umschuldung: Grundschuld abtreten lassen statt neu bestellen (spart Notar- und Grundbuchkosten), Ablösung terminieren'),
+    seq('Prolongation unterschreiben, neue Zinsbindung und Tilgung dokumentieren'))}
+    ${seq('Fristen im Kunden-Cockpit hinterlegen: 12, 6, 3 und 1 Monat vor Ablauf erinnern')}
   </div>`;
 }
 
@@ -171,6 +201,33 @@ function dscrGauge() {
   </svg>`;
 }
 
+// Zinsänderungsrisiko: Monatsrate nach 10 Jahren bei verschiedenen Anschlusszinsen (Restschuld über 20 Jahre getilgt).
+function rateAnnu(S, i, n) { const m = i / 12; return m === 0 ? S / n : (S * m) / (1 - Math.pow(1 + m, -n)); }
+function stress() {
+  const f = FALL, plan = tilgungsplan(f.darlehen, f.zins, f.tilgung, 30), rest = plan[9].rest;
+  return [f.zins, 0.05, 0.06, 0.07].map((z) => ({ z, rate: rateAnnu(rest, z, 240) }));
+}
+function chartStress() {
+  const f = FALL, rows = stress(), max = Math.max(...rows.map((r) => r.rate)) * 1.15;
+  const W = 640, H = 270, L = 70, B = 220, bw = 90, gap = (W - L - 20 - rows.length * bw) / (rows.length - 1);
+  const y = (v) => B - (v / max) * (B - 20);
+  return `<svg class="bw-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Monatsrate nach Zinsbindung bei verschiedenen Anschlusszinsen">
+    <line x1="${L - 10}" y1="${B}" x2="${W - 10}" y2="${B}" stroke="#94A3B8"/>
+    <line x1="${L - 10}" y1="${y(f.rate)}" x2="${W - 10}" y2="${y(f.rate)}" stroke="#0F2C59" stroke-dasharray="5 4"/><text x="${W - 12}" y="${y(f.rate) + 16}" text-anchor="end" class="bw-ax">– – heutige Rate ${E(f.rate)}</text>
+    ${rows.map((r, i) => { const x = L + i * (bw + gap); const c = r.rate <= f.rate * 1.05 ? '#16A34A' : r.rate <= f.rate * 1.2 ? '#F59E0B' : '#DC2626'; return `<rect x="${x}" y="${y(r.rate)}" width="${bw}" height="${B - y(r.rate)}" rx="4" fill="${c}"/><text x="${x + bw / 2}" y="${y(r.rate) - 6}" text-anchor="middle" class="bw-val">${E(r.rate)}</text><text x="${x + bw / 2}" y="${B + 20}" text-anchor="middle" class="bw-lb">${P(r.z, 1)}</text>`; }).join('')}
+    <text x="${W / 2}" y="${H - 6}" text-anchor="middle" class="bw-ax">Anschlusszins ab Jahr 11 · Restschuld ${E(tilgungsplan(f.darlehen, f.zins, f.tilgung, 30)[9].rest)} über 20 Jahre</text>
+  </svg>`;
+}
+// Tilgungssatz-Vergleich: Restschuld nach 10 Jahren bei 1–4 % Anfangstilgung (gleicher Sollzins).
+function chartTilgung() {
+  const f = FALL, rows = [0.01, 0.02, 0.03, 0.04].map((t) => ({ t, rest: tilgungsplan(f.darlehen, f.zins, t, 30)[9].rest, rate: f.darlehen * (f.zins + t) / 12 }));
+  const W = 640, L = 150, bh = 34, gap = 14, H = rows.length * (bh + gap) + 34, x = (v) => L + (v / f.darlehen) * (W - L - 120);
+  return `<svg class="bw-svg bw-svg-mid" viewBox="0 0 ${W} ${H}" role="img" aria-label="Restschuld nach 10 Jahren je Anfangstilgung">
+    ${rows.map((r, i) => { const yy = 8 + i * (bh + gap); return `<text x="${L - 10}" y="${yy + 14}" text-anchor="end" class="bw-lb">${P(r.t, 0)} Tilgung</text><text x="${L - 10}" y="${yy + 30}" text-anchor="end" class="bw-ax">${E(r.rate)} mtl.</text><rect x="${L}" y="${yy}" width="${x(r.rest) - L}" height="${bh}" rx="4" fill="${['#DC2626', '#F59E0B', '#0369A1', '#16A34A'][i]}"/><text x="${x(r.rest) + 6}" y="${yy + bh / 2 + 5}" class="bw-val">${E(r.rest)}</text>`; }).join('')}
+    <text x="${L}" y="${H - 6}" class="bw-ax">Restschuld nach 10 Jahren bei ${P(f.zins, 2)} Sollzins · Darlehen ${E(f.darlehen)}</text>
+  </svg>`;
+}
+
 // ---------- 6. Rechtsrahmen ----------
 const RECHT = [
   ['§ 34c GewO', 'Immobilienmakler, Darlehensvermittler (ohne Immobiliar-Verbraucherdarlehen), Bauträger, WEG-Verwalter', 'Erlaubnis der IHK/Gewerbeamt, MaBV-Pflichten, Weiterbildung 20 Std. in 3 Jahren'],
@@ -219,7 +276,48 @@ const CHAPTERS = [
   ['mind', 'Mindmap'], ['ns', 'Struktogramm'], ['prozess', 'Prozess'], ['kpi', 'Kennzahlen'], ['charts', 'Diagramme'], ['recht', 'Rechtsrahmen'], ['glossar', 'Glossar'],
 ];
 
+
+// ---------- Handy: kompakte App-Ansicht (Kernaussagen statt großer Grafiken) ----------
+const VIEW_KEY = 'bw-view';
+const viewPref = () => { try { return localStorage.getItem(VIEW_KEY); } catch { return null; } };
+const setView = (v) => { try { localStorage.setItem(VIEW_KEY, v); } catch { /* nur Komfort */ } };
+const KERN = [
+  ['Was die Bank prüft', ['Kapitaldienstfähigkeit: Rate muss aus dem Einkommen tragbar sein – auch bei höherem Anschlusszins.', 'Objekt: Beleihungswert liegt meist 10–20 % unter dem Marktwert.', 'Bonität, Eigenkapital und vollständige Unterlagen entscheiden über Zinsstufe und Tempo.']],
+  ['Vorprüfung in 5 Schritten', ['Unterlagen vollständig machen.', 'Darlehensbedarf und Beleihungsauslauf berechnen.', 'Haushaltsrechnung mit Stresszins prüfen.', 'Bei Auslauf über 80 %: mehr Eigenkapital oder höhere Tilgung.', 'Kreditmappe mit Prüfsumme erzeugen und einreichen.']],
+  ['Anschlussfinanzierung', ['Bis 60 Monate vorher: Forward-Darlehen möglich (mit Aufschlag).', 'Bis 6 Monate vorher: Prolongation mit Marktangeboten vergleichen.', 'Bankwechsel: Grundschuld abtreten statt neu bestellen.', 'Nach 10 Jahren: Kündigungsrecht nach § 489 BGB.']],
+  ['Unterlagen je Kundentyp', ['Angestellte: 3 Gehaltsabrechnungen, Dezember-Abrechnung.', 'Selbstständige: 2–3 Jahresabschlüsse, Steuerbescheide, aktuelle BWA.', 'Kapitalanleger: Mietverträge, Anlage V, Bestandsliste.', 'Eigentumswohnung: Teilungserklärung, Protokolle, Wirtschaftsplan.']],
+  ['Rechtsrahmen kurz', ['Makler: § 34c GewO. Baufinanzierungs-Vermittler: § 34i GewO.', 'Banken: KWG, CRR, MaRisk; § 18 KWG ab 750.000 €.', 'Verbraucher: Kreditwürdigkeitsprüfung und ESIS-Merkblatt (§§ 505a ff. BGB).', 'ImmoAdv vermittelt keine Kredite – reine Analyse und Vorbereitung.']],
+];
+function renderCompact(box) {
+  const f = FALL, plan = tilgungsplan(f.darlehen, f.zins, f.tilgung, 30), noi = (f.kaltmiete - f.nichtUmlage) * 12;
+  const st = stress();
+  const kpi = [['Darlehen', E(f.darlehen)], ['Rate', E(f.rate) + ' mtl.'], ['Beleihungsauslauf', P(f.darlehen / f.beleihungswert)], ['Restschuld nach 10 J.', E(plan[9].rest)], ['Rate bei 6 % Anschluss', E(st[2].rate)], ['DSCR bei Vermietung', N(noi / f.annuitaet)]];
+  box.innerHTML = `<div class="bw bw-compact">
+    <section class="pt-card bw-hero"><span class="bw-kick">ImmoAdv Academy</span><h2>Fachwissen Baufinanzierung</h2>
+      <p>Das Wichtigste kompakt. Die ausführliche Fassung mit Struktogrammen, Mindmaps und Diagrammen ist für Computer und Tablet gemacht.</p>
+      <button type="button" class="btn bw-switch" data-view="voll">Ausführliche Ansicht mit Grafiken</button></section>
+    <section class="pt-card"><h2>Beispielfall in Zahlen</h2><div class="bw-kpis">${kpi.map(([k, v]) => `<div><small>${k}</small><strong>${v}</strong></div>`).join('')}</div>
+      <p class="form-note">Kaufpreis ${E(f.kaufpreis)}, Eigenkapital ${E(f.eigenkapital)}, Sollzins ${P(f.zins, 2)}, Tilgung ${P(f.tilgung, 0)}.</p></section>
+    ${KERN.map(([t, pts], i) => `<details class="pt-card bw-acc"${i === 0 ? ' open' : ''}><summary><b class="bw-no">${i + 1}</b>${t}</summary><ul>${pts.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>`).join('')}
+    <details class="pt-card bw-acc"><summary><b class="bw-no">${KERN.length + 1}</b>Fachglossar</summary>
+      <input type="search" id="bwQ" class="bw-q" placeholder="Begriff suchen" aria-label="Fachbegriff suchen">
+      <dl class="bw-gl">${GLOSSAR.map(([t, d]) => `<div data-q="${esc((t + ' ' + d).toLowerCase())}"><dt>${t}</dt><dd>${d}</dd></div>`).join('')}</dl><p class="form-note" id="bwCount">${GLOSSAR.length} Begriffe</p></details>
+  </div>`;
+  bindCommon(box);
+}
+function bindCommon(box) {
+  const q = box.querySelector('#bwQ');
+  if (q) q.oninput = () => {
+    const t = q.value.trim().toLowerCase(); let n = 0;
+    box.querySelectorAll('.bw-gl > div').forEach((d) => { const ok = !t || d.dataset.q.includes(t); d.hidden = !ok; if (ok) n++; });
+    box.querySelector('#bwCount').textContent = `${n} von ${GLOSSAR.length} Begriffen`;
+  };
+  box.querySelectorAll('.bw-switch').forEach((b) => b.onclick = () => { setView(b.dataset.view === 'voll' ? 'voll' : 'kompakt'); renderWissen(box); box.scrollIntoView({ block: 'start' }); });
+}
+
 export function renderWissen(box) {
+  const pref = viewPref();
+  if (pref ? pref === 'kompakt' : innerWidth < 900) { renderCompact(box); return; }
   const f = FALL;
   const noi = (f.kaltmiete - f.nichtUmlage) * 12;
   box.innerHTML = `<div class="bw">
@@ -227,14 +325,17 @@ export function renderWissen(box) {
       <h2>Fachwissen Baufinanzierung – visuell erklärt</h2>
       <p>Wie Banken eine Wohnimmobilienfinanzierung prüfen, welche Kennzahlen entscheiden und wo ImmoAdv im Prozess unterstützt. Alle Grafiken beruhen auf einem durchgängigen, nachrechenbaren Beispielfall.</p>
       <nav class="bw-toc" aria-label="Kapitel">${CHAPTERS.map(([k, l], i) => `<a href="#wissen=${k}" data-ch="${k}"><b>${i + 1}</b>${l}</a>`).join('')}</nav>
+      <button type="button" class="btn bw-switch bw-switch-m" data-view="kompakt">Kompakte Ansicht</button>
       <div class="bw-case"><strong>Beispielfall</strong><span>Kaufpreis ${E(f.kaufpreis)}</span><span>Nebenkosten ${P(f.nebenkosten)}</span><span>Eigenkapital ${E(f.eigenkapital)}</span><span>Darlehen ${E(f.darlehen)}</span><span>Sollzins ${P(f.zins, 2)} · Tilgung ${P(f.tilgung, 0)}</span><span>Rate ${E(f.rate, 2)} mtl.</span></div>
     </section>
 
     <section class="pt-card" id="bw-mind"><h2><b class="bw-no">1</b> Mindmap: Was die Kreditentscheidung bestimmt</h2>
-      <p class="form-note">Sechs Prüffelder, die in jedem Kreditvotum zusammenlaufen. Schwächen in einem Feld lassen sich teilweise durch Stärken in einem anderen ausgleichen – etwa ein hoher Beleihungsauslauf durch sehr gute Bonität.</p>${mindmap()}</section>
+      <p class="form-note">Sechs Prüffelder, die in jedem Kreditvotum zusammenlaufen. Schwächen in einem Feld lassen sich teilweise durch Stärken in einem anderen ausgleichen – etwa ein hoher Beleihungsauslauf durch sehr gute Bonität.</p>${mindmap()}
+      <h3 class="bw-h3">Unterlagen je Kundentyp</h3><p class="form-note">Was die Bank für eine vollständige Kreditmappe erwartet – je nach Einkommensart und Objekt. Vollständige Unterlagen sind der größte Hebel für eine schnelle Zusage.</p>${mindmap(MIND2, 'Kredit&shy;mappe', 'vollständig einreichen', 'Mindmap: Unterlagen je Kundentyp')}</section>
 
     <section class="pt-card" id="bw-ns"><h2><b class="bw-no">2</b> Struktogramm: Kreditvorprüfung</h2>
-      <p class="form-note">Nassi-Shneiderman-Darstellung des typischen Prüfablaufs: Sequenzen (Rechteck), Verzweigungen (Dreieck mit ja / nein) und Wiederholung (Schleife). So bereiten Sie Fälle vor, bevor sie zur Bank gehen.</p>${ns()}</section>
+      <p class="form-note">Nassi-Shneiderman-Darstellung des typischen Prüfablaufs: Sequenzen (Rechteck), Verzweigungen (Dreieck mit ja / nein) und Wiederholung (Schleife). So bereiten Sie Fälle vor, bevor sie zur Bank gehen.</p>${ns()}
+      <h3 class="bw-h3">Anschlussfinanzierung</h3><p class="form-note">Ablauf für Bestandskunden vor dem Ende der Zinsbindung – Prolongation, Forward-Darlehen oder Umschuldung.</p>${ns2()}</section>
 
     <section class="pt-card" id="bw-prozess"><h2><b class="bw-no">3</b> Prozess: Von der Anfrage bis zur Auszahlung</h2>
       <p class="form-note">Swimlane-Diagramm mit vier Beteiligten. ImmoAdv bereitet Daten und Unterlagen technisch auf – Beratung, Vermittlung und Kreditentscheidung bleiben bei Ihnen bzw. der Bank.</p>${swimlane()}</section>
@@ -252,6 +353,10 @@ export function renderWissen(box) {
           <p class="form-note">Die Rate bleibt gleich, der Zinsanteil sinkt. Die Restschuld am Ende der Zinsbindung ist das Zinsänderungsrisiko – deshalb gehört sie in jedes Beratungsprotokoll.</p></figure>
         <figure class="bw-fig"><figcaption><strong>DSCR – wenn die Wohnung vermietet wird</strong><span>Nettomietertrag ${E(noi)} p. a. ÷ Kapitaldienst ${E(f.annuitaet)}</span></figcaption>${dscrGauge()}
           <p class="form-note">Rot: Miete deckt den Kapitaldienst nicht (unter 1,0). Gelb: knapp (1,0–1,2). Grün: komfortabel (ab 1,2). Bei Kapitalanlagen rechnen viele Banken die Miete nur zu 70–80 % an.</p></figure>
+        <figure class="bw-fig"><figcaption><strong>Stresstest: Rate nach der Zinsbindung</strong><span>Restschuld nach 10 Jahren, Anschlusszins 3,6 bis 7 %</span></figcaption>${chartStress()}
+          <p class="form-note">Grün: Rate bleibt etwa gleich. Gelb: bis +20 %. Rot: mehr als +20 %. Genau diesen Stresstest machen Banken bei der Kapitaldienstfähigkeit.</p></figure>
+        <figure class="bw-fig bw-wide"><figcaption><strong>Anfangstilgung entscheidet über die Restschuld</strong><span>Gleiches Darlehen, gleicher Zins, 1 bis 4 % Anfangstilgung</span></figcaption>${chartTilgung()}
+          <p class="form-note">Höhere Tilgung bedeutet höhere Rate heute, aber deutlich weniger Zinsänderungsrisiko in zehn Jahren – ein starkes Argument im Kundengespräch.</p></figure>
       </div></section>
 
     <section class="pt-card" id="bw-recht"><h2><b class="bw-no">6</b> Rechtsrahmen: Wer darf was?</h2>
@@ -263,12 +368,7 @@ export function renderWissen(box) {
       <dl class="bw-gl">${GLOSSAR.map(([t, d]) => `<div data-q="${esc((t + ' ' + d).toLowerCase())}"><dt>${t}</dt><dd>${d}</dd></div>`).join('')}</dl>
       <p class="form-note" id="bwCount">${GLOSSAR.length} Begriffe</p></section>
   </div>`;
-  const q = box.querySelector('#bwQ');
-  q.oninput = () => {
-    const t = q.value.trim().toLowerCase(); let n = 0;
-    box.querySelectorAll('.bw-gl > div').forEach((d) => { const ok = !t || d.dataset.q.includes(t); d.hidden = !ok; if (ok) n++; });
-    box.querySelector('#bwCount').textContent = `${n} von ${GLOSSAR.length} Begriffen`;
-  };
+  bindCommon(box);
   box.querySelectorAll('[data-ch]').forEach((a) => a.onclick = (e) => { e.preventDefault(); box.querySelector('#bw-' + a.dataset.ch)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   const want = /wissen=([a-z]+)/.exec(location.hash)?.[1];
   if (want) requestAnimationFrame(() => box.querySelector('#bw-' + want)?.scrollIntoView({ block: 'start' }));

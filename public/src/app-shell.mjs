@@ -60,7 +60,39 @@ export function phaseOf(d) {
   if (Number.isInteger(p) && p >= 0 && p < PHASES.length) return { idx: p, chosen: true };
   try { return { idx: Math.max(0, Math.min(3, rank(d.profile || {}, Array.isArray(d.objects) ? d.objects : [], []).level - 1)), chosen: false }; } catch { return { idx: 0, chosen: false }; }
 }
-const phasePicker = (idx, chosen) => `<div class="ph-pick" role="group" aria-label="Ihre Phase"><span class="ph-label">Ihre Phase${chosen ? '' : ' (automatisch erkannt)'}:</span>${PHASES.map((p, i) => `<button type="button" class="ph-btn${i === idx ? ' on' : ''}" data-phase="${i}" aria-pressed="${i === idx}">${i + 1} · ${p.name}</button>`).join('')}</div>`;
+// „Ihre Stufe“ als Einstellung: eine Zeile mit der aktuellen Stufe, Knopf öffnet die Auswahl (siehe openStage).
+const STAGE_EFFECT = [
+  'Cockpit zeigt Budget und Grundlagen · Lernplan: Geld, Eigenkapital, Zins und Tilgung · Steuern: Kaufphase',
+  'Cockpit zeigt Objektanalyse und Vergleich · Lernplan: Exposé lesen, Cashflow, Beleihung · Steuern: Kaufphase',
+  'Cockpit zeigt Kreditmappe und Unterlagen · Lernplan: Unterlagen, Beruf, Beleihungswert · Steuern: Kaufphase',
+  'Cockpit zeigt Fristen und Steuern · Lernplan: Steuern, Mietrecht, Mahnung, Fristen · Steuern: Bestand halten',
+];
+const phasePicker = (idx, chosen) => `<div class="stage-row" role="group" aria-label="Ihre Stufe"><div class="stage-cur"><span class="stage-k">Ihre Stufe${chosen ? '' : ' · automatisch erkannt'}</span><strong><b class="stage-n">${idx + 1}</b>${PHASES[idx].name}</strong><small>${PHASES[idx].plan}</small></div><button type="button" class="btn btn-outline stage-open">Stufe ändern</button></div>`;
+let STAGE_D = null;
+function stageToast(t) {
+  let el = document.getElementById('stageToast');
+  if (!el) { el = document.createElement('div'); el.id = 'stageToast'; el.className = 'stage-toast'; el.setAttribute('role', 'status'); document.body.append(el); }
+  el.innerHTML = t; el.classList.add('on'); clearTimeout(stageToast.t); stageToast.t = setTimeout(() => el.classList.remove('on'), 4200);
+}
+function openStage() {
+  if (!STAGE_D) return;
+  const cur = phaseOf(STAGE_D);
+  let dlg = document.getElementById('stageDlg');
+  if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'stageDlg'; dlg.className = 'stage-dlg'; document.body.append(dlg); }
+  dlg.innerHTML = `<form method="dialog" class="stage-in"><div class="stage-head"><div><span class="stage-k">Einstellung</span><h2>Ihre Stufe</h2></div><button class="stage-x" value="x" aria-label="Schließen">×</button></div>
+    <p class="form-note">Wählen Sie, wo Sie gerade stehen. Die ganze Anwendung stellt sich darauf ein: Startseite, Lernplan, Reihenfolge im Wissen und der Steuer-Bereich. Sie können jederzeit wechseln.</p>
+    <div class="stage-opts">${PHASES.map((p, i) => `<button type="button" class="stage-opt${cur.chosen && cur.idx === i ? ' on' : ''}" data-stage="${i}"><b class="stage-n">${i + 1}</b><span><strong>${p.name}</strong><small>${p.plan}</small><em>${STAGE_EFFECT[i]}</em></span></button>`).join('')}
+    <button type="button" class="stage-opt stage-auto${cur.chosen ? '' : ' on'}" data-stage="auto"><b class="stage-n">A</b><span><strong>Automatisch</strong><small>ImmoAdv erkennt die Stufe aus Ihren Daten (Finanzprofil, Objekte, Bankreife) und stellt sie selbst um.</small></span></button></div></form>`;
+  dlg.querySelectorAll('[data-stage]').forEach((b) => b.onclick = () => {
+    const v = b.dataset.stage === 'auto' ? null : Number(b.dataset.stage);
+    dlg.close();
+    try { sessionStorage.setItem('ia-stage-msg', v == null ? 'auto' : String(v)); } catch { /* ignore */ }
+    if (window.__iaSetPhase) window.__iaSetPhase(v);
+  });
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+}
+document.addEventListener('click', (e) => { if (e.target.closest?.('.stage-open')) { e.preventDefault(); openStage(); } });
 
 const PROFI = [
   ['Szenarien: Anschlusszins und Verkauf', '/szenarien'], ['AfA-Plan inkl. Sonder-AfA § 7b', '/rechner/afa'], ['Mieterhöhung mit Briefentwurf', '/rechner/mieterhoehung'],
@@ -82,6 +114,16 @@ function classify(el) {
 }
 
 export function setupApp({ u, d, saveData, reload }) {
+  STAGE_D = d;
+  // Bestätigung nach dem Umstellen der Stufe.
+  try {
+    const m = sessionStorage.getItem('ia-stage-msg');
+    if (m != null) {
+      sessionStorage.removeItem('ia-stage-msg');
+      const ph = phaseOf(d);
+      setTimeout(() => stageToast(`<strong>Auf Stufe ${ph.idx + 1} · ${PHASES[ph.idx].name} umgestellt${m === 'auto' ? ' (automatisch)' : ''}.</strong> Startseite, Lernplan und Steuer-Bereich sind angepasst.`), 250);
+    }
+  } catch { /* ignore */ }
   // Kaufwunsch von der Angebotsseite (vor der Anmeldung gemerkt): direkt weiter zur Bezahlseite.
   resumeIntent((t) => alert(t));
   const reloadFull = reload;

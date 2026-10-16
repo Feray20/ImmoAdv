@@ -372,3 +372,21 @@ body{max-width:100%;overflow-x:clip}
 .ad-help{margin:12px 0;border:1px solid #E2E8F0;border-radius:10px;background:#F8FAFC;padding:0 14px}
 .ad-help summary{cursor:pointer;padding:12px 0;font-weight:700;color:#0369A1}
 .ad-help p{margin:0 0 10px;font-size:14px;line-height:1.55;color:#334155}
+/* Fachwissen: Zusatzüberschriften, kompakte Handy-Ansicht, Umschalter */
+.bw-h3{margin:26px 0 4px;color:#0F2C59;font-size:17px}
+.bw-switch{background:#fff;color:#0F2C59;border-color:#fff;font-weight:700;margin-top:4px}
+.bw-switch-m{display:none;margin-bottom:12px}
+@media (max-width:899px){.bw-switch-m{display:inline-flex}}
+.bw-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 10px}
+.bw-kpis>div{border:1px solid #E2E8F0;border-radius:10px;padding:10px;background:#F8FAFC;display:grid;gap:2px}
+.bw-kpis small{font-size:12px;color:#64748B;font-weight:600;text-transform:none;letter-spacing:0}.bw-kpis strong{font-size:17px;color:#0F2C59}
+.bw-acc{padding:0}
+.bw-acc>summary{list-style:none;cursor:pointer;display:flex;gap:10px;align-items:center;padding:14px 16px;font-weight:700;color:#0F2C59;font-size:16px}
+.bw-acc>summary::-webkit-details-marker{display:none}
+.bw-acc>summary::after{content:"+";margin-left:auto;color:#0284C7;font-size:22px;font-weight:400}
+.bw-acc[open]>summary::after{content:"–"}
+.bw-acc>ul{margin:0;padding:0 16px 14px 42px;display:grid;gap:8px;font-size:15px;line-height:1.5;color:#334155}
+.bw-acc>.bw-q,.bw-acc>.bw-gl,.bw-acc>.form-note{margin-left:16px;margin-right:16px}
+.bw-acc>.bw-gl{grid-template-columns:1fr;margin-bottom:8px}
+.bw-compact .bw-no{width:26px;height:26px;font-size:13px}
+.bw-svg-mid{max-width:680px;margin:0 auto}
