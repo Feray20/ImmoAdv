@@ -52,7 +52,7 @@ export async function challengeUI(box, session, onDone) {
   const render = () => {
     const other = factors.find((x) => x !== f);
     box.innerHTML = `<div class="mfa-box"><h2>Bestätigung in zwei Schritten</h2>
-      <p class="form-note">${f.factor_type === 'phone' ? `Wir senden einen 6-stelligen Code per SMS an ${esc(maskPhone(f.phone))}.` : 'Bitte den 6-stelligen Code aus Ihrer Authenticator-App eingeben.'}</p>
+      <p class="form-note">${f.factor_type === 'phone' ? `Wir senden einen 6-stelligen Code per SMS an ${esc(maskPhone(f.phone))}.` : 'Bitte den aktuellen 6-stelligen Code für ImmoAdv aus Google Authenticator (bzw. Ihrer Authenticator-App) eingeben. Der Code wechselt alle 30 Sekunden.'}</p>
       ${f.factor_type === 'phone' ? '<button type="button" class="btn btn-outline mfa-send" id="mfaSend">SMS-Code senden</button>' : ''}
       <form id="mfaForm" class="mfa-form"><input id="mfaCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required aria-label="Code" placeholder="123456"><button class="btn btn-dark" type="submit">Bestätigen</button></form>
       ${other ? `<button type="button" class="link-btn" id="mfaSwitch">${other.factor_type === 'phone' ? 'Stattdessen Code per SMS' : 'Stattdessen Authenticator-App'}</button>` : ''}
@@ -116,7 +116,7 @@ export async function manageUI(box) {
     try {
       const cur = currentSession();
       const e = await sb('/auth/v1/factors', cur.access_token, { method: 'POST', body: JSON.stringify({ factor_type: 'totp', friendly_name: 'ImmoAdv ' + new Date().toISOString().slice(0, 10) + '-' + Math.random().toString(36).slice(2, 5) }) });
-      flow.innerHTML = `<div class="mfa-enroll"><p>1. In der Authenticator-App „Konto hinzufügen“ wählen und diesen Code scannen:</p><img src="${esc(e.totp.qr_code)}" alt="QR-Code für die Authenticator-App" width="180" height="180"><p class="form-note">Am Handy selbst? Schlüssel in der App manuell eingeben: <code>${esc(e.totp.secret)}</code></p><p>2. Den 6-stelligen Code aus der App eingeben:</p></div>`;
+      flow.innerHTML = `<div class="mfa-enroll"><p>1. Google Authenticator öffnen, auf „+“ tippen und „QR-Code scannen“ wählen:</p><img src="${esc(e.totp.qr_code)}" alt="QR-Code für die Authenticator-App" width="180" height="180"><p class="form-note">Am selben Handy? In Google Authenticator „Einrichtungsschlüssel eingeben“ wählen und diesen Schlüssel eintippen: <code>${esc(e.totp.secret)}</code></p><p>2. Den 6-stelligen Code aus Google Authenticator hier eingeben:</p></div>`;
       verifyStep(e.id);
     } catch (er) { msg(niceErr(er), true); }
   });
