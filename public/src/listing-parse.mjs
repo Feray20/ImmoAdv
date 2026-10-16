@@ -93,10 +93,12 @@ export function parseListing(d) {
   const hg = byLabel(lines, /^Hausgeld\b(\s*\(.*?\))?:?/i, euro);
   r.hausgeld = hg ? inRange(deNum(hg.value[1]), 1, 20000) : null;
 
-  const mi = byLabel(lines, /^(Mieteinnahmen|Ist-Miete|Istmiete|Mieteinnahme|Kaltmiete \(vermietet\)|Nettokaltmiete)\b[^\d€]{0,40}?/i, euro);
+  let mi = byLabel(lines, /^(Mieteinnahmen|Ist-Miete|Istmiete|Mieteinnahme|Kaltmiete \(vermietet\)|Nettokaltmiete|Jahresnettokaltmiete)\b[^\d€]{0,40}?/i, euro);
+  // Exposés von Kaufobjekten nennen die laufende Miete oft nur „Kaltmiete“ oder „Jahresmiete“.
+  if (!mi && /Kaufpreis/i.test(text)) mi = byLabel(lines, /^(Kaltmiete|Aktuelle Miete|Miete kalt|Jahresmiete|Jahreskaltmiete|Nettomiete)\b[^\d€]{0,40}?/i, euro);
   if (mi) {
     let v = deNum(mi.value[1]);
-    if (/pro\s*Jahr|p\.\s*a\.|jährlich|Jahresmiete|\/\s*Jahr/i.test(mi.line)) v = v / 12;
+    if (/pro\s*Jahr|p\.\s*a\.|jährlich|Jahres|\/\s*Jahr/i.test(mi.line)) v = v / 12;
     r.rent = inRange(v != null ? Math.round(v * 100) / 100 : null, 10, 1000000);
   } else r.rent = null;
 

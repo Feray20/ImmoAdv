@@ -47,13 +47,15 @@ function renderSearch() {
     <ol class="imp-steps"><li><strong>Einmalig:</strong> den Button „＋ Zu ImmoAdv“ mit der Maus in die Lesezeichenleiste ziehen (Leiste einblenden: Strg+Umschalt+B, am Mac ⌘+Umschalt+B).</li>
       <li>Im Portal ein <strong>einzelnes Inserat</strong> öffnen und in der Lesezeichenleiste auf „＋ Zu ImmoAdv“ klicken.</li>
       <li>Für jedes weitere Inserat wiederholen – alle erscheinen untereinander in der Trefferliste.</li></ol>
+    <div class="imp-expose"><strong>Exposé als PDF?</strong> <span>Datei wählen – Kaufpreis, Fläche, Miete usw. werden automatisch erkannt.</span>
+      <label class="btn btn-outline imp-file">Exposé (PDF) auswählen<input id="imp_pdf" type="file" accept="application/pdf" hidden></label></div>
     <details class="imp-paste"><summary>Am Handy oder ohne Lesezeichen: Inseratstext einfügen</summary>
       <p class="form-note">Im Inserat den Text markieren und kopieren (am Handy: lange tippen → „Alle auswählen“ → „Kopieren“), hier einfügen und die Adresse des Inserats dazusetzen.</p>
       <label>Link zum Inserat<input id="imp_url" type="url" placeholder="https://…" autocomplete="off"></label>
       <label>Text des Inserats<textarea id="imp_text" rows="5" maxlength="30000" placeholder="Kaufpreis 349.000 € · Wohnfläche 72 m² · Zimmer 3 …"></textarea></label>
       <button class="btn btn-dark" id="imp_go" type="button">Übernehmen</button></details>
     <p class="imp-msg" id="imp_msg" role="status" aria-live="polite"></p>
-    <p class="form-note">Die Übernahme läuft nur in Ihrem Browser: Gelesen wird ausschließlich das Inserat, das Sie gerade geöffnet haben, und nur Zahlen und Fakten für Ihre eigene Berechnung – keine Texte, Bilder oder Kontaktdaten. An ImmoAdv wird dabei nichts übertragen.</p>
+    <p class="form-note">Die Übernahme läuft nur in Ihrem Browser: Gelesen wird ausschließlich das Inserat bzw. Exposé, das Sie selbst öffnen oder auswählen, und nur Zahlen und Fakten für Ihre eigene Berechnung – keine Texte, Bilder oder Kontaktdaten. Die Exposé-Datei wird nicht hochgeladen; an ImmoAdv wird dabei nichts übertragen.</p>
   </article>
 </section>`;
 }
@@ -224,6 +226,24 @@ function importListing(d) {
   return r;
 }
 
+// Exposé-PDF im Browser auslesen (pdf.js, lokal ausgeliefert). Die Datei verlässt das Gerät nicht.
+const PDFJS = '/vendor/pdfjs-4.10.38/';
+async function exposeText(file) {
+  const pdfjs = await import(PDFJS + 'pdf.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.mjs';
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, disableFontFace: true }).promise;
+  const out = [];
+  try {
+    for (let i = 1; i <= Math.min(doc.numPages, 25); i++) {
+      const tc = await (await doc.getPage(i)).getTextContent();
+      let line = '';
+      for (const it of tc.items) { line += it.str || ''; if (it.hasEOL) { out.push(line); line = ''; } else if (it.str) line += ' '; }
+      if (line.trim()) out.push(line);
+    }
+  } finally { await doc.destroy(); }
+  return out.join('\n');
+}
+
 const IMPORT_KEY = 'ia-import';
 function checkImport() {
   const m = location.hash.match(/[?&]import=([^&]*)/);
@@ -279,6 +299,18 @@ export function mountObjekt(container, opts = {}) {
     bm.href = bookmarklet(location.origin);
     bm.addEventListener('click', (e) => { e.preventDefault(); $('imp_msg').className = 'imp-msg'; $('imp_msg').textContent = 'Nicht hier klicken, sondern den Button in die Lesezeichenleiste ziehen. Danach im Portal auf ein Inserat gehen und dort das Lesezeichen anklicken.'; });
   }
+  $('imp_pdf')?.addEventListener('change', async (e) => {
+    const f = e.target.files?.[0]; e.target.value = '';
+    if (!f) return;
+    const msg = $('imp_msg');
+    if (f.size > 40 * 1024 * 1024) { msg.className = 'imp-msg bad'; msg.textContent = 'Die Datei ist größer als 40 MB.'; return; }
+    msg.className = 'imp-msg'; msg.textContent = `Exposé „${f.name}“ wird gelesen …`;
+    try {
+      const t = await exposeText(f);
+      if (t.replace(/\s+/g, '').length < 150) { msg.className = 'imp-msg bad'; msg.textContent = 'In diesem Exposé ist kein lesbarer Text enthalten (vermutlich ein eingescanntes Dokument). Bitte die Werte unten in der Analyse eintragen.'; return; }
+      importListing({ u: $('imp_url')?.value.trim() || '', t, ti: f.name.replace(/\.pdf$/i, '') });
+    } catch (err) { msg.className = 'imp-msg bad'; msg.textContent = 'Das Exposé konnte nicht gelesen werden (beschädigt oder passwortgeschützt).'; console.warn(err); }
+  });
   $('imp_go')?.addEventListener('click', () => {
     const t = $('imp_text').value.trim(), u = $('imp_url').value.trim();
     if (!t) { $('imp_text').focus(); return; }

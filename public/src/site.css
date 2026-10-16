@@ -528,3 +528,7 @@ body.is-app main{padding:0 14px calc(88px + env(safe-area-inset-bottom))}
 .ex-tag{justify-self:start;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#0369A1;background:#E0F2FE;border-radius:999px;padding:3px 9px}
 .ex-h{margin:28px 0 12px}
 @media(max-width:700px){.ex-grid{grid-template-columns:1fr}.ex-card .btn{margin-top:4px}}
+.imp-expose{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:10px 0;padding:12px;border:1px dashed #93C5FD;border-radius:10px;background:#F0F9FF;font-size:14px}
+.imp-expose strong{color:#0F2C59}.imp-expose span{color:#475569;flex:1 1 220px}
+.imp-file{cursor:pointer;flex:none}
+@media(max-width:760px){.imp-file{flex:1 1 100%;justify-content:center}}

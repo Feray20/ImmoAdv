@@ -107,6 +107,8 @@ module.exports = {
       { source: '/p/:slug', headers: [{ key: 'Content-Security-Policy', value: cspValue.replace("frame-ancestors 'none'", 'frame-ancestors *') }, { key: 'X-Frame-Options', value: 'SAMEORIGIN' }] },
       { source: '/widget.js', headers: [{ key: 'Cache-Control', value: 'public, max-age=3600' }, { key: 'Access-Control-Allow-Origin', value: '*' }] },
       { source: '/src/:file*', headers: swr },
+      // Fremdbibliotheken mit Versionsnummer im Pfad (z. B. pdf.js) ändern sich nie: lange zwischenspeichern.
+      { source: '/vendor/:file*', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
       { source: '/data/:file*', headers: swr },
       { source: '/og/:file*', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=2592000' }] },
       { source: '/:icon(icon-192.png|icon-512.png|icon-192-maskable.png|icon-512-maskable.png|apple-touch-icon.png)', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=2592000' }] },

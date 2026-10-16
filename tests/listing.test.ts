@@ -58,3 +58,13 @@ test('parseListing: JSON-LD, ungültige URL und Mietangebot', async () => {
   assert.ok(bookmarklet('https://immoadv.de').startsWith('javascript:'));
   assert.ok(!/[^\x20-\x7e]/.test(decodeURIComponent(bookmarklet('https://immoadv.de'))));
 });
+
+test('parseListing: Exposé-Text mit Kaltmiete und Jahresnettokaltmiete', async () => {
+  const { parseListing } = await import('../public/src/listing-parse.mjs');
+  const a = parseListing({ u: '', ti: 'Exposé', t: ['Exposé', 'Vermietete 2-Zimmer-Wohnung', '10115 Berlin', 'Kaufpreis: 289.000 €', 'Wohnfläche: ca. 58 m²', 'Zimmer: 2', 'Kaltmiete: 720 €', 'Baujahr: 1965'].join('\n') });
+  assert.equal(a.price, 289000); assert.equal(a.area, 58); assert.equal(a.rent, 720); assert.equal(a.city, 'Berlin');
+  const b = parseListing({ u: '', t: ['Kaufpreis 1.250.000 €', 'Jahresnettokaltmiete 66.000 €', 'Wohnfläche 520 m²'].join('\n') });
+  assert.equal(b.rent, 5500);
+  const c = parseListing({ u: '', t: 'Kaltmiete 800 €\nKaution 2.400 €' });
+  assert.equal(c.rent, null);
+});
