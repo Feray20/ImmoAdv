@@ -835,3 +835,14 @@ img,svg,video,canvas,iframe{max-width:100%}
 .auth-links a{color:#0369A1;font-weight:700;text-decoration:none}.auth-links a:hover{text-decoration:underline}
 .auth-links br{display:none}
 @media (max-width:480px){.auth-card{padding:20px 16px 16px;border-radius:14px}}
+/* B2B-Seite: Hinweis auf die ImmoAdv Academy mit kleiner Mindmap */
+.b2b-acad{margin:36px 0 8px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:28px;align-items:center;padding:26px;border-radius:18px;background:linear-gradient(135deg,#0F2C59,#0B3A6E 60%,#0369A1);color:#fff}
+.b2b-acad h2{color:#fff;margin:6px 0 10px;font-size:clamp(22px,2.6vw,30px);line-height:1.2}.b2b-acad p{color:#DBEAFE;margin:0 0 12px}
+.b2b-acad-kick{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7DD3FC}
+.b2b-acad-list{margin:0;padding:0;list-style:none;display:grid;gap:6px;color:#E0F2FE;font-size:15px}.b2b-acad-list li{padding-left:22px;position:relative}.b2b-acad-list li::before{content:"✓";position:absolute;left:0;color:#7DD3FC;font-weight:800}.b2b-acad-list b{color:#fff}
+.b2b-acad-map{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-areas:"a b c" "core core core" "d e f";gap:10px;position:relative}
+.b2b-acad-map::before{content:"";position:absolute;left:12%;right:12%;top:50%;height:2px;background:rgba(255,255,255,.35)}
+.b2b-acad-map .m{background:#fff;color:#0F2C59;border-radius:12px;padding:12px 8px;text-align:center;font-weight:700;font-size:13.5px;border-top:4px solid var(--c);hyphens:auto}
+.b2b-acad-map .a{grid-area:a;--c:#0F2C59}.b2b-acad-map .b{grid-area:b;--c:#0369A1}.b2b-acad-map .c{grid-area:c;--c:#7C3AED}.b2b-acad-map .d{grid-area:d;--c:#16A34A}.b2b-acad-map .e{grid-area:e;--c:#DC2626}.b2b-acad-map .f{grid-area:f;--c:#D97706}
+.b2b-acad-map .m-core{grid-area:core;justify-self:center;position:relative;z-index:1;background:#38BDF8;color:#0F2C59;font-weight:800;border-radius:999px;padding:12px 22px;box-shadow:0 0 0 6px rgba(56,189,248,.25)}
+@media (max-width:860px){.b2b-acad{grid-template-columns:1fr;padding:20px 16px}}
