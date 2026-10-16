@@ -1,6 +1,5 @@
-// Admin-Zentrale (nur ADMIN_EMAILS, mit zweitem Faktor): Finanz-Cockpit, Partner, Rechnungsarchiv,
-// Steuer-Export, Anfragen und Codes, Protokoll, Betreiber-Kennzahlen sowie Objektsuche und Analyse.
-import { mountObjekt } from './objekt-ui.mjs';
+// Web-Admin (nur ADMIN_EMAILS, mit zweitem Faktor): Finanz-Cockpit, System, Nutzer, Sicherheit, Partner, Rechnungsarchiv,
+// Steuer-Export, Anfragen und Codes, Protokoll und Betreiber-Kennzahlen.
 import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs';
 
 const root = document.getElementById('intern');
@@ -69,7 +68,7 @@ async function mfa() {
 }
 
 // ---------- Rahmen ----------
-const TABS = [['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen'], ['objekt', 'Objektsuche']];
+const TABS = [['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
 
 function frame() {
   root.innerHTML = `<div class="ad-head"><h1>Admin-Zentrale</h1><button type="button" class="btn btn-outline" id="adLogout">Abmelden</button></div><p class="form-note">Nur für Administratoren · angemeldet mit zweitem Faktor · alle Aktionen werden protokolliert · automatische Abmeldung nach 15 Minuten ohne Aktivität.</p>
@@ -86,7 +85,40 @@ function show() {
   const v = $('#adView');
   v.innerHTML = '<p class="form-note">Wird geladen …</p>';
   msg('');
-  ({ cockpit, system, sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, objekt })[t](v);
+  ({ cockpit, system, nutzer, sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen })[t](v);
+}
+
+// ---------- Nutzer: Konten im Überblick, sperren/entsperren, Passwort-Reset ----------
+async function nutzer(v, page = 1, q = '', seg = 'b2c') {
+  const r = await api(`/api/admin/users?page=${page}&seg=${seg}&q=${encodeURIComponent(q)}`);
+  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  const us = r.data.users || [];
+  const ago = (x) => (x ? dtt(x) : 'nie');
+  v.innerHTML = `<section class="pt-card"><h2>Nutzer</h2>
+    <div class="seg us-seg" role="tablist" aria-label="Bereich">${[['b2c', 'Privatkunden (B2C)'], ['b2b', 'Unternehmen (B2B)'], ['admin', 'Administratoren']].map(([k, l]) => `<button type="button" data-seg="${k}" aria-selected="${k === seg}">${l}</button>`).join('')}</div>
+    <form class="ad-search" id="usF"><input id="usQ" type="search" placeholder="E-Mail suchen" value="${esc(q)}" aria-label="E-Mail suchen" autocomplete="off"><button class="btn btn-dark" type="submit">Suchen</button></form>
+    <p class="form-note">${us.length} Konten auf dieser Seite. Angezeigt werden nur Kontodaten – keine Inhalte. Jede Aktion wird protokolliert.</p>
+    <div class="us-list">${us.map((u) => `<article class="us-card${u.banned ? ' banned' : ''}">
+      <div class="us-top"><strong>${esc(u.email || '(ohne E-Mail)')}</strong><span class="us-tags">${u.admin ? '<span class="st ok">Admin</span>' : ''}${u.banned ? '<span class="st bad">gesperrt</span>' : ''}${u.confirmed ? '' : '<span class="st warn">unbestätigt</span>'}${u.mfa ? '<span class="st ok">2FA</span>' : '<span class="st">ohne 2FA</span>'}</span></div>
+      ${u.company ? `<p class="us-co"><strong>${esc(u.company.name)}</strong> · ${esc(u.company.number || '')} · ${u.company.role === 'owner' ? 'Inhaber' : 'Berater'} · ${u.company.verified ? '<span class="st ok">verifiziert</span>' : `<span class="st warn">${esc(u.company.status || 'offen')}</span>`}</p>` : ''}
+      <dl class="us-meta"><div><dt>Registriert</dt><dd>${dt(u.createdAt)}</dd></div><div><dt>Letzte Anmeldung</dt><dd>${ago(u.lastSignIn)}</dd></div></dl>
+      <div class="us-act">${u.confirmed ? '' : `<button type="button" class="btn btn-dark" data-us="confirm" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Bestätigung erneut senden</button>`}<button type="button" class="btn btn-outline" data-us="reset" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Passwort-Reset senden</button>${u.admin ? '' : `<button type="button" class="btn ${u.banned ? 'btn-outline' : 'btn-danger'}" data-us="${u.banned ? 'unban' : 'ban'}" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">${u.banned ? 'Entsperren' : 'Sperren'}</button>`}</div>
+    </article>`).join('') || '<p class="form-note">Keine Konten gefunden.</p>'}</div>
+    <div class="pt-row">${page > 1 ? '<button class="btn btn-ghost" id="usPrev" type="button">← Zurück</button>' : ''}${r.data.more ? '<button class="btn btn-ghost" id="usNext" type="button">Weiter →</button>' : ''}</div></section>`;
+  $('#usF').onsubmit = (e) => { e.preventDefault(); nutzer(v, 1, $('#usQ').value.trim(), seg); };
+  v.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => nutzer(v, 1, '', b.dataset.seg));
+  $('#usPrev')?.addEventListener('click', () => nutzer(v, page - 1, q, seg));
+  $('#usNext')?.addEventListener('click', () => nutzer(v, page + 1, q, seg));
+  v.querySelectorAll('[data-us]').forEach((b) => b.onclick = async () => {
+    const a = b.dataset.us, m = b.dataset.mail;
+    const ask = { ban: `Konto ${m} sperren? Anmelden ist dann nicht mehr möglich; offene Sitzungen laufen spätestens nach einer Stunde aus.`, unban: `Konto ${m} wieder freigeben?`, confirm: `Bestätigungs-E-Mail erneut an ${m} senden?`, reset: `E-Mail zum Zurücksetzen des Passworts an ${m} senden?` }[a];
+    if (!confirm(ask)) return;
+    b.disabled = true;
+    const x = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ action: a, id: b.dataset.id }) });
+    if (!x.ok) { msg(x.data?.error || 'Aktion fehlgeschlagen.', true); b.disabled = false; return; }
+    msg({ ban: 'Konto gesperrt.', unban: 'Konto freigegeben.', confirm: 'Bestätigungs-E-Mail gesendet.', reset: 'E-Mail zum Zurücksetzen gesendet.' }[a]);
+    nutzer(v, page, q, seg);
+  });
 }
 
 // ---------- System: Einrichtung, Test-E-Mail, Nutzer-Suche ----------
@@ -127,8 +159,11 @@ async function cockpit(v, zeitraum = 'monat', von = '', bis = '') {
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
   const d = r.data;
   const tile = (l, x, s = '') => `<div class="pt-kpi"><small>${l}</small><strong>${x}</strong>${s ? `<span class="form-note">${s}</span>` : ''}</div>`;
-  v.innerHTML = `<div class="pt-row" style="margin-bottom:12px"><div class="seg" role="tablist">${[['heute', 'Heute'], ['woche', 'Woche'], ['monat', 'Monat'], ['jahr', 'Jahr'], ['gesamt', 'Gesamt']].map(([k, l]) => `<button type="button" data-z="${k}" aria-selected="${k === zeitraum}">${l}</button>`).join('')}</div>
-      <label class="form-note">von <input type="date" id="zv" value="${esc(von)}"></label><label class="form-note">bis <input type="date" id="zb" value="${esc(bis)}"></label><button class="btn btn-ghost" id="zf" type="button">Zeitraum</button></div>
+  const iso = (x) => x.toISOString().slice(0, 10);
+  const now = new Date();
+  const dv = von || iso(new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1))), db = bis || iso(now);
+  v.innerHTML = `<div class="ad-period"><div class="seg" role="tablist" aria-label="Zeitraum">${[['heute', 'Heute'], ['woche', 'Woche'], ['monat', 'Monat'], ['jahr', 'Jahr'], ['gesamt', 'Gesamt']].map(([k, l]) => `<button type="button" data-z="${k}" aria-selected="${k === zeitraum}">${l}</button>`).join('')}</div>
+      <div class="ad-range"><label>Von<input type="date" id="zv" value="${esc(dv)}" max="${esc(iso(now))}"></label><label>Bis<input type="date" id="zb" value="${esc(db)}" max="${esc(iso(now))}"></label><button class="btn btn-outline" id="zf" type="button">Eigener Zeitraum</button></div></div>
     <h2>${esc(d.range.label)}</h2>
     <div class="pt-kpis">${tile('Umsatz netto', eur(d.revenue.net), `${d.revenue.count} Rechnungen${d.revenue.stornos ? `, ${d.revenue.stornos} Korrekturen` : ''}`)}${tile('Umsatzsteuer 19 %', eur(d.revenue.vat))}${tile('Umsatz brutto', eur(d.revenue.gross))}${tile('Offene Posten', String(d.openItems.length), eur(d.openItems.reduce((s, x) => s + Number(x.gross_cents), 0)))}</div>
     <div class="pt-kpis">${tile('MRR netto', eur(d.recurring.mrrNet), 'aus Stripe-Abos zum Listenpreis')}${tile('ARR netto', eur(d.recurring.arrNet))}${tile('Aktive Tarife', String(d.recurring.activeAccounts), `Basic ${d.recurring.byTier.BASIC} · Pro ${d.recurring.byTier.PRO} · Enterprise ${d.recurring.byTier.ENTERPRISE}${d.recurring.manualWithoutPrice ? ` · ${d.recurring.manualWithoutPrice} manuell` : ''}`)}${tile('Abgelaufen im Zeitraum', String(d.recurring.expiredInRange))}</div>
@@ -143,11 +178,14 @@ async function cockpit(v, zeitraum = 'monat', von = '', bis = '') {
   bindInv(v, () => cockpit(v, zeitraum, von, bis));
 }
 
-// Einfache Balken mit Wertbeschriftung; Monate ohne Umsatz bleiben sichtbar (0 €).
+// Einfache Balken mit Wertbeschriftung; Monate ohne Umsatz bleiben sichtbar (0 €). Kurze Monatsnamen, Jahr nur im Januar.
 function monthsChart(months) {
   const max = Math.max(1, ...months.map((x) => x.net));
-  const lab = (m) => new Intl.DateTimeFormat('de-DE', { month: 'short', year: '2-digit' }).format(new Date(m + '-01T12:00:00Z'));
-  return `<div class="ad-bars" role="list">${months.map((x) => `<div class="ad-bar" role="listitem" aria-label="${lab(x.m)}: ${eur(x.net, 0)}"><span class="ad-bar-v">${x.net ? eur(x.net, 0) : ''}</span><span class="ad-bar-f" style="height:${Math.max(x.net > 0 ? 3 : 0, Math.round((x.net / max) * 100))}%"></span><span class="ad-bar-l">${lab(x.m)}</span></div>`).join('')}</div>`;
+  const empty = !months.some((x) => x.net > 0);
+  const mon = (m) => new Intl.DateTimeFormat('de-DE', { month: 'short' }).format(new Date(m + '-01T12:00:00Z')).replace('.', '').slice(0, 3);
+  const yr = (m) => m.slice(2, 4);
+  const full = (m) => new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(new Date(m + '-01T12:00:00Z'));
+  return `<div class="ad-chart">${empty ? '<p class="ad-chart-empty">Noch keine Umsätze in den letzten 12 Monaten.</p>' : ''}<div class="ad-bars" role="list">${months.map((x, i) => `<div class="ad-bar" role="listitem" aria-label="${full(x.m)}: ${eur(x.net, 0)}"><span class="ad-bar-v">${x.net ? eur(x.net, 0) : ''}</span><span class="ad-bar-f" style="height:${Math.max(x.net > 0 ? 3 : 0, Math.round((x.net / max) * 100))}%"></span><span class="ad-bar-l">${mon(x.m)}${x.m.endsWith('-01') || i === 0 ? `<em>${yr(x.m)}</em>` : ''}</span></div>`).join('')}</div></div>`;
 }
 
 const invTable = (rows) => rows.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Nummer</th><th>Art</th><th>Datum</th><th>Kunde</th><th>Netto</th><th>USt</th><th>Brutto</th><th>Status</th><th></th></tr></thead><tbody>
@@ -428,7 +466,6 @@ async function kennzahlen(v) {
     <p class="form-note">Einstellungen: Bezahlung ${on(j.config.billing)} · E-Mail-Versand ${on(j.config.mail)} · Täglicher Lauf ${on(j.config.cron)} · Aktive Co-Branding-Partner (alt): ${n(j.partners)}</p>`;
 }
 
-function objekt(v) { v.innerHTML = ''; mountObjekt(v, { pdf: true }); }
 
 (async () => {
   if (!(await gate())) return;
