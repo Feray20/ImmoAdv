@@ -397,19 +397,26 @@ if ($('sres') && window.__IA_IDX) {
 
 // Öffentliche Angebotsseite aus der zentralen Preisliste
 if ($('pubOffers')) {
-  fetch('/data/preise.json').then((r) => r.json()).then((P) => {
+  fetch('/data/preise.json').then((r) => r.json()).then(async (P) => {
     const eur = (c) => (c / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
     let shown = new URLSearchParams(location.search).get('modus') === 'profi' ? 'profi' : 'einsteiger';
     const draw = () => {
       const m = P.modi[shown];
       $('pubOffers').innerHTML = `<div class="offer-head"><div><span class="form-note">Stufe</span><strong>${esc(m.name)}</strong></div><div class="seg" role="tablist"><button type="button" role="tab" data-seg="einsteiger" aria-selected="${shown === 'einsteiger'}">Einsteiger</button><button type="button" role="tab" data-seg="profi" aria-selected="${shown === 'profi'}">Profi</button></div></div>
         <p class="form-note">${esc(m.zielgruppe)}</p>
-        <div class="offers">${m.plans.map((p, i) => `<div class="offer${i === 0 ? ' rec' : ''}">${i === 0 ? '<span class="offer-rec">Am häufigsten passend</span>' : ''}<h4>${esc(p.name)}</h4><div class="offer-price">${eur(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn ${i === 0 ? 'btn-dark' : 'btn-outline'} offer-buy" href="/app/dashboard?modus=${shown}&buy=${p.id}#angebot">Jetzt buchen</a></div>`).join('')}</div>
+        <div class="offers">${m.plans.map((p, i) => `<div class="offer${i === 0 ? ' rec' : ''}">${i === 0 ? '<span class="offer-rec">Am häufigsten passend</span>' : ''}<h4>${esc(p.name)}</h4><div class="offer-price">${eur(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn ${i === 0 ? 'btn-dark' : 'btn-outline'} offer-buy" href="/app/dashboard?modus=${shown}&buy=${p.id}#angebot" data-offer="${i}">Jetzt buchen</a></div>`).join('')}</div>
         <div class="offer-free"><strong>Immer kostenlos:</strong> ${P.kostenlos.features.map(esc).join(' · ')}</div><p class="form-note">Für Makler, Finanzierungsvermittler und Banken gibt es eigene Tarife (netto, mit Widget, Anfragen und Team): <a class="ck-link" href="/b2b">Angebot für Unternehmen</a>.</p>
-        <p class="form-note">Mit „Jetzt buchen“ geht es nach dem Anmelden direkt zur Bezahlung – mit Apple&nbsp;Pay, Google&nbsp;Pay oder Karte (Express-Checkout), sobald die Zahlung freigeschaltet ist.</p>
+        <div class="offer-pay"><p class="form-note">„Jetzt buchen“ führt direkt zur sicheren Bezahlseite – bezahlen Sie bequem mit:</p>${PAY}</div>
         <p class="form-note">${esc(P.hinweis)} Buchbar, sobald die Zahlungsabwicklung startet. Widerrufsbelehrung: <a class="ck-link" href="/nutzungsbedingungen">Nutzungsbedingungen</a>. Kündigung: <a class="ck-link" href="/kuendigen">Verträge hier kündigen</a>.</p>`;
       document.querySelectorAll('#pubOffers [data-seg]').forEach((b) => b.onclick = () => { shown = b.dataset.seg; draw(); });
+      // „Jetzt buchen“: Kauf-Dialog statt Umweg über das Konto (Link bleibt als Rückfall ohne Skript).
+      document.querySelectorAll('#pubOffers [data-offer]').forEach((a) => a.onclick = async (e) => {
+        e.preventDefault();
+        const { openBuy } = await import('./buy.mjs');
+        openBuy(m.plans[+a.dataset.offer]);
+      });
     };
+    const { PAY_BADGES: PAY } = await import('./buy.mjs');
     draw();
   }).catch(() => { $('pubOffers').innerHTML = '<p class="form-note">Preise konnten nicht geladen werden.</p>'; });
 }

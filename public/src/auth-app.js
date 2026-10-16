@@ -134,3 +134,6 @@ b.onclick=async()=>{b.disabled=true;b.textContent='Wird zusammengeführt …';tr
 // Objektgrenze je Tarif (im Browser geprüft): kostenlos 3, Einsteiger 10, Profi und Unternehmenskonten mit Tarif unbegrenzt.
 function objLimit(){if(window.__iaPro||window.__iaB2B)return Infinity;return window.__iaTier==='starter'?10:3}
 (()=>{try{const t=JSON.parse(localStorage.getItem('immoadv-auth-session-v1')||'null')?.access_token;if(!t||!location.pathname.startsWith('/app/'))return;fetch('/api/b2b/account',{headers:{Authorization:'Bearer '+t},cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{window.__iaB2B=!!(d&&d.tier)}).catch(()=>{})}catch{}})();
+
+// Kaufwunsch von „Jetzt buchen“: Hinweis auf der Anmeldeseite, dass es danach direkt zur Bezahlung geht.
+(function buyNote(n){try{const x=JSON.parse(localStorage.getItem('ia-buy-intent')||'null');if(!x||Date.now()-x.at>1800000||!/^\/auth\/(login|register)/.test(location.pathname))return;const c=document.querySelector('.auth-card');if(!c){if(n<20)setTimeout(()=>buyNote(n+1),150);return}if(c.querySelector('.buy-resume'))return;const p=document.createElement('p');p.className='buy-resume';p.textContent='Nach der Anmeldung geht es direkt weiter zur sicheren Bezahlung: '+(x.name||'Ihre Auswahl')+'.';c.prepend(p)}catch{}})(0);

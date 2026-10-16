@@ -45,10 +45,13 @@ export async function middleware(req: NextRequest) {
     const password = process.env.SITE_PREVIEW_PASSWORD;
     const grant = () => {
       const res = NextResponse.redirect(new URL('/', req.url), 303);
-      res.cookies.set(COOKIE, key, { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 90 * 24 * 3600 });
+      // Für die ganze Domain (immoadv.de, www., admin., partner.), damit ein einmal freigeschaltetes Gerät überall Zugang hat.
+      const host = (req.headers.get('host') || '').toLowerCase().split(':')[0];
+      const domain = host === 'immoadv.de' || host.endsWith('.immoadv.de') ? '.immoadv.de' : undefined;
+      res.cookies.set(COOKIE, key, { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 90 * 24 * 3600, ...(domain ? { domain } : {}) });
       return res;
     };
-    if (searchParams.get('ende')) { const res = NextResponse.redirect(new URL('/', req.url)); res.cookies.delete(COOKIE); return res; }
+    if (searchParams.get('ende')) { const res = NextResponse.redirect(new URL('/', req.url)); res.headers.append('Set-Cookie', `${COOKIE}=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Lax`); res.headers.append('Set-Cookie', `${COOKIE}=; Path=/; Max-Age=0; Domain=.immoadv.de; Secure; HttpOnly; SameSite=Lax`); return res; }
     // Link mit Schlüssel.
     if (req.method === 'GET' && searchParams.get('key') === key) return grant();
     // Passwortformular von der „Coming soon“-Seite.

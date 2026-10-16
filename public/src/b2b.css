@@ -255,3 +255,11 @@ body{max-width:100%;overflow-x:clip}
 @media (max-width:1024px),(pointer:coarse){
   input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px!important}
 }
+/* Web-Admin: Testkauf */
+.tk-pm{display:flex;flex-wrap:wrap;gap:6px}
+.tk-plans{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.tk-plan{display:grid;gap:4px;text-align:left;border:1px solid #E2E8F0;border-left:4px solid #0284C7;border-radius:12px;background:#fff;padding:14px;cursor:pointer;font:inherit;color:#0F2C59}
+.tk-plan:hover{box-shadow:0 6px 18px rgba(15,44,89,.1)}.tk-plan span{font-size:20px;font-weight:800}.tk-plan small{color:#0369A1;font-weight:700;text-transform:none;letter-spacing:0}
+.tk-plan:disabled{opacity:.6}
+.tk-result.ok{border-left:4px solid #16A34A}.tk-result.warn{border-left:4px solid #EAB308}
+@media (max-width:640px){.tk-plans{grid-template-columns:1fr}}

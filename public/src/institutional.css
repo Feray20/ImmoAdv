@@ -771,5 +771,42 @@ img,svg,video,canvas,iframe{max-width:100%}
   main *{min-width:0}
   main input,main select,main textarea,main .btn{max-width:100%}
   main .btn{white-space:normal}
+  main table th,main table td{overflow-wrap:normal;hyphens:manual;-webkit-hyphens:manual}
+  main table td{min-width:max-content}
 }
 .calc-pages,.cancel-form{grid-template-columns:minmax(0,1fr)}
+
+/* Kauf-Dialog „Jetzt buchen“ */
+.buy-dlg{border:0;padding:0;border-radius:18px;width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;box-shadow:0 30px 80px rgba(15,44,89,.35);color:var(--ia-navy,#0F2C59)}
+.buy-dlg::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(3px)}
+.buy-in{padding:22px 22px 18px;display:grid;gap:12px}
+.buy-head{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding-bottom:12px;border-bottom:3px solid #0F2C59}
+.buy-kick{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#0284C7}
+.buy-head h2{margin:2px 0 0;font-size:21px;line-height:1.2}
+.buy-x{border:0;background:#F1F5F9;border-radius:50%;width:38px;height:38px;font-size:22px;line-height:1;cursor:pointer;color:#334155}
+.buy-price{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.buy-price strong{font-size:34px;letter-spacing:-.03em}.buy-price span{color:#64748B;font-weight:600}
+.buy-tax{margin:-8px 0 0;font-size:13px;color:#64748B}
+.buy-feat{margin:0;padding:12px 14px;list-style:none;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;display:grid;gap:6px;font-size:14.5px;color:#1E293B}
+.buy-feat li{padding-left:22px;position:relative}.buy-feat li::before{content:"✓";position:absolute;left:0;color:#16A34A;font-weight:800}
+.buy-consent{font-size:13.5px;line-height:1.5;color:#334155;display:grid!important;grid-template-columns:22px 1fr;gap:8px;align-items:start;padding:10px 12px;border:1px solid #CBD5E1;border-radius:10px}
+.buy-consent input{width:20px;height:20px;margin:1px 0 0}
+.buy-consent.consent-missing{border-color:#DC2626;background:#FEF2F2}
+.buy-legal,.buy-note{margin:0;font-size:12.5px;color:#64748B;line-height:1.5}.buy-legal a{color:#0369A1;text-decoration:underline}
+.buy-go{width:100%;min-height:54px;font-size:17px;border-radius:12px;background:#0F2C59;border-color:#0F2C59;justify-content:center}
+.buy-go:disabled{opacity:.6}
+.buy-msg{margin:0;color:#B91C1C;font-size:14px;font-weight:600}.buy-msg:empty{display:none}
+.buy-test{margin:0;padding:10px 12px;border-radius:10px;background:#FEF9C3;color:#713F12;font-size:13px}
+.buy-soon{margin:0;padding:12px;border-radius:10px;background:#EFF6FF;color:#1E3A8A;font-size:14px}
+.buy-secure{margin:0;display:flex;gap:6px;align-items:center;justify-content:center;font-size:12px;color:#64748B;text-align:center}
+.buy-resume{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:#EFF6FF;border:1px solid #BFDBFE;color:#1E3A8A;font-size:14px;font-weight:600}
+.pay-badges{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.pb{display:inline-flex;align-items:center;height:28px;padding:0 10px;border:1px solid #E2E8F0;border-radius:6px;background:#fff;font-size:12px;font-weight:700;color:#334155;white-space:nowrap}
+.pb-paypal{font-style:italic;font-size:14px;letter-spacing:-.02em}.pb-paypal b{color:#003087;font-weight:900}.pb-paypal i{color:#009CDE;font-weight:900}
+.pb-apple{background:#000;color:#fff;border-color:#000}.pb-google{color:#3C4043}.pb-klarna{background:#FFB3C7;color:#17120F;border-color:#FFB3C7}.pb-sepa{color:#10298E}
+.offer-pay{margin:14px 0 4px;padding:12px;border:1px dashed #CBD5E1;border-radius:12px;background:#F8FAFC}.offer-pay .form-note{margin:0 0 8px;text-align:center}
+.buy-overlay{position:fixed;inset:0;z-index:200;background:rgba(255,255,255,.92);display:grid;place-items:center;padding:20px}
+.buy-ov-box{display:grid;gap:10px;justify-items:center;text-align:center;color:#0F2C59}.buy-ov-box strong{font-size:18px}.buy-ov-box small{font-size:12.5px;color:#64748B;text-transform:none;letter-spacing:0}
+.buy-spin{width:44px;height:44px;border-radius:50%;border:4px solid #DBEAFE;border-top-color:#0284C7;animation:buyspin .8s linear infinite}
+@keyframes buyspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.buy-spin{animation-duration:2.4s}}
+@media (max-width:480px){.buy-dlg{width:100vw;max-width:100vw;max-height:100dvh;height:auto;margin:auto 0 0;border-radius:18px 18px 0 0}.buy-in{padding:18px 16px calc(16px + env(safe-area-inset-bottom))}.buy-price strong{font-size:30px}}

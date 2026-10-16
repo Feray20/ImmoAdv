@@ -46,10 +46,24 @@ export function stripe(): Stripe {
   return client;
 }
 
+// Testkauf im Web-Admin: eigener Testschlüssel (STRIPE_TEST_SECRET_KEY) – oder der Hauptschlüssel, falls er ein Testschlüssel ist.
+// Testkäufe laufen über ein getrenntes Stripe-Testkonto und schalten nie echte Leistungen frei.
+let testClient: Stripe | null = null;
+export function testKeyMode(): 'test-key' | 'main-is-test' | null {
+  if ((process.env.STRIPE_TEST_SECRET_KEY || '').startsWith('sk_test_')) return 'test-key';
+  if ((process.env.STRIPE_SECRET_KEY || '').startsWith('sk_test_')) return 'main-is-test';
+  return null;
+}
+export function testStripe(): Stripe {
+  const mode = testKeyMode();
+  if (!mode) throw new Error('Kein Stripe-Testschlüssel');
+  if (!testClient) testClient = new Stripe(mode === 'test-key' ? String(process.env.STRIPE_TEST_SECRET_KEY) : String(process.env.STRIPE_SECRET_KEY));
+  return testClient;
+}
+
 // Preis per lookup_key holen oder einmalig anlegen.
-export async function ensurePrice(plan: Plan): Promise<string> {
+export async function ensurePrice(plan: Plan, s: Stripe = stripe()): Promise<string> {
   const def = PLANS[plan];
-  const s = stripe();
   const found = await s.prices.list({ lookup_keys: [def.lookupKey], active: true, limit: 1 });
   if (found.data[0]) return found.data[0].id;
   const price = await s.prices.create({
@@ -65,8 +79,7 @@ export async function ensurePrice(plan: Plan): Promise<string> {
 }
 
 // Steuersatz 19 % USt (inklusive) holen oder anlegen, damit Rechnungen die Umsatzsteuer ausweisen.
-export async function ensureTaxRate(): Promise<string> {
-  const s = stripe();
+export async function ensureTaxRate(s: Stripe = stripe()): Promise<string> {
   const list = await s.taxRates.list({ active: true, inclusive: true, limit: 100 });
   const hit = list.data.find((t) => t.metadata?.immoadv === 'ust19');
   if (hit) return hit.id;

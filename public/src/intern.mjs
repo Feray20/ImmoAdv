@@ -72,7 +72,7 @@ async function mfa() {
 const SEGS = { b2c: 'Privatkunden (B2C)', b2b: 'Unternehmen (B2B)' };
 const getSeg = () => { try { return localStorage.getItem('ia-admin-seg') === 'b2b' ? 'b2b' : 'b2c'; } catch { return 'b2c'; } };
 const setSeg = (x) => { try { localStorage.setItem('ia-admin-seg', x); } catch { /* nur Komfort */ } };
-const TABS = [['uebersicht', 'Übersicht'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
+const TABS = [['uebersicht', 'Übersicht'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
 
 function paintSeg() {
   const chip = $('#adSeg'); if (!chip) return;
@@ -105,7 +105,7 @@ function show() {
   const v = $('#adView');
   v.innerHTML = '<p class="form-note">Wird geladen …</p>';
   msg('');
-  ({ uebersicht, cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen })[t](v);
+  ({ uebersicht, testkauf, cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen })[t](v);
 }
 
 // ---------- Nutzer: Konten im Überblick, sperren/entsperren, Passwort-Reset ----------
@@ -252,6 +252,51 @@ function bindMailSetup(root2) {
     const r = await api(path);
     if (!r.ok) { done('Vorlage nicht verfügbar.', true); return; }
     copy(await r.res.text(), b);
+  });
+}
+
+// ---------- Testkauf: echte Bezahlseite im Stripe-Testmodus ----------
+async function testkauf(v) {
+  const q = new URLSearchParams(location.search);
+  const back = q.get('testkauf');
+  const r = await api('/api/admin/testkauf');
+  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  const d = r.data;
+  const PN = Object.fromEntries((d.plans || []).map((p) => [p.id, p.name]));
+  const PS = { paid: 'bezahlt', unpaid: 'offen', no_payment_required: 'ohne Zahlung' };
+  const row = (x) => `<tr><td>${dtt(x.created)}</td><td>${esc(PN[x.plan] || x.plan || '–')}</td><td>${eur(x.amount)}</td><td>${esc(x.method || '–')}</td><td>${x.paymentStatus === 'paid' ? '<span class="st ok">bezahlt</span>' : x.status === 'expired' ? '<span class="st">abgelaufen</span>' : `<span class="st warn">${esc(x.paymentStatus || x.status)}</span>`}</td><td>${x.invoicePdf ? `<a class="ck-link" href="${esc(x.invoicePdf)}" target="_blank" rel="noopener">Rechnung (PDF)</a>` : '–'}</td></tr>`;
+  const setup = `<section class="pt-card"><h2>So wird der Testkauf eingerichtet</h2><ol class="ad-steps">
+    <li><div class="ad-step-h"><strong>Testschlüssel erzeugen</strong></div><p><a href="https://dashboard.stripe.com/test/apikeys" target="_blank" rel="noopener">Stripe → Entwickler → API-Schlüssel (Testmodus)</a> → „Secret key“ neu erzeugen (der alte Testschlüssel wurde im Chat gezeigt und sollte ohnehin ersetzt werden).</p></li>
+    <li><div class="ad-step-h"><strong>In Vercel eintragen</strong></div><p><a href="https://vercel.com/klk19/immoadv/settings/environment-variables" target="_blank" rel="noopener">Vercel → Environment Variables</a>: <code>STRIPE_TEST_SECRET_KEY</code> = <code>sk_test_…</code>, Umgebung <strong>Production</strong>. Danach neu deployen. Der Schlüssel funktioniert nur im Testmodus – es kann kein echtes Geld fließen.</p></li>
+    <li><div class="ad-step-h"><strong>PayPal im Testmodus aktivieren</strong></div><p><a href="https://dashboard.stripe.com/test/settings/payment_methods" target="_blank" rel="noopener">Stripe → Einstellungen → Zahlungsmethoden (Testmodus)</a> → PayPal einschalten. Für den Live-Betrieb dasselbe im Live-Modus (dort PayPal-Geschäftskonto verbinden).</p></li>
+    <li><div class="ad-step-h"><strong>Logo und Farben</strong></div><p><a href="https://dashboard.stripe.com/settings/branding" target="_blank" rel="noopener">Stripe → Einstellungen → Branding</a>: Logo <a class="ck-link" href="/brand/immoadv-stripe-logo.png" download>immoadv-stripe-logo.png</a> und Symbol <a class="ck-link" href="/brand/immoadv-stripe-icon.png" download>immoadv-stripe-icon.png</a> hochladen, Markenfarbe <code>#0F2C59</code>, Akzentfarbe <code>#0284C7</code>. Gilt für Bezahlseite, Rechnungen, Belege und Kundenportal.</p></li>
+  </ol></section>`;
+  if (!d.available) { v.innerHTML = `<section class="pt-card"><h2>Testkauf</h2><p class="form-note">Noch nicht eingerichtet: Es fehlt ein Stripe-Testschlüssel. Nach den Schritten unten können Sie hier jeden Tarif mit Testkarte oder PayPal-Testkonto kaufen – genau wie ein Kunde, aber ohne echtes Geld.</p></section>${setup}`; return; }
+  let res = '';
+  if (back === 'abbruch') res = '<p class="auth-message">Testkauf abgebrochen – es wurde nichts berechnet.</p>';
+  else if (back) {
+    const x = await api('/api/admin/testkauf?sid=' + encodeURIComponent(back));
+    const t = x.data?.session;
+    res = t ? `<section class="pt-card tk-result ${t.paymentStatus === 'paid' ? 'ok' : 'warn'}"><h2>${t.paymentStatus === 'paid' ? '✓ Testkauf erfolgreich' : 'Testkauf noch offen'}</h2>
+      <dl class="pt-dl">${[['Tarif', PN[t.plan] || t.plan], ['Betrag (brutto)', eur(t.amount)], ['darin USt', eur(t.tax)], ['Zahlart', t.method], ['Zahlstatus', PS[t.paymentStatus] || t.paymentStatus], ['Abo', t.subscription ? t.subscription.status : 'kein Abo (Einmalkauf)'], ['Rechnungsnummer', t.invoiceNumber || '–'], ['E-Mail auf der Bezahlseite', t.email || '–']].map(([k, val]) => `<div><dt>${k}</dt><dd>${esc(String(val ?? '–'))}</dd></div>`).join('')}</dl>
+      <div class="pt-row">${t.invoicePdf ? `<a class="btn btn-dark" href="${esc(t.invoicePdf)}" target="_blank" rel="noopener">Rechnung als PDF</a>` : ''}${t.invoiceUrl ? `<a class="btn btn-outline" href="${esc(t.invoiceUrl)}" target="_blank" rel="noopener">Rechnungsseite</a>` : ''}</div>
+      <p class="form-note">Geprüft: Bezahlseite, Zahlart, Steuer, Rechnung. Im Testmodus wird nichts freigeschaltet und nichts berechnet.</p></section>` : '<p class="form-note">Ergebnis nicht abrufbar.</p>';
+  }
+  v.innerHTML = `${res}<section class="pt-card"><h2>Testkauf</h2>
+    <p class="form-note">Startet die <strong>echte Bezahlseite</strong> (gleiche Texte, Steuer, Rechnung, Zahlarten) im Stripe-Testmodus. Es fließt kein Geld. Testkarte <code>4242 4242 4242 4242</code>, Datum in der Zukunft, beliebige Prüfziffer. PayPal: auf der Testseite „Authorize“ wählen.</p>
+    <h3 class="ad-sub">Aktive Zahlarten (Testmodus)</h3>
+    <div class="tk-pm">${(d.methods || []).map((m) => `<span class="st ${m.on ? 'ok' : ''}">${m.on ? '✓' : '○'} ${esc(m.label)}</span>`).join('')}</div>
+    ${(d.methods || []).some((m) => m.key === 'paypal' && m.on) ? '' : '<p class="form-note">PayPal ist im Testmodus noch nicht eingeschaltet – siehe Schritt 3 unten.</p>'}
+    <h3 class="ad-sub">Tarif wählen</h3>
+    <div class="tk-plans">${d.plans.map((p) => `<button type="button" class="tk-plan" data-tk="${esc(p.id)}"><strong>${esc(p.name)}</strong><span>${eur(p.cents)}${p.mode === 'subscription' ? ' / Monat' : ''}</span><small>Testkauf starten →</small></button>`).join('')}</div>
+  </section>
+  <section class="pt-card"><h2>Letzte Testkäufe</h2>${d.recent?.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Zeit</th><th>Tarif</th><th>Betrag</th><th>Zahlart</th><th>Status</th><th>Rechnung</th></tr></thead><tbody>${d.recent.map(row).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine Testkäufe.</p>'}</section>${setup}`;
+  if (back) history.replaceState(null, '', location.pathname + '#testkauf');
+  v.querySelectorAll('[data-tk]').forEach((b) => b.onclick = async () => {
+    b.disabled = true; b.querySelector('small').textContent = 'Bezahlseite wird geöffnet …';
+    const x = await api('/api/admin/testkauf', { method: 'POST', body: JSON.stringify({ plan: b.dataset.tk }) });
+    if (!x.ok || !x.data?.url) { msg(x.data?.error || 'Testkauf konnte nicht gestartet werden.', true); b.disabled = false; b.querySelector('small').textContent = 'Testkauf starten →'; return; }
+    location.href = x.data.url;
   });
 }
 

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import type Stripe from 'stripe';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { userFromRequest } from '@/lib/billing/auth';
-import { PLANS, billingEnabled, ensureCustomer, ensurePrice, ensureTaxRate, entitlementsFor, isPlan, stripe } from '@/lib/billing/stripe';
+import { checkoutParams } from '@/lib/billing/checkout-params';
+import { billingEnabled, ensureCustomer, ensurePrice, ensureTaxRate, entitlementsFor, isPlan, stripe } from '@/lib/billing/stripe';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +34,6 @@ export async function POST(req: Request) {
     const ent = await entitlementsFor(user.id, user.email).catch(() => null);
     if (!ent?.starter) return NextResponse.json({ error: 'Die Einsteiger-Kreditmappe ist nur mit gebuchter Einsteiger-Begleitung erhältlich.' }, { status: 403 });
   }
-  const def = PLANS[plan];
   const origin = new URL(req.url).origin;
 
   try {
@@ -49,37 +48,11 @@ export async function POST(req: Request) {
       consent_immediate_start: new Date().toISOString(),
     };
 
-    const params: Stripe.Checkout.SessionCreateParams = {
-      mode: def.mode,
-      customer: customer.id,
-      client_reference_id: user.id,
-      line_items: [{ price, quantity: 1, tax_rates: [taxRate] }],
-      locale: 'de',
-      billing_address_collection: 'required',
-      tax_id_collection: { enabled: true },
-      customer_update: { address: 'auto', name: 'auto' },
-      // Button-Lösung (§ 312j Abs. 3 BGB): Hinweis direkt am Bestellknopf der Bezahlseite.
-      custom_text: { submit: { message: 'Mit Klick auf den Button schließen Sie einen zahlungspflichtigen Vertrag mit ImmoAdv ab.' } },
-      metadata,
-      success_url: `${origin}/app/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/angebote?checkout=cancel`,
-    };
-
-    if (def.mode === 'payment') {
-      params.submit_type = 'pay';
-      params.invoice_creation = {
-        enabled: true,
-        invoice_data: {
-          description: def.description,
-          metadata,
-          rendering_options: { amount_tax_display: 'include_inclusive_tax' },
-          footer: 'ImmoAdv · Feray Korkmaz · Georg-August-Zinn-Str. 25 · 64354 Reinheim · USt-IdNr. DE348036700',
-        },
-      };
-      params.payment_intent_data = { metadata };
-    } else {
-      params.subscription_data = { metadata, description: def.description };
-    }
+    const params = checkoutParams({
+      plan, customer: customer.id, clientRef: user.id, price, taxRate, metadata,
+      successUrl: `${origin}/app/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${origin}/angebote?checkout=cancel`,
+    });
 
     const session = await stripe().checkout.sessions.create(params);
     return NextResponse.json({ url: session.url });

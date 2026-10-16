@@ -1,5 +1,6 @@
 // App-Rahmen für das Konto: Handy wie eine App (Tab-Leiste unten), Desktop wie ein Investment-Tool (Seitenleiste).
 // Ansichten über #hash; vorhandene Karten werden den Ansichten zugeordnet. Modus Einsteiger/Profi frei wählbar.
+import { openBuy, PAY_BADGES, resumeIntent } from './buy.mjs';
 import { rank, GREST } from './calc.mjs';
 const GREST_KEYS = Object.keys(GREST);
 
@@ -81,6 +82,8 @@ function classify(el) {
 }
 
 export function setupApp({ u, d, saveData, reload }) {
+  // Kaufwunsch von der Angebotsseite (vor der Anmeldung gemerkt): direkt weiter zur Bezahlseite.
+  resumeIntent((t) => alert(t));
   const reloadFull = reload;
   reload = () => { document.body.classList.add('ia-switching'); reloadFull({ u, d }); };
   requestAnimationFrame(() => document.body.classList.remove('ia-switching'));
@@ -641,23 +644,18 @@ async function renderOffers(mode) {
       <p class="form-note">${esc(m.zielgruppe)}</p>
       ${tier === 'pro' ? '<p class="auth-message">Profi ist aktiv – alle Funktionen und Kreditmappen sind enthalten.</p>' : ''}
       <div class="offers">${m.plans.map((p) => `<div class="offer${p.id === next ? ' rec' : ''}">${p.id === next ? '<span class="offer-rec">Empfohlener nächster Schritt</span>' : ''}<h4>${esc(p.name)}</h4><div class="offer-price">${E(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
-        ${cfg.enabled ? `<button class="btn ${p.id === next ? 'btn-dark' : 'btn-outline'}" type="button" data-buy="${p.id}"${(tier === 'pro' && shown === 'profi' && p.id !== 'credit-map') || (p.id === 'credit-map-starter' && tier !== 'starter') ? ' disabled' : ''}>${p.id === 'credit-map-starter' && tier !== 'starter' ? 'Mit Einsteiger-Begleitung' : 'Weiter zur Bezahlung'}</button>` : '<button class="btn btn-outline" type="button" disabled>Buchung startet in Kürze</button>'}</div>`).join('')}</div>
+        ${cfg.enabled ? `<button class="btn ${p.id === next ? 'btn-dark' : 'btn-outline'}" type="button" data-buy="${p.id}"${(tier === 'pro' && shown === 'profi' && p.id !== 'credit-map') || (p.id === 'credit-map-starter' && tier !== 'starter') ? ' disabled' : ''}>${p.id === 'credit-map-starter' && tier !== 'starter' ? 'Mit Einsteiger-Begleitung' : 'Jetzt buchen'}</button>` : '<button class="btn btn-outline" type="button" disabled>Buchung startet in Kürze</button>'}</div>`).join('')}</div>
       <div class="offer-free"><strong>Immer kostenlos:</strong> ${P.kostenlos.features.map(esc).join(' · ')}</div>
       <p class="form-note">Makler, Vermittler oder Bank? <a class="ck-link" href="/b2b-portal">Unternehmensportal</a> mit Widget, QR-Codes und Anfragen (Tarife netto, <a class="ck-link" href="/b2b">Übersicht</a>).</p>
-      ${cfg.enabled ? '<label class="consent"><input type="checkbox" id="offerConsent"> Ich verlange ausdrücklich, dass ImmoAdv vor Ablauf der Widerrufsfrist mit der Leistung beginnt. Mir ist bekannt, dass mein Widerrufsrecht bei digitalen Inhalten damit erlischt und ich bei einem Widerruf eines Abos Wertersatz für bereits erbrachte Leistungen schulde.</label><p class="form-note">Es gelten die <a class="ck-link" href="/nutzungsbedingungen">Nutzungsbedingungen</a> mit <a class="ck-link" href="/nutzungsbedingungen#widerruf">Widerrufsbelehrung</a>. Die Bestellung schließen Sie auf der folgenden Bezahlseite ab.</p>' : ''}
+      <div class="offer-pay"><p class="form-note">Bezahlen Sie auf der sicheren Bezahlseite mit:</p>${PAY_BADGES}</div>
       <p class="form-note">${esc(P.hinweis)} Es gelten die <a class="ck-link" href="/nutzungsbedingungen">Nutzungsbedingungen mit Widerrufsbelehrung</a>. Kündigung jederzeit über <a class="ck-link" href="/kuendigen">„Verträge hier kündigen“</a>.</p>`;
     box.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => { shown = b.dataset.seg; draw(); });
     // Aus der öffentlichen Angebotsseite vorgewählter Tarif: zur Karte springen und hervorheben.
     const want = new URLSearchParams(location.search).get('buy');
     if (want) { const card = box.querySelector(`[data-buy="${CSS.escape(want)}"]`)?.closest('.offer'); if (card) { card.classList.add('offer-want'); card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
-    box.querySelectorAll('[data-buy]').forEach((b) => b.onclick = async () => {
-      if (!$('offerConsent')?.checked) { $('offerConsent')?.closest('label')?.classList.add('consent-missing'); $('offerConsent')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); alert('Bitte zuerst der sofortigen Bereitstellung zustimmen.'); return; }
-      b.disabled = true;
-      try {
-        const r = await fetch('/api/billing/checkout', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: JSON.stringify({ plan: b.dataset.buy, consent: true }) });
-        const j = await r.json(); if (!r.ok) throw Error(j.error || 'Checkout fehlgeschlagen.');
-        location.href = j.url;
-      } catch (e) { alert(e.message); b.disabled = false; }
+    box.querySelectorAll('[data-buy]').forEach((b) => b.onclick = () => {
+      const offer = m.plans.find((x) => x.id === b.dataset.buy);
+      if (offer) openBuy(offer, { onError: (t) => alert(t) });
     });
   };
   draw();
