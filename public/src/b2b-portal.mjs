@@ -470,9 +470,11 @@ async function onboarding(avvVersion) {
       <h2>3. Verträge</h2>
       <details class="pt-avv"><summary>${esc(avv?.title || 'Auftragsverarbeitungsvertrag')} (Version ${esc(avvVersion)}) lesen</summary>
         ${(avv?.sections || []).map((s) => `<h3>${esc(s.h)}</h3>${s.p.map((p) => `<p>${esc(p)}</p>`).join('')}`).join('')}</details>
+      <label class="consent"><input type="checkbox" name="richtig" required> Ich versichere, dass alle Angaben zum Unternehmen und zu meiner Person vollständig und richtig sind. Mir ist bekannt, dass ImmoAdv das Konto bei falschen Angaben sperren kann.</label>
       <label class="consent"><input type="checkbox" name="unternehmer" required> Ich bestätige, dass ich als Unternehmer im Sinne des § 14 BGB handele. Mir ist bekannt, dass kein Widerrufsrecht besteht.</label>
       <label class="consent"><input type="checkbox" name="avv" required> Ich schließe für das Unternehmen den Auftragsverarbeitungsvertrag (Art. 28 DSGVO) in der oben angezeigten Fassung ab und bin dazu berechtigt.</label>
-      <label class="consent"><input type="checkbox" required> Ich habe die <a href="/nutzungsbedingungen#b2b" target="_blank">Nutzungsbedingungen für Unternehmen</a> und die <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen.</label>
+      <label class="consent"><input type="checkbox" name="agb" required> Ich habe die <a href="/nutzungsbedingungen#b2b" target="_blank">Nutzungsbedingungen für Unternehmen</a> und die <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen.</label>
+      <p class="form-note">Nach dem Absenden erhalten Sie einen schriftlichen Nachweis über alle Angaben und Erklärungen als PDF per E-Mail.</p>
       <button class="btn btn-dark" type="submit">Unternehmenskonto anlegen</button>
       <p class="form-note">ImmoAdv ist ein technisches Analyse- und Vorbereitungsinstrument. Keine Kreditvermittlung, keine Kreditzusage, keine Steuer- oder Rechtsberatung.</p>
     </form></div>`;
@@ -480,7 +482,7 @@ async function onboarding(avvVersion) {
     e.preventDefault();
     busy(e.target.querySelector('button[type=submit]'), async () => {
       const f = Object.fromEntries(new FormData(e.target));
-      const body = { ...f, unternehmer: f.unternehmer === 'on', avv: f.avv === 'on', referral: ref };
+      const body = { ...f, unternehmer: f.unternehmer === 'on', avv: f.avv === 'on', richtig: f.richtig === 'on', agb: f.agb === 'on', referral: ref };
       const r = await api('/api/b2b/account', { method: 'POST', body: JSON.stringify(body) });
       if (!r.ok) throw Error(r.data?.error || 'Registrierung fehlgeschlagen.');
       toast('Unternehmenskonto angelegt.');

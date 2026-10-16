@@ -162,6 +162,8 @@ export function setupApp({ u, d, saveData, reload }) {
 let KM = { doc: 'km', way: 'auto' };
 // Rückkehr aus dem Checkout (wird beim Laden des Moduls gelesen, bevor die Adresse bereinigt wird).
 const CHECKOUT = new URLSearchParams(location.search).get('checkout');
+// Nach einem Kauf den Navigationsstatus neu laden (Zur Anwendung / App-Leiste).
+if (CHECKOUT === 'success') { try { localStorage.removeItem('ia-access'); } catch { /* ignore */ } }
 function kmCard() {
   return `<article class="dash-card wide km-card" data-view="objekte" id="kmCard"><h3>PDF erstellen</h3>
     <div class="km-switch">

@@ -1,7 +1,11 @@
+import { createHash, randomUUID } from 'node:crypto';
+import { createElement } from 'react';
+import { renderToBuffer } from '@react-pdf/renderer';
 import { z } from 'zod';
 import { userFromRequest } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
-import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
+import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase/admin';
+import { RegistrationProofDocument, proofText, typeLabel, type RegistrationProof } from '@/lib/b2b/registration-proof';
 import { AVV_VERSION, TIER_LIMITS, adminAudit, dossiersThisMonth, effectiveTier, membershipFor, newWidgetKey, slugify, type B2BAccount } from '@/lib/b2b/core';
 import { json, requireMember } from '@/lib/b2b/http';
 import { adminList } from '@/lib/security/admin';
@@ -29,6 +33,8 @@ const RegisterSchema = z.object({
   city: z.string().transform(clean).pipe(z.string().min(2).max(80)),
   unternehmer: z.literal(true),
   avv: z.literal(true),
+  richtig: z.literal(true),
+  agb: z.literal(true),
   partnerCode: z.string().transform((s) => s.trim().toUpperCase()).optional().default(''),
   referral: z.string().max(40).optional().default(''),
 });
@@ -102,6 +108,8 @@ export async function POST(req: Request) {
     const msg: Record<string, string> = {
       unternehmer: 'Bitte bestätigen, dass Sie als Unternehmer handeln (§ 14 BGB).',
       avv: 'Bitte dem Auftragsverarbeitungsvertrag zustimmen.',
+      richtig: 'Bitte versichern, dass die Angaben vollständig und richtig sind.',
+      agb: 'Bitte die Nutzungsbedingungen und Datenschutzhinweise bestätigen.',
       postalCode: 'Bitte eine fünfstellige Postleitzahl angeben.',
       street: 'Bitte Straße und Hausnummer angeben.',
     };
@@ -150,12 +158,42 @@ export async function POST(req: Request) {
     await db.from('immo_b2b_accounts').delete().eq('id', ins.data.id);
     return json({ error: 'Registrierung fehlgeschlagen.' }, 500);
   }
-  await adminAudit(user.email, 'b2b_register', ins.data.id, { avv: AVV_VERSION, unternehmer: true, type: b.institutionType });
+  // Schriftlicher Nachweis: alle Angaben, Erklärungen im Wortlaut, Zeitpunkte, Prüfsumme.
+  let au: { email_confirmed_at?: string | null; created_at?: string | null } | null = null;
+  try { au = (await db.auth.admin.getUserById(user.id)).data?.user ?? null; } catch { au = null; }
+  const proof: RegistrationProof = {
+    proofId: 'REG-' + randomUUID().slice(0, 8).toUpperCase(),
+    createdAt: now,
+    customerNumber: String(ins.data.customer_number ?? ''),
+    company: { name: b.companyName, legalForm: b.legalForm, type: b.institutionType, registerNumber: reg || null, taxId: b.taxId || null, street: b.street, postalCode: b.postalCode, city: b.city, slug },
+    person: { name: b.advisorName, email: user.email, phone: b.phone || null },
+    account: { userId: user.id, emailConfirmedAt: au?.email_confirmed_at ?? null, signedUpAt: au?.created_at ?? null },
+    consents: [
+      { key: 'richtig', at: now },
+      { key: 'unternehmer', at: now },
+      { key: 'avv', at: now, version: AVV_VERSION },
+      { key: 'agb', at: now },
+    ],
+    partnerCode: b.partnerCode || null,
+    tech: { ipHash: anonymizedIpHash(req), userAgent: (req.headers.get('user-agent') || '').slice(0, 180) || null },
+    sha256: '',
+  };
+  proof.sha256 = createHash('sha256').update(JSON.stringify({ ...proof, sha256: undefined })).digest('hex');
+  await adminAudit(user.email, 'b2b_register', ins.data.id, { avv: AVV_VERSION, unternehmer: true, richtig: true, type: b.institutionType, proofId: proof.proofId, sha256: proof.sha256 });
   if (mailConfigured()) {
-    for (const to of adminList()) {
-      await sendMail(to, `Neues Unternehmenskonto: ${b.companyName}`, `${b.companyName} (${b.legalForm}, ${b.institutionType})\n${b.advisorName}, ${b.postalCode} ${b.city}\nKundennummer: ${ins.data.customer_number}\n\nPrüfen und verifizieren: https://immoadv.de/intern/objektsuche#b2b`);
+    let pdf: Buffer | null = null;
+    try { pdf = await renderToBuffer(createElement(RegistrationProofDocument, { p: proof }) as unknown as Parameters<typeof renderToBuffer>[0]); } catch (e) { console.error('b2b_proof_pdf', e instanceof Error ? e.message : e); }
+    const att = pdf ? [{ filename: `ImmoAdv_Registrierungsnachweis_${proof.proofId}.pdf`, content: pdf }] : [];
+    const text = proofText(proof);
+    // Geschäftsadresse für Nachweise (B2B_NOTIFY_EMAIL), sonst alle Administratoren.
+    const biz = (process.env.B2B_NOTIFY_EMAIL || '').split(',').map((x) => x.trim()).filter(Boolean);
+    for (const to of biz.length ? biz : adminList()) {
+      await sendMail(to, `Neue B2B-Registrierung: ${b.companyName} (${typeLabel(b.institutionType)})`, `${text}
+
+Prüfen und freischalten: https://immoadv.de/intern/objektsuche#partner`, att);
     }
-    await sendMail(user.email, 'Ihr ImmoAdv-Unternehmenskonto', `Guten Tag ${b.advisorName},\n\nIhr Unternehmenskonto für ${b.companyName} ist angelegt (Kundennummer ${ins.data.customer_number}).\nDen Auftragsverarbeitungsvertrag (Version ${AVV_VERSION}) können Sie jederzeit im Portal herunterladen: https://immoadv.de/b2b-portal#profil\n\nImmoAdv · Georg-August-Zinn-Str. 25 · 64354 Reinheim`);
+    await sendMail(user.email, `Ihre Registrierung bei ImmoAdv – Nachweis ${proof.proofId}`,
+      `Guten Tag ${b.advisorName},\n\nIhr Unternehmenskonto für ${b.companyName} ist angelegt (Kundennummer ${ins.data.customer_number}). Im Anhang finden Sie den Nachweis über Ihre Angaben und Erklärungen. Bitte prüfen Sie ihn; falsche Angaben teilen Sie uns bitte umgehend an support@immoadv.de mit.\n\nNächster Schritt: Gewerbenachweis im Portal hochladen (https://immoadv.de/b2b-portal#verifizierung). Den Auftragsverarbeitungsvertrag (Version ${AVV_VERSION}) können Sie jederzeit unter https://immoadv.de/b2b-portal#profil herunterladen.\n\n${text}\n\nImmoAdv · Head of Operations: Feray Korkmaz · Georg-August-Zinn-Str. 25 · 64354 Reinheim`, att);
   }
   return json({ ok: true, ...view(ins.data as B2BAccount, 'owner') }, 201);
 }

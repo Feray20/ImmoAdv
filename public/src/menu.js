@@ -54,3 +54,65 @@ if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/aut
   new MutationObserver(() => { if (document.querySelector('.mobile-menu:not(:has(.mm-text))')) mark(); })
     .observe(document.documentElement, { childList: true, subtree: true });
 })();
+
+// Navigation je Status: Neue Besucher sehen „Anmelden“. „Zur Anwendung“ und die App-Leiste
+// erscheinen nur für zahlende Kunden (Tarif, Unternehmenskonto) und Administratoren;
+// angemeldete Nutzer ohne Tarif sehen „Mein Konto“. Der Status wird 10 Minuten zwischengespeichert.
+(() => {
+  const K = 'immoadv-auth-session-v1', C = 'ia-access', TTL = 10 * 60 * 1000;
+  const root = document.documentElement;
+  const sess = () => { try { return JSON.parse(localStorage.getItem(K) || 'null'); } catch { return null; } };
+  const uid = (s) => s?.user?.id || String(s?.refresh_token || '').slice(-10);
+  let state = { user: false, paid: false };
+  const relabel = () => {
+    document.querySelectorAll('.nav-actions a[href="/auth/login"], .mobile-nav a[href="/auth/login"], a.nav-acc').forEach((a) => {
+      const acc = state.user && !state.paid;
+      if (!a.dataset.orig) a.dataset.orig = a.textContent;
+      a.textContent = acc ? 'Mein Konto' : a.dataset.orig;
+      a.classList.toggle('nav-acc', acc);
+      a.setAttribute('href', acc ? '/app/dashboard#konto' : '/auth/login');
+    });
+  };
+  const apply = (st) => {
+    state = st;
+    root.classList.toggle('ia-user', !!st.user);
+    root.classList.toggle('ia-paid', !!st.paid);
+    relabel();
+  };
+  const save = (st, s) => { try { localStorage.setItem(C, JSON.stringify({ ...st, at: Date.now(), uid: uid(s) })); } catch { /* ignore */ } };
+  async function refresh(s) {
+    try {
+      const c = await (await fetch('/api/supabase-config')).json();
+      const r = await fetch(c.url + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: c.anonKey || c.key || c.publishableKey, 'content-type': 'application/json' }, body: JSON.stringify({ refresh_token: s.refresh_token }) });
+      if (!r.ok) return null;
+      const d = await r.json();
+      localStorage.setItem(K, JSON.stringify(d));
+      return d;
+    } catch { return null; }
+  }
+  async function check(force) {
+    let s = sess();
+    if (!s?.access_token) { apply({ user: false, paid: false }); try { localStorage.removeItem(C); } catch { /* ignore */ } return; }
+    let c = null; try { c = JSON.parse(localStorage.getItem(C) || 'null'); } catch { c = null; }
+    if (c && c.uid === uid(s)) apply({ user: !!c.user, paid: !!c.paid });
+    else apply({ user: true, paid: false });
+    if (!force && c && c.uid === uid(s) && Date.now() - c.at < TTL) return;
+    const ask = (tok) => fetch('/api/me/access', { headers: { Authorization: 'Bearer ' + tok }, cache: 'no-store' });
+    try {
+      let r = await ask(s.access_token);
+      if (r.status === 401 && s.refresh_token) { const n = await refresh(s); if (n) { s = n; r = await ask(n.access_token); } }
+      if (r.status === 401) { apply({ user: false, paid: false }); return; }
+      if (!r.ok) return; // Netzfehler: bisherigen Stand behalten
+      const d = await r.json();
+      const st = { user: !!d.loggedIn, paid: !!d.paid };
+      apply(st); save(st, s);
+    } catch { /* offline: bisherigen Stand behalten */ }
+  }
+  check(false);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', relabel);
+  // Seiten, die ihren Kopf per Skript aufbauen, und Wechsel in anderen Tabs.
+  new MutationObserver(() => { if (document.querySelector('.nav-actions a[href="/auth/login"]:not([data-orig])')) relabel(); })
+    .observe(document.documentElement, { childList: true, subtree: true });
+  addEventListener('storage', (e) => { if (e.key === K || e.key === C) check(e.key === K); });
+  window.__iaAccess = { check: () => check(true) };
+})();
