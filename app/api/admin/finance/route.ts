@@ -82,7 +82,13 @@ export async function GET(req: Request) {
   // Abwanderung im Zeitraum: Admin-Protokoll und Stripe-Kündigungen sind nicht vollständig erfasst; hier nur Konten mit abgelaufenem Tarif.
   const expired = (accs ?? []).filter((a) => a.plan_until && a.plan_until.slice(0, 10) >= r.from && a.plan_until.slice(0, 10) <= r.to && a.plan_until < new Date().toISOString()).length;
 
-  const fromTs = `${r.from}T00:00:00+01:00`, toTs = `${r.to}T23:59:59+01:00`;
+  // Tagesgrenzen in deutscher Zeit (MEZ/MESZ) korrekt in UTC umrechnen.
+  const berlinOffset = (day: string) => {
+    const d = new Date(`${day}T12:00:00Z`);
+    const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', hour12: false }).format(d));
+    return `+0${h - 12}:00`;
+  };
+  const fromTs = `${r.from}T00:00:00${berlinOffset(r.from)}`, toTs = `${r.to}T23:59:59.999${berlinOffset(r.to)}`;
   const cnt = async (t: string, f: (q: any) => any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const { count } = await f(db.from(t).select('*', { count: 'exact', head: true }));
     return count ?? 0;

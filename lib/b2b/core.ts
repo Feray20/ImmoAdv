@@ -94,7 +94,11 @@ export async function membershipFor(userId: string): Promise<{ account: B2BAccou
 // Erneutes Erstellen für dasselbe Objekt (Korrekturen) zählt nicht doppelt.
 export async function dossierObjectsThisMonth(accountId: string): Promise<Set<string>> {
   const now = new Date();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+  // Monatsbeginn in deutscher Zeit (1. des Monats, 00:00 MEZ/MESZ).
+  const ym = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit' }).format(now);
+  const noon = new Date(`${ym}-01T12:00:00Z`);
+  const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', hour12: false }).format(noon));
+  const start = new Date(`${ym}-01T00:00:00+0${h - 12}:00`).toISOString();
   const { data } = await supabaseAdmin()
     .from('immo_kreditmappe_versions')
     .select('owner_id, object_ref')
