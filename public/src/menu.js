@@ -116,3 +116,11 @@ if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/aut
   addEventListener('storage', (e) => { if (e.key === K || e.key === C) check(e.key === K); });
   window.__iaAccess = { check: () => check(true) };
 })();
+
+// Footer-Akkordeon: am Handy ist immer nur ein Bereich geöffnet.
+document.addEventListener('toggle', (e) => {
+  const d = e.target;
+  if (!(d instanceof HTMLDetailsElement) || !d.classList.contains('foot-col') || !d.open) return;
+  if (!matchMedia('(max-width: 900px)').matches) return;
+  document.querySelectorAll('details.foot-col[open]').forEach((x) => { if (x !== d) x.open = false; });
+}, true);

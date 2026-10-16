@@ -693,3 +693,15 @@ body.ia-pdfv-open{overflow:hidden}
 .sso-apple svg{margin-top:-2px}
 .sso-btn:active{transform:scale(.98)}
 .sso{grid-template-columns:1fr}
+/* Einwilligungen: Kästchen links, Text (inkl. Link) läuft als Fließtext daneben – überall gleich */
+label.consent{display:block!important;position:relative;padding-left:34px;font-size:14px;line-height:1.55;color:var(--ia-text,#334155);margin:14px 0}
+label.consent>input[type="checkbox"]{position:absolute;left:0;top:0;width:22px;height:22px;margin:0}
+.obj-grid label.consent{grid-column:1/-1}
+/* Footer am Handy: immer nur ein Bereich offen, Links zweispaltig und kompakt */
+@media (max-width:900px){
+  .foot-col[open] .foot-links{grid-template-columns:1fr 1fr;gap:2px 16px;padding-bottom:14px}
+  .foot-col .foot-links a{font-size:15px;padding:7px 0;line-height:1.3}
+}
+/* Startseite: Häkchen-Punkte am Handy untereinander */
+@media (max-width:600px){.home-proof{flex-direction:column;gap:8px}.home-kicker{font-size:12px}}
+label.full{justify-content:stretch;justify-items:stretch}

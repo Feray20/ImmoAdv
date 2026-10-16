@@ -125,3 +125,10 @@ body.intern>main,body.intern #intern{min-width:0}
 .pt-logout:hover{background:rgba(255,255,255,.08)}
 .pt-logout-m{display:none}
 @media (max-width:900px){.pt-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pt-logout-m{display:inline-block;margin:0 0 0 auto;color:#0F2C59;border-color:#CBD5E1;background:#fff;min-height:40px}}
+/* Kontaktformular: Felder volle Breite, iPhone ohne Zoom, großer Absende-Knopf */
+.b2b-form label{font-size:14px;min-width:0}
+.b2b-form input,.b2b-form select,.b2b-form textarea{width:100%;box-sizing:border-box;min-width:0;font-size:16px;min-height:46px;background:#fff}
+.b2b-form textarea{min-height:120px;resize:vertical}
+.b2b-form .btn{min-height:48px}
+@media (max-width:760px){.b2b-form .full .btn{width:100%;justify-content:center}}
+.b2b-form label.full{justify-content:stretch;justify-items:stretch}
