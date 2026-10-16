@@ -352,3 +352,5 @@ body.is-app .dashboard-grid{gap:16px}
 .app-side .brand>span{color:#fff}.app-side .brand>span>span{color:#38BDF8}
 [hidden]{display:none!important}
 .obj-grid select{border:1px solid var(--ia-hair,#CBD5E1);border-radius:4px;padding:8px 10px;background:#fff;color:#0F172A}
+@media(min-width:901px) and (max-width:1240px){.site-header .desktop-nav a[href="/suche"],.site-header .desktop-nav a[href="/pro-begleiter"],.site-header .desktop-nav a[href="/fuer-banken"]{display:none}}
+@media(min-width:901px) and (max-width:1040px){.site-header .desktop-nav a[href="/checkliste"]{display:none}}
