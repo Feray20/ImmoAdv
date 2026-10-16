@@ -32,11 +32,11 @@ const s = StyleSheet.create({
   note: { marginTop: 10, fontSize: 7, color: BRAND.muted },
 });
 
-export function ReportDocument({ r, reportId, createdAt, hash, partner, reportType = 'Objekt-Analyse' }: { r: ReportInput; reportId: string; createdAt: string; hash?: string; partner?: PartnerBrand | null; reportType?: string }) {
+export function ReportDocument({ r, reportId, createdAt, hash, partner, reportType = 'Objekt-Analyse', watermark }: { r: ReportInput; reportId: string; createdAt: string; hash?: string; partner?: PartnerBrand | null; reportType?: string; watermark?: string }) {
   return (
     <Document title={`ImmoAdv – ${r.title}`} author="ImmoAdv" language="de">
       <Page size="A4" style={s.page}>
-        <SecureWatermark docId={reportId} partner={partner} />
+        <SecureWatermark docId={reportId} partner={partner} label={watermark} strong={Boolean(watermark)} />
         <BrandHeader reportType={reportType} reportId={reportId} createdAt={createdAt} partner={partner} />
         <Text style={s.title}>{r.title}</Text>
         {r.subtitle ? <Text style={s.sub}>{r.subtitle}</Text> : null}
