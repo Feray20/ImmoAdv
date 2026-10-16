@@ -244,6 +244,31 @@ async function exposeText(file) {
   return out.join('\n');
 }
 
+// Objekt aus dem Konto in die Analyse übernehmen (automatische Objekt-Analyse); optional direkt PDF/E-Mail.
+const LOAD_KEY = 'ia-analyse-load';
+function loadFromObject(o) {
+  const set = (id, v) => { const el = $(id); if (!el || v === undefined || v === null || v === '') return; if (el.type === 'checkbox') el.checked = Boolean(v); else el.value = v; };
+  ['a_url', 'a_addr', 'a_price', 'a_area', 'a_rooms', 'a_year', 'a_ec', 'a_rent', 'a_vq', 'a_nonrec', 'a_lv', 'a_lz', 'a_rnd'].forEach((id) => { const el = $(id); if (el) el.value = ''; });
+  set('a_addr', o.name); set('a_price', o.price); set('a_area', o.area); set('a_year', o.yearBuilt); set('a_ec', o.efficiencyClass);
+  set('a_rent', o.rent); set('a_vq', o.vergleichsmieteQm); set('a_mpb', o.mietpreisbremse); set('a_vac', o.vacancyPct); set('a_nonrec', o.nonRecoverable);
+  if (Number(o.maintenance) > 0 && Number(o.area) > 0) set('a_mqm', Math.round((o.maintenance / o.area) * 100) / 100);
+  set('a_eq', o.equity); set('a_z', o.interestPct); set('a_t', o.repaymentPct); set('a_fix', o.fixedYears); set('a_bs', o.buildingSharePct);
+  set('a_tax', o.marginalTaxPct); set('a_lz', o.liegenschaftszinsPct); set('a_rnd', o.restnutzungsdauer); set('a_broker', o.brokerPct);
+  if (Number(o.grestPct) > 0 && $('a_land') && GREST[$('a_land').value]?.pct !== Number(o.grestPct)) {
+    const k = Object.keys(GREST).find((x) => GREST[x].pct === Number(o.grestPct)); if (k) $('a_land').value = k;
+  }
+  updateAnalyse();
+}
+function checkAnalyseLoad() {
+  let job = null;
+  try { job = JSON.parse(sessionStorage.getItem(LOAD_KEY) || 'null'); sessionStorage.removeItem(LOAD_KEY); } catch { job = null; }
+  if (!job || !job.o) return;
+  loadFromObject(job.o);
+  $('a_bar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (job.then === 'pdf') $('a_pdf')?.click();
+  if (job.then === 'mail') $('a_mail')?.click();
+}
+
 const IMPORT_KEY = 'ia-import';
 function checkImport() {
   const m = location.hash.match(/[?&]import=([^&]*)/);
@@ -317,7 +342,7 @@ export function mountObjekt(container, opts = {}) {
     if (importListing({ u, t, ti: '' })) { $('imp_text').value = ''; $('imp_url').value = ''; }
   });
   if (window.__iaImport) window.removeEventListener('hashchange', window.__iaImport);
-  window.__iaImport = () => { if (/[?&]import=/.test(location.hash)) checkImport(); };
+  window.__iaImport = () => { if (/[?&]import=/.test(location.hash)) checkImport(); if (location.hash.startsWith('#suche')) setTimeout(checkAnalyseLoad, 0); };
   window.addEventListener('hashchange', window.__iaImport);
   if (!opts.pdf) { $('a_pdf')?.remove(); $('a_mail')?.remove(); }
   const KEY = 'ia-objekt-v1';
@@ -328,5 +353,5 @@ export function mountObjekt(container, opts = {}) {
   [['ort', 's_ort'], ['land', 's_land'], ['art', 's_art'], ['preisab', 's_pmin'], ['preis', 's_price'], ['flaeche', 's_area'], ['zimmer', 's_rooms']].forEach(([k, id]) => { if (q.get(k) && $(id)) $(id).value = q.get(k); });
   root.addEventListener('input', (e) => { if (!e.target.id) return; if (e.target.id.startsWith('s_')) updateSearch(); else if (e.target.id.startsWith('a_')) updateAnalyse(); save(); });
   root.addEventListener('change', (e) => { if (e.target.tagName !== 'SELECT' && e.target.type !== 'checkbox') return; if (e.target.id.startsWith('s_')) updateSearch(); else updateAnalyse(); save(); });
-  bindActions(); updateSearch(); updateAnalyse(); renderList(); checkImport();
+  bindActions(); updateSearch(); updateAnalyse(); renderList(); checkImport(); checkAnalyseLoad();
 }

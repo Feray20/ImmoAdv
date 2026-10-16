@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { createElement } from 'react';
-import { BankOnePager, BeraterCheckliste } from '@/lib/unterlagen/pdfs';
+import { AnalyseVorlage, BankOnePager, BeraterCheckliste, KreditmappeVorlage } from '@/lib/unterlagen/pdfs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-static';
@@ -10,6 +10,8 @@ export const dynamic = 'force-static';
 const DOCS = {
   'bank-one-pager': { component: BankOnePager, filename: 'ImmoAdv_Bank_One_Pager.pdf' },
   'berater-checkliste': { component: BeraterCheckliste, filename: 'ImmoAdv_Berater_Checkliste.pdf' },
+  'kreditmappe-vorlage': { component: KreditmappeVorlage, filename: 'ImmoAdv_Kreditmappe_zum_Ausfuellen.pdf' },
+  'analyse-vorlage': { component: AnalyseVorlage, filename: 'ImmoAdv_Objekt-Analyse_zum_Ausfuellen.pdf' },
 } as const;
 
 export function generateStaticParams() {

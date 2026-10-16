@@ -1,5 +1,5 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
-import { BRAND, Logo } from '@/lib/pdf/brand';
+import { BRAND, Logo, SecureWatermark } from '@/lib/pdf/brand';
 
 const C = { navy: BRAND.navy, text: '#334155', muted: '#64748B', hair: '#CBD5E1', bg: '#F8FAFC', okBg: '#DCFCE7', ok: '#166534', noneBg: '#F1F5F9', none: '#64748B' };
 const DISCLAIMER = 'Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Rechts-, Steuer- oder Finanzierungsberatung gem. § 34i GewO / KWG.';
@@ -148,6 +148,117 @@ export function BeraterCheckliste() {
         </View>
         <Text style={s.h2}>Hinweise nach Erwerbsstatus</Text>
         <Text style={s.p}>Befristet Angestellte: häufig zweiter Darlehensnehmer oder zusätzliche Sicherheiten. Berufseinsteiger: Fokus auf Eigenkapital und Kaufpreisgrenze. Selbstständige: meist mindestens 2–3 Jahre Geschäftstätigkeit. Rentner: Altersgrenzen und Restlaufzeit beachten.</Text>
+        <Footer />
+      </Page>
+    </Document>
+  );
+}
+
+// ---------- Vorlagen zum Ausfüllen von Hand (manuelle Variante) ----------
+const fs = StyleSheet.create({
+  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
+  cell: { width: '50%', paddingHorizontal: 4, marginBottom: 7 },
+  cellFull: { width: '100%', paddingHorizontal: 4, marginBottom: 7 },
+  lab: { fontSize: 7, color: C.muted, marginBottom: 2 },
+  line: { borderBottomWidth: 0.75, borderBottomColor: C.hair, height: 13 },
+  sec: { fontSize: 10.5, fontFamily: 'Helvetica-Bold', color: C.navy, marginTop: 8, marginBottom: 5, paddingBottom: 2, borderBottomWidth: 1, borderBottomColor: C.navy },
+  calc: { flexDirection: 'row', alignItems: 'flex-end', borderBottomWidth: 0.5, borderBottomColor: C.hair, paddingVertical: 4 },
+  calcL: { flex: 3 }, calcF: { flex: 3, color: C.muted, fontSize: 7.5 }, calcV: { flex: 1.4, borderBottomWidth: 0.75, borderBottomColor: C.navy, height: 12, marginLeft: 6 },
+  box: { width: 8, height: 8, borderWidth: 0.75, borderColor: C.navy, marginRight: 6 },
+  chk: { flexDirection: 'row', alignItems: 'center', width: '50%', marginBottom: 5 },
+});
+const F = ({ l, full }: { l: string; full?: boolean }) => (
+  <View style={full ? fs.cellFull : fs.cell}><Text style={fs.lab}>{l}</Text><View style={fs.line} /></View>
+);
+const Calc = ({ l, f }: { l: string; f: string }) => (
+  <View style={fs.calc}><Text style={fs.calcL}>{l}</Text><Text style={fs.calcF}>{f}</Text><View style={fs.calcV} /></View>
+);
+const Head = ({ kicker, title }: { kicker: string; title: string }) => (
+  <>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}><Logo size={14} /><Text style={{ fontSize: 7, color: C.muted }}>immoadv.de · Vorlage · Stand Oktober 2026</Text></View>
+    <View style={s.bar}><Text style={s.barKicker}>{kicker}</Text><Text style={s.barTitle}>{title}</Text></View>
+  </>
+);
+
+export function KreditmappeVorlage() {
+  return (
+    <Document title="ImmoAdv – Kreditmappe zum Ausfüllen" author="ImmoAdv" language="de">
+      <Page size="A4" style={s.page}>
+        <SecureWatermark docId="VORLAGE-KM" />
+        <Head kicker="KREDITMAPPE · ZUM AUSFÜLLEN VON HAND" title="Kreditmappe für das Bankgespräch" />
+        <Text style={s.p}>Tragen Sie Ihre Angaben ein und legen Sie die Unterlagen bei. Schneller geht es digital: In der ImmoAdv-Anwendung werden alle Werte automatisch berechnet und als PDF ausgegeben.</Text>
+        <Text style={fs.sec}>1. Persönliche Angaben</Text>
+        <View style={fs.grid}>
+          <F l="Name, Vorname" /><F l="Geburtsdatum" /><F l="Anschrift" full /><F l="Familienstand / Kinder" /><F l="Telefon / E-Mail" />
+          <F l="Erwerbsstatus (angestellt, beamtet, selbstständig …)" /><F l="Arbeitgeber / beschäftigt seit" />
+        </View>
+        <Text style={fs.sec}>2. Objekt</Text>
+        <View style={fs.grid}>
+          <F l="Adresse des Objekts" full /><F l="Objektart (ETW, EFH, MFH)" /><F l="Baujahr" /><F l="Wohnfläche (m²) / Zimmer" /><F l="Energieeffizienzklasse" />
+          <F l="Nutzung (selbst bewohnt / vermietet)" /><F l="Ist-Miete bzw. geplante Kaltmiete (€/Monat)" /><F l="Hausgeld (€/Monat)" /><F l="Erhaltungsrücklage der WEG (€)" />
+        </View>
+        <Text style={fs.sec}>3. Kosten und Finanzierung</Text>
+        <Calc l="Kaufpreis" f="laut Kaufvertrag/Exposé" />
+        <Calc l="Grunderwerbsteuer" f="Kaufpreis × Satz des Bundeslands (3,5–6,5 %)" />
+        <Calc l="Notar und Grundbuch" f="ca. 2 % des Kaufpreises" />
+        <Calc l="Makler (Käuferanteil)" f="laut Exposé, z. B. 3,57 %" />
+        <Calc l="Gesamtkosten" f="Summe der Zeilen oben" />
+        <Calc l="Eigenkapital" f="mind. Nebenkosten, besser + 10–20 % Kaufpreis" />
+        <Calc l="Darlehen" f="Gesamtkosten − Eigenkapital" />
+        <Calc l="Monatsrate" f="Darlehen × (Sollzins + Tilgung) ÷ 12" />
+        <Footer />
+      </Page>
+      <Page size="A4" style={s.page}>
+        <SecureWatermark docId="VORLAGE-KM" />
+        <Text style={fs.sec}>4. Haushaltsrechnung (pro Monat)</Text>
+        <Calc l="Nettoeinkommen (alle Antragsteller)" f="laut letzten 3 Gehaltsabrechnungen" />
+        <Calc l="+ Kindergeld, sonstige Einnahmen" f="nur dauerhafte Einnahmen" />
+        <Calc l="+ Mieteinnahmen" f="Banken rechnen meist mit 70–80 % der Kaltmiete" />
+        <Calc l="− Lebenshaltung" f="Pauschale der Bank, z. B. je Person" />
+        <Calc l="− Wohnkosten (falls weiter zur Miete)" f="Warmmiete" />
+        <Calc l="− bestehende Kredite, Versicherungen, Sparraten" f="laut Verträgen" />
+        <Calc l="− Rate der neuen Finanzierung" f="aus Abschnitt 3" />
+        <Calc l="= Überschuss" f="sollte deutlich positiv sein" />
+        <Text style={fs.sec}>5. Vermögen und Verbindlichkeiten</Text>
+        <View style={fs.grid}><F l="Bankguthaben / Wertpapiere" /><F l="Bausparverträge / Lebensversicherungen" /><F l="Weitere Immobilien (Wert / Restschuld)" /><F l="Sonstige Verbindlichkeiten" /></View>
+        <Text style={fs.sec}>6. Unterlagen (bitte beilegen)</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          {['Ausweiskopie', 'Gehaltsabrechnungen (3 Monate)', 'Lohnsteuerbescheinigung', 'Kontoauszüge (3 Monate)', 'Eigenkapitalnachweis', 'Exposé', 'Grundbuchauszug', 'Flurkarte / Lageplan', 'Grundrisse und Wohnflächenberechnung', 'Teilungserklärung (ETW)', 'WEG-Protokolle, Wirtschaftsplan', 'Energieausweis', 'Mietvertrag (bei Vermietung)', 'Bei Selbstständigen: BWA, Bilanzen, Steuerbescheide'].map((d) => (
+            <View key={d} style={fs.chk}><View style={fs.box} /><Text>{d}</Text></View>
+          ))}
+        </View>
+        <View style={[fs.grid, { marginTop: 14 }]}><F l="Ort, Datum" /><F l="Unterschrift" /></View>
+        <Text style={[s.p, { color: C.muted, marginTop: 6 }]}>Welche Unterlagen und Pauschalen eine Bank konkret ansetzt, legt sie selbst fest. Keine Kreditzusage.</Text>
+        <Footer />
+      </Page>
+    </Document>
+  );
+}
+
+export function AnalyseVorlage() {
+  return (
+    <Document title="ImmoAdv – Objekt-Analyse zum Ausfüllen" author="ImmoAdv" language="de">
+      <Page size="A4" style={s.page}>
+        <SecureWatermark docId="VORLAGE-AN" />
+        <Head kicker="OBJEKT-ANALYSE · ZUM AUSFÜLLEN VON HAND" title="Lohnt sich die Immobilie?" />
+        <Text style={s.p}>Rechnen Sie die wichtigsten Kennzahlen selbst nach. Digital erledigt das die ImmoAdv-Anwendung automatisch – auch direkt aus einem Exposé.</Text>
+        <Text style={fs.sec}>Objekt</Text>
+        <View style={fs.grid}><F l="Adresse / Bezeichnung" full /><F l="Kaufpreis (€)" /><F l="Wohnfläche (m²)" /><F l="Kaltmiete (€/Monat)" /><F l="Nicht umlagefähige Kosten (€/Monat)" /><F l="Eigenkapital (€)" /><F l="Sollzins / Tilgung (%)" /></View>
+        <Text style={fs.sec}>Kennzahlen</Text>
+        <Calc l="Preis pro m²" f="Kaufpreis ÷ Wohnfläche" />
+        <Calc l="Jahreskaltmiete" f="Kaltmiete × 12" />
+        <Calc l="Bruttomietrendite" f="Jahreskaltmiete ÷ Kaufpreis × 100" />
+        <Calc l="Kaufpreisfaktor" f="Kaufpreis ÷ Jahreskaltmiete (≤ 22 eher günstig)" />
+        <Calc l="Kaufnebenkosten" f="Kaufpreis × (GrESt + Notar/Grundbuch + Makler)" />
+        <Calc l="Darlehen" f="Kaufpreis + Nebenkosten − Eigenkapital" />
+        <Calc l="Monatsrate" f="Darlehen × (Zins + Tilgung) ÷ 12" />
+        <Calc l="Instandhaltung + Mietausfall" f="ca. 1 €/m² + 2 % der Miete pro Monat" />
+        <Calc l="Cashflow vor Steuern" f="Miete − Kosten − Instandhaltung − Mietausfall − Rate" />
+        <Calc l="Kapitaldienstdeckung (DSCR)" f="(Miete − Kosten) ÷ Rate (≥ 1,2 solide)" />
+        <Calc l="Nettomietrendite" f="(Jahresmiete − Jahreskosten) ÷ Gesamtkosten × 100" />
+        <Text style={fs.sec}>Notizen</Text>
+        <View style={fs.grid}><F l="" full /><F l="" full /><F l="" full /></View>
+        <Text style={[s.p, { color: C.muted }]}>Ampelgrenzen sind Orientierungswerte (ImmoAdv-Annahmen). Rechnerische Orientierung, keine Anlage- oder Finanzierungsberatung.</Text>
         <Footer />
       </Page>
     </Document>
