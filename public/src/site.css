@@ -511,3 +511,14 @@ body.is-app main{padding:0 14px calc(88px + env(safe-area-inset-bottom))}
 .app-spin{width:34px;height:34px;border:3px solid #E2E8F0;border-top-color:#0369A1;border-radius:50%;animation:appspin .9s linear infinite}
 @keyframes appspin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.app-spin{animation:none;border-top-color:#94A3B8}}
+.km-card h3{margin-bottom:6px}
+.km-steps{display:grid;gap:2px;margin:0 0 12px;padding-left:20px;color:#475569;font-size:14px}
+.km-pick{display:grid;gap:4px;max-width:420px;font-size:13px;font-weight:600;color:#475569;margin-bottom:12px}
+.km-pick select{border:1px solid #CBD5E1;border-radius:8px;padding:10px;font:inherit;font-size:15px;color:#0F172A;background:#fff}
+.km-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.km-box{display:grid;gap:6px;align-content:start;border:1px solid #E2E8F0;border-radius:10px;padding:14px;background:#F8FAFC}
+.km-box strong{color:#0F2C59}.km-box span{color:#475569;font-size:14px}
+.km-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.km-msg{margin:12px 0 0;font-size:14px}.km-msg:empty{display:none}
+.km-msg.ok,.km-msg.bad{padding:10px 12px;border-radius:6px}.km-msg.ok{background:#F0FDF4;border-left:4px solid #16A34A}.km-msg.bad{background:#FEF2F2;border-left:4px solid #DC2626}
+@media(max-width:700px){.km-grid{grid-template-columns:1fr}.km-actions .btn{flex:1 1 auto;justify-content:center}}

@@ -7,11 +7,12 @@ import { userFromRequest } from '@/lib/billing/auth';
 import { buildKreditmappe } from '@/lib/kreditmappe/model';
 import { loadMappeInput } from '@/lib/kreditmappe/load';
 import { KreditmappeDocument } from '@/lib/kreditmappe/pdf';
+import { deliverPdf } from '@/lib/export/deliver';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const BodySchema = z.object({ objectId: z.string().min(4).max(40) });
+const BodySchema = z.object({ objectId: z.string().min(4).max(40), email: z.boolean().optional() });
 const PREVIEW_WATERMARK = 'VORSCHAU — NICHT ZUR VORLAGE — IMMOADV.DE';
 
 // Kostenfreie Vorschau der Kreditmappe: vollständiger Inhalt, aber mit Wasserzeichen,
@@ -35,14 +36,7 @@ export async function POST(req: Request) {
     const pdf = await renderToBuffer(element);
     if (pdf.subarray(0, 5).toString() !== '%PDF-') throw new Error('invalid_pdf_output');
     const filename = `ImmoAdv_Kreditmappe_Vorschau_${object.name.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}.pdf`;
-    return new NextResponse(new Uint8Array(pdf), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
-        'Cache-Control': 'no-store',
-      },
-    });
+    return deliverPdf({ pdf, filename, email: parsed.data.email, user, subject: `Kreditmappe (Vorschau): ${object.name}`, text: 'Im Anhang finden Sie die Vorschau Ihrer Kreditmappe. Die Vorschau trägt ein Wasserzeichen und ist nicht zur Vorlage bei der Bank bestimmt.' });
   } catch (e) {
     console.error('kreditmappe_preview_error', e instanceof Error ? e.message : e);
     return NextResponse.json({ error: 'Vorschau konnte nicht erstellt werden.' }, { status: 500 });

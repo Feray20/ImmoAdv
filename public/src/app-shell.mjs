@@ -106,12 +106,14 @@ export function setupApp({ u, d, saveData, reload }) {
   };
 
   // Eigene Karten: Start, Suche, Lernpfad, Angebot
+  grid.insertAdjacentHTML('afterbegin', kmCard(d));
   grid.insertAdjacentHTML('afterbegin', startCard(mode, d));
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="suche" id="sucheView"></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);
   grid.insertAdjacentHTML('beforeend', lernCard(mode, d));
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="angebot" id="angebotView"><h3>${mode === 'profi' ? 'Tarif' : 'Angebot'}</h3><div id="offerBody"><p class="form-note">Wird geladen …</p></div></article>`);
   bindStart(mode, d, u, saveData, reload);
+  bindKm();
   bindLern(d, u, saveData);
 
   const apply = () => {
@@ -136,6 +138,56 @@ export function setupApp({ u, d, saveData, reload }) {
   window.addEventListener('hashchange', window.__iaHash);
   new MutationObserver(apply).observe(grid, { childList: true });
   apply();
+}
+
+// Kreditmappe: gut sichtbarer, geführter Einstieg im Bereich „Objekte“ – Vorschau (immer) und endgültige Mappe
+// (nach Freischaltung), jeweils als PDF-Download auf jedem Gerät oder per E-Mail an die eigene Adresse.
+function kmCard(d) {
+  const os = (Array.isArray(d.objects) ? d.objects : []).filter((o) => o && o.id);
+  const head = '<h3>Kreditmappe erstellen</h3><ol class="km-steps"><li>Objekt wählen</li><li>Vorschau prüfen</li><li>Als PDF laden oder per E-Mail senden</li></ol>';
+  if (!os.length) {
+    return `<article class="dash-card wide km-card" data-view="objekte" id="kmCard">${head}
+      <p class="form-note">Legen Sie zuerst ein Objekt an (Kaufpreis, Miete, Finanzierung). Danach erscheint hier die Kreditmappe.</p>
+      <p><a class="btn btn-dark" href="#objekte" id="kmAdd">Objekt anlegen</a> <a class="btn btn-outline" href="/mustermappe">Beispiel ansehen</a></p></article>`;
+  }
+  return `<article class="dash-card wide km-card" data-view="objekte" id="kmCard">${head}
+    <label class="km-pick">Objekt<select id="kmObj">${os.map((o) => `<option value="${esc(o.id)}">${esc(o.name || 'Objekt')}</option>`).join('')}</select></label>
+    <div class="km-grid">
+      <div class="km-box"><strong>Vorschau</strong><span>Vollständiger Inhalt mit Wasserzeichen „Vorschau“ – zum Prüfen Ihrer Angaben. Kostenlos.</span>
+        <div class="km-actions"><button class="btn btn-dark" type="button" data-km="preview">PDF herunterladen</button><button class="btn btn-outline" type="button" data-km="preview" data-mail="1">Per E-Mail</button></div></div>
+      <div class="km-box"><strong>Kreditmappe für die Bank</strong><span>Mit Echtheits-QR und Prüfsumme, versioniert. Nach Freischaltung.</span>
+        <div class="km-actions"><button class="btn btn-dark" type="button" data-km="final">PDF herunterladen</button><button class="btn btn-outline" type="button" data-km="final" data-mail="1">Per E-Mail</button></div></div>
+    </div>
+    <p class="km-msg" id="kmMsg" role="status" aria-live="polite"></p>
+    <p class="form-note">Alle PDFs tragen das ImmoAdv-Kennzeichen. Fehlende Angaben (z. B. Zinsbindung) ergänzen Sie unten beim Objekt unter „Bearbeiten“ → „Angaben für die Kreditmappe“.</p></article>`;
+}
+
+function bindKm() {
+  const box = $('kmCard'); if (!box) return;
+  $('kmAdd')?.addEventListener('click', () => { setTimeout(() => document.querySelector('#objName, [name="objName"], .obj-form input')?.focus(), 50); });
+  const msg = (t, cls = '') => { const m = $('kmMsg'); if (m) { m.className = `km-msg ${cls}`; m.innerHTML = t; } };
+  box.querySelectorAll('[data-km]').forEach((b) => b.onclick = async () => {
+    const kind = b.dataset.km, mail = b.dataset.mail === '1', objectId = $('kmObj')?.value;
+    if (!objectId) return;
+    const token = (() => { try { return JSON.parse(localStorage.getItem('immoadv-auth-session-v1') || 'null')?.access_token || ''; } catch { return ''; } })();
+    box.querySelectorAll('[data-km]').forEach((x) => { x.disabled = true; });
+    msg(mail ? 'Wird erstellt und gesendet …' : 'Wird erstellt …');
+    try {
+      const r = await fetch(kind === 'final' ? '/api/kreditmappe' : '/api/kreditmappe/preview', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: JSON.stringify({ objectId, email: mail }) });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        const more = r.status === 402 || j.code === 'not_yet' ? ' <a class="ck-link" href="#angebot">Angebote ansehen</a>' : '';
+        throw Object.assign(new Error(j.error || 'Das hat nicht geklappt.'), { more });
+      }
+      if (mail) { const j = await r.json(); msg(`Gesendet an ${esc(j.sentTo || 'Ihre E-Mail-Adresse')}. Bitte auch im Spam-Ordner nachsehen.`, 'ok'); return; }
+      const ver = r.headers.get('X-Document-Version'), sha = r.headers.get('X-Document-SHA256') || '';
+      const blob = await r.blob(), a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = kind === 'final' ? `ImmoAdv_Kreditmappe${ver ? '_v' + ver : ''}.pdf` : 'ImmoAdv_Kreditmappe_Vorschau.pdf';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+      msg(kind === 'final' ? `Kreditmappe${ver ? ' Version ' + esc(ver) : ''} erstellt.${sha ? ' Prüfsumme: ' + esc(sha.slice(0, 16)) + '…' : ''}` : 'Vorschau erstellt. Prüfen Sie Ihre Angaben – für die Bank ist die freigeschaltete Kreditmappe gedacht.', 'ok');
+    } catch (e) { msg(esc(e.message) + (e.more || ''), 'bad'); }
+    finally { box.querySelectorAll('[data-km]').forEach((x) => { x.disabled = false; }); }
+  });
 }
 
 function startCard(mode, d) {

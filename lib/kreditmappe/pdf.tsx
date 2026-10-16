@@ -1,7 +1,7 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import type { Kreditmappe } from './model';
 import { LIVING_BASE, LIVING_PER_PERSON, RENT_RECOGNITION } from './model';
-import { BRAND, BrandFooter, BrandHeader, Watermark, type PartnerBrand } from '@/lib/pdf/brand';
+import { BRAND, BrandFooter, BrandHeader, SecureWatermark, type PartnerBrand } from '@/lib/pdf/brand';
 
 const C = {
   navy: BRAND.navy, slate: '#1E3A8A', text: '#334155', muted: '#64748B', hair: '#CBD5E1', line: '#E2E8F0', bg: '#F8FAFC',
@@ -62,16 +62,16 @@ function Rows({ rows, head }: { rows: [string, string][]; head?: [string, string
 function Frame({ m, reportId, watermark, partner }: { m: Kreditmappe; reportId: string; watermark?: string; partner?: PartnerBrand | null }) {
   return (
     <>
-      {watermark ? <Watermark text={watermark} opacity={watermark.startsWith('VORSCHAU') ? 0.13 : 0.05} /> : null}
+      <SecureWatermark docId={reportId} label={watermark} partner={partner} strong={Boolean(watermark && /^(VORSCHAU|MUSTER)/.test(watermark))} />
       <BrandHeader reportType="Kreditmappe" reportId={reportId} createdAt={m.createdAt} partner={partner} />
-      <BrandFooter hash={m.dataHash} />
+      <BrandFooter hash={m.dataHash} partner={partner} />
     </>
   );
 }
 
 export type Verification = { versionNo: number; versionId: string; url: string; qrDataUrl: string };
 
-export function KreditmappeDocument({ m, verify, watermark = 'UNVERIFIZIERTER ENTWURF — IMMOADV.DE', partner }: { m: Kreditmappe; verify?: Verification; watermark?: string; partner?: PartnerBrand | null }) {
+export function KreditmappeDocument({ m, verify, watermark, partner }: { m: Kreditmappe; verify?: Verification; watermark?: string; partner?: PartnerBrand | null }) {
   const rid = verify?.versionId ?? m.reportId;
   const { object: o, profile: p, financing: f, metrics: x, household: h } = m;
   const vetoTone: Tone = m.vetoLevel === 'HARD_VETO' ? 'bad' : m.vetoLevel === 'CONDITIONAL_VETO' ? 'warn' : m.vetoLevel === 'WARNING' ? 'warn' : 'ok';

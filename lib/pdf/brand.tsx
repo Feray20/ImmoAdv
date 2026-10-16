@@ -39,6 +39,19 @@ export function LogoMark({ size = 18 }: { size?: number }) {
   );
 }
 
+// Einfarbige Bildmarke (ohne Verlauf) für das Wasserzeichen-Raster – vermeidet doppelte Verlaufs-IDs je Seite.
+export function LogoMarkFlat({ size = 18, color = BRAND.navy }: { size?: number; color?: string }) {
+  return (
+    <Svg viewBox="-2 -2 104 88" style={{ width: size * 1.18, height: size }}>
+      <G fill={color}>
+        <Polygon points="50,8.3 63.1,19.4 62.6,22.5 49,34 45.2,31.1 5.3,68.9 2.5,70 3.1,51.7" />
+        <Polygon points="98.8,0.7 93.4,37.3 83.6,29.8 50.8,62.3 43.7,57.9 17.2,82.6 0.2,82.6 42.2,38.4 50.3,40.1 69.6,19.5 64.6,8.1" />
+        <Polygon points="82.3,37.6 99.5,53.6 99.6,84 88.6,83.6 62.5,57" />
+      </G>
+    </Svg>
+  );
+}
+
 export function Logo({ size = 16 }: { size?: number }) {
   return (
     <View style={s.logoRow}>
@@ -57,7 +70,9 @@ export function stamp(iso: string): string {
   return `${get('day')}.${get('month')}.${get('year')} ${get('hour')}:${get('minute')} ${zone}`;
 }
 
-export type PartnerBrand = { name: string; logo?: string | null; color?: string | null };
+// whitelabel: nur bei im Unternehmensportal gebuchtem White-Label (has_whitelabel) – dann ohne ImmoAdv-Kennzeichnung.
+// Im Kundenbereich (B2C) gibt es diese Möglichkeit nicht.
+export type PartnerBrand = { name: string; logo?: string | null; color?: string | null; whitelabel?: boolean };
 
 // Mit Partner (Co-Branding): Partnerlogo und -name dominant links, dezenter ImmoAdv-Hinweis rechts.
 export function BrandHeader({ reportType, reportId, createdAt, partner }: { reportType: string; reportId?: string; createdAt: string; partner?: PartnerBrand | null }) {
@@ -75,16 +90,16 @@ export function BrandHeader({ reportType, reportId, createdAt, partner }: { repo
       <View>
         <Text style={[s.meta, s.metaStrong]}>{reportType}</Text>
         <Text style={s.meta}>{stamp(createdAt)}{reportId ? ` · ID ${reportId}` : ''}</Text>
-        {partner ? <Text style={s.meta}>Strukturiert mit ImmoAdv-Software</Text> : null}
+        {partner && !partner.whitelabel ? <Text style={s.meta}>Strukturiert mit ImmoAdv-Software</Text> : null}
       </View>
     </View>
   );
 }
 
-export function BrandFooter({ hash }: { hash?: string }) {
+export function BrandFooter({ hash, partner }: { hash?: string; partner?: PartnerBrand | null }) {
   return (
     <View style={s.footer} fixed>
-      <Text style={s.fLeft}>immoadv.de | support@immoadv.de</Text>
+      <Text style={s.fLeft}>{partner?.whitelabel ? partner.name : 'immoadv.de | support@immoadv.de'}</Text>
       <Text style={s.fMid}>{PDF_DISCLAIMER}</Text>
       <Text style={s.fRight} render={({ pageNumber, totalPages }) => `${hash ? `Daten-SHA-256: ${hash.slice(0, 16)}\n` : ''}Seite ${pageNumber} von ${totalPages}`} />
     </View>
@@ -93,4 +108,31 @@ export function BrandFooter({ hash }: { hash?: string }) {
 
 export function Watermark({ text, opacity = 0.05 }: { text: string; opacity?: number }) {
   return <Text style={[s.wm, { opacity }]} fixed>{text}</Text>;
+}
+
+// Schutz-Wasserzeichen für alle Kunden-PDFs: ImmoAdv-Bildmarke als Vektorgrafik, rasterförmig über die ganze Seite
+// verteilt und Teil des Seiteninhalts (keine Anmerkung, kein markierbarer Text) – dazu Dokument-ID am Seitenrand.
+// Entfällt nur bei gebuchtem White-Label (partner.whitelabel). Hinweis: Absoluten Schutz gegen Bearbeitung gibt es bei
+// PDF nicht; maßgeblich für die Echtheit ist die Prüfung per QR/ID gegen die gespeicherte Prüfsumme.
+const wmGrid = { position: 'absolute' as const, top: 0, left: 0, right: 0, bottom: 0 };
+export function SecureWatermark({ docId, label, partner, strong = false }: { docId?: string; label?: string; partner?: PartnerBrand | null; strong?: boolean }) {
+  if (partner?.whitelabel) return label ? <Watermark text={label} opacity={strong ? 0.13 : 0.06} /> : null;
+  const op = strong ? 0.1 : 0.045;
+  const rows = [70, 210, 350, 490, 630, 770];
+  const cols = [30, 200, 370, 540];
+  return (
+    <>
+      <View style={wmGrid} fixed>
+        {rows.map((y, ri) => cols.map((x, ci) => (
+          <View key={`${ri}-${ci}`} style={{ position: 'absolute', top: y, left: x + (ri % 2 ? 85 : 0), opacity: op, transform: 'rotate(-28deg)' }}>
+            <LogoMarkFlat size={26} />
+          </View>
+        )))}
+      </View>
+      {label ? <Watermark text={label} opacity={strong ? 0.13 : 0.06} /> : null}
+      <Text fixed style={{ position: 'absolute', top: 4, left: 42, right: 42, fontSize: 5.5, color: BRAND.muted, textAlign: 'right' }}>
+        {`ImmoAdv · immoadv.de${docId ? ` · Dokument-ID ${docId}` : ''} · Echtheit prüfbar unter immoadv.de/pruefen`}
+      </Text>
+    </>
+  );
 }

@@ -14,5 +14,5 @@ export async function partnerBrandFor(a: B2BAccount | null | undefined): Promise
       if (type) logo = `data:${type};base64,${buf.toString('base64')}`;
     }
   }
-  return { name: a.company_name, logo, color: a.brand_color };
+  return { name: a.company_name, logo, color: a.brand_color, whitelabel: Boolean(a.has_whitelabel) };
 }

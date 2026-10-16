@@ -13,11 +13,13 @@ import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { KreditmappeDocument, type Verification } from '@/lib/kreditmappe/pdf';
 import { b2bDossierAllowance, membershipFor } from '@/lib/b2b/core';
 import { partnerBrandFor } from '@/lib/b2b/brand';
+import { deliverPdf } from '@/lib/export/deliver';
+import { isAdminEmail } from '@/lib/security/admin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const BodySchema = z.object({ objectId: z.string().min(4).max(40) });
+const BodySchema = z.object({ objectId: z.string().min(4).max(40), email: z.boolean().optional() });
 const LEDGER_KEY = 'kreditmappe_objects';
 
 // Erstellt die Kreditmappe als PDF für ein gespeichertes Objekt des angemeldeten Nutzers.
@@ -33,19 +35,21 @@ export async function POST(req: Request) {
 
   const parsedBody = BodySchema.safeParse(await req.json().catch(() => null));
   if (!parsedBody.success) return NextResponse.json({ error: 'Ungültige Anfrage.' }, { status: 400 });
-  const { objectId } = parsedBody.data;
+  const { objectId, email } = parsedBody.data;
 
   // Unternehmenskonten: Kontingent des Tarifs (auch manuell freigeschaltete Tarife ohne Stripe).
   const b2b = adminConfigured() ? await b2bDossierAllowance(user.id, objectId).catch(() => null) : null;
   if (b2b && !b2b.allowed) return NextResponse.json({ error: b2b.reason ?? 'Kontingent erreicht.' }, { status: 402 });
-  if (!billingEnabled() && !b2b?.allowed) return NextResponse.json({ error: 'Die Kreditmappe ist noch nicht verfügbar.' }, { status: 503 });
+  // Administratoren (ADMIN_EMAILS) sind immer freigeschaltet – zum Testen vor dem Start der Bezahlung.
+  const admin = isAdminEmail(user.email);
+  if (!billingEnabled() && !b2b?.allowed && !admin) return NextResponse.json({ error: 'Die endgültige Kreditmappe wird mit dem Start der Bezahlung freigeschaltet. Bis dahin steht die vollständige Vorschau mit Wasserzeichen zur Verfügung.', code: 'not_yet' }, { status: 503 });
 
   const loaded = await loadMappeInput(req, user.id, objectId);
   if (!loaded.ok) return NextResponse.json({ error: loaded.error }, { status: loaded.status });
   const { object, profile, uploads } = loaded.data;
 
   // Freischaltung prüfen und Verbrauch vermerken (entfällt bei Unternehmenskonten mit Tarif).
-  if (!b2b?.allowed) try {
+  if (!b2b?.allowed && !admin) try {
     const ent = await entitlementsFor(user.id, user.email);
     if (!ent.pro && adminConfigured()) {
       // Atomar über den Primärschlüssel (owner_id, object_ref): parallele Anfragen können
@@ -126,16 +130,15 @@ export async function POST(req: Request) {
       }
     }
     const filename = `ImmoAdv_Kreditmappe_${object.name.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}.pdf`;
-    return new NextResponse(new Uint8Array(pdf), {
-      status: 200,
+    return deliverPdf({
+      pdf, filename, email, user,
+      subject: `Ihre Kreditmappe: ${object.name}`,
+      text: `Im Anhang finden Sie Ihre Kreditmappe${verify ? ` (Version ${verify.versionNo}). Echtheit prüfbar unter ${verify.url}` : ''}.`,
       headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
         'X-Document-SHA256': sha256,
         'X-Document-Version': verify ? String(verify.versionNo) : '',
         'X-Version-Id': verify ? verify.versionId : '',
         'Access-Control-Expose-Headers': 'X-Document-SHA256, X-Document-Version, X-Version-Id, Content-Disposition',
-        'Cache-Control': 'no-store',
       },
     });
   } catch (e) {

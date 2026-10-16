@@ -109,7 +109,7 @@ function renderAnalyse() {
   </div><p class="form-note">Bodenwert: Bodenrichtwert × Grundstücksanteil (BORIS des Landes). Liegenschaftszins und Restnutzungsdauer: Grundstücksmarktbericht des Gutachterausschusses.</p></article>
   </div>
   <div class="an-out" id="a_out"></div>
-  <p class="an-actions" id="a_actions" hidden><button class="btn btn-dark" id="a_keep" type="button">In Trefferliste</button> <button class="btn btn-outline" id="a_pdf" type="button">Analyse als PDF</button> <button class="btn btn-outline" id="a_save" type="button">Als Objekt im Konto speichern</button> <button class="btn btn-ghost" id="a_print" type="button">Drucken</button> <span class="form-note" id="a_msg" role="status"></span></p>
+  <p class="an-actions" id="a_actions" hidden><button class="btn btn-dark" id="a_keep" type="button">In Trefferliste</button> <button class="btn btn-outline" id="a_pdf" type="button">Analyse als PDF</button> <button class="btn btn-outline" id="a_mail" type="button">Per E-Mail</button> <button class="btn btn-outline" id="a_save" type="button">Als Objekt im Konto speichern</button> <button class="btn btn-ghost" id="a_print" type="button">Drucken</button> <span class="form-note" id="a_msg" role="status"></span></p>
 </section>`;
 }
 
@@ -158,18 +158,20 @@ function updateAnalyse() {
 function bindActions() {
   $('a_print').onclick = () => window.print();
   $('a_keep').onclick = () => { if (keepCurrent()) $('a_msg').textContent = ' In der Trefferliste gespeichert (nur in diesem Browser).'; };
-  $('a_pdf').onclick = async () => {
+  const sendPdf = async (mail) => {
     if (!last) return; const { a } = last;
-    const b = $('a_pdf'); b.disabled = true; $('a_msg').textContent = ' PDF wird erstellt …';
+    const b = $(mail ? 'a_mail' : 'a_pdf'); b.disabled = true; $('a_msg').textContent = mail ? ' PDF wird erstellt und gesendet …' : ' PDF wird erstellt …';
     try {
-      const body = { title: last.ort || 'Objekt-Analyse', subtitle: last.subtitle, url: last.url, chips: last.chips, sections: last.sections, hints: a.hints };
+      const body = { title: last.ort || 'Objekt-Analyse', subtitle: last.subtitle, url: last.url, chips: last.chips, sections: last.sections, hints: a.hints, email: mail };
       const r = await fetch('/api/analyse-pdf', { method: 'POST', headers: { Authorization: 'Bearer ' + token(), 'content-type': 'application/json' }, body: JSON.stringify(body) });
       if (!r.ok) { const j = await r.json().catch(() => ({})); throw Error(j.error || 'PDF fehlgeschlagen.'); }
-      const blob = await r.blob(), l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = 'ImmoAdv_Analyse.pdf'; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(l.href), 5000);
-      $('a_msg').textContent = ' PDF erstellt.';
+      if (mail) { const j = await r.json(); $('a_msg').textContent = ` Gesendet an ${j.sentTo || 'Ihre E-Mail-Adresse'}.`; }
+      else { const blob = await r.blob(), l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = 'ImmoAdv_Analyse.pdf'; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(l.href), 8000); $('a_msg').textContent = ' PDF erstellt.'; }
     } catch (e) { $('a_msg').textContent = ' ' + e.message; }
     b.disabled = false;
   };
+  if ($('a_mail')) $('a_mail').onclick = () => sendPdf(true);
+  if ($('a_pdf')) $('a_pdf').onclick = () => sendPdf(false);
   $('a_save').onclick = () => {
     if (!last) return; const { a, ort } = last;
     const nk = kaufnebenkosten({ price: a.price, land: val('a_land'), brokerPct: num('a_broker') });
@@ -285,7 +287,7 @@ export function mountObjekt(container, opts = {}) {
   if (window.__iaImport) window.removeEventListener('hashchange', window.__iaImport);
   window.__iaImport = () => { if (/[?&]import=/.test(location.hash)) checkImport(); };
   window.addEventListener('hashchange', window.__iaImport);
-  if (!opts.pdf) $('a_pdf')?.remove();
+  if (!opts.pdf) { $('a_pdf')?.remove(); $('a_mail')?.remove(); }
   const KEY = 'ia-objekt-v1';
   const ids = [...root.querySelectorAll('.is-search input, .is-search select, .an input, .an select')].map((e) => e.id).filter(Boolean);
   try { const s = JSON.parse(localStorage.getItem(KEY) || '{}'); ids.forEach((id) => { if (s[id] !== undefined) { const el = $(id); if (el.type === 'checkbox') el.checked = s[id]; else el.value = s[id]; } }); } catch { /* ohne Speicher */ }

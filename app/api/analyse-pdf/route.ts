@@ -7,6 +7,7 @@ import { userFromRequest } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { ReportDocument } from '@/lib/pdf/report';
 import { billingEnabled, entitlementsFor } from '@/lib/billing/stripe';
+import { deliverPdf } from '@/lib/export/deliver';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,7 @@ const Body = z.object({
   chips: z.array(Pair).max(12),
   sections: z.array(z.object({ title: str(80), rows: z.array(Pair).max(14) })).max(8),
   hints: z.array(str(300)).max(10),
+  email: z.boolean().optional(),
 });
 
 const isAdmin = (email: string) => (process.env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).includes(email.toLowerCase());
@@ -40,13 +42,14 @@ export async function POST(req: Request) {
   if (!allowRequest(`analyse-pdf:${user.id}`, 10, 60_000)) return NextResponse.json({ error: 'Zu viele Anfragen.' }, { status: 429 });
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Ungültige Daten.' }, { status: 400 });
-  const r = { ...parsed.data, url: parsed.data.url || undefined };
+  const { email, ...rest } = parsed.data;
+  const r = { ...rest, url: rest.url || undefined };
   const dataHash = createHash('sha256').update(JSON.stringify(r)).digest('hex');
   try {
     const el = createElement(ReportDocument, { r, reportId: randomUUID(), createdAt: new Date().toISOString(), hash: dataHash }) as unknown as Parameters<typeof renderToBuffer>[0];
     const pdf = await renderToBuffer(el);
     const name = `ImmoAdv_Analyse_${r.title.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}.pdf`;
-    return new NextResponse(new Uint8Array(pdf), { status: 200, headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(name)}`, 'Cache-Control': 'no-store' } });
+    return deliverPdf({ pdf, filename: name, email, user, subject: `Objekt-Analyse: ${r.title}`, text: 'Im Anhang finden Sie Ihre Objekt-Analyse als PDF.' });
   } catch (e) {
     console.error('analyse_pdf_error', e instanceof Error ? e.message : e);
     return NextResponse.json({ error: 'PDF konnte nicht erstellt werden.' }, { status: 500 });
