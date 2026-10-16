@@ -115,7 +115,16 @@ export function Watermark({ text, opacity = 0.05 }: { text: string; opacity?: nu
 // Entfällt nur bei gebuchtem White-Label (partner.whitelabel). Hinweis: Absoluten Schutz gegen Bearbeitung gibt es bei
 // PDF nicht; maßgeblich für die Echtheit ist die Prüfung per QR/ID gegen die gespeicherte Prüfsumme.
 const wmGrid = { position: 'absolute' as const, top: 0, left: 0, right: 0, bottom: 0 };
-export function SecureWatermark({ docId, label, partner, strong = false }: { docId?: string; label?: string; partner?: PartnerBrand | null; strong?: boolean }) {
+// clean: für zahlende Kunden – kein Logo-Raster und kein Schriftzug, nur die kleine Dokument-ID-Zeile zur Echtheitsprüfung.
+export function SecureWatermark({ docId, label, partner, strong = false, clean = false }: { docId?: string; label?: string; partner?: PartnerBrand | null; strong?: boolean; clean?: boolean }) {
+  if (clean && !label) {
+    if (partner?.whitelabel) return null;
+    return (
+      <Text fixed style={{ position: 'absolute', top: 4, left: 42, right: 42, fontSize: 5.5, color: BRAND.muted, textAlign: 'right' }}>
+        {`immoadv.de${docId ? ` · Dokument-ID ${docId}` : ''} · Echtheit prüfbar unter immoadv.de/pruefen`}
+      </Text>
+    );
+  }
   if (partner?.whitelabel) return label ? <Watermark text={label} opacity={strong ? 0.13 : 0.06} /> : null;
   const op = strong ? 0.1 : 0.045;
   const rows = [70, 210, 350, 490, 630, 770];

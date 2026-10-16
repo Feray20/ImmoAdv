@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     const pdf = await renderToBuffer(element);
     if (pdf.subarray(0, 5).toString() !== '%PDF-') throw new Error('invalid_pdf_output');
     const filename = `ImmoAdv_Kreditmappe_Vorschau_${object.name.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}.pdf`;
-    return deliverPdf({ pdf, filename, email: parsed.data.email, user, subject: `Kreditmappe (Vorschau): ${object.name}`, text: 'Im Anhang finden Sie die Vorschau Ihrer Kreditmappe. Die Vorschau trägt ein Wasserzeichen und ist nicht zur Vorlage bei der Bank bestimmt.' });
+    return deliverPdf({ pdf, filename, email: parsed.data.email, user, subject: `BankReady-Kreditmappe (Vorschau): ${object.name}`, text: 'Im Anhang finden Sie die Vorschau Ihrer Kreditmappe. Die Vorschau trägt ein Wasserzeichen und ist nicht zur Vorlage bei der Bank bestimmt.' });
   } catch (e) {
     console.error('kreditmappe_preview_error', e instanceof Error ? e.message : e);
     return NextResponse.json({ error: 'Vorschau konnte nicht erstellt werden.' }, { status: 500 });

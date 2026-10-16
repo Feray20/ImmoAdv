@@ -59,11 +59,11 @@ function Rows({ rows, head }: { rows: [string, string][]; head?: [string, string
   );
 }
 
-function Frame({ m, reportId, watermark, partner }: { m: Kreditmappe; reportId: string; watermark?: string; partner?: PartnerBrand | null }) {
+function Frame({ m, reportId, watermark, partner, clean }: { m: Kreditmappe; reportId: string; watermark?: string; partner?: PartnerBrand | null; clean?: boolean }) {
   return (
     <>
-      <SecureWatermark docId={reportId} label={watermark} partner={partner} strong={Boolean(watermark && /^(VORSCHAU|MUSTER)/.test(watermark))} />
-      <BrandHeader reportType="Kreditmappe" reportId={reportId} createdAt={m.createdAt} partner={partner} />
+      <SecureWatermark docId={reportId} label={watermark} partner={partner} clean={clean} strong={Boolean(watermark && /^(VORSCHAU|MUSTER)/.test(watermark))} />
+      <BrandHeader reportType={partner?.whitelabel ? "Kreditmappe" : "BankReady · Kreditmappe"} reportId={reportId} createdAt={m.createdAt} partner={partner} />
       <BrandFooter hash={m.dataHash} partner={partner} />
     </>
   );
@@ -71,7 +71,7 @@ function Frame({ m, reportId, watermark, partner }: { m: Kreditmappe; reportId: 
 
 export type Verification = { versionNo: number; versionId: string; url: string; qrDataUrl: string };
 
-export function KreditmappeDocument({ m, verify, watermark, partner }: { m: Kreditmappe; verify?: Verification; watermark?: string; partner?: PartnerBrand | null }) {
+export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { m: Kreditmappe; verify?: Verification; watermark?: string; partner?: PartnerBrand | null; clean?: boolean }) {
   const rid = verify?.versionId ?? m.reportId;
   const { object: o, profile: p, financing: f, metrics: x, household: h } = m;
   const vetoTone: Tone = m.vetoLevel === 'HARD_VETO' ? 'bad' : m.vetoLevel === 'CONDITIONAL_VETO' ? 'warn' : m.vetoLevel === 'WARNING' ? 'warn' : 'ok';
@@ -81,7 +81,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner }: { m: Kred
   return (
     <Document title={`Kreditmappe – ${o.name}`} author="ImmoAdv" subject="Kreditmappe zur Vorbereitung des Bankgesprächs" language="de">
       <Page size="A4" style={s.page}>
-        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} />
+        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} clean={clean} />
         <Text style={s.kicker}>KREDITMAPPE · VORBEREITUNG BANKGESPRÄCH</Text>
         <Text style={s.h1}>{o.name}</Text>
         <Text style={s.muted}>Erwerbsstatus: {p.employment} · Haushalt: {p.householdSize} {p.householdSize === 1 ? 'Person' : 'Personen'}</Text>
@@ -138,7 +138,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner }: { m: Kred
       </Page>
 
       <Page size="A4" style={s.page}>
-        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} />
+        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} clean={clean} />
         <Text style={s.h2}>3. Objekt</Text>
         <Rows head={['Merkmal', 'Wert']} rows={[
           ['Bezeichnung', o.name],
@@ -213,7 +213,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner }: { m: Kred
         </View>
       </Page>
       <Page size="A4" style={s.page}>
-        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} />
+        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} clean={clean} />
         <Text style={s.h2}>Steuerliche Modellrechnung (erstes Jahr)</Text>
         {m.tax ? (
           <>
@@ -267,7 +267,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner }: { m: Kred
 
 
       <Page size="A4" style={s.page}>
-        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} />
+        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} clean={clean} />
         <Text style={s.h2}>6. Haushaltsrechnung (monatlich)</Text>
         <Rows head={['Position', 'Betrag']} rows={[
           ['Nettoeinkommen', eur(h.income)],

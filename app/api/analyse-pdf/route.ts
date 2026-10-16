@@ -8,6 +8,7 @@ import { allowRequest } from '@/lib/security/rate-limit';
 import { ReportDocument } from '@/lib/pdf/report';
 import { billingEnabled, entitlementsFor } from '@/lib/billing/stripe';
 import { deliverPdf } from '@/lib/export/deliver';
+import { paidAccess } from '@/lib/billing/paid';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -46,10 +47,12 @@ export async function POST(req: Request) {
   const r = { ...rest, url: rest.url || undefined };
   const dataHash = createHash('sha256').update(JSON.stringify(r)).digest('hex');
   try {
-    const el = createElement(ReportDocument, { r, reportId: randomUUID(), createdAt: new Date().toISOString(), hash: dataHash }) as unknown as Parameters<typeof renderToBuffer>[0];
+    // Zahlende Kunden und Administratoren: ohne Wasserzeichen. Gratis-Nutzung: mit ImmoAdv-Wasserzeichen.
+    const { paid } = await paidAccess(user).catch(() => ({ paid: false }));
+    const el = createElement(ReportDocument, { r, reportId: randomUUID(), createdAt: new Date().toISOString(), hash: dataHash, reportType: 'RenditeRadar · Objekt-Analyse', clean: paid }) as unknown as Parameters<typeof renderToBuffer>[0];
     const pdf = await renderToBuffer(el);
-    const name = `ImmoAdv_Analyse_${r.title.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}.pdf`;
-    return deliverPdf({ pdf, filename: name, email, user, subject: `Objekt-Analyse: ${r.title}`, text: 'Im Anhang finden Sie Ihre Objekt-Analyse als PDF.' });
+    const name = `ImmoAdv_RenditeRadar_${r.title.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}.pdf`;
+    return deliverPdf({ pdf, filename: name, email, user, subject: `RenditeRadar: ${r.title}`, text: 'Im Anhang finden Sie Ihre RenditeRadar-Objekt-Analyse als PDF.' });
   } catch (e) {
     console.error('analyse_pdf_error', e instanceof Error ? e.message : e);
     return NextResponse.json({ error: 'PDF konnte nicht erstellt werden.' }, { status: 500 });

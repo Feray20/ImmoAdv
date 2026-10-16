@@ -1,6 +1,7 @@
 // App-Rahmen für das Konto: Handy wie eine App (Tab-Leiste unten), Desktop wie ein Investment-Tool (Seitenleiste).
 // Ansichten über #hash; vorhandene Karten werden den Ansichten zugeordnet. Modus Einsteiger/Profi frei wählbar.
-import { rank } from './calc.mjs';
+import { rank, GREST } from './calc.mjs';
+const GREST_KEYS = Object.keys(GREST);
 
 const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -26,7 +27,7 @@ const TABS = ['start', 'suche', 'objekte', 'steuer', 'lernen', 'konto'];
 // Lernbereich: Themen frei wählbar (keine feste Reihenfolge). Wissen aus /data/faq.json (Kurz- und Detailantwort).
 // [id, Titel, Kurzbeschreibung, FAQ-Indizes, [Werkzeug-Text, Link], Bereich]
 const LERN = [
-  ['geld', 'Geld-Master: Geld, Inflation, Vermögen', 'Wie Geld entsteht, was Inflation mit Ihrem Geld macht, wie Vermögen wächst und wie Sie klug investieren.', [37, 38, 39, 40, 41, 42, 43], ['Kaufen oder mieten?', '/rechner/kaufen-mieten'], 'Geld & Vermögen'],
+  ['geld', 'Wie funktioniert Geld?', 'Wie Geld entsteht, was Inflation mit Ihrem Geld macht, warum sich Investieren lohnt und wie Vermögen wächst.', [37, 38, 39, 40, 41, 42, 43], ['Kaufen oder mieten?', '/rechner/kaufen-mieten'], 'Geld & Vermögen'],
   ['budget', 'Was kann ich mir leisten?', 'Rate, Darlehen und Kaufpreis aus Einkommen und Eigenkapital.', [0, 5, 6], ['Budget-Rechner', '/rechner/budget'], 'Leisten & Finanzieren'],
   ['eigenkapital', 'Eigenkapital und Kaufnebenkosten', 'Wie viel eigenes Geld nötig ist und was zum Kaufpreis dazukommt.', [1, 2], ['Kaufnebenkosten-Rechner', '/rechner/kaufnebenkosten'], 'Leisten & Finanzieren'],
   ['annuitaet', 'Zins, Tilgung, Zinsbindung', 'Wie sich die Rate zusammensetzt.', [3], ['Tilgungsplan', '/rechner/tilgungsplan'], 'Leisten & Finanzieren'],
@@ -130,7 +131,7 @@ export function setupApp({ u, d, saveData, reload }) {
   grid.insertAdjacentHTML('beforeend', lernCard(mode, d));
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="angebot" id="angebotView"><h3>${mode === 'profi' ? 'Tarif' : 'Angebot'}</h3><div id="offerBody"><p class="form-note">Wird geladen …</p></div></article>`);
   bindStart(mode, d, u, saveData, reload);
-  bindKm(d);
+  bindKm(d, u, saveData, reload);
   renderFin();
   bindLern(d, u, saveData);
 
@@ -158,99 +159,306 @@ export function setupApp({ u, d, saveData, reload }) {
   apply();
 }
 
-// „PDF erstellen“ im Bereich Objekte: Kreditmappe oder Objekt-Analyse, jeweils automatisch (aus den gespeicherten
-// Daten) oder manuell (selbst im Formular eintragen bzw. Vorlage zum Ausfüllen von Hand). Ausgabe als PDF oder E-Mail.
+// ImmoAdv Studio (Bereich Objekte): Produkt wählen – BankReady (Kreditmappe) oder RenditeRadar (Objekt-Analyse) –
+// und wie die Daten kommen: AutoPilot (Exposé-PDF hochladen, Link eintragen oder gespeichertes Objekt – ImmoAdv
+// rechnet alles automatisch) oder Manuell (online eintragen oder PDF-Formular herunterladen, ausfüllen, wieder hochladen).
+// Das Ergebnis erscheint zuerst als PDF auf dem Bildschirm und kann dann heruntergeladen werden.
 let KM = { doc: 'km', way: 'auto' };
 // Rückkehr aus dem Checkout (wird beim Laden des Moduls gelesen, bevor die Adresse bereinigt wird).
 const CHECKOUT = new URLSearchParams(location.search).get('checkout');
 // Nach einem Kauf den Navigationsstatus neu laden (Zur Anwendung / App-Leiste).
 if (CHECKOUT === 'success') { try { localStorage.removeItem('ia-access'); } catch { /* ignore */ } }
+const PROD = {
+  km: { name: 'BankReady', sub: 'Kreditmappe für die Bank', form: 'kreditmappe' },
+  an: { name: 'RenditeRadar', sub: 'Objekt-Analyse in Sekunden', form: 'analyse' },
+};
+// Zahlender Kunde? (Tarif, Unternehmenskonto, Admin) – sonst kostenlose Demo mit Wasserzeichen auf PDFs.
+let ACCESS = null;
+const getAccess = () => (ACCESS ||= fetch('/api/me/access', { headers: { Authorization: 'Bearer ' + sessToken() }, cache: 'no-store' }).then((r) => (r.ok ? r.json() : { paid: false })).catch(() => ({ paid: false })));
+const DEMO_NOTE = 'Kostenlose Demo: PDFs tragen ein ImmoAdv-Wasserzeichen. Mit einem Abo bzw. gebuchten Tarif entfällt es.';
+const sessToken = () => { try { return JSON.parse(localStorage.getItem('immoadv-auth-session-v1') || 'null')?.access_token || ''; } catch { return ''; } };
+// Darlehen, wenn nicht angegeben: Kaufpreis + Nebenkosten − Eigenkapital (mindestens 0).
+const autoLoan = (o) => Math.max(0, Math.round(Number(o.price) * (1 + (Number(o.purchaseCostPct) || 0) / 100) - (Number(o.equity) || 0)));
+const newObjId = () => { const b = new Uint8Array(6); crypto.getRandomValues(b); return 'o' + [...b].map((x) => x.toString(16).padStart(2, '0')).join(''); };
+// Analyse-Modul (Suche) bei Bedarf laden – AutoPilot nutzt denselben Rechenweg wie die Analyse.
+async function objektModule() {
+  const v = $('sucheView');
+  const m = await import('/src/objekt-ui.mjs');
+  if (v && !v.dataset.ready) { v.dataset.ready = '1'; m.mountObjekt(v, { pdf: true }); }
+  return m;
+}
+const fileName = (r, fallback) => { const m = /filename\*=UTF-8''([^;]+)|filename="([^"]+)"/.exec(r.headers.get('content-disposition') || ''); return m ? decodeURIComponent(m[1] || m[2]) : fallback; };
+
 function kmCard() {
-  return `<article class="dash-card wide km-card" data-view="objekte" id="kmCard"><h3>PDF erstellen</h3>
-    <div class="km-switch">
-      <div class="seg" role="tablist" aria-label="Dokument"><button type="button" role="tab" data-kmdoc="km">Kreditmappe</button><button type="button" role="tab" data-kmdoc="an">Objekt-Analyse</button></div>
-      <div class="seg" role="tablist" aria-label="Weg"><button type="button" role="tab" data-kmway="auto">Automatisch</button><button type="button" role="tab" data-kmway="man">Manuell</button></div>
-    </div>
-    <div id="kmBody"></div><p class="km-msg" id="kmMsg" role="status" aria-live="polite"></p></article>`;
+  return `<article class="dash-card wide km-card" data-view="objekte" id="kmCard">
+    <div class="studio-head"><h3>ImmoAdv Studio</h3><p class="form-note">Produkt wählen – und entscheiden, ob ImmoAdv alles automatisch erledigt oder Sie selbst eintragen.</p></div>
+    <div class="studio-prod" role="tablist" aria-label="Produkt">${Object.entries(PROD).map(([k, p]) => `<button type="button" role="tab" data-kmdoc="${k}"><strong>${p.name}</strong><small>${p.sub}</small></button>`).join('')}</div>
+    <div class="seg studio-way" role="tablist" aria-label="Weg"><button type="button" role="tab" data-kmway="auto"><strong>AutoPilot</strong><small>Exposé oder Link – ImmoAdv rechnet</small></button><button type="button" role="tab" data-kmway="man"><strong>Manuell</strong><small>Online oder per PDF-Formular</small></button></div>
+    <p class="demo-hint" id="kmDemo" hidden></p><div id="kmBody"></div><p class="km-msg" id="kmMsg" role="status" aria-live="polite"></p><div id="kmRes"></div></article>`;
 }
 
 function kmBody(d) {
   const os = (Array.isArray(d.objects) ? d.objects : []).filter((o) => o && o.id);
-  const km = KM.doc === 'km';
-  const pick = `<label class="km-pick">Objekt<select id="kmObj">${os.map((o) => `<option value="${esc(o.id)}">${esc(o.name || 'Objekt')}</option>`).join('')}</select></label>`;
+  const km = KM.doc === 'km', P = PROD[KM.doc];
   if (KM.way === 'man') {
-    const tpl = km ? '/api/unterlagen/kreditmappe-vorlage' : '/api/unterlagen/analyse-vorlage';
     return `<div class="km-grid">
-      <div class="km-box"><strong>Selbst eintragen</strong><span>${km ? 'Alle Angaben im Objekt-Formular eintragen (Bereich „Angaben für die Kreditmappe“). Danach unter „Automatisch“ als PDF ausgeben.' : 'Kaufpreis, Miete, Kosten und Finanzierung selbst eintragen – die Kennzahlen rechnen sich sofort.'}</span>
+      <div class="km-box"><strong>Online eintragen</strong><span>${km ? 'Alle Angaben direkt auf der Website eintragen (Objekt und „Angaben für die Kreditmappe“). Danach erstellt BankReady die Kreditmappe per AutoPilot aus dem gespeicherten Objekt.' : 'Kaufpreis, Miete, Kosten und Finanzierung im Analyse-Formular eintragen – RenditeRadar rechnet jede Kennzahl sofort mit.'}</span>
         <div class="km-actions"><button class="btn btn-dark" type="button" id="kmManual">${km ? 'Formular öffnen' : 'Analyse-Formular öffnen'}</button></div></div>
-      <div class="km-box"><strong>Vorlage zum Ausfüllen von Hand</strong><span>${km ? 'Kreditmappe als PDF-Formular zum Ausdrucken: Angaben, Finanzierung, Haushaltsrechnung, Unterlagen-Checkliste.' : 'Rechenblatt mit allen Formeln: Rendite, Faktor, Rate, Cashflow, DSCR.'}</span>
-        <div class="km-actions"><a class="btn btn-dark" href="${tpl}" target="_blank" rel="noopener">Ansehen</a><a class="btn btn-outline" href="${tpl}" download>Herunterladen</a></div></div>
+      <div class="km-box"><strong>PDF-Formular</strong><span>Formular herunterladen, am Handy oder Computer ausfüllen (z. B. Acrobat Reader, Dateien-App, Vorschau), speichern und hier wieder hochladen – ${P.name} übernimmt alle Werte automatisch.</span>
+        <div class="km-actions"><button class="btn btn-dark" type="button" id="kmFormGet">Formular ansehen &amp; herunterladen</button><label class="btn btn-outline km-file">Ausgefülltes PDF hochladen<input type="file" accept="application/pdf,.pdf" id="kmFormUp" hidden></label></div>
+        <small class="form-note">Handschriftlich ausgefüllte Scans können nicht automatisch gelesen werden.</small></div>
     </div>`;
   }
-  if (!os.length) {
-    return `<p class="form-note">Für die automatische ${km ? 'Kreditmappe' : 'Analyse'} braucht es ein gespeichertes Objekt. Legen Sie eines an – oder übernehmen Sie ein Inserat bzw. Exposé in der Suche.</p>
-      <div class="km-actions"><a class="btn btn-dark" href="#objekte" id="kmAdd">Objekt anlegen</a><a class="btn btn-outline" href="#suche">Exposé / Inserat übernehmen</a><a class="btn btn-outline" href="/mustermappe">Beispiel ansehen</a></div>`;
-  }
-  if (!km) {
-    return `${pick}<div class="km-grid"><div class="km-box"><strong>Objekt-Analyse</strong><span>Rendite, Cashflow vor und nach Steuern, Finanzierung, Risiko und Wert – automatisch aus den Objektdaten berechnet.</span>
-      <div class="km-actions"><button class="btn btn-dark" type="button" data-an="pdf">PDF herunterladen</button><button class="btn btn-outline" type="button" data-an="mail">Per E-Mail</button><button class="btn btn-ghost" type="button" data-an="open">Ansehen und anpassen</button></div></div></div>`;
-  }
-  return `${pick}<div class="km-grid">
-      <div class="km-box"><strong>Vorschau</strong><span>Vollständiger Inhalt mit Wasserzeichen „Vorschau“ – zum Prüfen Ihrer Angaben. Kostenlos.</span>
-        <div class="km-actions"><button class="btn btn-dark" type="button" data-km="preview">PDF herunterladen</button><button class="btn btn-outline" type="button" data-km="preview" data-mail="1">Per E-Mail</button></div></div>
-      <div class="km-box"><strong>Kreditmappe für die Bank</strong><span>Mit Echtheits-QR und Prüfsumme, versioniert. Nach Freischaltung.</span>
-        <div class="km-actions"><button class="btn btn-dark" type="button" data-km="final">PDF herunterladen</button><button class="btn btn-outline" type="button" data-km="final" data-mail="1">Per E-Mail</button></div></div>
-    </div>
-    <p class="form-note">Fehlende Angaben (z. B. Zinsbindung) ergänzen Sie beim Objekt unter „Bearbeiten“ → „Angaben für die Kreditmappe“.</p>`;
+  return `<div class="km-grid">
+    <div class="km-box"><strong>Exposé hochladen</strong><span>PDF vom Makler oder Portal – ${P.name} liest Kaufpreis, Miete, Fläche, Baujahr und mehr aus und ${km ? 'erstellt die Kreditmappe' : 'rechnet alle Kennzahlen'} automatisch.</span>
+      <div class="km-actions"><label class="btn btn-dark km-file">Exposé-PDF wählen<input type="file" accept="application/pdf,.pdf" id="kmPdf" hidden></label></div></div>
+    <div class="km-box"><strong>Link eintragen</strong><span>Link zum Exposé-PDF oder zur Seite des Anbieters. Für ImmoScout24, Immowelt und Kleinanzeigen nutzen Sie die <a class="ck-link" href="#suche">Ein-Klick-Übernahme</a> oder das Exposé-PDF.</span>
+      <form class="km-link" id="kmLinkF"><input type="url" id="kmLink" inputmode="url" autocomplete="off" placeholder="https://…" aria-label="Link zum Exposé" required><button class="btn btn-dark" type="submit">Auswerten</button></form></div>
+    ${os.length ? `<div class="km-box"><strong>Aus meinen Objekten</strong><span>Gespeichertes Objekt wählen – ${P.name} erstellt das Dokument aus Ihren Angaben.</span>
+      <label class="km-pick">Objekt<select id="kmObj">${os.map((o) => `<option value="${esc(o.id)}">${esc(o.name || 'Objekt')}</option>`).join('')}</select></label>
+      <div class="km-actions"><button class="btn btn-dark" type="button" id="kmGo">${km ? 'Kreditmappe erstellen' : 'Analyse erstellen'}</button></div></div>` : ''}
+  </div>
+  ${km && !(Number(d.profile?.netIncome) > 0) ? '<p class="form-note">Tipp: Für die Haushaltsrechnung der Kreditmappe im Finanzprofil das Nettoeinkommen eintragen.</p>' : ''}`;
 }
 
-function bindKm(d) {
+function bindKm(d, u, saveData, reload) {
   const box = $('kmCard'); if (!box) return;
+  const msg = (t, cls = '') => { const m = $('kmMsg'); if (m) { m.className = `km-msg ${cls}`; m.innerHTML = t; } };
+  const res = (h) => { const r = $('kmRes'); if (r) r.innerHTML = h; };
   const draw = () => {
     box.querySelectorAll('[data-kmdoc]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.kmdoc === KM.doc)));
     box.querySelectorAll('[data-kmway]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.kmway === KM.way)));
-    $('kmBody').innerHTML = kmBody(d); msg('');
+    $('kmBody').innerHTML = kmBody(d); msg(''); res('');
     wire();
   };
-  const msg = (t, cls = '') => { const m = $('kmMsg'); if (m) { m.className = `km-msg ${cls}`; m.innerHTML = t; } };
-  const token = () => { try { return JSON.parse(localStorage.getItem('immoadv-auth-session-v1') || 'null')?.access_token || ''; } catch { return ''; } };
   const openForm = () => {
     const det = document.querySelector('#objectForm .obj-more'); if (det) det.open = true;
     const f = document.getElementById('objName'); if (f) { f.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => f.focus({ preventScroll: true }), 300); }
   };
+  const land = () => { try { const s = JSON.parse(localStorage.getItem('ia-objekt-v1') || '{}'); return GREST_KEYS.includes(s.a_land) ? s.a_land : GREST_KEYS.includes(s.s_land) ? s.s_land : 'hessen'; } catch { return 'hessen'; } };
+  const mainBtns = () => box.querySelectorAll('button, .km-file, input');
+  const busy = (on) => mainBtns().forEach((x) => { if ('disabled' in x) x.disabled = on; x.classList?.toggle('is-busy', on); });
+
+  // ---------- Kreditmappe (BankReady) für ein gespeichertes Objekt erzeugen und anzeigen ----------
+  async function mappeFor(objectId, w, extraNote = '') {
+    const H = { Authorization: 'Bearer ' + sessToken(), 'content-type': 'application/json' };
+    let r = await fetch('/api/kreditmappe', { method: 'POST', headers: H, body: JSON.stringify({ objectId }) });
+    let preview = false;
+    if (!r.ok) {
+      const j = await r.clone().json().catch(() => ({}));
+      if (r.status === 402 || r.status === 503 || j.code === 'not_yet') {
+        preview = true;
+        r = await fetch('/api/kreditmappe/preview', { method: 'POST', headers: H, body: JSON.stringify({ objectId }) });
+        if (!r.ok) { const k = await r.json().catch(() => ({})); throw Error(k.error || 'Die Kreditmappe konnte nicht erstellt werden.'); }
+      } else throw Error(j.error || 'Die Kreditmappe konnte nicht erstellt werden.');
+    }
+    const ver = r.headers.get('X-Document-Version');
+    const blob = await r.blob();
+    await w.done('Kreditmappe fertig');
+    const { showPdf } = await import('/src/pdf-view.mjs');
+    const o = (d.objects || []).find((x) => x.id === objectId);
+    showPdf(blob, {
+      filename: fileName(r, preview ? 'ImmoAdv_BankReady_Vorschau.pdf' : `ImmoAdv_BankReady${ver ? '_v' + ver : ''}.pdf`),
+      title: `BankReady · ${o?.name || 'Kreditmappe'}`,
+      note: (preview ? 'Kostenlose Demo: Vorschau mit Wasserzeichen. Mit einem Abo bzw. gebuchten Tarif erhalten Sie die Fassung für die Bank – ohne Wasserzeichen und mit Echtheits-QR. <a class="ck-link" href="#angebot">Tarife ansehen</a>. ' : '') + extraNote,
+      onClose: () => reload?.(),
+    });
+    msg(preview ? 'BankReady-Vorschau erstellt. Fehlende Angaben ergänzen Sie beim Objekt unter „Bearbeiten“.' : `BankReady-Kreditmappe${ver ? ' Version ' + esc(ver) : ''} erstellt.`, 'ok');
+  }
+
+  // ---------- Objekt aus Exposé-/Link-Daten anlegen ----------
+  function objectFromListing(r) {
+    const l = land(), g = GREST[l];
+    const area = Number(r.area) || 0;
+    const o = {
+      id: newObjId(), name: String(r.name || r.title || 'Objekt aus Exposé').slice(0, 160), price: Math.round(r.price), rent: Number(r.rent) || 0, area,
+      yearBuilt: Number(r.year) || 0, efficiencyClass: r.energyClass || '', brokerPct: r.brokerPct != null ? Number(r.brokerPct) : 3.57, grestPct: g.pct, notaryPct: 2,
+      purchaseCostPct: Math.round((g.pct + 2 + (r.brokerPct != null ? Number(r.brokerPct) : 3.57)) * 100) / 100,
+      equity: Number(d.profile?.equity) || 0, interestPct: 3.5, repaymentPct: 2, fixedYears: 10, vacancyPct: 2, maintenance: area ? Math.round(area * 100) / 100 : 0,
+      source: r.url || '', createdVia: 'autopilot',
+    };
+    o.loan = autoLoan(o);
+    return o;
+  }
+
+  // ---------- Gemeinsamer Ablauf für AutoPilot (Exposé-Text) ----------
+  async function runListing(listing, w) {
+    if (KM.doc === 'an') {
+      const mod = await objektModule();
+      await w.step(2);
+      const sum = mod.autoAnalyse({ listing });
+      await w.step(3);
+      const out = await mod.analysePdf(false);
+      await w.done('RenditeRadar fertig');
+      showResult(sum);
+      const { showPdf } = await import('/src/pdf-view.mjs');
+      const demo = !(await getAccess()).paid ? DEMO_NOTE + ' ' : '';
+      showPdf(out.blob, { filename: out.filename, title: `RenditeRadar · ${sum.name}`, note: demo + (sum.missing.length ? `Nicht im Exposé gefunden: ${esc(sum.missing.join(', '))} – in der Analyse ergänzen.` : '') });
+      return;
+    }
+    const { parseListing } = await import('/src/listing-parse.mjs');
+    await w.step(2);
+    const r = parseListing(listing);
+    if (r.price == null) throw Error('Im Exposé wurde kein Kaufpreis gefunden. Bitte ein einzelnes Kaufangebot verwenden oder die Werte manuell eintragen.');
+    const o = objectFromListing(r);
+    d.objects = [...(Array.isArray(d.objects) ? d.objects : []), o];
+    await saveData(u, d);
+    await w.step(3);
+    const miss = [...r.missing, ...(Number(d.profile?.netIncome) > 0 ? [] : ['Nettoeinkommen im Finanzprofil'])];
+    await mappeFor(o.id, w, `Objekt „${esc(o.name)}“ wurde angelegt (Bundesland ${esc(GREST[land()].name)}, Zins 3,5 %, Tilgung 2 % als Annahme – bitte prüfen).${miss.length ? ' Noch offen: ' + esc(miss.join(', ')) + '.' : ''}`);
+  }
+
+  function showResult(sum) {
+    const E0 = (x) => (x == null ? '–' : Number(x).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }));
+    const Pc = (x) => (x == null ? '–' : `${Number(x).toLocaleString('de-DE', { maximumFractionDigits: 2 })} %`);
+    res(`<div class="km-result"><strong>RenditeRadar: ${esc(sum.name)}</strong>
+      <div class="km-kpis"><span><small>Kaufpreis</small>${E0(sum.price)}</span><span><small>Bruttorendite</small>${Pc(sum.grossYield)}</span><span><small>Cashflow / Monat</small>${E0(sum.cashflow)}</span><span><small>DSCR</small>${sum.dscr == null ? '–' : Number(sum.dscr).toLocaleString('de-DE', { maximumFractionDigits: 2 })}</span></div>
+      <div class="km-actions"><a class="btn btn-outline" href="#suche">In der Analyse ansehen &amp; anpassen</a></div></div>`);
+  }
+
   const wire = () => {
-    $('kmAdd')?.addEventListener('click', (e) => { e.preventDefault(); openForm(); });
-    $('kmManual')?.addEventListener('click', () => {
-      if (KM.doc === 'km') openForm();
-      else location.hash = 'suche';
-    });
-    box.querySelectorAll('[data-an]').forEach((b) => b.onclick = () => {
-      const o = (d.objects || []).find((x) => x.id === $('kmObj')?.value); if (!o) return;
-      try { sessionStorage.setItem('ia-analyse-load', JSON.stringify({ o, then: b.dataset.an === 'open' ? null : b.dataset.an })); } catch { /* ohne Speicher */ }
-      location.hash = 'suche';
-    });
-    box.querySelectorAll('[data-km]').forEach((b) => b.onclick = async () => {
-      const kind = b.dataset.km, mail = b.dataset.mail === '1', objectId = $('kmObj')?.value;
-      if (!objectId) return;
-      box.querySelectorAll('[data-km]').forEach((x) => { x.disabled = true; });
-      msg(mail ? 'Wird erstellt und gesendet …' : 'Wird erstellt …');
+    $('kmManual')?.addEventListener('click', () => { if (KM.doc === 'km') openForm(); else location.hash = 'suche'; });
+
+    // Exposé-PDF (AutoPilot)
+    $('kmPdf')?.addEventListener('change', async (e) => {
+      const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
+      if (f.size > 40 * 1024 * 1024) { msg('Die Datei ist größer als 40 MB.', 'bad'); return; }
+      msg(''); busy(true);
+      const { work } = await import('/src/loader.mjs');
+      const w = work(`${PROD[KM.doc].name} AutoPilot`, ['Exposé öffnen', 'Text erkennen', 'Eckdaten übernehmen', KM.doc === 'km' ? 'Kreditmappe erstellen' : 'Kennzahlen & PDF erstellen']);
       try {
-        const r = await fetch(kind === 'final' ? '/api/kreditmappe' : '/api/kreditmappe/preview', { method: 'POST', headers: { Authorization: 'Bearer ' + token(), 'content-type': 'application/json' }, body: JSON.stringify({ objectId, email: mail }) });
+        await w.step(0);
+        const mod = await objektModule();
+        await w.step(1);
+        const t = await mod.exposeText(f);
+        if (t.replace(/\s+/g, '').length < 150) throw Error('In diesem PDF ist kein lesbarer Text (vermutlich ein Scan). Bitte die Werte manuell eintragen.');
+        await runListing({ u: '', t, ti: f.name.replace(/\.pdf$/i, '') }, w);
+      } catch (err) { w.close(); msg(esc(err.message), 'bad'); }
+      finally { busy(false); }
+    });
+
+    // Link (AutoPilot)
+    $('kmLinkF')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = $('kmLink').value.trim(); if (!url) return;
+      msg(''); busy(true);
+      const { work } = await import('/src/loader.mjs');
+      const w = work(`${PROD[KM.doc].name} AutoPilot`, ['Link abrufen', 'Inhalt erkennen', 'Eckdaten übernehmen', KM.doc === 'km' ? 'Kreditmappe erstellen' : 'Kennzahlen & PDF erstellen']);
+      try {
+        await w.step(0);
+        const r = await fetch('/api/expose-link', { method: 'POST', headers: { Authorization: 'Bearer ' + sessToken(), 'content-type': 'application/json' }, body: JSON.stringify({ url }) });
         if (!r.ok) {
           const j = await r.json().catch(() => ({}));
-          const more = r.status === 402 || j.code === 'not_yet' ? ' <a class="ck-link" href="#angebot">Angebote ansehen</a>' : '';
-          throw Object.assign(new Error(j.error || 'Das hat nicht geklappt.'), { more });
+          throw Object.assign(Error(j.error || 'Der Link konnte nicht ausgewertet werden.'), { more: j.code === 'portal' ? ' <a class="ck-link" href="#suche">Zur Ein-Klick-Übernahme</a>' : '' });
         }
-        if (mail) { const j = await r.json(); msg(`Gesendet an ${esc(j.sentTo || 'Ihre E-Mail-Adresse')}. Bitte auch im Spam-Ordner nachsehen.`, 'ok'); return; }
-        const ver = r.headers.get('X-Document-Version'), sha = r.headers.get('X-Document-SHA256') || '';
-        const blob = await r.blob(), a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = kind === 'final' ? `ImmoAdv_Kreditmappe${ver ? '_v' + ver : ''}.pdf` : 'ImmoAdv_Kreditmappe_Vorschau.pdf';
-        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 8000);
-        msg(kind === 'final' ? `Kreditmappe${ver ? ' Version ' + esc(ver) : ''} erstellt.${sha ? ' Prüfsumme: ' + esc(sha.slice(0, 16)) + '…' : ''}` : 'Vorschau erstellt. Prüfen Sie Ihre Angaben – für die Bank ist die freigeschaltete Kreditmappe gedacht.', 'ok');
-      } catch (e) { msg(esc(e.message) + (e.more || ''), 'bad'); }
-      finally { box.querySelectorAll('[data-km]').forEach((x) => { x.disabled = false; }); }
+        await w.step(1);
+        let listing;
+        if ((r.headers.get('content-type') || '').includes('application/pdf')) {
+          const mod = await objektModule();
+          const t = await mod.exposeText(await r.blob());
+          if (t.replace(/\s+/g, '').length < 150) throw Error('Das verlinkte PDF enthält keinen lesbaren Text (vermutlich ein Scan).');
+          listing = { u: url, t, ti: '' };
+        } else {
+          const j = await r.json();
+          listing = { u: j.u || url, t: j.t, ti: j.ti, j: j.j };
+        }
+        await runListing(listing, w);
+        $('kmLink').value = '';
+      } catch (err) { w.close(); msg(esc(err.message) + (err.more || ''), 'bad'); }
+      finally { busy(false); }
+    });
+
+    // Gespeichertes Objekt (AutoPilot)
+    $('kmGo')?.addEventListener('click', async () => {
+      const id = $('kmObj')?.value; const o = (d.objects || []).find((x) => x.id === id); if (!o) return;
+      msg(''); busy(true);
+      const { work } = await import('/src/loader.mjs');
+      const w = work(`${PROD[KM.doc].name} wird erstellt`, KM.doc === 'km' ? ['Objekt und Finanzprofil laden', 'Kennzahlen und Stresstest rechnen', 'Kreditmappe erzeugen'] : ['Objekt laden', 'Kennzahlen berechnen', 'PDF erzeugen']);
+      try {
+        await w.step(0);
+        if (KM.doc === 'km') { await w.step(1); await w.step(2); await mappeFor(id, w); }
+        else {
+          const mod = await objektModule();
+          mod.loadFromObject(o);
+          await w.step(1);
+          const sum = mod.autoAnalyse({});
+          await w.step(2);
+          const out = await mod.analysePdf(false);
+          await w.done('RenditeRadar fertig');
+          showResult(sum);
+          const { showPdf } = await import('/src/pdf-view.mjs');
+          showPdf(out.blob, { filename: out.filename, title: `RenditeRadar · ${sum.name}`, note: (await getAccess()).paid ? '' : DEMO_NOTE });
+        }
+      } catch (err) { w.close(); msg(esc(err.message), 'bad'); }
+      finally { busy(false); }
+    });
+
+    // PDF-Formular ansehen und herunterladen (zahlende Kunden ohne Wasserzeichen)
+    $('kmFormGet')?.addEventListener('click', async () => {
+      busy(true); msg('');
+      const { work } = await import('/src/loader.mjs');
+      const w = work('Formular wird vorbereitet', ['Felder anlegen', 'PDF erzeugen']);
+      try {
+        await w.step(0);
+        const r = await fetch(`/api/formular/${PROD[KM.doc].form}`, { headers: { Authorization: 'Bearer ' + sessToken() } });
+        if (!r.ok) throw Error('Das Formular konnte nicht erstellt werden.');
+        await w.step(1);
+        const blob = await r.blob(); const clean = r.headers.get('X-Form-Clean') === '1';
+        await w.done('Formular bereit');
+        const { showPdf } = await import('/src/pdf-view.mjs');
+        showPdf(blob, { filename: fileName(r, `ImmoAdv_${PROD[KM.doc].name}_Formular.pdf`), title: `${PROD[KM.doc].name} · Formular zum Ausfüllen`,
+          note: `Herunterladen, ausfüllen, speichern – dann unter „Ausgefülltes PDF hochladen“ wieder einlesen.${clean ? '' : ' ' + DEMO_NOTE}` });
+      } catch (err) { w.close(); msg(esc(err.message), 'bad'); }
+      finally { busy(false); }
+    });
+
+    // Ausgefülltes PDF-Formular hochladen (Manuell)
+    $('kmFormUp')?.addEventListener('change', async (e) => {
+      const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
+      msg(''); busy(true);
+      const { work } = await import('/src/loader.mjs');
+      const kind = PROD[KM.doc].form;
+      const w = work(`${PROD[KM.doc].name}: Formular wird eingelesen`, ['PDF öffnen', 'Eingaben lesen', 'Daten übernehmen', KM.doc === 'km' ? 'Kreditmappe erstellen' : 'Kennzahlen & PDF erstellen']);
+      try {
+        await w.step(0);
+        const [{ readPdfForm, showPdf }, spec] = await Promise.all([import('/src/pdf-view.mjs'), import('/src/form-spec.mjs')]);
+        const raw = await readPdfForm(f);
+        await w.step(1);
+        const other = kind === 'analyse' ? 'kreditmappe' : 'analyse';
+        if (raw.id === spec.FORMS[other].id) throw Error(`Das ist das ${spec.FORMS[other].product}-Formular. Bitte oben „${spec.FORMS[other].product}“ wählen und erneut hochladen.`);
+        const { values, filled } = spec.readForm(kind, raw.values);
+        if (!filled) throw Error(raw.id === spec.FORMS[kind].id ? 'Das Formular ist noch leer. Bitte ausfüllen, speichern und erneut hochladen.' : 'In dieser Datei wurden keine ImmoAdv-Formularfelder gefunden. Bitte das Formular über „Formular ansehen & herunterladen“ verwenden.');
+        await w.step(2);
+        if (kind === 'analyse') {
+          const mod = await objektModule();
+          const sum = mod.autoAnalyse({ values });
+          await w.step(3);
+          const out = await mod.analysePdf(false);
+          await w.done('RenditeRadar fertig');
+          showResult(sum);
+          showPdf(out.blob, { filename: out.filename, title: `RenditeRadar · ${sum.name}`, note: `${filled} Angaben aus dem Formular übernommen.${(await getAccess()).paid ? '' : ' ' + DEMO_NOTE}` });
+          return;
+        }
+        // BankReady: Finanzprofil und Objekt aus dem Formular übernehmen
+        if (!(values.o_price > 0)) throw Error('Im Formular fehlt der Kaufpreis.');
+        const prof = { ...(d.profile || {}) };
+        if (values.p_employment) prof.employment = values.p_employment;
+        for (const k of ['netIncome', 'householdSize', 'equity']) if (values['p_' + k] != null) prof[k] = values['p_' + k];
+        d.profile = prof;
+        const l = values.o_land || land(), g = GREST[l];
+        const o = { id: newObjId(), name: values.o_name || 'Objekt aus Formular', createdVia: 'formular', grestPct: g.pct, notaryPct: 2, brokerPct: 0, interestPct: 3.5, repaymentPct: 2, fixedYears: 10, vacancyPct: 2, equity: Number(prof.equity) || 0, rent: 0 };
+        for (const [k, v] of Object.entries(values)) if (k.startsWith('o_') && k !== 'o_land' && k !== 'o_name') o[k.slice(2)] = v;
+        o.purchaseCostPct = Math.round((g.pct + (Number(o.notaryPct) || 0) + (Number(o.brokerPct) || 0)) * 100) / 100;
+        if (!(Number(o.loan) > 0)) o.loan = autoLoan(o);
+        d.objects = [...(Array.isArray(d.objects) ? d.objects : []), o];
+        await saveData(u, d);
+        await w.step(3);
+        await mappeFor(o.id, w, `${filled} Angaben aus dem Formular übernommen; Objekt „${esc(o.name)}“ und Finanzprofil wurden gespeichert.`);
+      } catch (err) { w.close(); msg(esc(err.message), 'bad'); }
+      finally { busy(false); }
     });
   };
+  getAccess().then((a) => { const h = $('kmDemo'); if (h && !a.paid) { h.hidden = false; h.innerHTML = `${DEMO_NOTE} <a class="ck-link" href="#angebot">Tarife ansehen</a>`; } });
   box.querySelectorAll('[data-kmdoc]').forEach((b) => b.onclick = () => { KM.doc = b.dataset.kmdoc; draw(); });
   box.querySelectorAll('[data-kmway]').forEach((b) => b.onclick = () => { KM.way = b.dataset.kmway; draw(); });
   draw();
@@ -262,6 +470,7 @@ async function renderFin() {
   const token = (() => { try { return JSON.parse(localStorage.getItem('immoadv-auth-session-v1') || 'null')?.access_token || ''; } catch { return ''; } })();
   const H = { Authorization: 'Bearer ' + token };
   let cfg = { enabled: false }, st = { tier: 'free' }, inv = { invoices: [] };
+  const acc = await getAccess();
   try { cfg = await fetch('/api/billing/config', { cache: 'no-store' }).then((r) => r.json()); } catch { /* aus */ }
   if (cfg.enabled) {
     [st, inv] = await Promise.all([
@@ -269,13 +478,14 @@ async function renderFin() {
       fetch('/api/billing/invoices', { headers: H, cache: 'no-store' }).then((r) => r.json()).catch(() => ({ invoices: [] })),
     ]);
   }
-  const tierName = { free: 'Kostenlos', starter: 'Einsteiger', pro: 'Profi' }[st.tier || 'free'] || 'Kostenlos';
+  const tierName = acc.paid && (st.tier || 'free') === 'free' ? (acc.admin ? 'Administrator (voller Zugang)' : acc.b2b ? 'Unternehmenskonto' : 'Voller Zugang') : ({ free: 'Kostenlose Demo', starter: 'Einsteiger', pro: 'Profi' }[st.tier || 'free'] || 'Kostenlose Demo');
+  const demoBox = acc.paid ? '' : `<div class="demo-box"><strong>Sie nutzen die kostenlose Demo</strong><p>Probieren Sie alles aus: RenditeRadar-Analysen, BankReady-Vorschau, PDF-Formulare und den Lernbereich. In der Demo tragen alle PDFs ein ImmoAdv-Wasserzeichen. Sobald Sie ein Abo besitzen bzw. einen Tarif gebucht haben, entfallen die Wasserzeichen – Ihre Dokumente sind dann fertig für Bank und Weitergabe.</p><a class="btn btn-dark" href="#angebot">Tarife ansehen</a></div>`;
   const until = st.pro ? st.proUntil : st.starter ? st.starterUntil : null;
   const money = (c, cur = 'eur') => (Number(c || 0) / 100).toLocaleString('de-DE', { style: 'currency', currency: String(cur).toUpperCase() });
   const dte = (x) => (x ? new Date(x).toLocaleDateString('de-DE') : '–');
   const list = Array.isArray(inv.invoices) ? inv.invoices : [];
-  box.innerHTML = `${CHECKOUT === 'success' ? '<p class="auth-message success">Vielen Dank – Ihre Zahlung wurde übermittelt. Die Rechnung erscheint unten und kommt per E-Mail.</p>' : CHECKOUT === 'cancel' ? '<p class="form-note">Bezahlung abgebrochen – es wurde nichts berechnet.</p>' : ''}<div class="fin-grid">
-    <div class="fin-box"><small>Ihr Tarif</small><strong>${tierName}</strong><span>${until ? `aktiv bis ${dte(until)}` : st.tier === 'free' ? 'Suche, Analyse und Rechner kostenlos' : ''}${st.creditMaps ? ` · Kreditmappen: ${Math.max(0, (st.creditMaps || 0) - (st.creditMapsUsed || 0))} frei` : ''}</span></div>
+  box.innerHTML = `${demoBox}${CHECKOUT === 'success' ? '<p class="auth-message success">Vielen Dank – Ihre Zahlung wurde übermittelt. Die Rechnung erscheint unten und kommt per E-Mail.</p>' : CHECKOUT === 'cancel' ? '<p class="form-note">Bezahlung abgebrochen – es wurde nichts berechnet.</p>' : ''}<div class="fin-grid">
+    <div class="fin-box"><small>Ihr Tarif</small><strong>${tierName}</strong><span>${until ? `aktiv bis ${dte(until)}` : st.tier === 'free' ? (acc.paid ? 'Alle Funktionen, PDFs ohne Wasserzeichen' : 'Alles ausprobieren · PDFs mit Wasserzeichen') : ''}${st.creditMaps ? ` · Kreditmappen: ${Math.max(0, (st.creditMaps || 0) - (st.creditMapsUsed || 0))} frei` : ''}</span></div>
     <div class="fin-actions">
       <a class="btn btn-dark" href="#angebot">${st.tier === 'free' ? 'Tarif buchen' : 'Upgrade / Tarife ansehen'}</a>
       <button class="btn btn-outline" type="button" data-flow="update"${cfg.enabled && st.tier !== 'free' ? '' : ' disabled'}>Tarif wechseln</button>

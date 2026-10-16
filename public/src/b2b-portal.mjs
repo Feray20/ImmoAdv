@@ -483,8 +483,14 @@ async function onboarding(avvVersion) {
     busy(e.target.querySelector('button[type=submit]'), async () => {
       const f = Object.fromEntries(new FormData(e.target));
       const body = { ...f, unternehmer: f.unternehmer === 'on', avv: f.avv === 'on', richtig: f.richtig === 'on', agb: f.agb === 'on', referral: ref };
-      const r = await api('/api/b2b/account', { method: 'POST', body: JSON.stringify(body) });
-      if (!r.ok) throw Error(r.data?.error || 'Registrierung fehlgeschlagen.');
+      const { work } = await import('./loader.mjs');
+      const w = work('Unternehmenskonto wird angelegt', ['Angaben prüfen', 'Konto anlegen', 'Nachweis erstellen und senden']);
+      await w.step(0);
+      const pr = api('/api/b2b/account', { method: 'POST', body: JSON.stringify(body) });
+      await w.step(1);
+      const r = await pr;
+      if (!r.ok) { w.close(); throw Error(r.data?.error || 'Registrierung fehlgeschlagen.'); }
+      await w.step(2); await w.done('Konto angelegt');
       toast('Unternehmenskonto angelegt.');
       location.hash = '#start';
       await start();

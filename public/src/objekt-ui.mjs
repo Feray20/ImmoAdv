@@ -4,6 +4,8 @@
 // die Analyse rechnet ausschließlich mit Angaben, die der Nutzer selbst einträgt.
 import { GREST, kaufnebenkosten, budget, analyse, portalLinks } from './calc.mjs';
 import { parseListing, bookmarklet } from './listing-parse.mjs';
+import { work } from './loader.mjs';
+import { showPdf } from './pdf-view.mjs';
 
 const SESSION = 'immoadv-auth-session-v1';
 const $ = (id) => document.getElementById(id);
@@ -157,19 +159,58 @@ function updateAnalyse() {
   $('a_actions').hidden = false;
 }
 
+// RenditeRadar-PDF erzeugen: liefert { blob, filename } bzw. bei E-Mail { sentTo }.
+export async function analysePdf(mail = false) {
+  if (!last) throw Error('Noch keine Analyse – bitte zuerst einen Kaufpreis eintragen.');
+  const { a } = last;
+  const body = { title: last.ort || 'Objekt-Analyse', subtitle: last.subtitle, url: last.url, chips: last.chips, sections: last.sections, hints: a.hints, email: mail };
+  const r = await fetch('/api/analyse-pdf', { method: 'POST', headers: { Authorization: 'Bearer ' + token(), 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); throw Error(j.error || 'PDF konnte nicht erstellt werden.'); }
+  if (mail) return r.json();
+  const cd = r.headers.get('content-disposition') || '';
+  const m = /filename\*=UTF-8''([^;]+)|filename="([^"]+)"/.exec(cd);
+  return { blob: await r.blob(), filename: m ? decodeURIComponent(m[1] || m[2]) : 'ImmoAdv_RenditeRadar.pdf' };
+}
+
+// AutoPilot: Daten aus Exposé/Link (listing) oder aus einem ausgefüllten Formular (values) übernehmen und rechnen.
+// Gibt eine kurze Zusammenfassung zurück; wirft einen Fehler, wenn kein Kaufpreis erkennbar ist.
+export function autoAnalyse({ listing, values } = {}) {
+  let r = null;
+  if (listing) {
+    r = importListing(listing);
+    if (!r) throw Error('Im Exposé wurde kein Kaufpreis gefunden. Bitte ein einzelnes Kaufangebot verwenden oder die Werte manuell eintragen.');
+  } else if (values) {
+    ['a_url', 'a_addr', 'a_price', 'a_area', 'a_rooms', 'a_year', 'a_ec', 'a_rent', 'a_vq', 'a_nonrec'].forEach((id) => { const el = $(id); if (el) el.value = ''; });
+    for (const [id, v] of Object.entries(values)) {
+      const el = $(id); if (!el) continue;
+      if (el.type === 'checkbox') el.checked = Boolean(v);
+      else if (el.tagName === 'SELECT') { const opt = [...el.options].find((o) => o.value === String(v) || o.textContent.trim() === String(v)); if (opt) el.value = opt.value; }
+      else el.value = v;
+    }
+    updateAnalyse();
+    if (!last) throw Error('Im Formular fehlt der Kaufpreis.');
+    keepCurrent({});
+  }
+  if (!last) throw Error('Keine Analyse möglich.');
+  const { a } = last;
+  return { name: last.ort || 'Objekt', price: a.price, rent: a.rent, grossYield: a.grossYield, netYield: a.netYield, cashflow: a.cashflow, cashflowAfterTax: a.cashflowAfterTax, dscr: a.dscr,
+    nebenkosten: a.nebenkosten, found: r?.found || [], missing: r?.missing || (a.rent ? [] : ['Miete (Ist)']), land: GREST[val('a_land')]?.name || '' };
+}
+
 function bindActions() {
   $('a_print').onclick = () => window.print();
   $('a_keep').onclick = () => { if (keepCurrent()) $('a_msg').textContent = ' In der Trefferliste gespeichert (nur in diesem Browser).'; };
   const sendPdf = async (mail) => {
-    if (!last) return; const { a } = last;
-    const b = $(mail ? 'a_mail' : 'a_pdf'); b.disabled = true; $('a_msg').textContent = mail ? ' PDF wird erstellt und gesendet …' : ' PDF wird erstellt …';
+    if (!last) return;
+    const b = $(mail ? 'a_mail' : 'a_pdf'); b.disabled = true; $('a_msg').textContent = '';
+    const w = work(mail ? 'RenditeRadar wird gesendet' : 'RenditeRadar wird erstellt', ['Kennzahlen zusammenstellen', 'PDF erzeugen', mail ? 'E-Mail senden' : 'Dokument anzeigen']);
     try {
-      const body = { title: last.ort || 'Objekt-Analyse', subtitle: last.subtitle, url: last.url, chips: last.chips, sections: last.sections, hints: a.hints, email: mail };
-      const r = await fetch('/api/analyse-pdf', { method: 'POST', headers: { Authorization: 'Bearer ' + token(), 'content-type': 'application/json' }, body: JSON.stringify(body) });
-      if (!r.ok) { const j = await r.json().catch(() => ({})); throw Error(j.error || 'PDF fehlgeschlagen.'); }
-      if (mail) { const j = await r.json(); $('a_msg').textContent = ` Gesendet an ${j.sentTo || 'Ihre E-Mail-Adresse'}.`; }
-      else { const blob = await r.blob(), l = document.createElement('a'); l.href = URL.createObjectURL(blob); l.download = 'ImmoAdv_Analyse.pdf'; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(l.href), 8000); $('a_msg').textContent = ' PDF erstellt.'; }
-    } catch (e) { $('a_msg').textContent = ' ' + e.message; }
+      await w.step(0); await w.step(1);
+      const out = await analysePdf(mail);
+      await w.step(2);
+      if (mail) { await w.done('Gesendet'); $('a_msg').textContent = ` Gesendet an ${out.sentTo || 'Ihre E-Mail-Adresse'}.`; }
+      else { await w.done('Fertig'); showPdf(out.blob, { filename: out.filename, title: 'RenditeRadar · ' + (last?.ort || 'Objekt-Analyse') }); }
+    } catch (e) { w.close(); $('a_msg').textContent = ' ' + e.message; }
     b.disabled = false;
   };
   if ($('a_mail')) $('a_mail').onclick = () => sendPdf(true);
@@ -228,7 +269,7 @@ function importListing(d) {
 
 // Exposé-PDF im Browser auslesen (pdf.js, lokal ausgeliefert). Die Datei verlässt das Gerät nicht.
 const PDFJS = '/vendor/pdfjs-4.10.38/';
-async function exposeText(file) {
+export async function exposeText(file) {
   const pdfjs = await import(PDFJS + 'pdf.mjs');
   pdfjs.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.mjs';
   const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, disableFontFace: true }).promise;
@@ -246,7 +287,7 @@ async function exposeText(file) {
 
 // Objekt aus dem Konto in die Analyse übernehmen (automatische Objekt-Analyse); optional direkt PDF/E-Mail.
 const LOAD_KEY = 'ia-analyse-load';
-function loadFromObject(o) {
+export function loadFromObject(o) {
   const set = (id, v) => { const el = $(id); if (!el || v === undefined || v === null || v === '') return; if (el.type === 'checkbox') el.checked = Boolean(v); else el.value = v; };
   ['a_url', 'a_addr', 'a_price', 'a_area', 'a_rooms', 'a_year', 'a_ec', 'a_rent', 'a_vq', 'a_nonrec', 'a_lv', 'a_lz', 'a_rnd'].forEach((id) => { const el = $(id); if (el) el.value = ''; });
   set('a_addr', o.name); set('a_price', o.price); set('a_area', o.area); set('a_year', o.yearBuilt); set('a_ec', o.efficiencyClass);
@@ -329,12 +370,17 @@ export function mountObjekt(container, opts = {}) {
     if (!f) return;
     const msg = $('imp_msg');
     if (f.size > 40 * 1024 * 1024) { msg.className = 'imp-msg bad'; msg.textContent = 'Die Datei ist größer als 40 MB.'; return; }
-    msg.className = 'imp-msg'; msg.textContent = `Exposé „${f.name}“ wird gelesen …`;
+    msg.className = 'imp-msg'; msg.textContent = '';
+    const w = work('Exposé wird ausgewertet', ['Datei öffnen', 'Text erkennen', 'Eckdaten übernehmen', 'Kennzahlen berechnen']);
     try {
+      await w.step(0); await w.step(1);
       const t = await exposeText(f);
-      if (t.replace(/\s+/g, '').length < 150) { msg.className = 'imp-msg bad'; msg.textContent = 'In diesem Exposé ist kein lesbarer Text enthalten (vermutlich ein eingescanntes Dokument). Bitte die Werte unten in der Analyse eintragen.'; return; }
-      importListing({ u: $('imp_url')?.value.trim() || '', t, ti: f.name.replace(/\.pdf$/i, '') });
-    } catch (err) { msg.className = 'imp-msg bad'; msg.textContent = 'Das Exposé konnte nicht gelesen werden (beschädigt oder passwortgeschützt).'; console.warn(err); }
+      if (t.replace(/\s+/g, '').length < 150) { w.close(); msg.className = 'imp-msg bad'; msg.textContent = 'In diesem Exposé ist kein lesbarer Text enthalten (vermutlich ein eingescanntes Dokument). Bitte die Werte unten in der Analyse eintragen.'; return; }
+      await w.step(2);
+      const ok = importListing({ u: $('imp_url')?.value.trim() || '', t, ti: f.name.replace(/\.pdf$/i, '') });
+      await w.step(3);
+      if (ok) await w.done('Analyse fertig'); else w.close();
+    } catch (err) { w.close(); msg.className = 'imp-msg bad'; msg.textContent = 'Das Exposé konnte nicht gelesen werden (beschädigt oder passwortgeschützt).'; console.warn(err); }
   });
   $('imp_go')?.addEventListener('click', () => {
     const t = $('imp_text').value.trim(), u = $('imp_url').value.trim();

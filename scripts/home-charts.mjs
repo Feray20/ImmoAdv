@@ -107,7 +107,7 @@ const both = (fn) => fn(false) + fn(true);
 
 const n = { min: nkRows[0], max: nkRows[nkRows.length - 1] };
 const html = `<!--charts:start-->
-<section class="section home-why"><div class="container">
+<section class="section home-why" id="warum"><div class="container">
   <h2 class="home-h2">Warum überhaupt investieren?</h2>
   <p class="hc-lead">Geld, das nur auf dem Konto liegt, wirkt sicher – verliert aber jedes Jahr an Kaufkraft. Wer investiert, geht dagegen Risiken ein. Beides gehört ehrlich auf den Tisch.</p>
   <div class="why-grid">
@@ -118,7 +118,7 @@ const html = `<!--charts:start-->
       <article class="why-card"><span class="why-tag ok">Mit Verstand</span><h3>Krisen vorher durchrechnen</h3><p>ImmoAdv rechnet jedes Angebot mit Stresstest: Zins plus 2 Prozentpunkte, Mietausfall, Kipp-Zins und Anschlussfinanzierung. So sehen Sie vor dem Kauf, ob ein Objekt auch schlechte Jahre übersteht.</p></article>
     </div>
   </div>
-  <p class="hc-note">Allgemeine Information, keine Anlageberatung. Jede Geldanlage hat Risiken; Immobilienpreise können fallen. <a class="ck-link" href="/wissen">Mehr im Lernbereich: Geld, Inflation, Vermögen und klug investieren</a></p>
+  <p class="hc-note">Allgemeine Information, keine Anlageberatung. Jede Geldanlage hat Risiken; Immobilienpreise können fallen. <a class="ck-link" href="/wissen">Wie funktioniert Geld? Alles Wichtige im Lernbereich</a></p>
 </div></section>
 <section class="section home-charts"><div class="container">
   <h2 class="home-h2">Was eine vermietete Wohnung rechnerisch leistet</h2>

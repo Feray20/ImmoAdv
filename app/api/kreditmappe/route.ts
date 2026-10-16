@@ -110,7 +110,7 @@ export async function POST(req: Request) {
     }
 
     const partner = b2b?.allowed ? await partnerBrandFor((await membershipFor(user.id))?.account) : null;
-    const element = createElement(KreditmappeDocument, { m: mappe, verify, partner }) as unknown as Parameters<typeof renderToBuffer>[0];
+    const element = createElement(KreditmappeDocument, { m: mappe, verify, partner, clean: true }) as unknown as Parameters<typeof renderToBuffer>[0];
     const pdf = await renderToBuffer(element);
     if (pdf.subarray(0, 5).toString() !== '%PDF-') throw new Error('invalid_pdf_output');
     // Hash erst nach dem Rendern aus den tatsächlichen Bytes berechnen.
@@ -132,7 +132,7 @@ export async function POST(req: Request) {
     const filename = `ImmoAdv_Kreditmappe_${object.name.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60)}.pdf`;
     return deliverPdf({
       pdf, filename, email, user,
-      subject: `Ihre Kreditmappe: ${object.name}`,
+      subject: `Ihre BankReady-Kreditmappe: ${object.name}`,
       text: `Im Anhang finden Sie Ihre Kreditmappe${verify ? ` (Version ${verify.versionNo}). Echtheit prüfbar unter ${verify.url}` : ''}.`,
       headers: {
         'X-Document-SHA256': sha256,
