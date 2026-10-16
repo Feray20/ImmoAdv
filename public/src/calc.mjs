@@ -105,6 +105,54 @@ export function grenze15({ price, purchaseCostPct = 0, buildingSharePct = 80, sp
   return { akGebaeude: r2(akGebaeude), limit: r2(limit), spent: r2(spentNet), headroom: r2(limit - spentNet), exceeded: spentNet > limit };
 }
 
+// Verbilligte Vermietung (§ 21 Abs. 2 EStG): Verhältnis Ist-Miete zu ortsüblicher Miete (jeweils Kaltmiete).
+// Ab 2021: ≥ 66 % → Werbungskosten voll abziehbar. 50 bis < 66 % → voll nur bei positiver Totalüberschuss-
+// prognose, sonst anteilig. < 50 % → Aufteilung in entgeltlich/unentgeltlich, Abzug nur anteilig.
+export function verbilligteMiete({ ist = 0, ortsueblich = 0 }) {
+  if (!(ortsueblich > 0) || !(ist >= 0)) return null;
+  const quote = (ist / ortsueblich) * 100;
+  let stufe, abzugPct, hinweis;
+  if (quote >= 66) { stufe = 'voll'; abzugPct = 100; hinweis = 'Mindestens 66 % der ortsüblichen Miete: Werbungskosten voll abziehbar.'; }
+  else if (quote >= 50) { stufe = 'prognose'; abzugPct = 100; hinweis = '50 bis unter 66 %: voller Abzug nur mit positiver Totalüberschussprognose, sonst anteilig.'; }
+  else { stufe = 'anteilig'; abzugPct = r2(quote); hinweis = 'Unter 50 %: Vermietung gilt anteilig als unentgeltlich; Werbungskosten nur anteilig abziehbar.'; }
+  return { quote: r2(quote), stufe, abzugPct, mindestMiete66: r2(ortsueblich * 0.66), mindestMiete50: r2(ortsueblich * 0.5), hinweis };
+}
+
+// Drei-Objekt-Grenze (gewerblicher Grundstückshandel): Werden in engem zeitlichem Zusammenhang (i. d. R. fünf
+// Jahre) mehr als drei Objekte veräußert, droht die Einstufung als gewerblich (Gewerbesteuer, kein steuerfreier
+// Verkauf). Rechtsprechung, keine starre Grenze – daher nur ein Warnhinweis. Prüft jedes 5-Jahres-Fenster.
+const gueltigesDatum = (s) => (s instanceof Date ? (isNaN(+s) ? null : s) : (/^\d{4}-\d{2}-\d{2}/.test(String(s || '')) ? parseDate(s) : null));
+
+export function dreiObjektGrenze(dates = []) {
+  const ds = dates.map(gueltigesDatum).filter(Boolean).sort((a, b) => a - b);
+  let maxImFenster = ds.length ? 1 : 0, risiko = false, fenster = null;
+  for (let i = 0; i < ds.length; i++) {
+    const ende = new Date(ds[i]); ende.setFullYear(ende.getFullYear() + 5);
+    const n = ds.filter((d) => d >= ds[i] && d < ende).length;
+    if (n > maxImFenster) maxImFenster = n;
+    if (n > 3 && !risiko) { risiko = true; fenster = { von: iso(ds[i]), bis: iso(ende) }; }
+  }
+  return { anzahl: ds.length, maxImFenster, risiko, fenster };
+}
+
+// Verkauf steuerfrei (§ 23 EStG): private Veräußerung steuerfrei nach Ablauf von 10 Jahren ab Anschaffung
+// (maßgeblich der Tag des obligatorischen Vertrags). Ausnahme Eigennutzung (§ 23 Abs. 1 Nr. 1 S. 3): steuerfrei,
+// wenn im Jahr der Veräußerung und den beiden vorangegangenen Kalenderjahren zu eigenen Wohnzwecken genutzt.
+export function verkaufSteuerfrei({ anschaffung, verkauf = null, eigengenutzt = false }) {
+  const a = gueltigesDatum(anschaffung);
+  if (!a) return null;
+  // Frist (§§ 187, 188 BGB): beginnt am Tag nach der Anschaffung und endet mit dem Jahrestag nach 10 Jahren.
+  // Steuerfrei ist erst ein Verkauf (Notarvertrag) ab dem Folgetag.
+  const frist = new Date(a); frist.setFullYear(frist.getFullYear() + 10);
+  const ab = new Date(frist); ab.setDate(ab.getDate() + 1);
+  const v = verkauf ? gueltigesDatum(verkauf) : null;
+  const spekulationVorbei = v ? v >= ab : null;
+  let steuerfrei = spekulationVorbei === true;
+  let grund = steuerfrei ? 'Zehnjahresfrist abgelaufen – Veräußerungsgewinn steuerfrei.' : null;
+  if (!steuerfrei && eigengenutzt) { steuerfrei = true; grund = 'Eigennutzung (ausschließlich seit Kauf oder im Verkaufsjahr und den beiden Vorjahren) – steuerfrei (§ 23 Abs. 1 Nr. 1 S. 3 EStG).'; }
+  return { fristEnde: iso(frist), steuerfreiAb: iso(ab), spekulationVorbei, steuerfrei, grund };
+}
+
 // ---------- Fristen ----------
 export function parseDate(s) {
   const [y, m, d] = String(s).split('-').map(Number);

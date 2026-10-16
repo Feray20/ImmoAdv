@@ -140,7 +140,24 @@ window.IA_CONTENT = {
     { cat: 'Produkt, Sicherheit & Datenschutz', q: 'Wie lösche ich meine Daten?',
       l1: 'Gespeicherte Objekte löschen Sie direkt in Ihrem Konto. Das gesamte Konto löschen Sie im Konto unter „Daten & Konto“ oder per E-Mail an support@immoadv.de.',
       next: 'E-Mail an support@immoadv.de senden.',
-      l2: 'Recht auf Löschung nach Art. 17 DSGVO und auf Datenübertragbarkeit nach Art. 20 DSGVO. Gesetzliche Aufbewahrungspflichten (z. B. Rechnungen, 10 Jahre nach § 147 AO) bleiben unberührt. Browser-Daten löschen Sie über die Einstellungen Ihres Browsers.' }
+      l2: 'Recht auf Löschung nach Art. 17 DSGVO und auf Datenübertragbarkeit nach Art. 20 DSGVO. Gesetzliche Aufbewahrungspflichten (z. B. Rechnungen, 10 Jahre nach § 147 AO) bleiben unberührt. Browser-Daten löschen Sie über die Einstellungen Ihres Browsers.' },
+    // Vermieten & Absicherung
+    { cat: 'Vermieten & Absicherung', q: 'Was tun, wenn der Mieter nicht pünktlich zahlt?',
+      l1: 'Die Miete ist meist bis zum dritten Werktag des Monats fällig (§ 556b BGB). Zahlt der Mieter nicht, ist er auch ohne Mahnung im Verzug. Erst freundlich nachfragen, dann schriftlich mahnen – mit Betrag, Monat und Frist. So haben Sie einen sauberen Nachweis.',
+      next: 'Zahlungseingänge monatlich prüfen und bei Ausfall eine schriftliche Mahnung mit Frist von 7 bis 14 Tagen versenden.',
+      l2: 'Weil der Zahltermin nach dem Kalender bestimmt ist, tritt Verzug ohne Mahnung ein (§ 286 Abs. 2 Nr. 1 BGB). Ab Verzug können Verzugszinsen verlangt werden: bei Wohnraummietern 5 Prozentpunkte über dem Basiszinssatz (§ 288 Abs. 1 BGB). Dokumentieren Sie Fälligkeit, Zahlungseingang und jede Mahnung. Oft hilft ein offenes Gespräch – eine Ratenvereinbarung schriftlich festhalten.' },
+    { cat: 'Vermieten & Absicherung', q: 'Wie funktioniert das gerichtliche Mahnverfahren?',
+      l1: 'Zahlt der Mieter trotz Mahnung nicht, können Sie beim Mahngericht einen Mahnbescheid beantragen – online über das offizielle Portal der Justiz unter https://www.online-mahnantrag.de, ohne Anwalt. Widerspricht der Mieter nicht, folgt der Vollstreckungsbescheid; damit kann vollstreckt werden.',
+      next: 'Mahnantrag online stellen: https://www.online-mahnantrag.de (offizielles Portal der Justiz).',
+      l2: 'Das Mahnverfahren prüft nicht, ob die Forderung besteht – es ist schnell und günstig. Ablauf: Antrag → Mahnbescheid wird zugestellt → der Mieter hat zwei Wochen für einen Widerspruch → ohne Widerspruch beantragen Sie den Vollstreckungsbescheid → danach Vollstreckung, z. B. durch Gerichtsvollzieher oder Kontopfändung. Bei Widerspruch geht die Sache ins normale Gerichtsverfahren. Die Gerichtsgebühr richtet sich nach der Forderungshöhe, wird zunächst von Ihnen vorgestreckt und ist vom Schuldner zu erstatten. Für eine Räumung reicht das Mahnverfahren nicht – dafür braucht es eine Räumungsklage.' },
+    { cat: 'Vermieten & Absicherung', q: 'Wann darf ich wegen Mietrückstand kündigen?',
+      l1: 'Fristlos kündigen können Sie, wenn der Mieter für zwei aufeinanderfolgende Termine mit der Miete oder einem Betrag von mehr als einer Monatsmiete im Rückstand ist – oder über einen längeren Zeitraum mit insgesamt zwei Monatsmieten (§ 543 Abs. 2 Nr. 3, § 569 Abs. 3 Nr. 1 BGB).',
+      next: 'Rückstand genau aufstellen, schriftlich und begründet kündigen, vorsorglich zusätzlich ordentlich – im Zweifel anwaltlich prüfen lassen.',
+      l2: 'Achtung Schonfrist (§ 569 Abs. 3 Nr. 2 BGB): Zahlt der Mieter den gesamten Rückstand spätestens zwei Monate nach Zustellung der Räumungsklage oder übernimmt eine öffentliche Stelle die Zahlung, wird die fristlose Kündigung unwirksam – einmal innerhalb von zwei Jahren. Vermieter kündigen deshalb häufig zusätzlich ordentlich wegen erheblicher Pflichtverletzung (§ 573 Abs. 2 Nr. 1 BGB); diese wird nach der Rechtsprechung des BGH durch die Nachzahlung nicht automatisch geheilt. Zieht der Mieter nicht aus, ist eine Räumungsklage nötig. Selbst räumen oder Schlösser austauschen ist verboten.' },
+    { cat: 'Vermieten & Absicherung', q: 'Wie sichere ich mich gegen Mietausfall ab?',
+      l1: 'Vor dem Vertrag die Bonität prüfen (Einkommensnachweise, Mietschuldenfreiheitsbescheinigung, Selbstauskunft, ggf. Bonitätsauskunft des Mieters). Im Vertrag eine Kaution von bis zu drei Nettokaltmieten vereinbaren (§ 551 BGB). Laufend Zahlungseingänge prüfen und früh reagieren.',
+      next: 'In der Analyse ein Mietausfallwagnis von 2 bis 4 % ansetzen und eine Reserve von mindestens drei Monatsraten halten.',
+      l2: 'Die Kaution darf in drei Monatsraten gezahlt werden und ist getrennt vom eigenen Vermögen anzulegen. Während des laufenden Mietverhältnisses ist der Zugriff darauf stark eingeschränkt, etwa nicht wegen bestrittener Forderungen (BGH). Eine Mietausfallversicherung kann sinnvoll sein – Bedingungen und Wartezeiten genau lesen. Für Kapitalanleger wichtig: Bleibt die Miete aus, läuft die Rate an die Bank weiter. Deshalb Reserve einplanen.' }
   ],
 
   legal: {

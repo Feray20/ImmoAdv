@@ -1,5 +1,7 @@
 // App-Rahmen für das Konto: Handy wie eine App (Tab-Leiste unten), Desktop wie ein Investment-Tool (Seitenleiste).
 // Ansichten über #hash; vorhandene Karten werden den Ansichten zugeordnet. Modus Einsteiger/Profi frei wählbar.
+import { rank } from './calc.mjs';
+
 const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const E = (cents) => (cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
@@ -11,30 +13,52 @@ const ICON = {
   lernen: '<path d="M2 8l10-5 10 5-10 5z"/><path d="M6 10v5c0 2 3 4 6 4s6-2 6-4v-5"/>',
   angebot: '<path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   konto: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+  steuer: '<line x1="19" y1="5" x2="5" y2="19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>',
 };
 const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
 const VIEWS = {
-  einsteiger: [['start', 'Übersicht'], ['suche', 'Suche'], ['objekte', 'Objekte'], ['lernen', 'Lernpfad'], ['angebot', 'Angebot'], ['konto', 'Konto']],
-  profi: [['start', 'Cockpit'], ['suche', 'Suche & Analyse'], ['objekte', 'Objekte'], ['lernen', 'Wissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
+  einsteiger: [['start', 'Übersicht'], ['suche', 'Suche'], ['objekte', 'Objekte'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
+  profi: [['start', 'Cockpit'], ['suche', 'Suche & Analyse'], ['objekte', 'Objekte'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
 };
-const TABS = ['start', 'suche', 'objekte', 'lernen', 'konto'];
+const TABS = ['start', 'suche', 'objekte', 'steuer', 'lernen', 'konto'];
 
-// Lernpfad: aufeinander aufbauende Module aus vorhandenen Inhalten.
+// Lernbereich: Themen frei wählbar (keine feste Reihenfolge). Wissen aus /data/faq.json (Kurz- und Detailantwort).
+// [id, Titel, Kurzbeschreibung, FAQ-Indizes, [Werkzeug-Text, Link], Bereich]
 const LERN = [
-  ['budget', 'Was kann ich mir leisten?', 'Rate, Darlehen und Kaufpreis aus Einkommen und Eigenkapital.', '/rechner/budget'],
-  ['eigenkapital', 'Wie viel Eigenkapital brauche ich?', 'Nebenkosten, Puffer und warum Banken darauf schauen.', '/wissen/wie-viel-eigenkapital-brauche-ich'],
-  ['nebenkosten', 'Kaufnebenkosten im eigenen Bundesland', 'Grunderwerbsteuer, Notar, Grundbuch, Makler.', '/rechner/kaufnebenkosten'],
-  ['beruf', 'Was die Bank je nach Beruf prüft', 'Angestellt, selbstständig, verbeamtet – und welche Unterlagen.', '/wissen/erwerbsstatus'],
-  ['annuitaet', 'Zins, Tilgung, Zinsbindung', 'Wie sich die Rate zusammensetzt und was nach der Zinsbindung passiert.', '/wissen/was-bedeuten-zins-tilgung-annuitaet-und-zinsbindung'],
-  ['suche', 'Immobilie suchen und prüfen', 'Portalsuche, dann Kaufpreis und Miete in die Analyse.', '#suche'],
-  ['scorecard', 'Ampel für Haushalt, Eigenkapital, Objekt', 'Die Deal-Scorecard zeigt, wo es hakt.', '/rechner/scorecard'],
-  ['etw', 'Eigentumswohnung richtig prüfen', 'Teilungserklärung, Protokolle, Rücklage.', '/wissen/wie-pruefe-ich-eine-eigentumswohnung'],
-  ['cashflow', 'Cashflow vor und nach Steuern', 'AfA, Zinsen und Grenzsteuersatz verstehen.', '/rechner/cashflow'],
-  ['beleihung', 'Beleihungswert und Bankblick', 'Warum die Bank anders rechnet als der Verkäufer.', '/wissen/was-ist-der-beleihungswert'],
-  ['unterlagen', 'Unterlagen vollständig machen', 'Checkliste abarbeiten, Bankreife auf 90 % bringen.', '/checkliste'],
-  ['fristen', 'Nach dem Kauf: Fristen im Griff', '15-%-Grenze, Spekulationsfrist, Zinsbindung, Mieterhöhung.', '/fristen'],
+  ['budget', 'Was kann ich mir leisten?', 'Rate, Darlehen und Kaufpreis aus Einkommen und Eigenkapital.', [0, 5, 6], ['Budget-Rechner', '/rechner/budget'], 'Leisten & Finanzieren'],
+  ['eigenkapital', 'Eigenkapital und Kaufnebenkosten', 'Wie viel eigenes Geld nötig ist und was zum Kaufpreis dazukommt.', [1, 2], ['Kaufnebenkosten-Rechner', '/rechner/kaufnebenkosten'], 'Leisten & Finanzieren'],
+  ['annuitaet', 'Zins, Tilgung, Zinsbindung', 'Wie sich die Rate zusammensetzt.', [3], ['Tilgungsplan', '/rechner/tilgungsplan'], 'Leisten & Finanzieren'],
+  ['fristen', 'Wenn die Zinsbindung endet', 'Anschlussfinanzierung, Kipp-Punkt und wichtige Fristen.', [23, 24], ['Fristen-Rechner', '/fristen'], 'Leisten & Finanzieren'],
+  ['beruf', 'Was die Bank je nach Beruf prüft', 'Angestellt, selbstständig, verbeamtet – und welche Unterlagen.', [4], ['Erwerbsstatus im Detail', '/wissen/erwerbsstatus'], 'Leisten & Finanzieren'],
+  ['beleihung', 'Beleihungswert: wie die Bank rechnet', 'Warum die Bank anders bewertet als der Verkäufer.', [7], ['Deal-Scorecard', '/rechner/scorecard'], 'Leisten & Finanzieren'],
+  ['suche', 'Objekte suchen und vergleichen', 'Vom Inserat zur Kennzahl – und mehrere Angebote nebeneinander.', [10], ['Suche & Analyse', '#suche'], 'Objekt finden & prüfen'],
+  ['etw', 'Eigentumswohnung richtig prüfen', 'Teilungserklärung, Protokolle, Rücklage.', [8, 9], ['Unterlagen-Checkliste', '/checkliste'], 'Objekt finden & prüfen'],
+  ['cashflow', 'Rendite und Cashflow', 'Brutto, netto, vor und nach Steuern.', [12, 13, 14], ['Cashflow-Rechner', '/rechner/cashflow'], 'Rendite, Steuer & Miete'],
+  ['steuer', 'Steuern: AfA, 15-%-Grenze, steuerfreier Verkauf', 'Was die Steuer beim Kauf, Vermieten und Verkaufen bedeutet.', [15, 16, 17], ['Steuer-Bereich', '#steuer'], 'Rendite, Steuer & Miete'],
+  ['miete', 'Mietrecht für Vermieter', 'Mietpreisbremse, Kappungsgrenze, Staffelmiete, Mietausfall.', [18, 19, 20, 21], ['Mieterhöhung prüfen', '/rechner/mieterhoehung'], 'Rendite, Steuer & Miete'],
+  ['unterlagen', 'Unterlagen und Kreditmappe', 'Was die Bank sehen will und wie Sie es vollständig machen.', [11, 25, 26, 27], ['Unterlagen-Checkliste', '/checkliste'], 'Bank & Unterlagen'],
+  ['mahnung', 'Mieter zahlt nicht: Mahnung, Mahnverfahren, Kündigung', 'So sichern Sie sich rechtlich ab – Schritt für Schritt.', [33, 34, 35, 36], ['Online-Mahnantrag der Justiz', 'https://www.online-mahnantrag.de'], 'Vermieten & Absicherung'],
 ];
+// Phasen = die vier Stufen von „Ihr Weg“. Frei wählbar (profile.phase 0–3), sonst automatisch erkannt.
+// Die gewählte Phase steuert Startaktionen, Reihenfolge im Steuer-Bereich und empfohlene Wissensthemen.
+export const PHASES = [
+  { name: 'Orientieren', steuer: 'kauf', lern: ['budget', 'eigenkapital', 'annuitaet', 'beruf'],
+    actions: [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#lernen', 'Grundlagen auffrischen', 'Eigenkapital, Zins, Tilgung'], ['#suche', 'Immobilien ansehen', 'Suche bei den großen Portalen']] },
+  { name: 'Objekte prüfen', steuer: 'kauf', lern: ['suche', 'etw', 'cashflow', 'beleihung'],
+    actions: [['#suche', 'Objekt analysieren', 'Inserat übernehmen, Kennzahlen sehen'], ['#objekte', 'Objekte im Konto', 'Anlegen, vergleichen, Bankreife'], ['#steuer', 'Steuern beim Kauf', 'Kaufkosten, Inventar, AfA']] },
+  { name: 'Bankgespräch', steuer: 'kauf', lern: ['unterlagen', 'beruf', 'beleihung', 'annuitaet'],
+    actions: [['#objekte', 'Kreditmappe erstellen', 'Objekt wählen → Vorschau → PDF'], ['/checkliste', 'Unterlagen vollständig machen', 'Bankreife auf 90 % bringen'], ['#lernen', 'Was die Bank prüft', 'Beleihungswert, Unterlagen']] },
+  { name: 'Bestand', steuer: 'halten', lern: ['steuer', 'miete', 'mahnung', 'fristen'],
+    actions: [['/fristen', 'Fristen im Blick', 'Zinsbindung, 15-%-Grenze, Spekulationsfrist'], ['#steuer', 'Steuern & Werbungskosten', 'Anlage V, 66-%-Check, Verkauf'], ['#lernen', 'Mieter zahlt nicht?', 'Mahnung, Mahnverfahren, Kündigung']] },
+];
+export function phaseOf(d) {
+  const p = d.profile?.phase;
+  if (Number.isInteger(p) && p >= 0 && p < PHASES.length) return { idx: p, chosen: true };
+  try { return { idx: Math.max(0, Math.min(3, rank(d.profile || {}, Array.isArray(d.objects) ? d.objects : [], []).level - 1)), chosen: false }; } catch { return { idx: 0, chosen: false }; }
+}
+const phasePicker = (idx, chosen) => `<div class="ph-pick" role="group" aria-label="Ihre Phase"><span class="ph-label">Ihre Phase${chosen ? '' : ' (automatisch erkannt)'}:</span>${PHASES.map((p, i) => `<button type="button" class="ph-btn${i === idx ? ' on' : ''}" data-phase="${i}" aria-pressed="${i === idx}">${i + 1} · ${p.name}</button>`).join('')}</div>`;
+
 const PROFI = [
   ['Szenarien: Anschlusszins und Verkauf', '/szenarien'], ['AfA-Plan inkl. Sonder-AfA § 7b', '/rechner/afa'], ['Mieterhöhung mit Briefentwurf', '/rechner/mieterhoehung'],
   ['Angebotsvergleich', '/rechner/vergleich'], ['Kaufen oder mieten', '/rechner/kaufen-mieten'], ['Investment-Cockpit (Stresstest)', '/cockpit'],
@@ -44,7 +68,7 @@ const PROFI = [
 function classify(el) {
   if (el.dataset.view) return el.dataset.view;
   const id = el.id || '', h = el.querySelector('h3')?.textContent || '', mode = document.body.dataset.mode;
-  if (id === 'rankCard') return mode === 'profi' ? 'konto' : 'start';
+  if (id === 'rankCard') return mode === 'profi' ? 'konto' : 'start konto';
   if (['termineCard', 'pendingCard'].includes(id) || el.classList.contains('req-card')) return 'start';
   if (id === 'portfolioCard') return mode === 'profi' ? 'start objekte' : 'objekte';
   if (['docsCard', 'bankreifeCard'].includes(id) || h === 'Objekte') return 'objekte';
@@ -84,6 +108,7 @@ export function setupApp({ u, d, saveData, reload }) {
   // Eigene Karten: Start, Suche, Lernpfad, Angebot
   grid.insertAdjacentHTML('afterbegin', startCard(mode, d));
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="suche" id="sucheView"></article>`);
+  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);
   grid.insertAdjacentHTML('beforeend', lernCard(mode, d));
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="angebot" id="angebotView"><h3>${mode === 'profi' ? 'Tarif' : 'Angebot'}</h3><div id="offerBody"><p class="form-note">Wird geladen …</p></div></article>`);
   bindStart(mode, d, u, saveData, reload);
@@ -100,6 +125,10 @@ export function setupApp({ u, d, saveData, reload }) {
       $('sucheView').dataset.ready = '1';
       import('/src/objekt-ui.mjs').then((m) => m.mountObjekt($('sucheView'), { pdf: true })).catch(() => { $('sucheView').innerHTML = '<p class="auth-message error">Suche konnte nicht geladen werden.</p>'; });
     }
+    if (cur === 'steuer' && !$('steuerView').dataset.ready) {
+      $('steuerView').dataset.ready = '1';
+      import('/src/steuer.mjs').then((m) => m.mountSteuer($('steuerView'), { mode, phase: PHASES[phaseOf(d).idx].steuer })).catch(() => { $('steuerView').innerHTML = '<p class="auth-message error">Steuer-Bereich konnte nicht geladen werden.</p>'; });
+    }
     if (cur === 'angebot' && !$('angebotView').dataset.ready) { $('angebotView').dataset.ready = '1'; renderOffers(mode); }
   };
   if (window.__iaHash) window.removeEventListener('hashchange', window.__iaHash);
@@ -110,20 +139,25 @@ export function setupApp({ u, d, saveData, reload }) {
 }
 
 function startCard(mode, d) {
-  const os = Array.isArray(d.objects) ? d.objects : [];
   const done = Object.values(d.progress?.lern || {}).filter(Boolean).length;
   if (!d.profile?.mode && !new URLSearchParams(location.search).get('modus')) {
     return `<article class="dash-card wide start-card" data-view="start"><h3>Willkommen! Wo stehen Sie gerade?</h3><p class="form-note">Sie können jederzeit wechseln – oben rechts.</p>
       <div class="mode-pick"><button class="mode-card" type="button" data-pick="einsteiger"><span class="mode-tag">Einsteiger</span><strong>Ich fange gerade an</strong><span>Lernpfad, Erklärungen, Schritt für Schritt zur Finanzierung.</span></button>
       <button class="mode-card pro" type="button" data-pick="profi"><span class="mode-tag">Profi</span><strong>Ich investiere schon</strong><span>Cockpit mit Kennzahlen, Portfolio, Datenraum.</span></button></div></article>`;
   }
-  const actions = mode === 'profi'
-    ? [['#suche', 'Objekt analysieren', 'Suche, Analyse, Merkliste, PDF'], ['#objekte', 'Objekte und Datenraum', `${os.length} Objekt(e) im Konto`], ['/rechner/vergleich', 'Angebote vergleichen', 'Bis zu drei nebeneinander']]
-    : [['#suche', 'Immobilie suchen', 'ImmoScout24, Immowelt, Kleinanzeigen'], ['#lernen', 'Lernpfad fortsetzen', `${done} von ${LERN.length} Schritten erledigt`], ['#objekte', os.length ? 'Meine Objekte' : 'Erstes Objekt anlegen', os.length ? `${os.length} Objekt(e)` : 'Kaufpreis und Miete reichen für den Anfang']];
-  return `<article class="dash-card wide start-card" data-view="start"><div class="quick">${actions.map(([h, t, s]) => `<a class="quick-a" href="${h}"><strong>${t}</strong><span>${s}</span></a>`).join('')}</div></article>`;
+  const ph = phaseOf(d);
+  const extra = mode === 'profi' ? [['/rechner/vergleich', 'Angebote vergleichen', 'Bis zu drei nebeneinander']] : [['#lernen', 'Wissen auffrischen', `${done} von ${LERN.length} Themen verstanden`]];
+  const actions = [...PHASES[ph.idx].actions, ...extra];
+  return `<article class="dash-card wide start-card" data-view="start">${phasePicker(ph.idx, ph.chosen)}<div class="quick">${actions.map(([h, t, s]) => `<a class="quick-a" href="${h}"><strong>${t}</strong><span>${s}</span></a>`).join('')}</div></article>`;
 }
 
 function bindStart(mode, d, u, saveData, reload) {
+  document.querySelectorAll('[data-phase]').forEach((b) => b.onclick = async () => {
+    d.profile = { ...(d.profile || {}), phase: Number(b.dataset.phase) };
+    b.closest('.ph-pick')?.querySelectorAll('.ph-btn').forEach((x) => x.classList.toggle('on', x === b));
+    try { await saveData(u, d); } catch { /* weiter */ }
+    reload();
+  });
   document.querySelectorAll('[data-pick]').forEach((b) => b.onclick = async () => {
     d.profile = { ...(d.profile || {}), mode: b.dataset.pick };
     try { await saveData(u, d); } catch { /* weiter */ }
@@ -131,26 +165,76 @@ function bindStart(mode, d, u, saveData, reload) {
   });
 }
 
+function lernTopics(st, rec = [], recName = '') {
+  const groups = [...new Set(LERN.map((x) => x[5]))];
+  const one = ([id, t, sub]) => `
+    <details class="lt${st[id] ? ' done' : ''}" data-topic="${id}">
+      <summary><span class="lt-title"><strong>${t}</strong><span>${sub}</span></span><span class="lt-state">${st[id] ? '✓ verstanden' : ''}</span></summary>
+      <div class="lt-body" data-body="${id}"><p class="form-note">Wird geladen …</p></div>
+    </details>`;
+  const recT = rec.map((id) => LERN.find((x) => x[0] === id)).filter(Boolean);
+  const head = recT.length ? `<h4 class="lt-group lt-rec">Empfohlen für Ihre Phase: ${recName}</h4>${recT.map(one).join('')}` : '';
+  return head + groups.map((g) => { const items = LERN.filter((x) => x[5] === g && !rec.includes(x[0])); return items.length ? `<h4 class="lt-group">${g}</h4>${items.map(one).join('')}` : ''; }).join('');
+}
+
 function lernCard(mode, d) {
-  if (mode === 'profi') {
-    return `<article class="dash-card wide" data-view="lernen" id="lernView"><h3>Werkzeuge und Wissen für Profis</h3><div class="quick">${PROFI.map(([t, h]) => `<a class="quick-a" href="${h}"><strong>${t}</strong></a>`).join('')}</div>
-      <p class="form-note">Neu dabei oder Wissenslücke? Der Einsteiger-Lernpfad ist jederzeit über den Moduswechsel oben erreichbar.</p></article>`;
-  }
   const st = d.progress?.lern || {};
   const n = LERN.filter(([id]) => st[id]).length;
-  return `<article class="dash-card wide" data-view="lernen" id="lernView"><h3>Ihr Lernpfad: vom ersten Gedanken zur Finanzierung</h3>
-    <div class="lp-bar" role="progressbar" aria-valuenow="${n}" aria-valuemin="0" aria-valuemax="${LERN.length}"><span style="width:${Math.round((n / LERN.length) * 100)}%"></span></div>
-    <p class="form-note">${n} von ${LERN.length} Schritten erledigt.${n === LERN.length ? ' Stark – der Profi-Modus passt jetzt zu Ihnen.' : ''}</p>
-    <ol class="lp">${LERN.map(([id, t, s, h], i) => `<li class="${st[id] ? 'done' : ''}"><label class="lp-check"><input type="checkbox" data-lern="${id}"${st[id] ? ' checked' : ''}><span class="sr-only">erledigt</span></label><a href="${h}"><strong>${i + 1}. ${t}</strong><span>${s}</span></a></li>`).join('')}</ol></article>`;
+  const head = mode === 'profi'
+    ? `<h3>Werkzeuge und Wissen</h3><div class="quick">${PROFI.map(([t, h]) => `<a class="quick-a" href="${h}"><strong>${t}</strong></a>`).join('')}</div>
+       <h3 class="lt-h">Wissen auffrischen</h3><p class="form-note">Themen antippen, Fragen lesen, bei Bedarf „Mehr erklären“.</p>`
+    : `<h3>Wissen: wählen Sie, was Sie interessiert</h3>
+       <p class="form-note">Keine feste Reihenfolge – frischen Sie auf, was Sie gerade brauchen. Thema antippen, Fragen lesen, danach als verstanden markieren.</p>`;
+  return `<article class="dash-card wide" data-view="lernen" id="lernView">${head}
+    <div class="lp-bar" role="progressbar" aria-label="Verstandene Themen" aria-valuenow="${n}" aria-valuemin="0" aria-valuemax="${LERN.length}"><span style="width:${Math.round((n / LERN.length) * 100)}%"></span></div>
+    <p class="form-note" id="lpNote">${n} von ${LERN.length} Themen verstanden.</p>
+    <div class="lt-list">${lernTopics(st, PHASES[phaseOf(d).idx].lern, PHASES[phaseOf(d).idx].name)}</div></article>`;
+}
+
+let FAQ = null;
+const escH = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const lnk = (t) => escH(t).replace(/https:\/\/[^\s<]*[^\s<.,;)]/g, (u) => `<a class="ck-link" href="${u}" target="_blank" rel="noopener noreferrer">${u.replace(/^https:\/\/(www\.)?/, '')}</a>`);
+const slugQ = (q) => { let t = q.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); if (t.length > 70) { t = t.slice(0, 70); t = t.slice(0, t.lastIndexOf('-') > 30 ? t.lastIndexOf('-') : 70); } return t; };
+
+function fillTopic(id, d) {
+  const box = document.querySelector(`[data-body="${id}"]`);
+  const topic = LERN.find((x) => x[0] === id);
+  if (!box || !topic || !FAQ || box.dataset.ready) return;
+  box.dataset.ready = '1';
+  const [, , , idx, [toolText, toolHref]] = topic;
+  const done = !!d.progress?.lern?.[id];
+  box.innerHTML = `${idx.map((i) => FAQ[i]).filter(Boolean).map((q, k) => `<div class="lt-qa">
+      <p class="lt-q">${escH(q.question)}</p>
+      <p class="lt-a">${lnk(q.level1)}</p>
+      <div class="lt-more" id="more-${id}-${k}" hidden><p>${lnk(q.level2)}</p>${q.nextStep ? `<p class="lt-next"><strong>Nächster Schritt:</strong> ${lnk(q.nextStep)}</p>` : ''}<a class="ck-link" href="/wissen/${slugQ(q.question)}">Ganze Seite öffnen →</a></div>
+      <button class="lt-mini" type="button" data-more="more-${id}-${k}" aria-expanded="false" aria-controls="more-${id}-${k}">Mehr erklären</button>
+    </div>`).join('')}
+    <div class="lt-actions"><a class="btn btn-outline" href="${toolHref}"${/^https:/.test(toolHref) ? ' target="_blank" rel="noopener noreferrer"' : ''}>${toolText}${/^https:/.test(toolHref) ? ' öffnen ↗' : ' ausprobieren'}</a>
+      <button class="btn ${done ? 'btn-outline' : 'btn-dark'}" type="button" data-done="${id}">${done ? 'Als offen markieren' : '✓ Verstanden'}</button></div>`;
 }
 
 function bindLern(d, u, saveData) {
-  document.querySelectorAll('[data-lern]').forEach((c) => c.onchange = async () => {
-    d.progress = { ...(d.progress || {}), lern: { ...(d.progress?.lern || {}), [c.dataset.lern]: c.checked } };
-    c.closest('li').classList.toggle('done', c.checked);
-    const n = Object.values(d.progress.lern).filter(Boolean).length;
-    const bar = document.querySelector('.lp-bar span'); if (bar) bar.style.width = `${Math.round((n / LERN.length) * 100)}%`;
-    const note = bar?.parentElement?.nextElementSibling; if (note) note.textContent = `${n} von ${LERN.length} Schritten erledigt.${n === LERN.length ? ' Stark – der Profi-Modus passt jetzt zu Ihnen.' : ''}`;
+  const ensure = async () => { if (FAQ) return; try { FAQ = (await fetch('/data/faq.json').then((r) => r.json())).entries; } catch { FAQ = []; } };
+  document.querySelectorAll('details.lt').forEach((det) => det.addEventListener('toggle', async () => { if (!det.open) return; await ensure(); fillTopic(det.dataset.topic, d); }));
+  const view = $('lernView');
+  if (!view) return;
+  view.addEventListener('click', async (e) => {
+    const more = e.target.closest('[data-more]');
+    if (more) { const el = $(more.dataset.more); const open = el.hidden; el.hidden = !open; more.setAttribute('aria-expanded', String(open)); more.textContent = open ? 'Weniger' : 'Mehr erklären'; return; }
+    const btn = e.target.closest('[data-done]');
+    if (!btn) return;
+    const id = btn.dataset.done, val = !d.progress?.lern?.[id];
+    d.progress = { ...(d.progress || {}), lern: { ...(d.progress?.lern || {}), [id]: val } };
+    const det = btn.closest('details.lt');
+    det.classList.toggle('done', val);
+    det.querySelector('.lt-state').textContent = val ? '✓ verstanden' : '';
+    btn.textContent = val ? 'Als offen markieren' : '✓ Verstanden';
+    btn.className = `btn ${val ? 'btn-outline' : 'btn-dark'}`;
+    if (val) det.open = false;
+    const n = LERN.filter(([k]) => d.progress.lern[k]).length;
+    const bar = view.querySelector('.lp-bar span'); if (bar) bar.style.width = `${Math.round((n / LERN.length) * 100)}%`;
+    view.querySelector('.lp-bar')?.setAttribute('aria-valuenow', String(n));
+    $('lpNote').textContent = `${n} von ${LERN.length} Themen verstanden.${n === LERN.length ? ' Stark – der Profi-Modus passt jetzt zu Ihnen.' : ''}`;
     try { await saveData(u, d); } catch { /* nächster Speichervorgang holt es nach */ }
   });
 }

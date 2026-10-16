@@ -300,3 +300,37 @@ test('portalLinks: geprüfte URL-Formate der Portale', async () => {
   const m = portalLinks({ land: 'hessen', kreis: '', ort: 'Darmstadt', art: 'wohnung', minPrice: 150000, maxPrice: 0, minArea: 0, minRooms: 0 });
   assert.equal(m[0].url, 'https://www.immobilienscout24.de/Suche/de/hessen/darmstadt/wohnung-kaufen?price=150000.0-');
 });
+
+test('verbilligteMiete: Stufen 66 % / 50 % / darunter', async () => {
+  const { verbilligteMiete } = await import('../public/src/calc.mjs');
+  assert.equal(verbilligteMiete({ ist: 700, ortsueblich: 1000 }).stufe, 'voll');
+  assert.equal(verbilligteMiete({ ist: 660, ortsueblich: 1000 }).stufe, 'voll');
+  assert.equal(verbilligteMiete({ ist: 600, ortsueblich: 1000 }).stufe, 'prognose');
+  const u = verbilligteMiete({ ist: 400, ortsueblich: 1000 });
+  assert.equal(u.stufe, 'anteilig'); assert.equal(u.abzugPct, 40);
+  assert.equal(verbilligteMiete({ ist: 500, ortsueblich: 1000 }).mindestMiete66, 660);
+  assert.equal(verbilligteMiete({ ist: 0, ortsueblich: 0 }), null);
+});
+
+test('dreiObjektGrenze: >3 Verkäufe in 5 Jahren', async () => {
+  const { dreiObjektGrenze } = await import('../public/src/calc.mjs');
+  const ok = dreiObjektGrenze(['2021-01-01', '2022-01-01', '2023-01-01']);
+  assert.equal(ok.risiko, false); assert.equal(ok.maxImFenster, 3);
+  const bad = dreiObjektGrenze(['2021-01-01', '2022-01-01', '2023-01-01', '2024-01-01']);
+  assert.equal(bad.risiko, true); assert.equal(bad.maxImFenster, 4);
+  const spread = dreiObjektGrenze(['2010-01-01', '2016-01-01', '2022-01-01', '2028-01-01']);
+  assert.equal(spread.risiko, false);
+  assert.equal(dreiObjektGrenze([]).anzahl, 0);
+});
+
+test('verkaufSteuerfrei: 10 Jahre und Eigennutzung', async () => {
+  const { verkaufSteuerfrei } = await import('../public/src/calc.mjs');
+  const a = verkaufSteuerfrei({ anschaffung: '2015-03-01' });
+  assert.equal(a.fristEnde, '2025-03-01'); assert.equal(a.steuerfreiAb, '2025-03-02'); assert.equal(a.steuerfrei, false);
+  assert.equal(verkaufSteuerfrei({ anschaffung: '2015-03-01', verkauf: '2025-03-01' }).steuerfrei, false); // Jahrestag noch in der Frist
+  assert.equal(verkaufSteuerfrei({ anschaffung: '2015-03-01', verkauf: '2025-03-02' }).steuerfrei, true);
+  assert.equal(verkaufSteuerfrei({ anschaffung: '2020-01-01', verkauf: '2024-01-01' }).steuerfrei, false);
+  const e = verkaufSteuerfrei({ anschaffung: '2020-01-01', verkauf: '2024-01-01', eigengenutzt: true });
+  assert.equal(e.steuerfrei, true); assert.match(e.grund, /Eigennutzung/);
+  assert.equal(verkaufSteuerfrei({ anschaffung: '' }), null);
+});
