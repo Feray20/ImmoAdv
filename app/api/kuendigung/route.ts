@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
   const name = clean(body.name, 120);
   const email = clean(body.email, 200);
-  const contract = clean(body.contract, 120) || 'ImmoAdv Pro';
+  const contract = clean(body.contract, 120) || 'ImmoAdv-Abo';
   const type = body.type === 'ausserordentlich' ? 'außerordentlich' : 'ordentlich';
   const reason = clean(body.reason, 2000);
   if (!name || !EMAIL_RE.test(email)) {

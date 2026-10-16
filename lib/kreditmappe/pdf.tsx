@@ -63,7 +63,7 @@ function Frame({ m, reportId, watermark, partner }: { m: Kreditmappe; reportId: 
   return (
     <>
       {watermark ? <Watermark text={watermark} opacity={watermark.startsWith('VORSCHAU') ? 0.13 : 0.05} /> : null}
-      <BrandHeader reportType="Banken-Ready Kreditmappe" reportId={reportId} createdAt={m.createdAt} partner={partner} />
+      <BrandHeader reportType="Kreditmappe" reportId={reportId} createdAt={m.createdAt} partner={partner} />
       <BrandFooter hash={m.dataHash} />
     </>
   );

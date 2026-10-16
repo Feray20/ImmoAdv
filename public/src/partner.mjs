@@ -33,7 +33,7 @@ async function load() {
 
 function legacy(d) {
   box.innerHTML = `<div class="pp-head"><div><h1>${esc(d.name)}</h1><small>${esc(d.kind || '')}</small></div></div>
-    <p>Sie wurden von ${esc(d.name)} eingeladen, Ihre Finanzierung mit ImmoAdv vorzubereiten: Kennzahlen der Bank verstehen, Unterlagen vollständig sammeln, Kreditmappe erstellen.</p>
+    <p>Sie wurden von ${esc(d.name)} eingeladen, Ihre Finanzierung mit ImmoAdv vorzubereiten: bankübliche Kennzahlen verstehen, Unterlagen vollständig sammeln, Kreditmappe erstellen.</p>
     <p class="pt-row"><a class="btn btn-dark" href="/auth/register?ref=${encodeURIComponent(d.slug)}">Kostenlos starten</a><a class="btn btn-ghost" href="/mustermappe">Mustermappe ansehen</a></p>
     <p class="pp-foot">ImmoAdv ist ein unabhängiges technisches Vorbereitungsinstrument. ${esc(d.name)} und ImmoAdv sind getrennte Unternehmen. ImmoAdv vermittelt keine Darlehen und erhält keine Vergütung für einen Abschluss.</p>`;
 }

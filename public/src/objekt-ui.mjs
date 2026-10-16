@@ -37,7 +37,7 @@ function renderSearch() {
   </div></details>
   <div class="is-result" id="s_out_box" aria-live="polite"></div>
   <div class="is-portals" id="s_links"></div>
-  <p class="form-note">Die Suche öffnet die Trefferlisten direkt bei den Portalen. ImmoAdv lädt, speichert und zeigt keine Inserate. Gefundenes Objekt? Link und Kernfakten unten in die Analyse übernehmen.</p>
+  <p class="form-note">Die Suche öffnet die Trefferlisten direkt bei den Portalen. ImmoAdv lädt, speichert und zeigt keine Inserate. Die Portalnamen sind Marken ihrer Inhaber; ImmoAdv steht mit ihnen in keiner Verbindung. Gefundenes Objekt? Link und Kernfakten unten in die Analyse übernehmen.</p>
 </section>`;
 }
 

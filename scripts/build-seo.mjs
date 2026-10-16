@@ -26,7 +26,7 @@ const APP = {
 
 // Seitenliste: Pfad, Datei, Titel, Beschreibung, Brotkrumen, Indexierung, Zusatz-JSON-LD.
 const PAGES = [
-  { path: '/', file: 'index.html', title: 'Immobilie finden, prüfen, finanzieren | ImmoAdv', desc: 'Immobiliensuche bei ImmoScout24, Immowelt und Kleinanzeigen, Analyse mit Rendite, Cashflow nach Steuern und Bankkennzahlen, Kreditmappe für das Bankgespräch – für Einsteiger und Profis.', crumbs: [], extra: ['website', 'app', 'howto'] },
+  { path: '/', file: 'index.html', title: 'Immobilie finden, prüfen, finanzieren | ImmoAdv', desc: 'Immobilie suchen, Rendite und Cashflow nach Steuern berechnen, Bankkennzahlen prüfen und die Kreditmappe fürs Bankgespräch erstellen – kostenlos starten.', crumbs: [], extra: ['website', 'app', 'howto'] },
   { path: '/wissen', title: 'Immobilienfinanzierung verständlich erklärt – 33 Antworten | ImmoAdv', desc: 'Eigenkapital, Nebenkosten, Beleihungswert, AfA, 15-%-Grenze, Anschlusszins: Antworten in zwei Ebenen mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
   { path: '/cockpit', file: null, skip: true, title: '', desc: '' },
   { path: '/suche', file: 'suche/index.html', template: 'wissen/index.html', title: 'Suche | ImmoAdv', desc: 'Rechner, Antworten und Fachbegriffe rund um Immobilienkauf und Finanzierung durchsuchen.', crumbs: ['Suche'] },
@@ -36,20 +36,20 @@ const PAGES = [
   { path: '/rechner', title: 'Mietrecht- und Steuerrechner: Mietpreisbremse, AfA, Indexmiete | ImmoAdv', desc: 'Mietpreisbremse, Kappungsgrenze, Index- und Staffelmiete, AfA linear und degressiv, Kaufpreisaufteilung und 15-%-Grenze – mit offengelegter Formel.', crumbs: ['Rechner'], extra: ['app'] },
   { path: '/fristen', title: 'Fristen nach dem Immobilienkauf berechnen | ImmoAdv', desc: 'Spekulationsfrist (§ 23 EStG), 15-%-Grenze, Zinsbindung, Kündigungsrecht nach § 489 BGB und Mieterhöhung – als Liste und Kalenderdatei.', crumbs: ['Fristen'], extra: ['app'] },
   { path: '/szenarien', title: 'Anschlussfinanzierung und Verkauf durchrechnen | ImmoAdv', desc: 'Restschuld, neue Rate und Kipp-Punkt nach der Zinsbindung; Verkaufsszenario mit Veräußerungsgewinn und Spekulationsfrist.', crumbs: ['Szenarien'], extra: ['app'] },
-  { path: '/rechner/afa', file: 'rechner/afa/index.html', title: 'AfA-Rechner Immobilie: linear, degressiv und Sonder-AfA § 7b | ImmoAdv', desc: 'Gebäudeabschreibung berechnen: 2 %, 2,5 % oder 3 % linear, 5 % degressiv nach § 7 Abs. 5a EStG und Sonder-AfA für Mietwohnungsneubau nach § 7b – Jahr für Jahr mit Restwert.', crumbs: ['Rechner', 'AfA'] },
+  { path: '/rechner/afa', file: 'rechner/afa/index.html', title: 'AfA-Rechner Immobilie: linear, degressiv und Sonder-AfA § 7b | ImmoAdv', desc: 'Gebäude-AfA berechnen: 2 %, 2,5 % oder 3 % linear, 5 % degressiv (§ 7 Abs. 5a EStG) und Sonder-AfA nach § 7b – Jahr für Jahr mit Restwert.', crumbs: ['Rechner', 'AfA'] },
   { path: '/rechner/mieterhoehung', file: 'rechner/mieterhoehung/index.html', title: 'Mieterhöhung berechnen: Kappungsgrenze, Vergleichsmiete, Brief | ImmoAdv', desc: 'Zulässige Mieterhöhung nach § 558 BGB: Kappungsgrenze 20 % oder 15 %, ortsübliche Vergleichsmiete, Wirksamkeit nach § 558b und ein Briefentwurf zum Anpassen.', crumbs: ['Rechner', 'Mieterhöhung'] },
-  { path: '/rechner/cashflow', file: 'rechner/cashflow/index.html', title: 'Cashflow-Rechner Immobilie: vor und nach Steuern | ImmoAdv', desc: 'Cashflow einer vermieteten Immobilie vor und nach Steuern berechnen: Miete, nicht umlagefähige Kosten, Zinsen, Tilgung, AfA und Grenzsteuersatz – mit 10-Jahres-Verlauf.', crumbs: ['Rechner', 'Cashflow'] },
+  { path: '/rechner/cashflow', file: 'rechner/cashflow/index.html', title: 'Cashflow-Rechner Immobilie: vor und nach Steuern | ImmoAdv', desc: 'Cashflow einer vermieteten Immobilie vor und nach Steuern: Miete, nicht umlagefähige Kosten, Zinsen, Tilgung, AfA, Steuersatz – mit 10-Jahres-Verlauf.', crumbs: ['Rechner', 'Cashflow'] },
   { path: '/rechner/vergleich', file: 'rechner/vergleich/index.html', title: 'Immobilienangebote vergleichen: Rendite, Faktor, Cashflow | ImmoAdv', desc: 'Bis zu drei Wohnungen oder Häuser nebeneinander vergleichen: Kaufnebenkosten, Rate, Cashflow, Brutto- und Nettomietrendite, Kaufpreisfaktor und Preis pro m².', crumbs: ['Rechner', 'Angebotsvergleich'] },
-  { path: '/rechner/kaufen-mieten', file: 'rechner/kaufen-mieten/index.html', title: 'Kaufen oder mieten? Vermögensvergleich über 25 Jahre | ImmoAdv', desc: 'Eigentum mit Kredit gegen Miete plus angelegtes Eigenkapital: Vermögen nach 5, 10 und 25 Jahren mit eigenen Annahmen zu Mietsteigerung, Wertentwicklung und Anlagerendite.', crumbs: ['Rechner', 'Kaufen oder mieten'] },
-  { path: '/rechner/scorecard', file: 'rechner/scorecard/index.html', title: 'Deal-Scorecard: Haushalt, Eigenkapital und Objekt prüfen | ImmoAdv', desc: 'Ampel für Ihr Immobilienvorhaben: Haushaltsüberschuss nach Rate, Eigenkapital inklusive Nebenkosten und Reserve, Rendite, Instandhaltung und Mietpreisbremse – mit offengelegten Annahmen.', crumbs: ['Rechner', 'Deal-Scorecard'] },
-  { path: '/rechner/budget', file: 'rechner/budget/index.html', title: 'Budget-Rechner: Wie viel Immobilie kann ich mir leisten? | ImmoAdv', desc: 'Aus Einkommen, Ausgaben und Eigenkapital zur tragbaren Rate, zum Darlehen und zum Kaufpreis inklusive Kaufnebenkosten je Bundesland – auch für Kapitalanleger mit Mieteinnahmen.', crumbs: ['Rechner', 'Budget'] },
+  { path: '/rechner/kaufen-mieten', file: 'rechner/kaufen-mieten/index.html', title: 'Kaufen oder mieten? Vermögensvergleich über 25 Jahre | ImmoAdv', desc: 'Eigentum mit Kredit gegen Miete plus angelegtes Eigenkapital: Vermögen nach 5, 10 und 25 Jahren mit eigenen Annahmen zu Miete, Wert und Rendite.', crumbs: ['Rechner', 'Kaufen oder mieten'] },
+  { path: '/rechner/scorecard', file: 'rechner/scorecard/index.html', title: 'Deal-Scorecard: Haushalt, Eigenkapital und Objekt prüfen | ImmoAdv', desc: 'Ampel für Ihr Immobilienvorhaben: Haushalt nach Rate, Eigenkapital inkl. Nebenkosten und Reserve, Rendite, Instandhaltung und Mietpreisbremse.', crumbs: ['Rechner', 'Deal-Scorecard'] },
+  { path: '/rechner/budget', file: 'rechner/budget/index.html', title: 'Budget-Rechner: Wie viel Immobilie kann ich mir leisten? | ImmoAdv', desc: 'Aus Einkommen, Ausgaben und Eigenkapital zur tragbaren Rate, zum Darlehen und zum Kaufpreis inkl. Nebenkosten je Bundesland – auch für Kapitalanleger.', crumbs: ['Rechner', 'Budget'] },
   { path: '/rechner/tilgungsplan', file: 'rechner/tilgungsplan/index.html', title: 'Tilgungsplan mit Sondertilgung berechnen | ImmoAdv', desc: 'Tilgungsplan für Ihr Annuitätendarlehen: Zinsen, Tilgung und Restschuld je Jahr, Restschuld nach Zinsbindung, Sondertilgung und CSV-Export.', crumbs: ['Rechner', 'Tilgungsplan'] },
   { path: '/rechner/kaufnebenkosten', file: 'rechner/kaufnebenkosten/index.html', title: 'Kaufnebenkosten nach Bundesland 2026 | ImmoAdv', desc: 'Grunderwerbsteuer von 3,5 % bis 6,5 %: alle 16 Bundesländer im Vergleich, mit Rechner für Notar, Grundbuch und Makler.', crumbs: ['Rechner', 'Kaufnebenkosten'] },
   { path: '/checkliste', title: 'Unterlagen-Checkliste für die Baufinanzierung | ImmoAdv', desc: '21 Unterlagen, die Banken bei Kapitalanlegern typischerweise sehen wollen – gefiltert nach Erwerbsstatus und Objektart, druckbar.', crumbs: ['Checkliste'] },
   { path: '/mustermappe', title: 'Muster-Kreditmappe: DSCR, Stresstest, Haushaltsrechnung | ImmoAdv', desc: 'Fiktiver Beispielfall einer Kreditmappe mit Finanzierung, Anschlusszins-Szenarien, Haushaltsrechnung und Unterlagenindex – als PDF.', crumbs: ['Mustermappe'] },
   { path: '/pro-begleiter', title: '12-Monats-Programm für Kapitalanleger | ImmoAdv', desc: 'Vom Kassensturz bis zum verwalteten Bestand: ein Thema pro Monat mit Aufgaben, Werkzeug und Gesetzestext zum Nachlesen.', crumbs: ['Pro-Begleiter'] },
   { path: '/profiler', title: 'Investor-Profiler: Welche Strategie passt zu Ihnen? | ImmoAdv', desc: 'Sechs Fragen zu Eigenkapital, Cashflow, Steuer und Horizont – mit den Kennzahlen, auf die Sie besonders achten sollten.', crumbs: ['Investor-Profiler'] },
-  { path: '/angebote', title: 'Preise und Angebote | ImmoAdv', desc: 'Suche, Analyse und Rechner kostenlos. Einsteiger ab 9,90 € pro Monat, Profi ab 29,00 € pro Monat, Kreditmappe ab 39,00 € – Endpreise inkl. 19 % USt, monatlich kündbar.', crumbs: ['Angebote'] },
+  { path: '/angebote', title: 'Preise und Angebote | ImmoAdv', desc: 'Suche, Analyse und Rechner kostenlos. Einsteiger 9,90 €/Monat, Profi 29,00 €/Monat, Kreditmappe ab 39,00 € – Endpreise inkl. USt, monatlich kündbar.', crumbs: ['Angebote'] },
   { path: '/fuer-banken', title: 'Für Banken und Finanzierungsberater | ImmoAdv', desc: 'Vorbereitete Finanzierungsanfragen mit Kreditmappe, Prüf-QR und Datenraum. Keine Vermittlung, keine Provision – Pilotpartner gesucht.', crumbs: ['Für Banken'] },
   { path: '/sicherheit', title: 'Sicherheit und Datenschutz | ImmoAdv', desc: 'Speicherung in Frankfurt, Prüfsummen, befristete Freigabelinks und Zugriffsprotokoll – und was noch geplant ist.', crumbs: ['Sicherheit'] },
   { path: '/impressum', title: 'Impressum | ImmoAdv', desc: 'Anbieterkennzeichnung nach § 5 DDG.', crumbs: ['Impressum'] },
@@ -59,7 +59,7 @@ const PAGES = [
   // Nicht indexieren: persönliche oder tokengebundene Seiten
   { path: '/datenraum', title: 'Datenraum | ImmoAdv', desc: 'Freigegebene Unterlagen.', noindex: true },
   { path: '/pruefen', title: 'Kreditmappe prüfen | ImmoAdv', desc: 'Echtheitsprüfung einer ImmoAdv-Kreditmappe.', noindex: true },
-  { path: '/b2b', title: 'Für Makler, Vermittler und Banken: Tarife | ImmoAdv', desc: 'Kreditmappen nach Bankstandard, Website-Widget, Exposé-QR und Anfragen-Pipeline für Makler, Finanzierungsvermittler und Banken. Ab 49 € netto im Monat.', crumbs: ['Für Unternehmen'] },
+  { path: '/b2b', title: 'Für Makler, Vermittler und Banken: Tarife | ImmoAdv', desc: 'Kreditmappen nach banküblichen Prüfkriterien, Website-Widget, Exposé-QR und Anfragen-Pipeline für Makler, Vermittler und Banken. Ab 49 € netto/Monat.', crumbs: ['Für Unternehmen'] },
   { path: '/partner', title: 'Partner | ImmoAdv', desc: 'Partnerseite.', noindex: true },
   { path: '/app/dashboard', file: 'auth-login.html', title: 'Konto | ImmoAdv', desc: 'Ihr ImmoAdv-Konto.', noindex: true, noCanonical: true },
   { path: '/offline', file: 'offline.html', title: 'Offline | ImmoAdv', desc: 'Keine Verbindung.', noindex: true, noCanonical: true },
@@ -108,7 +108,7 @@ function glossarLd() {
     hasDefinedTerm: Object.entries(g).map(([k, v]) => ({ '@type': 'DefinedTerm', name: k, description: v, inDefinedTermSet: `${ORIGIN}/wissen/glossar#set` })) };
 }
 const HOWTO = {
-  '@type': 'HowTo', name: 'In drei Schritten zur bankfertigen Kreditmappe',
+  '@type': 'HowTo', name: 'In drei Schritten zur Kreditmappe für das Bankgespräch',
   step: [
     { '@type': 'HowToStep', position: 1, name: 'Profil und Haushaltsrechnung', text: 'Einkommen, Ausgaben, Eigenkapital und Haushaltsgröße im Konto erfassen.' },
     { '@type': 'HowToStep', position: 2, name: 'Objekt und Wirtschaftlichkeit', text: 'Kaufpreis, Miete, Kosten und Finanzierung eintragen; Cashflow, DSCR und Stresstest prüfen.' },
@@ -152,6 +152,11 @@ function headBlock(p, html) {
 
 const template = read('rechner/index.html').replace(/<!--seo:start-->[\s\S]*?<!--seo:end-->/, '');
 const results = [];
+// Suchmaschinen kürzen Titel ab ca. 60 Zeichen: lange Titel ohne Markenzusatz, Beschreibungen auf 160 Zeichen begrenzt.
+for (const p of PAGES) {
+  if (p.title.length > 62) p.title = p.title.replace(/ \| ImmoAdv$/, '');
+  if (p.desc.length > 160) throw new Error(`Beschreibung zu lang (${p.desc.length}): ${p.path}`);
+}
 for (const p of PAGES) {
   if (p.skip) { results.push(p); continue; } // Next.js-Seite: Metadaten in app/layout.tsx
   const file = p.file || `${p.path.slice(1)}/index.html`;

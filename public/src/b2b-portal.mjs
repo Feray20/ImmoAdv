@@ -374,7 +374,7 @@ async function vTarif(box) {
     <div class="offers">${tiers.map((t) => b2b.plans.filter((p) => p.tier === t).map((p) => `<div class="offer${t === 'PRO' ? ' rec' : ''}" data-ivl="${p.interval}"${p.interval === 'year' ? ' hidden' : ''}>${t === 'PRO' ? '<span class="offer-rec">Am häufigsten gewählt</span>' : ''}
         <h4>${esc(p.name.replace(' (Jahr)', ''))}</h4><div class="offer-price">${net(p.netto_cents)} <small>netto ${esc(p.intervall)}</small></div>
         <ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
-        ${me.tier === t ? '<span class="st ok">Gebucht</span>' : `<button class="btn btn-dark" data-plan="${p.id}" type="button"${billingOn ? '' : ' disabled'}>${billingOn ? 'Buchen' : 'Buchung startet in Kürze'}</button>`}</div>`).join('')).join('')}
+        ${me.tier === t ? '<span class="st ok">Gebucht</span>' : `<button class="btn btn-dark" data-plan="${p.id}" type="button"${billingOn ? '' : ' disabled'}>${billingOn ? 'Weiter zur Bezahlung' : 'Buchung startet in Kürze'}</button>`}</div>`).join('')).join('')}
       <div class="offer"><h4>${esc(b2b.enterprise.name)}</h4><div class="offer-price">${esc(b2b.enterprise.preis)}</div><ul>${b2b.enterprise.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-ghost" href="/b2b#kontakt">Angebot anfragen</a></div>
     </div>
     <label class="consent"><input type="checkbox" id="terms"> Ich buche als Unternehmer (§ 14 BGB) zu den <a href="/nutzungsbedingungen#b2b" target="_blank">Nutzungsbedingungen für Unternehmen</a>. Preise netto zzgl. 19 % USt. Ein Widerrufsrecht besteht nicht.</label>

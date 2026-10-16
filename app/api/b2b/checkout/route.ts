@@ -36,6 +36,8 @@ export async function POST(req: Request) {
       tax_id_collection: { enabled: true },
       customer_update: { address: 'auto', name: 'auto' },
       allow_promotion_codes: true,
+      // Button-Lösung (§ 312j Abs. 3 BGB): Hinweis direkt am Bestellknopf der Bezahlseite.
+      custom_text: { submit: { message: 'Mit Klick auf den Button schließen Sie einen zahlungspflichtigen Vertrag mit ImmoAdv ab.' } },
       metadata,
       subscription_data: { metadata, description: `${plan.name} – ${plan.intervall}` },
       success_url: `${origin}/b2b-portal?checkout=success#tarif`,
