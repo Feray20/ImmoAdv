@@ -1,25 +1,18 @@
 import { NextResponse } from 'next/server';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { guardSubmission } from '@/lib/security/antispam';
+import { mailConfigured, sendMail } from '@/lib/notify/mail';
 
 // Kündigungsbutton nach § 312k BGB.
 // Versand per E-Mail über Resend (https://resend.com), konfiguriert über:
 //   RESEND_API_KEY      – API-Schlüssel
-//   CANCEL_FROM_EMAIL   – verifizierte Absenderadresse, z. B. "ImmoAdv <kuendigung@immoadv.de>"
+//   NOTIFY_FROM_EMAIL   – verifizierte Absenderadresse (Absendername wird immer „ImmoAdv“)
 //   CANCEL_TO_EMAIL     – Empfänger beim Betreiber (Standard: support@immoadv.de)
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const clean = (v: unknown, max = 300) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-const ENT: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
-const html = (t: string) => t.replace(/[&<>"]/g, (c) => ENT[c] ?? c);
-
-async function send(key: string, from: string, to: string, subject: string, text: string) {
-  const r = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from, to: [to], subject, text, html: `<pre style="font-family:Helvetica,Arial,sans-serif">${html(text)}</pre>` }),
-  });
-  if (!r.ok) throw new Error(`Mailversand fehlgeschlagen (${r.status})`);
+async function send(to: string, subject: string, text: string, title: string) {
+  if (!(await sendMail(to, subject, text, [], { title }))) throw new Error('Mailversand fehlgeschlagen');
 }
 
 export async function POST(req: Request) {
@@ -48,10 +41,8 @@ export async function POST(req: Request) {
   if (guard.action === 'drop') return NextResponse.json({ ok: true });
   if (guard.action === 'reject') return NextResponse.json({ error: guard.error, field: guard.field, suggestion: guard.suggestion }, { status: 400 });
 
-  const key = process.env.RESEND_API_KEY;
-  const from = process.env.CANCEL_FROM_EMAIL;
   const to = process.env.CANCEL_TO_EMAIL || 'support@immoadv.de';
-  if (!key || !from) {
+  if (!mailConfigured()) {
     return NextResponse.json(
       { error: 'Die Online-Kündigung ist gerade nicht erreichbar. Bitte kündigen Sie formlos per E-Mail an support@immoadv.de – das ist ebenso wirksam.' },
       { status: 503 },
@@ -74,9 +65,9 @@ export async function POST(req: Request) {
   ].filter(Boolean).join('\n');
 
   try {
-    await send(key, from, to, `Kündigung: ${contract} – ${name}`, text);
-    await send(key, from, email, 'Bestätigung Ihrer Kündigung bei ImmoAdv',
-      `Guten Tag ${name},\n\nwir haben Ihre Kündigung erhalten.\n\n${text}\n\nImmoAdv · Feray Korkmaz · Georg-August-Zinn-Str. 25 · 64354 Reinheim`);
+    await send(to, `Kündigung: ${contract} – ${name}`, text, 'Neue Kündigung');
+    await send(email, 'Bestätigung Ihrer Kündigung bei ImmoAdv',
+      `Guten Tag ${name},\n\nwir haben Ihre Kündigung erhalten. Diese E-Mail ist Ihre Eingangsbestätigung.\n\n${text}`, 'Ihre Kündigung ist eingegangen');
   } catch {
     return NextResponse.json(
       { error: 'Die Kündigung konnte nicht übermittelt werden. Bitte kündigen Sie per E-Mail an support@immoadv.de.' },
