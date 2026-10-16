@@ -1,7 +1,7 @@
 // Admin-Zentrale (nur ADMIN_EMAILS, mit zweitem Faktor): Finanz-Cockpit, Partner, Rechnungsarchiv,
 // Steuer-Export, Anfragen und Codes, Protokoll, Betreiber-Kennzahlen sowie Objektsuche und Analyse.
 import { mountObjekt } from './objekt-ui.mjs';
-import { api, download, dt, dtt, esc, eur, session, setSession, supa, token } from './sess.mjs';
+import { api, download, dt, dtt, esc, eur, logout, session, setSession, supa, token } from './sess.mjs';
 
 const root = document.getElementById('intern');
 const $ = (s, el = document) => el.querySelector(s);
@@ -61,10 +61,11 @@ async function mfa() {
 const TABS = [['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen'], ['objekt', 'Objektsuche']];
 
 function frame() {
-  root.innerHTML = `<h1>Admin-Zentrale</h1><p class="form-note">Nur für Administratoren · angemeldet mit zweitem Faktor · alle Aktionen werden protokolliert.</p>
+  root.innerHTML = `<div class="ad-head"><h1>Admin-Zentrale</h1><button type="button" class="btn btn-outline" id="adLogout">Abmelden</button></div><p class="form-note">Nur für Administratoren · angemeldet mit zweitem Faktor · alle Aktionen werden protokolliert · automatische Abmeldung nach 15 Minuten ohne Aktivität.</p>
     <div class="ad-tabs" role="tablist">${TABS.map(([k, l]) => `<button type="button" role="tab" data-t="${k}">${l}</button>`).join('')}</div>
     <p id="adMsg" class="form-note" role="status"></p><div id="adView"></div>`;
   root.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { location.hash = b.dataset.t; });
+  $('#adLogout').onclick = logout;
 }
 
 function show() {

@@ -121,3 +121,7 @@ body.intern>main,body.intern #intern{min-width:0}
 .pt-up label{display:grid;gap:4px;font-size:13px;font-weight:600;color:#475569}
 .pt-up select,.pt-up input{border:1px solid #CBD5E1;border-radius:6px;padding:8px;font:inherit;min-width:0}
 @media(max-width:700px){.pt-up{grid-template-columns:1fr}.pt-alert .btn{display:flex;margin:10px 0 0;justify-content:center}}
+.pt-logout{background:none;border:1px solid rgba(255,255,255,.3);color:#E0F2FE;border-radius:6px;padding:6px 10px;font:inherit;font-size:13px;margin-top:8px;cursor:pointer;text-align:left}
+.pt-logout:hover{background:rgba(255,255,255,.08)}
+.pt-logout-m{display:none}
+@media (max-width:900px){.pt-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pt-logout-m{display:inline-block;margin:0 0 0 auto;color:#0F2C59;border-color:#CBD5E1;background:#fff;min-height:40px}}

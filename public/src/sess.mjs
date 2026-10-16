@@ -4,7 +4,9 @@ let cfg = null;
 
 export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const session = () => { try { return JSON.parse(localStorage.getItem(SESSION) || 'null'); } catch { return null; } };
-export const setSession = (s) => { try { s ? localStorage.setItem(SESSION, JSON.stringify(s)) : localStorage.removeItem(SESSION); } catch { /* ignore */ } };
+export const setSession = (s) => { try { if (s) { localStorage.setItem(SESSION, JSON.stringify(s)); localStorage.setItem('ia-last-active', String(Date.now())); } else localStorage.removeItem(SESSION); } catch { /* ignore */ } };
+// Abmelden (widerruft das Token, meldet alle Tabs ab); Fallback ohne Sitzungsschutz-Skript.
+export const logout = () => { if (window.iaAuth) window.iaAuth.logout(); else { setSession(null); location.href = '/'; } };
 export const token = () => session()?.access_token || '';
 
 export async function config() {

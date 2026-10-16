@@ -528,3 +528,26 @@ body.is-app .dashboard-grid{gap:16px}
 .fin-list li div{display:grid;gap:2px;min-width:0}.fin-list li span{color:#64748B;font-size:13px}
 .fin-msg{margin:8px 0 0;font-size:14px}.fin-msg:empty{display:none}
 @media(max-width:700px){.fin-grid{grid-template-columns:1fr}.fin-actions{min-width:0}.fin-list li{flex-direction:column;align-items:stretch}.fin-list li .btn{width:100%;justify-content:center;min-height:44px}}
+/* Anmeldung: Passwort anzeigen, Angemeldet bleiben */
+.pw-wrap{position:relative;display:block}
+.pw-wrap input{width:100%;padding-right:96px}
+.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;color:#0284C7;font:inherit;font-size:14px;font-weight:600;padding:8px 10px;min-height:40px;cursor:pointer}
+.auth-card label.remember{display:flex;flex-direction:row;align-items:center;gap:10px;font-weight:500}
+.auth-card label.remember input{width:22px;height:22px;margin:0;flex:none}
+.auth-card label.remember small{color:#64748B;font-weight:400}
+.remember-note{margin:-4px 0 12px;font-size:13px}
+/* Hinweis vor automatischer Abmeldung */
+.ia-idle{position:fixed;inset:0;z-index:9999;background:rgba(15,44,89,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.ia-idle-box{background:#fff;border-radius:14px;max-width:420px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.ia-idle-box h2{margin:0 0 8px;font-size:22px;color:#0F2C59}
+.ia-idle-box p{margin:0 0 18px;color:#334155}
+.ia-idle-act{display:flex;gap:10px;flex-wrap:wrap}
+.ia-idle-act .btn{flex:1 1 160px;min-height:46px}
+.ad-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ad-head h1{margin:0}
+.sess-card .sess-rem{display:flex;flex-direction:row;align-items:center;gap:10px;font-weight:600;margin:6px 0 4px}
+.sess-card .sess-rem input{width:22px;height:22px;margin:0;flex:none}
+.sess-act{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
+.sess-act .btn{flex:1 1 180px;min-height:46px;text-align:center;justify-content:center}
+.auth-card label.remember small{text-transform:none;letter-spacing:0;font-size:13px}
+@media (max-width:600px){.auth-card form .btn-lg{width:100%;min-height:48px}}

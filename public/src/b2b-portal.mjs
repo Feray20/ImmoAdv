@@ -1,6 +1,6 @@
 // Unternehmensportal (/b2b-portal): Registrierung mit § 14 BGB und AVV, Anfragen-Pipeline,
 // Widget- und QR-Studio, Team, Profil mit Co-Branding, Tarif und Rechnungen.
-import { api, download, dt, dtt, esc, eur, session } from './sess.mjs';
+import { api, download, dt, dtt, esc, eur, logout, session } from './sess.mjs';
 
 const root = document.getElementById('portal');
 const $ = (s, el = document) => el.querySelector(s);
@@ -31,13 +31,14 @@ function shell() {
     <aside class="pt-side"><a class="pt-brand" href="/"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a>
       <small class="pt-tag">Unternehmensportal</small>
       <nav>${VIEWS.filter(([v]) => me.role === 'owner' || !['tarif', 'profil'].includes(v)).map(([v, l]) => `<a href="#${v}" data-v="${v}">${l}${v === 'anfragen' && me.usage.leadsNew ? ` <b class="pt-dot">${me.usage.leadsNew}</b>` : ''}</a>`).join('')}</nav>
-      <div class="pt-foot"><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><a href="/app/dashboard">Zur Anwendung</a></div>
+      <div class="pt-foot"><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><a href="/app/dashboard">Zur Anwendung</a><button type="button" class="pt-logout" id="ptLogout">Abmelden</button></div>
     </aside>
-    <section class="pt-main"><header class="pt-top"><h1 id="ptTitle"></h1>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
+    <section class="pt-main"><header class="pt-top"><h1 id="ptTitle"></h1><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
       ${a.status === 'locked' ? `<div class="pt-alert bad"><strong>Konto gesperrt.</strong> ${esc(a.lockReason || '')} Rechnungen und AVV bleiben abrufbar. Fragen an support@immoadv.de.</div>` : ''}
       <div id="ptView"></div></section>
     <nav class="pt-tabs">${VIEWS.filter(([v]) => me.role === 'owner' || !['tarif', 'profil'].includes(v)).map(([v, l]) => `<a href="#${v}" data-v="${v}">${{ start: 'Start', einreichungen: 'Postkorb', werkzeuge: 'Widget' }[v] || l.split(' ')[0]}</a>`).join('')}</nav>
   </div>`;
+  root.querySelectorAll('#ptLogout,#ptLogoutM').forEach((b) => { b.onclick = logout; });
 }
 
 function route() {

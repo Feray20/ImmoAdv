@@ -110,6 +110,20 @@ export function setupApp({ u, d, saveData, reload }) {
   grid.insertAdjacentHTML('afterbegin', kmCard());
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide fin-card" data-view="konto" id="finCard"><h3>Tarif &amp; Rechnungen</h3><div id="finBody"><p class="form-note">Wird geladen …</p></div></article>`);
   grid.insertAdjacentHTML('afterbegin', startCard(mode, d));
+  // Sitzung: Angemeldet bleiben, automatische Abmeldung, Abmelden (auch auf dem Handy erreichbar).
+  {
+    const A = window.iaAuth;
+    grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide sess-card" data-view="konto" id="sessCard"><h3>Anmeldung &amp; Sicherheit</h3>
+      <p class="form-note">Angemeldet als <strong>${esc(u.email)}</strong></p>
+      <label class="chk sess-rem"><input type="checkbox" id="sessRem"${A && A.remembered() ? ' checked' : ''}> Auf diesem Gerät angemeldet bleiben</label>
+      <p class="form-note" id="sessNote"></p>
+      <div class="sess-act"><button class="btn btn-dark" type="button" id="sessOut">Abmelden</button><a class="btn btn-outline" href="/auth/forgot">Passwort ändern</a></div>
+      <p class="form-note">Ihr Passwort können Sie im Browser bzw. im iPhone-Schlüsselbund speichern lassen – beim Anmelden einfach „Passwort sichern“ bestätigen.</p></article>`);
+    const note = () => { const n = $('sessNote'); if (n) n.textContent = $('sessRem').checked ? 'Sie bleiben angemeldet, bis Sie sich abmelden oder 30 Tage nicht aktiv waren. Nur auf eigenen Geräten verwenden.' : 'Automatische Abmeldung nach 30 Minuten ohne Aktivität.'; };
+    note();
+    $('sessRem').onchange = () => { if (A) { A.setRemember($('sessRem').checked); try { localStorage.setItem('ia-last-active', String(Date.now())); } catch { /* ignore */ } } note(); };
+    $('sessOut').onclick = () => document.getElementById('logout')?.click();
+  }
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="suche" id="sucheView"></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);
   grid.insertAdjacentHTML('beforeend', lernCard(mode, d));
