@@ -92,7 +92,7 @@ export async function GET(req: Request) {
     { key: 'tax', label: 'Steuerkanzlei (monatlicher Export)', ok: has('TAX_ADVISOR_EMAIL'), fix: 'TAX_ADVISOR_EMAIL setzen.' },
     { key: 'leadtoken', label: 'Eigener Schlüssel für Anfrage-PDFs', ok: has('LEAD_TOKEN_SECRET'), optional: true, fix: 'Optional: LEAD_TOKEN_SECRET setzen.' },
     { key: 'ip', label: 'IP-Freigabe für Admin', ok: has('ADMIN_IP_ALLOWLIST'), optional: true, fix: 'Optional: ADMIN_IP_ALLOWLIST setzen.' },
-    { key: 'preview', label: 'Vorschau-Sperre (Coming soon)', ok: !has('SITE_PREVIEW_KEY'), info: has('SITE_PREVIEW_KEY') ? `aktiv${has('SITE_PREVIEW_PASSWORD') ? ', mit Passwort' : ', nur Zugangslink'}` : 'Website öffentlich', optional: true, fix: 'Zum Start SITE_PREVIEW_KEY löschen.' },
+    { key: 'preview', label: 'Website öffentlich', ok: true, info: has('SITE_PREVIEW_KEY') ? 'öffentlich · SITE_PREVIEW_KEY hat keine Wirkung mehr und kann in Vercel gelöscht werden' : 'öffentlich', optional: true, fix: '–' },
     { key: 'panic', label: 'Not-Aus', ok: !panic.active, info: panic.active ? 'AKTIV' : 'aus', fix: 'Im Reiter „Sicherheit“ ausschalten.' },
   ];
   const from = fromAddress();
