@@ -707,3 +707,10 @@ body.ia-pdfv-open{overflow:hidden}
 .sso-btn:focus-visible{outline:3px solid #38BDF8;outline-offset:2px}
 .sso-or{display:flex;align-items:center;gap:12px;color:#64748B;font-size:13px;margin:4px 0 14px}
 .sso-or::before,.sso-or::after{content:"";flex:1;height:1px;background:#E2E8F0}
+.sso-h{margin:0 0 8px;text-align:center;font-size:13px;font-weight:600;color:#64748B}
+.sso{grid-template-columns:1fr 1fr;gap:10px}
+.sso-btn{min-height:48px;border-radius:8px;font-size:17px;font-weight:600;letter-spacing:-.01em;gap:8px;padding:0 10px}
+.sso-btn svg{width:22px;height:22px;flex:none}
+.sso-apple svg{margin-top:-2px}
+.sso-btn:active{transform:scale(.98)}
+.sso{grid-template-columns:1fr}
