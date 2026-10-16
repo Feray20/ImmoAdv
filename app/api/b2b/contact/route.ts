@@ -10,7 +10,9 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const Schema = z.object({
-  kind: z.enum(['demo', 'enterprise', 'kooperation']),
+  kind: z.enum(['konto', 'demo', 'enterprise', 'kooperation']),
+  institutionType: z.enum(['BANK', 'BROKER', 'REALTOR', 'OTHER']).optional(),
+  city: z.string().trim().max(80).optional().default(''),
   name: z.string().trim().min(2).max(120),
   company: z.string().trim().min(2).max(160),
   email: z.string().trim().toLowerCase().email().max(200),
@@ -21,7 +23,7 @@ const Schema = z.object({
   ts: z.coerce.number().optional(),
 });
 
-// Anfrage für Demo, Enterprise-Angebot oder Kooperation (Banken, Kanzleien).
+// Anfrage für ein Unternehmenskonto (Zugang vergibt ImmoAdv im Web-Admin), Demo, Enterprise-Angebot oder Kooperation.
 export async function POST(req: Request) {
   if (!adminConfigured()) return json({ error: 'Nicht verfügbar.' }, 503);
   const ip = anonymizedIpHash(req) ?? 'x';
@@ -36,7 +38,7 @@ export async function POST(req: Request) {
   if (guard.action === 'drop') return json({ ok: true }, 201);
   if (guard.action === 'reject') return json({ error: guard.error, field: guard.field, suggestion: guard.suggestion }, 400);
   const flag = guard.action === 'allow' && guard.flagged ? ' [Spam-Verdacht]' : '';
-  const ins = await supabaseAdmin().from('immo_b2b_contact').insert({ kind: b.kind, name: b.name, company: b.company, email: b.email, phone: b.phone || null, message: (b.message || '') + flag || null, ip_hash: ip });
+  const ins = await supabaseAdmin().from('immo_b2b_contact').insert({ kind: b.kind, name: b.name, company: b.company, email: b.email, phone: b.phone || null, institution_type: b.institutionType || null, city: b.city || null, message: (b.message || '') + flag || null, ip_hash: ip });
   if (ins.error) return json({ error: 'Anfrage konnte nicht gespeichert werden.' }, 500);
   if (mailConfigured()) {
     for (const to of adminList()) await sendMail(to, `B2B-Anfrage (${b.kind}): ${b.company}`, `${b.name}, ${b.company}\n${b.email} · ${b.phone || '–'}\n\n${b.message || '–'}`);

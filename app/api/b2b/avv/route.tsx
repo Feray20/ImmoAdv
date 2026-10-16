@@ -50,7 +50,7 @@ export async function GET(req: Request) {
   if (new URL(req.url).searchParams.get('pdf') !== '1') {
     return NextResponse.json({ version: AVV_VERSION, title: AVV_TITLE, sections: AVV_SECTIONS }, { headers: { 'Cache-Control': 'public, max-age=600' } });
   }
-  const ctx = await requireMember(req, { allowLocked: true, bucket: 'b2b-avv', limit: 10 });
+  const ctx = await requireMember(req, { allowLocked: true, bucket: 'b2b-avv', limit: 10, onboarding: true });
   if (ctx instanceof Response) return ctx;
   const el = createElement(AvvPdf, { a: ctx.account }) as unknown as Parameters<typeof renderToBuffer>[0];
   const pdf = await renderToBuffer(el);

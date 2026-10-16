@@ -270,6 +270,44 @@ function bindMailSetup(root2) {
   });
 }
 
+// ---------- Unternehmenskonto anlegen (Zugang mit Startpasswort) ----------
+const TYPES = [['BROKER', 'Finanzierungsvermittler (§ 34i GewO)'], ['REALTOR', 'Immobilienmakler (§ 34c GewO)'], ['BANK', 'Kreditinstitut'], ['OTHER', 'Sonstiges Unternehmen']];
+function openCreateAccount(c, done) {
+  let d = document.getElementById('mkDlg');
+  if (!d) { d = document.createElement('dialog'); d.id = 'mkDlg'; d.className = 'ad-dlg'; document.body.append(d); }
+  const f = (n, l, val = '', extra = '') => `<label>${l}<input name="${n}" value="${esc(val || '')}" ${extra}></label>`;
+  d.innerHTML = `<form class="ad-dlg-in" id="mkF"><div class="ad-dlg-h"><h2>Unternehmenskonto anlegen</h2><button type="button" class="stage-x" id="mkX" aria-label="Schließen">×</button></div>
+    <p class="form-note">Es wird ein Zugang mit Startpasswort erzeugt. Bei der ersten Anmeldung legt der Inhaber ein eigenes Passwort fest und bestätigt § 14 BGB und den AVV.</p>
+    <div class="ad-grid2">${f('companyName', 'Firmenname*', c?.company, 'required minlength="2"')}${f('legalForm', 'Rechtsform*', '', 'required placeholder="GmbH, e. K., …"')}
+      <label>Art*<select name="institutionType">${TYPES.map(([k, l]) => `<option value="${k}"${c?.institution_type === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+      ${f('advisorName', 'Ansprechpartner*', c?.name, 'required minlength="2"')}${f('email', 'E-Mail (Benutzername)*', c?.email, 'type="email" required')}${f('phone', 'Telefon', c?.phone)}
+      ${f('street', 'Straße und Hausnummer*', '', 'required')}${f('postalCode', 'PLZ*', '', 'required pattern="[0-9]{5}" inputmode="numeric"')}${f('city', 'Ort*', c?.city, 'required')}
+      ${f('registerNumber', 'Vermittlerregister (optional)', '', 'placeholder="D-…"')}${f('taxId', 'USt-IdNr. / Steuernummer (optional)')}</div>
+    <label class="chk"><input type="checkbox" name="verified"> Unternehmen bereits geprüft – sofort freischalten</label>
+    <label class="chk"><input type="checkbox" name="sendMail"> Zugangsdaten zusätzlich per E-Mail senden</label>
+    <p class="auth-message error" id="mkMsg" hidden></p><div id="mkOut"></div>
+    <div class="wiz-nav"><button type="button" class="btn btn-outline" id="mkCancel">Abbrechen</button><button type="submit" class="btn btn-dark">Konto anlegen</button></div></form>`;
+  const close = () => { d.close(); };
+  d.querySelector('#mkX').onclick = close; d.querySelector('#mkCancel').onclick = close;
+  d.querySelector('#mkF').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = Object.fromEntries(new FormData(e.target));
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+    const x = await api('/api/admin/b2b-create', { method: 'POST', body: JSON.stringify({ ...fd, verified: fd.verified === 'on', sendMail: fd.sendMail === 'on', requestId: c?.id }) });
+    btn.disabled = false;
+    const m = d.querySelector('#mkMsg');
+    if (!x.ok) { m.textContent = x.data?.error || 'Anlegen fehlgeschlagen.'; m.hidden = false; return; }
+    m.hidden = true;
+    const txt = `Portal: https://partner.immoadv.de\nBenutzername: ${x.data.email}\nStartpasswort: ${x.data.password}`;
+    d.querySelector('#mkOut').innerHTML = `<div class="pt-alert ok"><strong>Konto angelegt (Kundennummer ${esc(String(x.data.customerNumber))})${x.data.mailed ? ' und Zugangsdaten per E-Mail gesendet' : ''}.</strong> Diese Daten werden nur jetzt angezeigt:<pre class="pt-code">${esc(txt)}</pre><button type="button" class="btn btn-outline" id="mkCopy">Zugangsdaten kopieren</button></div>`;
+    d.querySelector('#mkCopy').onclick = async (ev) => { try { await navigator.clipboard.writeText(txt); ev.target.textContent = 'Kopiert ✓'; } catch { msg('Bitte markieren und kopieren.', true); } };
+    e.target.querySelector('.wiz-nav').innerHTML = '<span></span><button type="button" class="btn btn-dark" id="mkFin">Fertig</button>';
+    d.querySelector('#mkFin').onclick = () => { close(); done?.(); };
+    e.target.querySelectorAll('input,select').forEach((i) => { i.disabled = true; });
+  };
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}
+
 // ---------- Testkauf: echte Bezahlseite im Stripe-Testmodus ----------
 async function testkauf(v) {
   const q = new URLSearchParams(location.search);
@@ -502,7 +540,7 @@ async function partner(v) {
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
   const list = r.data.accounts;
   const pend = list.filter((a) => a.verification_status === 'eingereicht').length;
-  v.innerHTML = `${pend ? `<p class="auth-message" style="margin-bottom:10px"><strong>${pend} Unternehmen</strong> ${pend === 1 ? 'wartet' : 'warten'} auf Prüfung und Freischaltung. Filter „Zur Prüfung eingereicht“ wählen und „Prüfen“ öffnen.</p>` : ''}<div class="pt-row" style="margin-bottom:10px"><input id="pq" aria-label="Unternehmen suchen" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><select id="ps" aria-label="Status filtern" style="border:1px solid #CBD5E1;border-radius:6px;padding:8px"><option value="">Alle</option><option value="active">Aktiv</option><option value="locked">Gesperrt</option><option value="unverified">Ungeprüft</option><option value="pruefen">Zur Prüfung eingereicht</option></select><button class="btn btn-ghost" id="pCsv" type="button">CSV</button></div>
+  v.innerHTML = `<div class="pt-row" style="margin-bottom:12px"><button class="btn btn-dark" type="button" id="mkNew">+ Unternehmenskonto anlegen</button></div>${pend ? `<p class="auth-message" style="margin-bottom:10px"><strong>${pend} Unternehmen</strong> ${pend === 1 ? 'wartet' : 'warten'} auf Prüfung und Freischaltung. Filter „Zur Prüfung eingereicht“ wählen und „Prüfen“ öffnen.</p>` : ''}<div class="pt-row" style="margin-bottom:10px"><input id="pq" aria-label="Unternehmen suchen" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><select id="ps" aria-label="Status filtern" style="border:1px solid #CBD5E1;border-radius:6px;padding:8px"><option value="">Alle</option><option value="active">Aktiv</option><option value="locked">Gesperrt</option><option value="unverified">Ungeprüft</option><option value="pruefen">Zur Prüfung eingereicht</option></select><button class="btn btn-ghost" id="pCsv" type="button">CSV</button></div>
     ${list.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Unternehmen</th><th>Art</th><th>Register / Steuer</th><th>Tarif</th><th>Status</th><th>Anfragen</th><th>Aktionen</th></tr></thead><tbody>
     ${list.map((a) => `<tr data-row="${a.id}" data-s="${a.status}${a.verified_at ? '' : ' unverified'}${a.verification_status === 'eingereicht' ? ' pruefen' : ''}" data-q="${esc((a.company_name + ' ' + a.city + ' ' + a.customer_number + ' ' + a.email).toLowerCase())}">
       <td><strong>${esc(a.company_name)}</strong> ${esc(a.legal_form)}<br><small>${esc(a.customer_number)} · ${esc(a.postal_code)} ${esc(a.city)} · ${esc(a.email)}</small></td>
@@ -554,6 +592,7 @@ async function partner(v) {
     const r = await api('/api/admin/b2b', { method: 'POST', body: JSON.stringify(body) });
     if (r.ok) { msg('Gespeichert.'); partner(v); } else msg(r.data?.error || 'Fehler', true);
   });
+  $('#mkNew')?.addEventListener('click', () => openCreateAccount(null, () => partner(v)));
 }
 
 // Nur lesende Detailansicht eines Unternehmens (kein Einloggen als Partner).
@@ -666,12 +705,13 @@ async function anfragen(v) {
   const r = await api('/api/admin/misc');
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
   const { contacts, codes } = r.data;
-  v.innerHTML = `<section class="pt-card"><h2>B2B-Anfragen (Demo, Enterprise, Kooperation)</h2>${contacts.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Eingang</th><th>Anliegen</th><th>Kontakt</th><th>Nachricht</th><th></th></tr></thead><tbody>
-    ${contacts.map((c) => `<tr><td>${dtt(c.created_at)}</td><td>${esc(c.kind)}</td><td><strong>${esc(c.company)}</strong><br>${esc(c.name)}<br><a href="mailto:${esc(c.email)}">${esc(c.email)}</a> ${esc(c.phone || '')}</td><td>${esc(c.message || '')}</td><td>${c.status === 'offen' ? `<button class="text-btn" data-done="${c.id}" type="button">Erledigt</button>` : 'erledigt'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine Anfragen.</p>'}</section>
+  v.innerHTML = `<section class="pt-card"><h2>B2B-Anfragen</h2><p class="form-note">Kontoanfragen prüfen und mit „Konto anlegen“ den Zugang erzeugen – Firmendaten werden übernommen.</p>${contacts.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Eingang</th><th>Anliegen</th><th>Kontakt</th><th>Nachricht</th><th></th></tr></thead><tbody>
+    ${contacts.map((c) => `<tr><td>${dtt(c.created_at)}</td><td>${({ konto: '<span class="st warn">Kontoanfrage</span>', demo: 'Demo', enterprise: 'Enterprise', kooperation: 'Kooperation' })[c.kind] || esc(c.kind)}${c.city ? `<br><small>${esc(c.city)}</small>` : ''}</td><td><strong>${esc(c.company)}</strong><br>${esc(c.name)}<br><a href="mailto:${esc(c.email)}">${esc(c.email)}</a> ${esc(c.phone || '')}</td><td>${esc(c.message || '')}</td><td>${c.kind === 'konto' && !c.account_id ? `<button class="btn btn-dark btn-sm" data-mk="${c.id}" type="button">Konto anlegen</button> ` : c.account_id ? '<span class="st ok">Konto angelegt</span> ' : ''}${c.status === 'offen' ? `<button class="text-btn" data-done="${c.id}" type="button">Erledigt</button>` : 'erledigt'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine Anfragen.</p>'}</section>
     <section class="pt-card"><h2>Partnercodes</h2><p class="form-note">Kampagnen-Codes für die Registrierung von Unternehmen. Der Code wird am Konto gespeichert; Rabatte vergibt Stripe über Aktionscodes im Bezahlvorgang.</p>
     <div class="pt-row ad-form"><input id="cc" aria-label="Code" placeholder="CODE-2026" style="text-transform:uppercase"><input id="cd" aria-label="Beschreibung" placeholder="Beschreibung"><input id="cm" aria-label="Maximale Einlösungen" placeholder="max. Einlösungen" inputmode="numeric" style="width:150px"><button class="btn btn-dark" id="cAdd" type="button">Anlegen</button></div>
     ${codes.length ? `<table class="ad-table" style="margin-top:10px"><thead><tr><th>Code</th><th>Beschreibung</th><th>Eingelöst</th><th>Quote</th><th></th></tr></thead><tbody>${codes.map((c) => `<tr><td>${esc(c.code)}</td><td>${esc(c.description || '')}</td><td>${c.redeemed}${c.max_redemptions ? ' / ' + c.max_redemptions : ''}</td><td>${c.max_redemptions ? Math.round((c.redeemed / c.max_redemptions) * 100) + ' %' : '–'}</td><td><button class="text-btn" data-code="${esc(c.code)}" data-on="${!c.active}" type="button">${c.active ? 'Deaktivieren' : 'Aktivieren'}</button></td></tr>`).join('')}</tbody></table>` : ''}</section>`;
   v.querySelectorAll('[data-done]').forEach((b) => b.onclick = async () => { await api('/api/admin/misc', { method: 'POST', body: JSON.stringify({ action: 'contactDone', id: b.dataset.done }) }); anfragen(v); });
+  v.querySelectorAll('[data-mk]').forEach((b) => b.onclick = () => { const c = contacts.find((x) => x.id === b.dataset.mk); openCreateAccount(c, () => anfragen(v)); });
   v.querySelectorAll('[data-code]').forEach((b) => b.onclick = async () => { await api('/api/admin/misc', { method: 'POST', body: JSON.stringify({ action: 'codeActive', code: b.dataset.code, on: b.dataset.on === 'true' }) }); anfragen(v); });
   $('#cAdd').onclick = async () => {
     const r2 = await api('/api/admin/misc', { method: 'POST', body: JSON.stringify({ action: 'codeCreate', code: $('#cc').value, description: $('#cd').value, maxRedemptions: $('#cm').value ? Number($('#cm').value) : null }) });

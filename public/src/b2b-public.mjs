@@ -10,7 +10,7 @@ async function offers() {
   const b = d.b2b;
   const card = (p, rec) => `<div class="offer${rec ? ' rec' : ''}" data-ivl="${p.interval}"${p.interval === 'year' ? ' hidden' : ''}>${rec ? '<span class="offer-rec">Am häufigsten gewählt</span>' : ''}
     <h4>${esc(p.name.replace(' (Jahr)', ''))}</h4><div class="offer-price">${net(p.netto_cents)} <small>netto ${esc(p.intervall)}</small></div>
-    <ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-dark" href="/b2b-portal">Unternehmenskonto anlegen</a></div>`;
+    <ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-dark" href="#anfrage">Unternehmenskonto anfragen</a></div>`;
   box.innerHTML = `<div class="seg" role="tablist"><button type="button" data-i="month" aria-selected="true">Monatlich</button><button type="button" data-i="year" aria-selected="false">Jährlich</button></div>
     <div class="offers">${b.plans.map((p) => card(p, p.tier === 'PRO')).join('')}
       <div class="offer"><h4>${esc(b.enterprise.name)}</h4><div class="offer-price">${esc(b.enterprise.preis)}</div><ul>${b.enterprise.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-ghost" href="#kontakt">Angebot anfragen</a></div></div>

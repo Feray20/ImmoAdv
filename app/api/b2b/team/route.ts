@@ -2,14 +2,14 @@ import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { userFromRequest } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
-import { TIER_LIMITS, effectiveTier, hashToken, membershipFor, newToken } from '@/lib/b2b/core';
+import { TIER_LIMITS, effectiveTier, hashToken, membershipFor } from '@/lib/b2b/core';
 import { json, requireMember } from '@/lib/b2b/http';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
+import { createB2BLogin } from '@/lib/b2b/provision';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const INVITE_DAYS = 14;
 
 async function emailOf(userId: string): Promise<string> {
   const { data } = await supabaseAdmin().auth.admin.getUserById(userId);
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
   return json({ members, invites: ctx.role === 'owner' ? inv ?? [] : [], seats: tier ? TIER_LIMITS[tier].seats : 1 });
 }
 
-const Invite = z.object({ email: z.string().trim().toLowerCase().email().max(200) });
+const Invite = z.object({ email: z.string().trim().toLowerCase().email().max(200), send: z.boolean().optional().default(false) });
 
 export async function POST(req: Request) {
   const ctx = await requireMember(req, { owner: true, bucket: 'b2b-invite', limit: 10 });
@@ -46,16 +46,18 @@ export async function POST(req: Request) {
   ]);
   const seats = TIER_LIMITS[tier].seats;
   if ((m ?? 0) + (i ?? 0) >= seats) return json({ error: `Alle ${seats} Berater-Zugänge Ihres Tarifs sind vergeben.` }, 409);
-  const token = newToken();
-  const ins = await db.from('immo_b2b_invites').insert({ account_id: ctx.account.id, email: p.data.email, token_hash: hashToken(token), expires_at: new Date(Date.now() + INVITE_DAYS * 864e5).toISOString() });
-  if (ins.error) return json({ error: 'Einladung fehlgeschlagen.' }, 500);
-  const link = `${new URL(req.url).origin}/b2b-portal#einladung=${token}`;
+  // Zugang direkt anlegen (keine Selbstregistrierung): Startpasswort einmalig anzeigen, Wechsel bei der ersten Anmeldung.
+  const login = await createB2BLogin(p.data.email, '');
+  if (!login.ok) return json({ error: login.error }, login.status);
+  const mem = await db.from('immo_b2b_members').insert({ account_id: ctx.account.id, user_id: login.userId, role: 'advisor' });
+  if (mem.error) { await db.auth.admin.deleteUser(login.userId).catch(() => null); return json({ error: 'Zugang konnte nicht angelegt werden.' }, 500); }
   let mailed = false;
-  if (mailConfigured()) {
-    mailed = await sendMail(p.data.email, `Einladung zu ${ctx.account.company_name} auf ImmoAdv`,
-      `Guten Tag,\n\n${ctx.account.advisor_name} lädt Sie als Berater für ${ctx.account.company_name} ein.\n\n1. Mit dieser E-Mail-Adresse bei ImmoAdv anmelden oder registrieren.\n2. Diesen Link öffnen (gültig ${INVITE_DAYS} Tage):\n${link}\n\nImmoAdv · Georg-August-Zinn-Str. 25 · 64354 Reinheim`);
+  if (mailConfigured() && p.data.send) {
+    mailed = await sendMail(p.data.email, `Ihr Zugang für ${ctx.account.company_name} auf ImmoAdv`,
+      `Guten Tag,\n\n${ctx.account.advisor_name} hat für Sie einen Berater-Zugang im ImmoAdv-Unternehmensportal von ${ctx.account.company_name} eingerichtet.\n\nPortal: https://partner.immoadv.de\nBenutzername: ${p.data.email}\nStartpasswort: ${login.password}\n\nBei der ersten Anmeldung legen Sie ein eigenes Passwort fest.`,
+      [], { title: 'Ihr Berater-Zugang', button: { label: 'Zum Unternehmensportal', url: 'https://partner.immoadv.de' }, note: 'Bitte das Startpasswort nicht weitergeben.' });
   }
-  return json({ ok: true, link, mailed }, 201);
+  return json({ ok: true, email: p.data.email, password: login.password, mailed }, 201);
 }
 
 export async function DELETE(req: Request) {

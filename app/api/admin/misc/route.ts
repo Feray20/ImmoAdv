@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
   const db = supabaseAdmin();
   const [{ data: contacts }, { data: codes }, { data: audit }] = await Promise.all([
-    db.from('immo_b2b_contact').select('id, kind, name, company, email, phone, message, status, created_at').order('created_at', { ascending: false }).limit(300),
+    db.from('immo_b2b_contact').select('id, kind, name, company, email, phone, message, status, created_at, institution_type, city, account_id').order('created_at', { ascending: false }).limit(300),
     db.from('immo_b2b_partner_codes').select('*').order('created_at', { ascending: false }).limit(300),
     db.from('immo_admin_audit').select('actor_email, action, target, meta, created_at').order('created_at', { ascending: false }).limit(200),
   ]);

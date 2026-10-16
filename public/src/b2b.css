@@ -427,3 +427,24 @@ body{max-width:100%;overflow-x:clip}
 .de-date{position:relative;display:block}
 .de-txt{display:flex;align-items:center;justify-content:center;min-height:46px;border:1px solid #CBD5E1;border-radius:8px;background:#fff;font-size:16px;font-weight:600;color:#0F172A;pointer-events:none}
 .de-date input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+/* Web-Admin: Dialog Unternehmenskonto anlegen */
+.ad-dlg{border:0;padding:0;border-radius:16px;width:min(720px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;box-shadow:0 30px 80px rgba(15,44,89,.35)}
+.ad-dlg::backdrop{background:rgba(15,23,42,.55)}
+.ad-dlg-in{padding:20px;display:grid;gap:12px}
+.ad-dlg-h{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #0F2C59;padding-bottom:8px}.ad-dlg-h h2{margin:0;color:#0F2C59}
+.ad-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.ad-grid2 label{display:grid;gap:4px;font-size:13px;font-weight:600;color:#334155}
+.ad-grid2 input,.ad-grid2 select{min-height:44px;border:1px solid #CBD5E1;border-radius:8px;padding:8px 10px;font-size:16px;font-weight:400}
+.ad-dlg .chk{display:flex;gap:8px;align-items:center;font-size:14px}
+.btn-sm{min-height:34px;padding:0 12px;font-size:13px}
+@media (max-width:640px){.ad-grid2{grid-template-columns:1fr}.ad-dlg{width:100vw;max-width:100vw;margin:auto 0 0;border-radius:16px 16px 0 0}}
+.cred-dl{display:grid;gap:4px;margin:8px 0}.cred-dl div{display:flex;gap:8px}.cred-dl dt{min-width:110px;color:#64748B}.cred-dl dd{margin:0;font-weight:700}
+.inv-send{display:flex;gap:6px;align-items:center;font-size:14px;white-space:nowrap}
+.pt-first{max-width:560px;margin:0 auto}.pt-first-f{display:grid;gap:12px}.pt-first-f>label:not(.consent){display:grid;gap:6px;font-weight:600}
+.pt-first-f input[type=password]{min-height:48px;border:1.5px solid #CBD5E1;border-radius:10px;padding:10px 12px;font-size:16px}
+.pw-row input{flex:1 1 180px;min-height:44px;border:1px solid #CBD5E1;border-radius:8px;padding:8px 10px;font-size:16px}
+/* Portal-Einstieg: Anmelden | Unternehmenskonto anfragen */
+.pt-gate{max-width:640px;margin:0 auto;padding:18px 16px 40px}
+.pt-gate-tabs{display:grid;grid-template-columns:1fr 1fr;margin:8px 0 14px}
+.pt-gate-tabs button{min-height:46px;font-weight:700}
+.pt-req h1{font-size:clamp(22px,4vw,28px);margin:0 0 6px;color:#0F2C59}

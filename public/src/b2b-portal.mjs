@@ -49,7 +49,7 @@ function route() {
   $('#ptTitle').textContent = VIEWS.find(([k]) => k === view)[1];
   const box = $('#ptView');
   box.innerHTML = '<p class="form-note">Wird geladen …</p>';
-  ({ start: vStart, kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs').then((m) => m.renderWissen(b)).catch(() => { b.innerHTML = '<p class="form-note">Fachwissen konnte nicht geladen werden.</p>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: vTeam, profil: vProfil, tarif: vTarif })[view](box);
+  ({ start: vStart, kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs').then((m) => m.renderWissen(b)).catch(() => { b.innerHTML = '<p class="form-note">Fachwissen konnte nicht geladen werden.</p>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: (b) => vTeam(b).then(() => addPw(b)), profil: (b) => { vProfil(b); addPw(b); }, tarif: vTarif })[view](box);
 }
 
 // ---------- Kunden: einladen und Fortschritt sehen (nur mit Einwilligung des Kunden) ----------
@@ -333,6 +333,13 @@ function vTools(box) {
   box.querySelectorAll('[data-q]').forEach((b) => b.onclick = () => busy(b, () => download(`/api/b2b/qr?format=${b.dataset.q}&` + qs(), {}, 'QR')));
 }
 
+// Zugangsdaten einmalig anzeigen (Startpasswort muss bei der ersten Anmeldung geändert werden).
+const credBox = (email, pw, mailed) => `<div class="pt-alert ok cred"><strong>Zugang angelegt${mailed ? ' und per E-Mail gesendet' : ''}.</strong> Diese Daten werden nur jetzt angezeigt:
+  <dl class="cred-dl"><div><dt>Portal</dt><dd>partner.immoadv.de</dd></div><div><dt>Benutzername</dt><dd>${esc(email)}</dd></div><div><dt>Startpasswort</dt><dd><code>${esc(pw)}</code></dd></div></dl>
+  <button type="button" class="btn btn-outline cred-copy" data-copy="${esc(`Portal: https://partner.immoadv.de\nBenutzername: ${email}\nStartpasswort: ${pw}`)}">Zugangsdaten kopieren</button>
+  <small>Bei der ersten Anmeldung wird ein eigenes Passwort festgelegt. Bitte nur auf sicherem Weg weitergeben.</small></div>`;
+document.addEventListener('click', async (e) => { const b = e.target.closest?.('.cred-copy'); if (!b) return; try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Kopiert ✓'; } catch { toast('Bitte markieren und kopieren.', true); } });
+
 // ---------- Team ----------
 async function vTeam(box) {
   const r = await api('/api/b2b/team');
@@ -343,8 +350,8 @@ async function vTeam(box) {
     ${members.map((m) => `<tr><td>${esc(m.email)}${m.self ? ' (Sie)' : ''}</td><td>${m.role === 'owner' ? 'Inhaber' : 'Berater'}</td><td>${dt(m.created_at)}</td><td>${me.role === 'owner' && m.role !== 'owner' ? `<button class="text-btn del" data-m="${m.user_id}" type="button">Entfernen</button>` : ''}</td></tr>`).join('')}
     ${invites.map((i) => `<tr><td>${esc(i.email)}</td><td>Eingeladen</td><td>bis ${dt(i.expires_at)}</td><td><button class="text-btn del" data-i="${i.id}" type="button">Zurückziehen</button></td></tr>`).join('')}
     </tbody></table>
-    ${me.role === 'owner' ? `<form id="inv" class="pt-row" style="margin-top:14px"><input type="email" required placeholder="kollegin@kanzlei.de" id="invMail" aria-label="E-Mail"><button class="btn btn-dark" type="submit">Einladen</button></form><div id="invOut"></div>` : ''}
-    <p class="form-note">Berater melden sich mit der eingeladenen E-Mail-Adresse an. Sie sehen die Anfragen und erstellen Kreditmappen im Kontingent des Unternehmens; Tarif, Profil und Rechnungen verwaltet nur der Inhaber.</p></section>`;
+    ${me.role === 'owner' ? `<form id="inv" class="pt-row" style="margin-top:14px"><input type="email" required placeholder="kollegin@kanzlei.de" id="invMail" aria-label="E-Mail"><label class="chk inv-send"><input type="checkbox" id="invSend"> per E-Mail senden</label><button class="btn btn-dark" type="submit">Zugang anlegen</button></form><div id="invOut"></div>` : ''}
+    <p class="form-note">Sie legen den Zugang an und erhalten ein Startpasswort; der Berater legt bei der ersten Anmeldung ein eigenes Passwort fest. Sie sehen die Anfragen und erstellen Kreditmappen im Kontingent des Unternehmens; Tarif, Profil und Rechnungen verwaltet nur der Inhaber.</p></section>`;
   box.querySelectorAll('[data-m],[data-i]').forEach((b) => b.onclick = async () => {
     if (!confirm('Wirklich?')) return;
     const x = await api('/api/b2b/team?' + (b.dataset.m ? 'member=' + b.dataset.m : 'invite=' + b.dataset.i), { method: 'DELETE' });
@@ -352,11 +359,21 @@ async function vTeam(box) {
   });
   if ($('#inv')) $('#inv').onsubmit = async (e) => {
     e.preventDefault();
-    const x = await api('/api/b2b/team', { method: 'POST', body: JSON.stringify({ email: $('#invMail').value }) });
+    const x = await api('/api/b2b/team', { method: 'POST', body: JSON.stringify({ email: $('#invMail').value, send: Boolean($('#invSend')?.checked) }) });
     if (!x.ok) return toast(x.data?.error || 'Fehler', true);
-    $('#invOut').innerHTML = `<div class="pt-alert">${x.data.mailed ? 'Einladung per E-Mail versendet.' : 'E-Mail-Versand ist nicht eingerichtet. Bitte diesen Link selbst weitergeben:'}<pre class="pt-code">${esc(x.data.link)}</pre></div>`;
-    setTimeout(() => vTeam(box).then(() => { $('#invOut') && ($('#invOut').innerHTML = `<div class="pt-alert"><pre class="pt-code">${esc(x.data.link)}</pre></div>`); }), 10);
+    const html = credBox(x.data.email, x.data.password, x.data.mailed);
+    await vTeam(box); addPw(box);
+    if ($('#invOut')) $('#invOut').innerHTML = html;
   };
+}
+
+// Passwort jederzeit ändern (Profil für Inhaber, Team für alle Berater).
+function addPw(box) {
+  if (!box || box.querySelector('#pwCard')) return;
+  box.insertAdjacentHTML('beforeend', `<section class="pt-card" id="pwCard"><h2>Mein Passwort</h2><p class="form-note">Angemeldet als ${esc(session()?.user?.email || '')}. Mindestens 10 Zeichen mit Groß- und Kleinbuchstaben und einer Zahl.</p>
+    <form id="pwF" class="pt-row pw-row"><input id="pw1" type="password" autocomplete="new-password" placeholder="Neues Passwort" aria-label="Neues Passwort" minlength="10" required><input id="pw2" type="password" autocomplete="new-password" placeholder="Wiederholen" aria-label="Neues Passwort wiederholen" minlength="10" required><button class="btn btn-dark" type="submit">Passwort ändern</button></form></section>`);
+  $('#pwF').onsubmit = (e) => { e.preventDefault(); const p1 = $('#pw1').value; if (p1 !== $('#pw2').value) return toast('Die Passwörter stimmen nicht überein.', true); if (p1.length < 10 || !/[A-Z]/.test(p1) || !/[a-z]/.test(p1) || !/[0-9]/.test(p1)) return toast('Mindestens 10 Zeichen mit Groß-/Kleinbuchstaben und Zahl.', true);
+    busy(e.target.querySelector('button'), async () => { const err = await changePassword(p1); if (err) throw Error(err); e.target.reset(); toast('Passwort geändert.'); }); };
 }
 
 // ---------- Profil ----------
@@ -552,6 +569,104 @@ async function onboarding(avvVersion) {
   };
 }
 
+// Portal ohne Anmeldung: „Anmelden“ (Zugangsdaten von ImmoAdv) oder „Unternehmenskonto anfragen“.
+function portalGate() {
+  const tab = /anfrage/.test(location.hash) ? 'anfrage' : 'login';
+  root.innerHTML = `<div class="pt-gate"><div class="seg area-seg pt-gate-tabs" role="tablist"><button type="button" role="tab" data-gt="login" aria-selected="${tab === 'login'}">Anmelden</button><button type="button" role="tab" data-gt="anfrage" aria-selected="${tab === 'anfrage'}">Unternehmenskonto anfragen</button></div><div id="ptGate"></div></div>`;
+  root.querySelectorAll('[data-gt]').forEach((b) => b.onclick = () => { history.replaceState(null, '', location.pathname + (b.dataset.gt === 'anfrage' ? '#anfrage' : '')); portalGate(); });
+  const box = $('#ptGate');
+  if (tab === 'login') {
+    loginForm(box, { title: 'Unternehmensportal', lead: 'Anmeldung mit den Zugangsdaten, die Sie von ImmoAdv erhalten haben.', noteHtml: 'Noch kein Zugang? <a class="ck-link" href="#anfrage" id="toReq">Unternehmenskonto anfragen</a>' });
+    box.querySelector('#toReq')?.addEventListener('click', (e) => { e.preventDefault(); history.replaceState(null, '', location.pathname + '#anfrage'); portalGate(); });
+    return;
+  }
+  const ts = Date.now();
+  box.innerHTML = `<div class="pt-card pt-req"><h1>Unternehmenskonto anfragen</h1><p class="form-note">Für Finanzierungsvermittler, Makler, Banken und Kanzleien. Wir prüfen Ihre Angaben und senden Ihnen die Zugangsdaten innerhalb von zwei Werktagen.</p>
+    <form id="reqF" class="b2b-form">
+      <label>Unternehmen*<input name="company" required minlength="2" autocomplete="organization"></label>
+      <label>Art des Unternehmens<select name="institutionType"><option value="BROKER">Finanzierungsvermittler (§ 34i GewO)</option><option value="REALTOR">Immobilienmakler (§ 34c GewO)</option><option value="BANK">Kreditinstitut</option><option value="OTHER">Sonstiges Unternehmen</option></select></label>
+      <label>Ansprechpartner*<input name="name" required minlength="2" autocomplete="name"></label>
+      <label>Geschäftliche E-Mail*<input name="email" type="email" required autocomplete="email"></label>
+      <label>Telefon<input name="phone" autocomplete="tel"></label>
+      <label>Ort<input name="city" autocomplete="address-level2" maxlength="80"></label>
+      <label class="full">Nachricht (optional)<textarea name="message" rows="3" maxlength="2000" placeholder="z. B. Anzahl Berater, gewünschter Starttermin"></textarea></label>
+      <div class="pp-hp" aria-hidden="true"><input name="website" tabindex="-1" autocomplete="off"></div>
+      <label class="consent full"><input type="checkbox" name="privacy" required> Ich habe die <a class="ck-link" href="/datenschutz" target="_blank" rel="noopener">Datenschutzhinweise</a> gelesen. Die Angaben werden nur zur Bearbeitung der Anfrage gespeichert.</label>
+      <div class="full"><button class="btn btn-dark btn-lg" type="submit">Anfrage senden</button></div>
+      <p class="form-note full" id="reqMsg" role="status"></p></form></div>`;
+  $('#reqF').onsubmit = (e) => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target));
+    busy(e.target.querySelector('button[type=submit]'), async () => {
+      const r = await fetch('/api/b2b/contact', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...d, kind: 'konto', privacy: d.privacy === 'on', ts }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw Error(j.error || 'Anfrage konnte nicht gesendet werden.');
+      box.innerHTML = `<div class="pt-card pt-req"><h1>Danke – Ihre Anfrage ist eingegangen</h1><p>Wir prüfen Ihre Angaben und senden die Zugangsdaten an <strong>${esc(d.email)}</strong>, in der Regel innerhalb von zwei Werktagen.</p><p><button class="btn btn-outline" type="button" id="backLogin">Zur Anmeldung</button></p></div>`;
+      $('#backLogin').onclick = () => { history.replaceState(null, '', location.pathname); portalGate(); };
+    });
+  };
+}
+
+// Login ohne Unternehmenskonto: Zugänge vergibt ImmoAdv nach Anfrage.
+function noAccount() {
+  root.innerHTML = `<div class="pt-onb"><h1>Kein Unternehmenskonto</h1><p>Mit dieser Anmeldung ist kein Unternehmenskonto verbunden. Zugänge zum Unternehmensportal vergibt ImmoAdv nach einer kurzen Anfrage.</p>
+    <p class="pt-row"><button class="btn btn-dark" type="button" id="ptReq">Unternehmenskonto anfragen</button><button class="btn btn-outline" type="button" id="ptOther">Mit anderen Zugangsdaten anmelden</button></p></div>`;
+  $('#ptOther').onclick = () => { setSession(null); location.reload(); };
+  $('#ptReq').onclick = () => { setSession(null); location.replace(location.pathname + '#anfrage'); location.reload(); };
+}
+
+// Erste Anmeldung: eigenes Passwort festlegen; Inhaber bestätigt § 14 BGB, AVV und Nutzungsbedingungen.
+function firstLogin(d) {
+  const owner = d.role === 'owner', cons = d.onboarding?.consentsMissing;
+  root.innerHTML = `<div class="pt-onb pt-first"><span class="stage-k">Willkommen bei ImmoAdv</span><h1>Ersteinrichtung für ${esc(d.account.companyName)}</h1>
+    <p class="form-note">Kundennummer ${esc(d.account.customerNumber || '')}. Bitte legen Sie ein eigenes Passwort fest${owner && cons ? ' und bestätigen Sie die Vertragsgrundlagen' : ''}. Danach ist das Portal freigeschaltet.</p>
+    <form id="firstF" class="pt-first-f">
+      <label>Neues Passwort<input id="np1" type="password" autocomplete="new-password" minlength="10" required></label>
+      <label>Neues Passwort wiederholen<input id="np2" type="password" autocomplete="new-password" minlength="10" required></label>
+      <p class="form-note" id="npHint">Mindestens 10 Zeichen mit Groß- und Kleinbuchstaben und einer Zahl.</p>
+      ${owner && cons ? `<label class="consent"><input type="checkbox" name="unternehmer" required> Ich bestätige, dass das Unternehmen als Unternehmer im Sinne des § 14 BGB handelt. Mir ist bekannt, dass kein Widerrufsrecht besteht.</label>
+      <label class="consent"><input type="checkbox" name="avv" required> Ich schließe für das Unternehmen den Auftragsverarbeitungsvertrag (Art. 28 DSGVO, Version ${esc(d.avvVersion)}) ab und bin dazu berechtigt.</label>
+      <details class="pt-avv" id="avvBox"><summary>Auftragsverarbeitungsvertrag lesen</summary><div id="avvTxt"><p class="form-note">Wird geladen …</p></div></details>
+      <label class="consent"><input type="checkbox" name="agb" required> Ich habe die <a class="ck-link" href="/nutzungsbedingungen#b2b" target="_blank" rel="noopener">Nutzungsbedingungen für Unternehmen</a> und die <a class="ck-link" href="/datenschutz" target="_blank" rel="noopener">Datenschutzhinweise</a> gelesen.</label>` : ''}
+      <p class="auth-message error" id="firstMsg" hidden></p>
+      <button class="btn btn-dark btn-lg" type="submit">Speichern und Portal öffnen</button></form></div>`;
+  $('#avvBox')?.addEventListener('toggle', async (e) => {
+    if (!e.target.open || e.target.dataset.ready) return; e.target.dataset.ready = '1';
+    const a = await fetch('/api/b2b/avv').then((r) => r.json()).catch(() => null);
+    $('#avvTxt').innerHTML = a ? (a.sections || []).map((x) => `<h3>${esc(x.h)}</h3>${x.p.map((t) => `<p>${esc(t)}</p>`).join('')}`).join('') : '<p class="form-note">Text konnte nicht geladen werden.</p>';
+  });
+  $('#firstF').onsubmit = (e) => {
+    e.preventDefault();
+    const m = $('#firstMsg'), p1 = $('#np1').value, p2 = $('#np2').value;
+    const err = (t) => { m.textContent = t; m.hidden = false; };
+    if (p1 !== p2) return err('Die beiden Passwörter stimmen nicht überein.');
+    if (p1.length < 10 || !/[A-Z]/.test(p1) || !/[a-z]/.test(p1) || !/[0-9]/.test(p1)) return err('Bitte mindestens 10 Zeichen mit Groß- und Kleinbuchstaben und einer Zahl.');
+    busy(e.target.querySelector('button[type=submit]'), async () => {
+      const f = Object.fromEntries(new FormData(e.target));
+      const c = await changePassword(p1);
+      if (c) return err(c);
+      const x = await api('/api/b2b/onboard', { method: 'POST', body: JSON.stringify({ passwordChanged: true, unternehmer: f.unternehmer === 'on', avv: f.avv === 'on', agb: f.agb === 'on' }) });
+      if (!x.ok) return err(x.data?.error || 'Speichern fehlgeschlagen.');
+      toast('Passwort gespeichert – willkommen im Portal.');
+      location.hash = '#start'; await start();
+    });
+  };
+}
+
+// Passwort über Supabase ändern (angemeldete Sitzung). Liefert eine Fehlermeldung oder null.
+async function changePassword(pw) {
+  const { supa, token } = await import('./sess.mjs');
+  const r = await supa('/auth/v1/user', { method: 'PUT', headers: { Authorization: 'Bearer ' + token() }, body: JSON.stringify({ password: pw }) }).catch(() => null);
+  if (!r) return 'Keine Verbindung. Bitte erneut versuchen.';
+  if (r.ok) return null;
+  const j = await r.json().catch(() => ({}));
+  const t = String(j.msg || j.error_description || j.message || '');
+  if (/same|different/i.test(t)) return 'Bitte ein anderes Passwort als das Startpasswort wählen.';
+  if (/weak|short|pwned|leaked/i.test(t)) return 'Dieses Passwort ist zu schwach oder bekannt geworden. Bitte ein anderes wählen.';
+  if (/reauth/i.test(t)) return 'Bitte melden Sie sich neu an und versuchen Sie es erneut.';
+  return 'Passwort konnte nicht geändert werden.';
+}
+
 async function acceptInvite(tok) {
   const r = await api('/api/b2b/team', { method: 'PUT', body: JSON.stringify({ token: tok }) });
   history.replaceState(null, '', location.pathname + '#start');
@@ -565,7 +680,7 @@ async function start() {
   const hp = new URLSearchParams(location.hash.slice(1));
   if (hp.get('access_token')) { setSession({ access_token: hp.get('access_token'), refresh_token: hp.get('refresh_token'), expires_in: Number(hp.get('expires_in')) || 3600, token_type: 'bearer' }); history.replaceState(null, '', location.pathname + '#start'); }
   if (!session()?.access_token) {
-    loginForm(root, { title: 'Unternehmensportal', lead: 'Anmeldung für Unternehmen – getrennt vom privaten ImmoAdv-Konto.', note: 'Noch kein Unternehmenskonto? Oben „Konto anlegen“ wählen.', signup: { next: '/b2b-portal' } });
+    portalGate();
     return;
   }
   const inv = /einladung=([A-Za-z0-9_-]{20,80})/.exec(location.hash);
@@ -573,7 +688,8 @@ async function start() {
   const r = await api('/api/b2b/account');
   if (r.status === 401) { setSession(null); return start(); }
   if (!r.ok) { root.innerHTML = `<div class="pt-onb"><h1>Unternehmensportal</h1><p>${esc(r.data?.error || 'Nicht verfügbar.')}</p></div>`; return; }
-  if (!r.data.account) { await onboarding(r.data.avvVersion); return; }
+  if (!r.data.account) { noAccount(); return; }
+  if (r.data.onboarding?.mustChange || r.data.onboarding?.consentsMissing) { firstLogin(r.data); return; }
   me = r.data;
   if (new URLSearchParams(location.search).get('checkout') === 'success') toast('Danke! Der Tarif wird aktiviert, sobald die Zahlung bestätigt ist.');
   shell();

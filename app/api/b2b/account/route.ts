@@ -93,11 +93,17 @@ export async function GET(req: Request) {
     dossiersThisMonth(m.account.id),
     db.from('immo_b2b_leads').select('id', { count: 'exact', head: true }).eq('account_id', m.account.id).eq('status', 'neu'),
   ]);
-  return json({ ...view(m.account, m.role), usage: { seats: seats ?? 1, dossiersThisMonth: used, leadsNew: leadsNew ?? 0 }, avvVersion: AVV_VERSION });
+  // Erstanmeldung: Startpasswort ändern; Inhaber bestätigt § 14 BGB und schließt den AVV ab.
+  let mustChange = false;
+  try { mustChange = Boolean((await db.auth.admin.getUserById(user.id)).data?.user?.user_metadata?.must_change_password); } catch { mustChange = false; }
+  const consentsMissing = m.role === 'owner' && (!m.account.unternehmer_confirmed_at || !m.account.avv_accepted_at);
+  return json({ ...view(m.account, m.role), usage: { seats: seats ?? 1, dossiersThisMonth: used, leadsNew: leadsNew ?? 0 }, avvVersion: AVV_VERSION, onboarding: { mustChange, consentsMissing } });
 }
 
 // Registrierung eines Unternehmenskontos (nur Unternehmer nach § 14 BGB, mit AVV nach Art. 28 DSGVO).
 export async function POST(req: Request) {
+  // Zugänge vergibt ImmoAdv im Web-Admin nach einer Anfrage – keine Selbstregistrierung mehr.
+  if (process.env.B2B_SELF_SIGNUP !== 'true') return json({ error: 'Unternehmenskonten vergibt ImmoAdv nach einer Anfrage: https://immoadv.de/b2b#anfrage' }, 403);
   if (!adminConfigured()) return json({ error: 'Nicht konfiguriert.' }, 503);
   const user = await userFromRequest(req);
   if (!user) return json({ error: 'Bitte zuerst anmelden.' }, 401);
