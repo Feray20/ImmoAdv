@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "prebuild": "node scripts/bundle-css.mjs && node scripts/build-seo.mjs",
+    "prebuild": "node scripts/bundle-css.mjs && node scripts/build-seo.mjs && node scripts/version-assets.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
