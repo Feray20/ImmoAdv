@@ -760,7 +760,7 @@ input.bad{border-color:#DC2626!important;background:#FEF2F2!important;box-shadow
 /* Handy: nie automatisch hineinzoomen (iOS zoomt bei Feldern unter 16 px und bleibt vergrößert) und nie seitlich verschiebbar.
    Eigenes Zoomen mit zwei Fingern bleibt erlaubt. */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
-html,body{max-width:100%;overflow-x:clip}
+body{max-width:100%;overflow-x:clip}
 @media (max-width:1024px),(pointer:coarse){
   input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px!important}
 }

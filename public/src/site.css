@@ -770,7 +770,7 @@ input.bad{border-color:#DC2626!important;background:#FEF2F2!important;box-shadow
 @media (max-width:600px){.area-login{margin:16px auto;padding:22px 16px;border-radius:14px}}
 .area-login label.remember small{text-transform:none;letter-spacing:0;font-size:13px;color:#64748B;font-weight:400}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
-html,body{max-width:100%;overflow-x:clip}
+body{max-width:100%;overflow-x:clip}
 @media (max-width:1024px),(pointer:coarse){
 input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px!important}
 }
