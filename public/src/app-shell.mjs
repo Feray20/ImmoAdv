@@ -45,13 +45,13 @@ const LERN = [
 // Phasen = die vier Stufen von „Ihr Weg“. Frei wählbar (profile.phase 0–3), sonst automatisch erkannt.
 // Die gewählte Phase steuert Startaktionen, Reihenfolge im Steuer-Bereich und empfohlene Wissensthemen.
 export const PHASES = [
-  { name: 'Orientieren', steuer: 'kauf', lern: ['geld', 'budget', 'eigenkapital', 'annuitaet', 'beruf'],
+  { name: 'Orientieren', plan: 'Erst verstehen, wie Geld, Eigenkapital und Finanzierung funktionieren – dann wissen Sie, was Sie sich leisten können.', steuer: 'kauf', lern: ['geld', 'budget', 'eigenkapital', 'annuitaet', 'beruf'],
     actions: [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#lernen', 'Grundlagen auffrischen', 'Eigenkapital, Zins, Tilgung'], ['#suche', 'Immobilien ansehen', 'Suche bei den großen Portalen']] },
-  { name: 'Objekte prüfen', steuer: 'kauf', lern: ['suche', 'etw', 'cashflow', 'beleihung'],
+  { name: 'Objekte prüfen', plan: 'Lernen Sie, Angebote wie ein Profi zu lesen: Rendite, Cashflow, Zustand und was die Bank vom Objekt hält.', steuer: 'kauf', lern: ['suche', 'etw', 'cashflow', 'beleihung'],
     actions: [['#suche', 'Objekt analysieren', 'Inserat übernehmen, Kennzahlen sehen'], ['#objekte', 'Objekte im Konto', 'Anlegen, vergleichen, Bankreife'], ['#steuer', 'Steuern beim Kauf', 'Kaufkosten, Inventar, AfA']] },
-  { name: 'Bankgespräch', steuer: 'kauf', lern: ['unterlagen', 'beruf', 'beleihung', 'annuitaet'],
+  { name: 'Bankgespräch', plan: 'Bereiten Sie sich auf die Bank vor: Unterlagen, Beleihungswert und wie Ihr Beruf bewertet wird.', steuer: 'kauf', lern: ['unterlagen', 'beruf', 'beleihung', 'annuitaet'],
     actions: [['#objekte', 'Kreditmappe erstellen', 'Objekt wählen → Vorschau → PDF'], ['/checkliste', 'Unterlagen vollständig machen', 'Bankreife auf 90 % bringen'], ['#lernen', 'Was die Bank prüft', 'Beleihungswert, Unterlagen']] },
-  { name: 'Bestand', steuer: 'halten', lern: ['steuer', 'miete', 'mahnung', 'fristen'],
+  { name: 'Bestand', plan: 'Ihre Immobilie gut führen: Steuern, Mietrecht, Fristen und was tun, wenn die Miete ausbleibt.', steuer: 'halten', lern: ['steuer', 'miete', 'mahnung', 'fristen'],
     actions: [['/fristen', 'Fristen im Blick', 'Zinsbindung, 15-%-Grenze, Spekulationsfrist'], ['#steuer', 'Steuern & Werbungskosten', 'Anlage V, 66-%-Check, Verkauf'], ['#lernen', 'Mieter zahlt nicht?', 'Mahnung, Mahnverfahren, Kündigung']] },
 ];
 export function phaseOf(d) {
@@ -70,7 +70,7 @@ const PROFI = [
 function classify(el) {
   if (el.dataset.view) return el.dataset.view;
   const id = el.id || '', h = el.querySelector('h3')?.textContent || '', mode = document.body.dataset.mode;
-  if (id === 'rankCard') return mode === 'profi' ? 'konto' : 'start konto';
+  if (id === 'rankCard') return 'start';
   if (['termineCard', 'pendingCard'].includes(id) || el.classList.contains('req-card')) return 'start';
   if (id === 'portfolioCard') return mode === 'profi' ? 'start objekte' : 'objekte';
   if (['docsCard', 'bankreifeCard'].includes(id) || h === 'Objekte') return 'objekte';
@@ -81,6 +81,9 @@ function classify(el) {
 }
 
 export function setupApp({ u, d, saveData, reload }) {
+  const reloadFull = reload;
+  reload = () => { document.body.classList.add('ia-switching'); reloadFull({ u, d }); };
+  requestAnimationFrame(() => document.body.classList.remove('ia-switching'));
   const app = $('app'), grid = document.querySelector('.dashboard-grid');
   if (!app || !grid) return;
   try { if (sessionStorage.getItem('ia-import') && !location.hash.startsWith('#suche')) history.replaceState(null, '', location.pathname + location.search + '#suche'); } catch { /* ohne Speicher */ }
@@ -103,7 +106,7 @@ export function setupApp({ u, d, saveData, reload }) {
   $('appLogout').onclick = () => document.getElementById('logout')?.click();
   $('modeChip').onclick = async () => {
     d.profile = { ...(d.profile || {}), mode: mode === 'profi' ? 'einsteiger' : 'profi' };
-    try { await saveData(u, d); } catch { /* Anzeige wechselt trotzdem */ }
+    saveData(u, d).catch(() => { /* wird beim nächsten Speichern nachgeholt */ });
     history.replaceState(null, '', location.pathname + location.hash);
     reload();
   };
@@ -525,26 +528,32 @@ function bindStart(mode, d, u, saveData, reload) {
   document.querySelectorAll('[data-phase]').forEach((b) => b.onclick = async () => {
     d.profile = { ...(d.profile || {}), phase: Number(b.dataset.phase) };
     b.closest('.ph-pick')?.querySelectorAll('.ph-btn').forEach((x) => x.classList.toggle('on', x === b));
-    try { await saveData(u, d); } catch { /* weiter */ }
+    saveData(u, d).catch(() => { /* wird nachgeholt */ });
     reload();
   });
   document.querySelectorAll('[data-pick]').forEach((b) => b.onclick = async () => {
     d.profile = { ...(d.profile || {}), mode: b.dataset.pick };
-    try { await saveData(u, d); } catch { /* weiter */ }
+    saveData(u, d).catch(() => { /* wird nachgeholt */ });
     reload();
   });
 }
 
-function lernTopics(st, rec = [], recName = '') {
-  const groups = [...new Set(LERN.map((x) => x[5]))];
-  const one = ([id, t, sub]) => `
-    <details class="lt${st[id] ? ' done' : ''}" data-topic="${id}">
-      <summary><span class="lt-title"><strong>${t}</strong><span>${sub}</span></span><span class="lt-state">${st[id] ? '✓ verstanden' : ''}</span></summary>
+function lernTopics(st, rec = [], recName = '', plan = '') {
+  const one = ([id, t, sub], k = -1, next = false) => `
+    <details class="lt${st[id] ? ' done' : ''}${next ? ' next' : ''}" data-topic="${id}">
+      <summary>${k >= 0 ? `<span class="lt-num" aria-hidden="true">${st[id] ? '✓' : k + 1}</span>` : ''}<span class="lt-title">${next ? '<em class="lt-next-tag">Als Nächstes</em>' : ''}<strong>${t}</strong><span>${sub}</span></span><span class="lt-state">${st[id] ? '✓ verstanden' : ''}</span></summary>
       <div class="lt-body" data-body="${id}"><p class="form-note">Wird geladen …</p></div>
     </details>`;
   const recT = rec.map((id) => LERN.find((x) => x[0] === id)).filter(Boolean);
-  const head = recT.length ? `<h4 class="lt-group lt-rec">Empfohlen für Ihre Phase: ${recName}</h4>${recT.map(one).join('')}` : '';
-  return head + groups.map((g) => { const items = LERN.filter((x) => x[5] === g && !rec.includes(x[0])); return items.length ? `<h4 class="lt-group">${g}</h4>${items.map(one).join('')}` : ''; }).join('');
+  const nextId = recT.find(([id]) => !st[id])?.[0];
+  const doneRec = recT.filter(([id]) => st[id]).length;
+  const head = recT.length ? `<div class="lt-plan"><h4 class="lt-group lt-rec">Ihr Lernplan · Phase ${recName}</h4>${plan ? `<p class="form-note">${plan}</p>` : ''}<p class="form-note lt-plan-n">${doneRec} von ${recT.length} Themen Ihres Lernplans verstanden.</p>${recT.map((x, k) => one(x, k, x[0] === nextId)).join('')}</div>` : '';
+  // Übrige Gruppen: zuerst die, die zur Phase passen (enthalten empfohlene Themen), dann der Rest.
+  const groups = [...new Set(LERN.map((x) => x[5]))];
+  const recGroups = new Set(recT.map((x) => x[5]));
+  groups.sort((a, b) => Number(recGroups.has(b)) - Number(recGroups.has(a)));
+  const rest = groups.map((g) => { const items = LERN.filter((x) => x[5] === g && !rec.includes(x[0])); return items.length ? `<h4 class="lt-group">${g}</h4>${items.map((x) => one(x)).join('')}` : ''; }).join('');
+  return head + (rest ? `<h4 class="lt-group lt-more-h">Weitere Themen</h4>${rest}` : '');
 }
 
 function lernCard(mode, d) {
@@ -558,7 +567,8 @@ function lernCard(mode, d) {
   return `<article class="dash-card wide" data-view="lernen" id="lernView">${head}
     <div class="lp-bar" role="progressbar" aria-label="Verstandene Themen" aria-valuenow="${n}" aria-valuemin="0" aria-valuemax="${LERN.length}"><span style="width:${Math.round((n / LERN.length) * 100)}%"></span></div>
     <p class="form-note" id="lpNote">${n} von ${LERN.length} Themen verstanden.</p>
-    <div class="lt-list">${lernTopics(st, PHASES[phaseOf(d).idx].lern, PHASES[phaseOf(d).idx].name)}</div></article>`;
+    ${phasePicker(phaseOf(d).idx, phaseOf(d).chosen)}
+    <div class="lt-list">${lernTopics(st, PHASES[phaseOf(d).idx].lern, PHASES[phaseOf(d).idx].name, PHASES[phaseOf(d).idx].plan)}</div></article>`;
 }
 
 let FAQ = null;
@@ -576,8 +586,8 @@ function fillTopic(id, d) {
   box.innerHTML = `${idx.map((i) => FAQ[i]).filter(Boolean).map((q, k) => `<div class="lt-qa">
       <p class="lt-q">${escH(q.question)}</p>
       <p class="lt-a">${lnk(q.level1)}</p>
-      <div class="lt-more" id="more-${id}-${k}" hidden><p>${lnk(q.level2)}</p>${q.nextStep ? `<p class="lt-next"><strong>Nächster Schritt:</strong> ${lnk(q.nextStep)}</p>` : ''}<a class="ck-link" href="/wissen/${slugQ(q.question)}">Ganze Seite öffnen →</a></div>
-      <button class="lt-mini" type="button" data-more="more-${id}-${k}" aria-expanded="false" aria-controls="more-${id}-${k}">Mehr erklären</button>
+      <div class="lt-more" id="more-${id}-${k}"${document.body.dataset.mode === 'profi' ? '' : ' hidden'}><p>${lnk(q.level2)}</p>${q.nextStep ? `<p class="lt-next"><strong>Nächster Schritt:</strong> ${lnk(q.nextStep)}</p>` : ''}<a class="ck-link" href="/wissen/${slugQ(q.question)}">Ganze Seite öffnen →</a></div>
+      ${document.body.dataset.mode === 'profi' ? '' : `<button class="lt-mini" type="button" data-more="more-${id}-${k}" aria-expanded="false" aria-controls="more-${id}-${k}">Mehr erklären</button>`}
     </div>`).join('')}
     <div class="lt-actions"><a class="btn btn-outline" href="${toolHref}"${/^https:/.test(toolHref) ? ' target="_blank" rel="noopener noreferrer"' : ''}>${toolText}${/^https:/.test(toolHref) ? ' öffnen ↗' : ' ausprobieren'}</a>
       <button class="btn ${done ? 'btn-outline' : 'btn-dark'}" type="button" data-done="${id}">${done ? 'Als offen markieren' : '✓ Verstanden'}</button></div>`;

@@ -62,8 +62,8 @@ const TABS = [['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['sicherheit'
 
 function frame() {
   root.innerHTML = `<div class="ad-head"><h1>Admin-Zentrale</h1><button type="button" class="btn btn-outline" id="adLogout">Abmelden</button></div><p class="form-note">Nur für Administratoren · angemeldet mit zweitem Faktor · alle Aktionen werden protokolliert · automatische Abmeldung nach 15 Minuten ohne Aktivität.</p>
-    <div class="ad-tabs" role="tablist">${TABS.map(([k, l]) => `<button type="button" role="tab" data-t="${k}">${l}</button>`).join('')}</div>
-    <p id="adMsg" class="form-note" role="status"></p><div id="adView"></div>`;
+    <div class="ad-shell"><div class="ad-tabs" role="tablist" aria-label="Bereiche">${TABS.map(([k, l]) => `<button type="button" role="tab" data-t="${k}">${l}</button>`).join('')}</div>
+    <div class="ad-main"><p id="adMsg" class="form-note" role="status"></p><div id="adView"></div></div></div>`;
   root.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { location.hash = b.dataset.t; });
   $('#adLogout').onclick = logout;
 }
@@ -71,6 +71,7 @@ function frame() {
 function show() {
   const t = TABS.find(([k]) => k === location.hash.slice(1))?.[0] || 'cockpit';
   root.querySelectorAll('[data-t]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.t === t)));
+  root.querySelector(`[data-t="${t}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
   const v = $('#adView');
   v.innerHTML = '<p class="form-note">Wird geladen …</p>';
   msg('');

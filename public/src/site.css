@@ -725,3 +725,18 @@ label.consent>input[type="checkbox"]{position:absolute;left:0;top:0;width:22px;h
 label.full{justify-content:stretch;justify-items:stretch}
 .auth-message a,.link-btn{color:inherit;font-weight:700;text-decoration:underline}
 .link-btn{background:none;border:0;padding:0;font:inherit;cursor:pointer}
+body.is-app main,body.is-app .dashboard-grid{transition:opacity .18s ease}
+body.ia-switching .dashboard-grid{opacity:.35}
+.lt-plan{border:1px solid #BAE6FD;background:linear-gradient(135deg,#F0F9FF,#fff);border-radius:14px;padding:6px 14px 10px;margin:0 0 18px}
+.lt-plan .lt-group{margin-top:10px}
+.lt-plan-n{margin:0 0 10px}
+.lt-num{flex:none;width:28px;height:28px;border-radius:50%;background:#0F2C59;color:#fff;font-weight:800;font-size:14px;display:inline-flex;align-items:center;justify-content:center;margin-right:10px}
+details.lt.done .lt-num{background:#10B981}
+details.lt.next{border-color:#0284C7;box-shadow:0 0 0 2px rgba(2,132,199,.15)}
+.lt-next-tag{display:inline-block;font-style:normal;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:#0284C7;border-radius:999px;padding:2px 8px;margin-bottom:4px}
+details.lt summary{align-items:center}
+#lernView .ph-pick{margin:4px 0 14px}
+.lt-more-h{margin-top:22px}
+details.lt summary .lt-title{flex:1;min-width:0}
+.lt-plan details.lt .lt-state{display:none}
+@media (max-width:600px){details.lt .lt-state{display:none}.lt-num{width:26px;height:26px;margin-right:8px}}
