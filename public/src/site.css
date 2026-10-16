@@ -723,3 +723,5 @@ label.consent>input[type="checkbox"]{position:absolute;left:0;top:0;width:22px;h
 }
 @media (max-width:600px){.home-proof{flex-direction:column;gap:8px}.home-kicker{font-size:12px}}
 label.full{justify-content:stretch;justify-items:stretch}
+.auth-message a,.link-btn{color:inherit;font-weight:700;text-decoration:underline}
+.link-btn{background:none;border:0;padding:0;font:inherit;cursor:pointer}
