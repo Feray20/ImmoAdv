@@ -776,8 +776,8 @@ input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{f
 }
 img,svg,video,canvas,iframe{max-width:100%}
 @media (max-width:480px){
-main,.container{overflow-wrap:anywhere;hyphens:auto;-webkit-hyphens:auto}
-main *{min-width:0}
+main p,main li,main dd,main dt,main td,main label,main em,main .module-card,main .dash-card{overflow-wrap:anywhere;hyphens:auto;-webkit-hyphens:auto}
+main h1,main h2,main h3,main h4,main nav,main nav a,main .btn{overflow-wrap:normal;hyphens:manual}
 main input,main select,main textarea,main .btn{max-width:100%}
 main .btn{white-space:normal}
 main table th,main table td{overflow-wrap:normal;hyphens:manual;-webkit-hyphens:manual}

@@ -5,7 +5,7 @@ import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSessio
 const root = document.getElementById('portal');
 const $ = (s, el = document) => el.querySelector(s);
 const VIEWS = [
-  ['start', 'Übersicht'], ['verifizierung', 'Verifizierung'], ['anfragen', 'Anfragen'], ['einreichungen', 'Einreichungen'], ['werkzeuge', 'Widget & QR'], ['team', 'Team'], ['profil', 'Profil'], ['tarif', 'Tarif & Rechnungen'],
+  ['start', 'Übersicht'], ['wissen', 'Fachwissen'], ['verifizierung', 'Verifizierung'], ['anfragen', 'Anfragen'], ['einreichungen', 'Einreichungen'], ['werkzeuge', 'Widget & QR'], ['team', 'Team'], ['profil', 'Profil'], ['tarif', 'Tarif & Rechnungen'],
 ];
 const TYPE = { BANK: 'Kreditinstitut', BROKER: 'Finanzierungsvermittler (§ 34i GewO)', REALTOR: 'Immobilienmakler (§ 34c GewO)', OTHER: 'Sonstiges Unternehmen' };
 const TIER = { BASIC: 'Makler & Vermittler Basic', PRO: 'Kanzlei & Baufi Pro', ENTERPRISE: 'Bank & Filiale Enterprise' };
@@ -36,7 +36,7 @@ function shell() {
     <section class="pt-main"><header class="pt-top"><h1 id="ptTitle"></h1><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
       ${a.status === 'locked' ? `<div class="pt-alert bad"><strong>Konto gesperrt.</strong> ${esc(a.lockReason || '')} Rechnungen und AVV bleiben abrufbar. Fragen an support@immoadv.de.</div>` : ''}
       <div id="ptView"></div></section>
-    <nav class="pt-tabs">${VIEWS.filter(([v]) => me.role === 'owner' || !['tarif', 'profil'].includes(v)).map(([v, l]) => `<a href="#${v}" data-v="${v}">${{ start: 'Start', einreichungen: 'Postkorb', werkzeuge: 'Widget' }[v] || l.split(' ')[0]}</a>`).join('')}</nav>
+    <nav class="pt-tabs">${VIEWS.filter(([v]) => me.role === 'owner' || !['tarif', 'profil'].includes(v)).map(([v, l]) => `<a href="#${v}" data-v="${v}">${{ start: 'Start', wissen: 'Wissen', einreichungen: 'Postkorb', werkzeuge: 'Widget' }[v] || l.split(' ')[0]}</a>`).join('')}</nav>
   </div>`;
   root.querySelectorAll('#ptLogout,#ptLogoutM').forEach((b) => { b.onclick = logout; });
 }
@@ -45,10 +45,11 @@ function route() {
   const v = (location.hash.slice(1).split('=')[0] || 'start');
   const view = VIEWS.find(([k]) => k === v) ? v : 'start';
   document.querySelectorAll('[data-v]').forEach((a) => a.classList.toggle('on', a.dataset.v === view));
+  document.querySelector(`.pt-tabs [data-v="${view}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center' });
   $('#ptTitle').textContent = VIEWS.find(([k]) => k === view)[1];
   const box = $('#ptView');
   box.innerHTML = '<p class="form-note">Wird geladen …</p>';
-  ({ start: vStart, verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: vTeam, profil: vProfil, tarif: vTarif })[view](box);
+  ({ start: vStart, wissen: (b) => import('./b2b-wissen.mjs').then((m) => m.renderWissen(b)).catch(() => { b.innerHTML = '<p class="form-note">Fachwissen konnte nicht geladen werden.</p>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: vTeam, profil: vProfil, tarif: vTarif })[view](box);
 }
 
 // ---------- Übersicht ----------
