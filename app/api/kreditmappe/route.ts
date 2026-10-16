@@ -14,7 +14,6 @@ import { KreditmappeDocument, type Verification } from '@/lib/kreditmappe/pdf';
 import { b2bDossierAllowance, membershipFor } from '@/lib/b2b/core';
 import { partnerBrandFor } from '@/lib/b2b/brand';
 import { deliverPdf } from '@/lib/export/deliver';
-import { isAdminEmail } from '@/lib/security/admin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,15 +40,14 @@ export async function POST(req: Request) {
   const b2b = adminConfigured() ? await b2bDossierAllowance(user.id, objectId).catch(() => null) : null;
   if (b2b && !b2b.allowed) return NextResponse.json({ error: b2b.reason ?? 'Kontingent erreicht.' }, { status: 402 });
   // Administratoren (ADMIN_EMAILS) sind immer freigeschaltet – zum Testen vor dem Start der Bezahlung.
-  const admin = isAdminEmail(user.email);
-  if (!billingEnabled() && !b2b?.allowed && !admin) return NextResponse.json({ error: 'Die endgültige Kreditmappe wird mit dem Start der Bezahlung freigeschaltet. Bis dahin steht die vollständige Vorschau mit Wasserzeichen zur Verfügung.', code: 'not_yet' }, { status: 503 });
+  if (!billingEnabled() && !b2b?.allowed) return NextResponse.json({ error: 'Die endgültige Kreditmappe wird mit dem Start der Bezahlung freigeschaltet. Bis dahin steht die vollständige Vorschau mit Wasserzeichen zur Verfügung.', code: 'not_yet' }, { status: 503 });
 
   const loaded = await loadMappeInput(req, user.id, objectId);
   if (!loaded.ok) return NextResponse.json({ error: loaded.error }, { status: loaded.status });
   const { object, profile, uploads } = loaded.data;
 
   // Freischaltung prüfen und Verbrauch vermerken (entfällt bei Unternehmenskonten mit Tarif).
-  if (!b2b?.allowed && !admin) try {
+  if (!b2b?.allowed) try {
     const ent = await entitlementsFor(user.id, user.email);
     if (!ent.pro && adminConfigured()) {
       // Atomar über den Primärschlüssel (owner_id, object_ref): parallele Anfragen können

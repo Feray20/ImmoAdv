@@ -369,3 +369,6 @@ body{max-width:100%;overflow-x:clip}
 .pt-tabs::-webkit-scrollbar{display:none}
 .pt-tabs a{padding:9px 12px;font-size:12.5px;border-radius:999px;white-space:nowrap}
 .pt-tabs a.on{background:#E0F2FE}
+.ad-help{margin:12px 0;border:1px solid #E2E8F0;border-radius:10px;background:#F8FAFC;padding:0 14px}
+.ad-help summary{cursor:pointer;padding:12px 0;font-weight:700;color:#0369A1}
+.ad-help p{margin:0 0 10px;font-size:14px;line-height:1.55;color:#334155}

@@ -126,9 +126,7 @@ export function setupApp({ u, d, saveData, reload }) {
       <label class="chk sess-rem"><input type="checkbox" id="sessRem"${A && A.remembered() ? ' checked' : ''}> Auf diesem Gerät angemeldet bleiben</label>
       <p class="form-note" id="sessNote"></p>
       <div class="sess-act"><button class="btn btn-dark" type="button" id="sessOut">Abmelden</button><a class="btn btn-outline" href="/auth/forgot">Passwort ändern</a></div>
-      <p class="form-note">Ihr Passwort können Sie im Browser bzw. im iPhone-Schlüsselbund speichern lassen – beim Anmelden einfach „Passwort sichern“ bestätigen.</p>
-      <h4 class="mfa-h">Zwei-Faktor-Schutz (Authenticator-App)</h4><div id="mfaBox"><p class="form-note">Wird geladen …</p></div></article>`);
-    import('/src/mfa.mjs').then((m) => m.manageUI($('mfaBox'))).catch(() => { const b = $('mfaBox'); if (b) b.textContent = 'Konnte nicht geladen werden.'; });
+      <p class="form-note">Ihr Passwort können Sie im Browser bzw. im iPhone-Schlüsselbund speichern lassen – beim Anmelden einfach „Passwort sichern“ bestätigen.</p></article>`);
     const note = () => { const n = $('sessNote'); if (n) n.textContent = $('sessRem').checked ? 'Sie bleiben angemeldet, bis Sie sich abmelden oder 30 Tage nicht aktiv waren. Nur auf eigenen Geräten verwenden.' : 'Automatische Abmeldung nach 30 Minuten ohne Aktivität.'; };
     note();
     $('sessRem').onchange = () => { if (A) { A.setRemember($('sessRem').checked); try { localStorage.setItem('ia-last-active', String(Date.now())); } catch { /* ignore */ } } note(); };
@@ -486,7 +484,7 @@ async function renderFin() {
       fetch('/api/billing/invoices', { headers: H, cache: 'no-store' }).then((r) => r.json()).catch(() => ({ invoices: [] })),
     ]);
   }
-  const tierName = acc.paid && (st.tier || 'free') === 'free' ? (acc.admin ? 'Administrator (voller Zugang)' : acc.b2b ? 'Unternehmenskonto' : 'Voller Zugang') : ({ free: 'Kostenlose Demo', starter: 'Einsteiger', pro: 'Profi' }[st.tier || 'free'] || 'Kostenlose Demo');
+  const tierName = acc.paid && (st.tier || 'free') === 'free' ? (acc.b2b ? 'Unternehmenskonto' : 'Voller Zugang') : ({ free: 'Kostenlose Demo', starter: 'Einsteiger', pro: 'Profi' }[st.tier || 'free'] || 'Kostenlose Demo');
   const demoBox = acc.paid ? '' : `<div class="demo-box"><strong>Sie nutzen die kostenlose Demo</strong><p>Probieren Sie alles aus: RenditeRadar-Analysen, BankReady-Vorschau, PDF-Formulare und den Lernbereich. In der Demo tragen alle PDFs ein ImmoAdv-Wasserzeichen. Sobald Sie ein Abo besitzen bzw. einen Tarif gebucht haben, entfallen die Wasserzeichen – Ihre Dokumente sind dann fertig für Bank und Weitergabe.</p><a class="btn btn-dark" href="#angebot">Tarife ansehen</a></div>`;
   const until = st.pro ? st.proUntil : st.starter ? st.starterUntil : null;
   const money = (c, cur = 'eur') => (Number(c || 0) / 100).toLocaleString('de-DE', { style: 'currency', currency: String(cur).toUpperCase() });

@@ -6,7 +6,6 @@ import { userFromRequest } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { adminConfigured, DOCUMENT_BUCKET, supabaseAdmin } from '@/lib/supabase/admin';
 import { TIER_LIMITS, effectiveTier, membershipFor } from '@/lib/b2b/core';
-import { isAdminEmail } from '@/lib/security/admin';
 import { CATEGORIES, CATEGORY_LABEL, type Category } from '@/lib/documents/files';
 import { storeExport } from '@/lib/storage/exports';
 
@@ -27,7 +26,7 @@ export async function POST(req: Request) {
   if (!allowRequest(`gesamt:${user.id}`, 4, 60_000)) return NextResponse.json({ error: 'Zu viele Anfragen. Bitte kurz warten.' }, { status: 429 });
   const m = await membershipFor(user.id);
   const tier = m && m.account.status === 'active' ? effectiveTier(m.account) : null;
-  if (!(tier && TIER_LIMITS[tier].merger) && !isAdminEmail(user.email)) {
+  if (!(tier && TIER_LIMITS[tier].merger)) {
     return NextResponse.json({ error: 'Das Gesamtdossier ist im Tarif Kanzlei & Baufi Pro enthalten.' }, { status: 402 });
   }
   const p = Body.safeParse(await req.json().catch(() => null));

@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 const j = (b: unknown, s = 200) => NextResponse.json(b, { status: s, headers: { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
 
 // Zugang für die Navigation: „Zur Anwendung" und App-Leiste nur für zahlende Kunden
-// (gebuchter Tarif, aktives Unternehmenskonto) und Administratoren. Liefert nur Ja/Nein-Werte.
+// (gebuchter Tarif, aktives Unternehmenskonto). Liefert nur Ja/Nein-Werte.
 export async function GET(req: Request) {
   const user = await userFromRequest(req);
   if (!user) return j({ loggedIn: false, paid: false }, 401);
