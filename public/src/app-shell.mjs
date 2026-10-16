@@ -556,6 +556,29 @@ async function renderFin() {
   });
 }
 
+// Fahrplan je Stufe (Einsteiger): Aufgaben mit Status aus den eigenen Daten. done: true/false, null = ohne Status.
+function fahrplan(idx, d) {
+  const pr = d.profile || {}, objs = Array.isArray(d.objects) ? d.objects : [], L = d.progress?.lern || {};
+  const prof = Number(pr.netIncome) > 0 && pr.equity !== undefined && pr.equity !== '';
+  const learned = (ids) => ids.every((i) => L[i]);
+  const owned = objs.some((o) => o.purchaseDate && Number(o.fixedYears) > 0);
+  return [
+    [['Finanzprofil ausfüllen', 'Nettoeinkommen und Eigenkapital – daraus ergibt sich Ihr Budget.', '#konto', prof],
+      ['Budget berechnen', 'Welche Rate und welcher Kaufpreis zu Ihnen passen.', '/rechner/budget', null],
+      ['Grundlagen lernen', 'Geld, Eigenkapital, Zins und Tilgung – je wenige Minuten.', '#lernen', learned(['geld', 'eigenkapital', 'annuitaet'])]],
+    [['Erstes Objekt anlegen', 'Inserat übernehmen oder Eckdaten eintragen.', '#suche', objs.length > 0],
+      ['Kennzahlen prüfen', 'Rendite, Cashflow und Bankreife mit RenditeRadar.', '#objekte', null],
+      ['Exposé lesen lernen', 'Was hinter Cashflow und Beleihung steckt.', '#lernen', learned(['cashflow', 'beleihung'])]],
+    [['Finanzprofil vollständig', 'Die Bank prüft Einkommen und Eigenkapital zuerst.', '#konto', prof],
+      ['Unterlagen vollständig machen', 'Bankreife Ihres Objekts auf 90 % bringen.', '/checkliste', null],
+      ['Kreditmappe erstellen', 'BankReady: Objekt wählen → Vorschau → PDF.', '#objekte', null],
+      ['Wissen für das Bankgespräch', 'Beleihungswert, Unterlagen, Bewertung Ihres Berufs.', '#lernen', learned(['unterlagen', 'beleihung'])]],
+    [['Kaufdatum und Zinsbindung eintragen', 'Dann überwacht ImmoAdv alle Fristen für Sie.', '#objekte', owned],
+      ['Fristen-Erinnerung einschalten', 'E-Mail vor Ende der Zinsbindung und weiteren Fristen.', '#konto', null],
+      ['Steuern und Mietrecht', 'Anlage V, Werbungskosten, wenn die Miete ausbleibt.', '#lernen', learned(['steuer', 'miete'])]],
+  ][idx];
+}
+
 function startCard(mode, d) {
   const done = Object.values(d.progress?.lern || {}).filter(Boolean).length;
   if (!d.profile?.mode && !new URLSearchParams(location.search).get('modus')) {
@@ -564,9 +587,24 @@ function startCard(mode, d) {
       <button class="mode-card pro" type="button" data-pick="profi"><span class="mode-tag">Profi</span><strong>Ich investiere schon</strong><span>Cockpit mit Kennzahlen, Portfolio, Datenraum.</span></button></div></article>`;
   }
   const ph = phaseOf(d);
-  const extra = mode === 'profi' ? [['/rechner/vergleich', 'Angebote vergleichen', 'Bis zu drei nebeneinander']] : [['#lernen', 'Wissen auffrischen', `${done} von ${LERN.length} Themen verstanden`]];
-  const actions = [...PHASES[ph.idx].actions, ...extra];
-  return `<article class="dash-card wide start-card" data-view="start">${phasePicker(ph.idx, ph.chosen)}<div class="quick">${actions.map(([h, t, s]) => `<a class="quick-a" href="${h}"><strong>${t}</strong><span>${s}</span></a>`).join('')}</div></article>`;
+  if (mode === 'profi') {
+    // Profi: nur Auswahl und Werkzeuge – keine Erklärtexte.
+    const tools = [...PHASES[ph.idx].actions.map(([h, t]) => [t, h]), ['Angebote vergleichen', '/rechner/vergleich'], ...PROFI.filter(([t]) => !/Angebotsvergleich|Glossar/.test(t))];
+    return `<article class="dash-card wide start-card start-pro" data-view="start">
+      <div class="stage-mini"><span class="stage-k">Stufe</span><strong><b class="stage-n">${ph.idx + 1}</b>${PHASES[ph.idx].name}</strong><button type="button" class="link-btn stage-open">ändern</button><div id="rankSlot" class="rank-slot mini"></div></div>
+      <div class="tool-grid">${tools.map(([t, h]) => `<a class="tool-a" href="${h}">${t}</a>`).join('')}</div></article>`;
+  }
+  const tasks = fahrplan(ph.idx, d);
+  const nextI = tasks.findIndex((x) => x[3] === false);
+  const extra = [['#lernen', 'Wissen auffrischen', `${done} von ${LERN.length} Themen verstanden`]];
+  const inPlan = new Set(tasks.map((x) => x[2]));
+  const actions = [...PHASES[ph.idx].actions.filter(([h]) => !inPlan.has(h)), ['#suche', 'Immobilien suchen', 'Inserate der großen Portale'], ...extra].filter((a, i, all) => all.findIndex((x) => x[0] === a[0]) === i);
+  return `<article class="dash-card wide start-card" data-view="start">${phasePicker(ph.idx, ph.chosen)}
+    <div id="rankSlot" class="rank-slot"></div>
+    <h4 class="sc-h">Ihr Fahrplan für Stufe ${ph.idx + 1}</h4>
+    <ol class="fp">${tasks.map(([t, sub, h, st], i) => `<li class="fp-i${st === true ? ' done' : ''}${i === nextI ? ' next' : ''}"><span class="fp-dot" aria-hidden="true">${st === true ? '✓' : i + 1}</span><span class="fp-t"><strong>${t}</strong><small>${sub}</small></span>${st === true ? '<span class="fp-st">erledigt</span>' : `<a class="btn ${i === nextI ? 'btn-dark' : 'btn-outline'} fp-go" href="${h}">${i === nextI ? 'Jetzt erledigen' : 'Öffnen'}</a>`}</li>`).join('')}</ol>
+    <h4 class="sc-h">Schnellzugriff</h4>
+    <div class="quick">${actions.map(([h, t, s2]) => `<a class="quick-a" href="${h}"><strong>${t}</strong><span>${s2}</span></a>`).join('')}</div></article>`;
 }
 
 function bindStart(mode, d, u, saveData, reload) {
@@ -583,9 +621,10 @@ function bindStart(mode, d, u, saveData, reload) {
   });
 }
 
+const escQ = (t) => String(t).toLowerCase().replace(/["<>&]/g, ' ');
 function lernTopics(st, rec = [], recName = '', plan = '') {
   const one = ([id, t, sub], k = -1, next = false) => `
-    <details class="lt${st[id] ? ' done' : ''}${next ? ' next' : ''}" data-topic="${id}">
+    <details class="lt${st[id] ? ' done' : ''}${next ? ' next' : ''}" data-topic="${id}" data-q="${escQ(t + ' ' + sub + ' ' + (LERN.find((x) => x[0] === id)?.[5] || ''))}">
       <summary>${k >= 0 ? `<span class="lt-num" aria-hidden="true">${st[id] ? '✓' : k + 1}</span>` : ''}<span class="lt-title">${next ? '<em class="lt-next-tag">Als Nächstes</em>' : ''}<strong>${t}</strong><span>${sub}</span></span><span class="lt-state">${st[id] ? '✓ verstanden' : ''}</span></summary>
       <div class="lt-body" data-body="${id}"><p class="form-note">Wird geladen …</p></div>
     </details>`;
@@ -604,11 +643,11 @@ function lernTopics(st, rec = [], recName = '', plan = '') {
 function lernCard(mode, d) {
   const st = d.progress?.lern || {};
   const n = LERN.filter(([id]) => st[id]).length;
+  const search = `<div class="lt-search"><input type="search" id="ltQ" placeholder="Thema eingeben, z. B. Zinsbindung, Inflation, AfA" aria-label="Wissensthema suchen" autocomplete="off"><p class="form-note" id="ltHits" aria-live="polite"></p></div>`;
   const head = mode === 'profi'
-    ? `<h3>Werkzeuge und Wissen</h3><div class="quick">${PROFI.map(([t, h]) => `<a class="quick-a" href="${h}"><strong>${t}</strong></a>`).join('')}</div>
-       <h3 class="lt-h">Wissen auffrischen</h3><p class="form-note">Themen antippen, Fragen lesen, bei Bedarf „Mehr erklären“.</p>`
+    ? `<h3>Wissen auffrischen</h3>${search}`
     : `<h3>Wissen: wählen Sie, was Sie interessiert</h3>
-       <p class="form-note">Keine feste Reihenfolge – frischen Sie auf, was Sie gerade brauchen. Thema antippen, Fragen lesen, danach als verstanden markieren.</p>`;
+       <p class="form-note">Keine feste Reihenfolge – frischen Sie auf, was Sie gerade brauchen. Thema eingeben oder antippen, Fragen lesen, danach als verstanden markieren.</p>${search}`;
   return `<article class="dash-card wide" data-view="lernen" id="lernView">${head}
     <div class="lp-bar" role="progressbar" aria-label="Verstandene Themen" aria-valuenow="${n}" aria-valuemin="0" aria-valuemax="${LERN.length}"><span style="width:${Math.round((n / LERN.length) * 100)}%"></span></div>
     <p class="form-note" id="lpNote">${n} von ${LERN.length} Themen verstanden.</p>
@@ -643,6 +682,23 @@ function bindLern(d, u, saveData) {
   document.querySelectorAll('details.lt').forEach((det) => det.addEventListener('toggle', async () => { if (!det.open) return; await ensure(); fillTopic(det.dataset.topic, d); }));
   const view = $('lernView');
   if (!view) return;
+  // Thema eingeben: Themen nach Titel, Beschreibung, Bereich und den Fragen darin filtern.
+  const q = $('ltQ');
+  if (q) {
+    let faqText = null;
+    const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    q.addEventListener('input', async () => {
+      const t = norm(q.value.trim());
+      if (t && !faqText) { await ensure(); faqText = Object.fromEntries(LERN.map(([id, , , idx]) => [id, norm(idx.map((i) => FAQ[i]?.question || '').join(' '))])); }
+      let n = 0;
+      view.querySelectorAll('details.lt').forEach((det) => { const ok = !t || norm(det.dataset.q || '').includes(t) || (faqText?.[det.dataset.topic] || '').includes(t); det.hidden = !ok; if (ok) n++; });
+      view.querySelectorAll('.lt-group,.lt-plan>.form-note,.lt-more-h').forEach((h) => { h.hidden = Boolean(t); });
+      const hits = $('ltHits');
+      if (!t) { hits.textContent = ''; return; }
+      hits.innerHTML = n ? `${n} passende${n === 1 ? 's Thema' : ' Themen'} – antippen zum Auffrischen. <a class="ck-link" href="/suche?q=${encodeURIComponent(q.value.trim())}">Auch in der Wissenszentrale suchen</a>` : `Kein Lernthema gefunden. <a class="ck-link" href="/suche?q=${encodeURIComponent(q.value.trim())}">In der Wissenszentrale nach „${escH(q.value.trim())}“ suchen</a>`;
+      if (n === 1) { const det = view.querySelector('details.lt:not([hidden])'); if (det && !det.open) det.open = true; }
+    });
+  }
   view.addEventListener('click', async (e) => {
     const more = e.target.closest('[data-more]');
     if (more) { const el = $(more.dataset.more); const open = el.hidden; el.hidden = !open; more.setAttribute('aria-expanded', String(open)); more.textContent = open ? 'Weniger' : 'Mehr erklären'; return; }
