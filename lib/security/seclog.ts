@@ -3,11 +3,19 @@ import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 
 // Sicherheitsprotokoll: gedrosselte Zugriffe und abgewiesene Admin-Zugriffe. Gespeichert wird nur der Bereich
 // und ein gekürzter Hash des Schlüssels (keine IP-Adresse, keine Nutzer-ID im Klartext); Löschung nach 30 Tagen.
-export type SecKind = 'rate_limit' | 'admin_denied' | 'admin_ip_blocked' | 'admin_mfa_missing' | 'panic';
+export type SecKind =
+  | 'rate_limit' | 'admin_denied' | 'admin_ip_blocked' | 'admin_mfa_missing' | 'panic'
+  // Formular-Abwehr (Bots/Fakes):
+  | 'honeypot' | 'too_fast' | 'disposable_email' | 'email_no_mx' | 'content_flagged';
 
 export function logSecurity(kind: SecKind, key: string): void {
   if (!adminConfigured()) return;
   const [bucket] = key.split(':');
   const subject = createHash('sha256').update(`seclog:${key}`).digest('hex').slice(0, 12);
   supabaseAdmin().from('immo_security_log').insert({ kind, bucket: bucket.slice(0, 40), subject }).then(() => null, () => null);
+}
+
+// Kurzform für die Formular-Abwehr: Art des Blocks plus Bereich (ohne personenbezogene Daten).
+export function reportBlock(kind: SecKind, bucket: string): void {
+  logSecurity(kind, `${bucket}:form`);
 }

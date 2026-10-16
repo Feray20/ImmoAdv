@@ -24,6 +24,7 @@ async function offers() {
 function contact() {
   const f = document.getElementById('b2bContact');
   if (!f) return;
+  const ts = Date.now();
   const kind = new URLSearchParams(location.search).get('anliegen');
   if (kind && f.kind.querySelector(`option[value="${kind}"]`)) f.kind.value = kind;
   f.onsubmit = async (e) => {
@@ -32,11 +33,11 @@ function contact() {
     if (!f.checkValidity()) { f.reportValidity(); return; }
     const d = Object.fromEntries(new FormData(f));
     const btn = f.querySelector('button'); btn.disabled = true;
-    const r = await fetch('/api/b2b/contact', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...d, privacy: d.privacy === 'on' }) });
+    const r = await fetch('/api/b2b/contact', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...d, privacy: d.privacy === 'on', ts }) });
     const j = await r.json().catch(() => ({}));
     btn.disabled = false;
     if (r.ok) { f.innerHTML = '<div class="pt-alert full"><strong>Danke!</strong> Ihre Anfrage ist eingegangen. Wir melden uns innerhalb von zwei Werktagen.</div>'; }
-    else msg.textContent = j.error || 'Senden fehlgeschlagen.';
+    else { msg.textContent = j.error || 'Senden fehlgeschlagen.'; if (j.field === 'email') f.email?.focus(); }
   };
 }
 

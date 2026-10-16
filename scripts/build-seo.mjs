@@ -55,7 +55,7 @@ const PAGES = [
   { path: '/impressum', title: 'Impressum | ImmoAdv', desc: 'Anbieterkennzeichnung nach § 5 DDG.', crumbs: ['Impressum'] },
   { path: '/datenschutz', title: 'Datenschutzerklärung | ImmoAdv', desc: 'Welche Daten ImmoAdv verarbeitet, wo sie gespeichert werden und welche Rechte Sie haben.', crumbs: ['Datenschutz'] },
   { path: '/nutzungsbedingungen', title: 'Nutzungsbedingungen und Widerrufsbelehrung | ImmoAdv', desc: 'Nutzungsbedingungen, Preise, Laufzeit, Kündigung und Widerrufsbelehrung von ImmoAdv.', crumbs: ['Nutzungsbedingungen'] },
-  { path: '/kuendigen', title: 'Verträge hier kündigen | ImmoAdv', desc: 'Kündigung Ihres ImmoAdv-Pro-Vertrags ohne Anmeldung nach § 312k BGB.', crumbs: ['Verträge kündigen'] },
+  { path: '/kuendigen', title: 'Verträge hier kündigen | ImmoAdv', desc: 'Abo (Einsteiger oder Profi) ohne Anmeldung kündigen – nach § 312k BGB, mit Eingangsbestätigung per E-Mail.', crumbs: ['Verträge kündigen'] },
   // Nicht indexieren: persönliche oder tokengebundene Seiten
   { path: '/datenraum', title: 'Datenraum | ImmoAdv', desc: 'Freigegebene Unterlagen.', noindex: true },
   { path: '/pruefen', title: 'Kreditmappe prüfen | ImmoAdv', desc: 'Echtheitsprüfung einer ImmoAdv-Kreditmappe.', noindex: true },

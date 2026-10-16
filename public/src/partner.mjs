@@ -89,6 +89,7 @@ function render(p) {
   };
   document.querySelectorAll('#calc input, #calc select').forEach((i) => i.addEventListener('input', calc));
   calc();
+  window.__iaLeadTs = Date.now();
   $('lead').onsubmit = async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));
@@ -99,12 +100,12 @@ function render(p) {
     const v = vals();
     const btn = e.target.querySelector('button'); btn.disabled = true;
     const r = await fetch('/api/b2b/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
-      slug, source, name: f.name, email: f.email, phone: f.phone || '', message: f.message || '', consent: true, website: f.website || '',
+      slug, source, name: f.name, email: f.email, phone: f.phone || '', message: f.message || '', consent: true, website: f.website || '', ts: window.__iaLeadTs || 0,
       property: { ref: pre.ref || undefined, address: f.address || undefined, land: v.land, price: v.price || undefined, rent: v.rent || undefined, area: v.area || undefined, equity: v.equity || undefined, ratePct: v.ratePct, repaymentPct: v.repaymentPct, brokerPct: v.brokerPct },
     }) });
     const d = await r.json().catch(() => ({}));
     btn.disabled = false;
-    if (!r.ok) { msg.textContent = d.error || 'Senden fehlgeschlagen.'; return; }
+    if (!r.ok) { msg.textContent = d.error || 'Senden fehlgeschlagen.'; if (d.field === 'email') e.target.querySelector('[name=email]')?.focus(); return; }
     $('leadBox').innerHTML = `<h2>Danke!</h2><p>Ihre Anfrage ist bei ${esc(p.name)} eingegangen. Sie werden direkt kontaktiert.</p>${d.pdf ? `<p><a class="btn btn-ghost" href="${esc(d.pdf)}" download>Ihre Finanzierungsübersicht (PDF)</a></p>` : ''}${p.booking ? `<p><a class="btn btn-dark" href="${esc(p.booking)}" target="_blank" rel="noopener">Gleich einen Termin buchen</a></p>` : ''}`;
     report();
   };

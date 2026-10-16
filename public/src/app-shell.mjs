@@ -181,8 +181,11 @@ async function renderOffers(mode) {
       ${cfg.enabled ? '<label class="consent"><input type="checkbox" id="offerConsent"> Ich verlange ausdrücklich, dass ImmoAdv vor Ablauf der Widerrufsfrist mit der Leistung beginnt. Mir ist bekannt, dass mein Widerrufsrecht bei digitalen Inhalten damit erlischt und ich bei einem Widerruf eines Abos Wertersatz für bereits erbrachte Leistungen schulde.</label><p class="form-note">Es gelten die <a class="ck-link" href="/nutzungsbedingungen">Nutzungsbedingungen</a> mit <a class="ck-link" href="/nutzungsbedingungen#widerruf">Widerrufsbelehrung</a>. Die Bestellung schließen Sie auf der folgenden Bezahlseite ab.</p>' : ''}
       <p class="form-note">${esc(P.hinweis)} Es gelten die <a class="ck-link" href="/nutzungsbedingungen">Nutzungsbedingungen mit Widerrufsbelehrung</a>. Kündigung jederzeit über <a class="ck-link" href="/kuendigen">„Verträge hier kündigen“</a>.</p>`;
     box.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => { shown = b.dataset.seg; draw(); });
+    // Aus der öffentlichen Angebotsseite vorgewählter Tarif: zur Karte springen und hervorheben.
+    const want = new URLSearchParams(location.search).get('buy');
+    if (want) { const card = box.querySelector(`[data-buy="${CSS.escape(want)}"]`)?.closest('.offer'); if (card) { card.classList.add('offer-want'); card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
     box.querySelectorAll('[data-buy]').forEach((b) => b.onclick = async () => {
-      if (!$('offerConsent')?.checked) { alert('Bitte zuerst der sofortigen Bereitstellung zustimmen.'); return; }
+      if (!$('offerConsent')?.checked) { $('offerConsent')?.closest('label')?.classList.add('consent-missing'); $('offerConsent')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); alert('Bitte zuerst der sofortigen Bereitstellung zustimmen.'); return; }
       b.disabled = true;
       try {
         const r = await fetch('/api/billing/checkout', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'content-type': 'application/json' }, body: JSON.stringify({ plan: b.dataset.buy, consent: true }) });

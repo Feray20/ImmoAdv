@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { allowRequest } from '@/lib/security/rate-limit';
+import { guardSubmission } from '@/lib/security/antispam';
 
 // Kündigungsbutton nach § 312k BGB.
 // Versand per E-Mail über Resend (https://resend.com), konfiguriert über:
@@ -42,6 +43,10 @@ export async function POST(req: Request) {
   if (!name || !EMAIL_RE.test(email)) {
     return NextResponse.json({ error: 'Bitte Name und gültige E-Mail-Adresse angeben.' }, { status: 400 });
   }
+  // Bot-/Fake-Abwehr (Kündigung ist eine Erklärung – fälschliche Blockade vermeiden; nur eindeutige Signale).
+  const guard = await guardSubmission({ email, name, message: reason, website: body.website, ts: body.ts, bucket: 'kuendigung' });
+  if (guard.action === 'drop') return NextResponse.json({ ok: true });
+  if (guard.action === 'reject') return NextResponse.json({ error: guard.error, field: guard.field, suggestion: guard.suggestion }, { status: 400 });
 
   const key = process.env.RESEND_API_KEY;
   const from = process.env.CANCEL_FROM_EMAIL;

@@ -7,6 +7,7 @@ import { json } from '@/lib/b2b/http';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
 import { leadToken } from '@/lib/b2b/leadtoken';
 import { sendWebhook } from '@/lib/b2b/webhook';
+import { guardSubmission } from '@/lib/security/antispam';
 // Gleicher Rechenkern wie im Browser.
 import { analyse } from '@/public/src/calc.mjs';
 
@@ -22,7 +23,8 @@ const Schema = z.object({
   phone: z.string().trim().max(40).optional().default(''),
   message: z.string().trim().max(2000).optional().default(''),
   consent: z.literal(true),
-  website: z.string().max(0).optional().default(''), // Honigtopf-Feld, bleibt bei Menschen leer
+  website: z.string().optional().default(''), // Honigtopf-Feld, bleibt bei Menschen leer
+  ts: z.coerce.number().optional(), // Zeitpunkt des Formularaufbaus (Zeitfalle gegen Bots)
   property: z.object({
     ref: z.string().trim().max(80).optional(),
     address: z.string().trim().max(160).optional(),
@@ -49,7 +51,10 @@ export async function POST(req: Request) {
     return json({ error: msg[f] ?? 'Bitte die Angaben prüfen.' }, 400);
   }
   const b = parsed.data;
-  if (b.website) return json({ ok: true }, 201); // Bot: stillschweigend verwerfen
+  // Bot- und Fake-Abwehr: Honigtopf, Zeitfalle, Wegwerf-Adresse, nicht empfangsfähige Domain, Spam-Inhalt.
+  const guard = await guardSubmission({ email: b.email, name: b.name, message: b.message, website: b.website, ts: b.ts, bucket: 'lead' });
+  if (guard.action === 'drop') return json({ ok: true }, 201); // Bot: stillschweigend verwerfen
+  if (guard.action === 'reject') return json({ error: guard.error, field: guard.field, suggestion: guard.suggestion }, 400);
   if ((await panicState()).active) return json({ error: 'Anfragen sind vorübergehend nicht möglich (Wartung).' }, 503);
   const db = supabaseAdmin();
   const { data } = await db.from('immo_b2b_accounts').select('*').eq('slug', b.slug).maybeSingle();
@@ -62,6 +67,8 @@ export async function POST(req: Request) {
     const r = analyse({ price: p.price, rent: p.rent ?? 0, area: p.area ?? 0, land: p.land, equity: p.equity ?? 0, ratePct: p.ratePct ?? 3.8, repaymentPct: p.repaymentPct ?? 2, brokerPct: p.brokerPct ?? 0, maintenanceQm: 1, vacancyPct: 2 });
     if (r) metrics = { allIn: r.allIn, nebenkosten: r.nebenkosten, loan: r.loan, ltv: r.ltv, rate: r.rate, noi: r.noi, cashflow: r.cashflow, dscr: r.dscr, grossYield: r.grossYield, netYield: r.netYield };
   }
+  // Auffällige Anfrage trotzdem zustellen, aber für den Partner sichtbar markieren.
+  if (guard.action === 'allow' && guard.flagged) metrics = { ...(metrics ?? {}), spamVerdacht: true };
   const ct = consentText(a.company_name);
   const ins = await db.from('immo_b2b_leads').insert({
     account_id: a.id, source: b.source, client_name: b.name, client_email: b.email, client_phone: b.phone || null, message: b.message || null,
