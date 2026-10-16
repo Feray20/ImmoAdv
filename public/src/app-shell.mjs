@@ -291,13 +291,15 @@ export function setupApp({ u, d, saveData, reload }) {
       <p class="form-note">Angemeldet als <strong>${esc(u.email)}</strong></p>
       <label class="chk sess-rem"><input type="checkbox" id="sessRem"${A && A.remembered() ? ' checked' : ''}> Auf diesem Gerät angemeldet bleiben</label>
       <p class="form-note" id="sessNote"></p>
-      <div class="sess-act"><button class="btn btn-dark" type="button" id="sessOut">Abmelden</button><a class="btn btn-outline" href="/auth/forgot">Passwort ändern</a></div>
+      <div class="sess-act"><button class="btn btn-dark" type="button" id="sessOut">Abmelden</button><button class="btn btn-outline" type="button" id="pwOpen" aria-expanded="false">Passwort ändern</button></div><div id="pwBox" hidden></div>
       <p class="form-note">Ihr Passwort können Sie im Browser bzw. im iPhone-Schlüsselbund speichern lassen – beim Anmelden einfach „Passwort sichern“ bestätigen.</p></article>`);
     const note = () => { const n = $('sessNote'); if (n) n.textContent = $('sessRem').checked ? 'Sie bleiben angemeldet, bis Sie sich abmelden oder 30 Tage nicht aktiv waren. Nur auf eigenen Geräten verwenden.' : 'Automatische Abmeldung nach 30 Minuten ohne Aktivität.'; };
     note();
     $('sessRem').onchange = () => { if (A) { A.setRemember($('sessRem').checked); try { localStorage.setItem('ia-last-active', String(Date.now())); } catch { /* ignore */ } } note(); };
     $('sessOut').onclick = () => document.getElementById('logout')?.click();
+    bindPw(u);
   }
+  personalCard(grid);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="suche" id="sucheView"></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);
   grid.insertAdjacentHTML('beforeend', lernCard(mode, d));
@@ -879,4 +881,99 @@ async function renderOffers(mode) {
     });
   };
   draw();
+}
+
+// Konto → Passwort ändern (direkt im Konto, ohne E-Mail-Umweg). Wer mit E-Mail und Passwort registriert ist,
+// bestätigt zuerst das aktuelle Passwort; wer sich nur mit Google anmeldet, legt hier erstmals ein Passwort fest.
+function bindPw(u) {
+  const btn = $('pwOpen'), box = $('pwBox');
+  if (!btn || !box) return;
+  const hasPw = (u.app_metadata?.providers || [u.app_metadata?.provider]).includes('email');
+  btn.textContent = hasPw ? 'Passwort ändern' : 'Passwort festlegen';
+  btn.onclick = () => {
+    const open = box.hidden; box.hidden = !open; btn.setAttribute('aria-expanded', String(open));
+    if (!open || box.dataset.ready) return; box.dataset.ready = '1';
+    box.innerHTML = `<form class="pw-form" id="pwF" autocomplete="on"><input type="email" autocomplete="username" value="${esc(u.email)}" hidden readonly>
+      ${hasPw ? '<label>Aktuelles Passwort<input id="pwCur" type="password" autocomplete="current-password" required></label>' : ''}
+      <label>Neues Passwort<input id="pwN1" type="password" autocomplete="new-password" minlength="10" required></label>
+      <label>Neues Passwort wiederholen<input id="pwN2" type="password" autocomplete="new-password" minlength="10" required></label>
+      <p class="form-note">Mindestens 10 Zeichen mit Groß- und Kleinbuchstaben und einer Zahl. Andere angemeldete Geräte bleiben bis zur nächsten Anmeldung aktiv.</p>
+      <p class="form-note" id="pwMsg" role="status"></p>
+      <div class="sess-act"><button class="btn btn-dark" type="submit">Neues Passwort speichern</button><a class="btn btn-ghost" href="/auth/forgot">Passwort vergessen?</a></div></form>`;
+    $('pwF').onsubmit = async (e) => {
+      e.preventDefault();
+      const m = $('pwMsg'), n1 = $('pwN1').value, n2 = $('pwN2').value, sb = e.target.querySelector('button[type=submit]');
+      const say = (t, ok) => { m.textContent = t; m.className = 'form-note ' + (ok ? 'ok' : 'err'); };
+      if (n1 !== n2) return say('Die beiden neuen Passwörter stimmen nicht überein.');
+      if (n1.length < 10 || !/[A-Z]/.test(n1) || !/[a-z]/.test(n1) || !/[0-9]/.test(n1)) return say('Bitte mindestens 10 Zeichen mit Groß- und Kleinbuchstaben und einer Zahl.');
+      sb.disabled = true; say('Wird gespeichert …', true);
+      try {
+        const { supa, token } = await import('/src/sess.mjs');
+        if (hasPw) {
+          const v = await supa('/auth/v1/token?grant_type=password', { method: 'POST', body: JSON.stringify({ email: u.email, password: $('pwCur').value }) });
+          if (!v.ok) throw Error(v.status === 429 ? 'Zu viele Versuche. Bitte einige Minuten warten.' : 'Das aktuelle Passwort stimmt nicht.');
+        }
+        const r = await supa('/auth/v1/user', { method: 'PUT', headers: { Authorization: 'Bearer ' + token() }, body: JSON.stringify({ password: n1 }) });
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({})), t = String(j.msg || j.error_description || j.message || j.error_code || '');
+          throw Error(/same|different/i.test(t) ? 'Das neue Passwort muss sich vom bisherigen unterscheiden.' : /weak|pwned|leaked/i.test(t) ? 'Dieses Passwort ist zu schwach oder bereits in Datenlecks aufgetaucht. Bitte ein anderes wählen.' : /reauth/i.test(t) ? 'Aus Sicherheitsgründen bitte kurz ab- und wieder anmelden, dann erneut ändern – oder „Passwort vergessen?“ nutzen.' : 'Passwort konnte nicht geändert werden.');
+        }
+        e.target.reset(); say('Neues Passwort gespeichert.', true);
+      } catch (er) { say(er.message); } finally { sb.disabled = false; }
+    };
+  };
+}
+
+// Konto → Persönliche Daten (nach einer Buchung): Name und Rechnungsanschrift. Änderungen gelten ab der nächsten Rechnung.
+const COUNTRIES = [['DE', 'Deutschland'], ['AT', 'Österreich'], ['CH', 'Schweiz'], ['LU', 'Luxemburg'], ['NL', 'Niederlande'], ['BE', 'Belgien'], ['FR', 'Frankreich'], ['IT', 'Italien'], ['ES', 'Spanien'], ['PL', 'Polen'], ['DK', 'Dänemark']];
+async function personalCard(grid) {
+  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide pers-card" data-view="konto" id="persCard"><h3>Persönliche Daten</h3><div id="persBody"><p class="form-note">Wird geladen …</p></div></article>`);
+  const body = $('persBody'), H = { Authorization: 'Bearer ' + sessToken() };
+  const [acc, r] = await Promise.all([getAccess(), fetch('/api/me/personal', { headers: H, cache: 'no-store' }).then((x) => (x.ok ? x.json() : null)).catch(() => null)]);
+  const p = r?.personal || null;
+  if (!acc?.paid && !p) {
+    body.innerHTML = `<p class="form-note">Nach Ihrer ersten Buchung legen Sie hier Ihren Namen und Ihre Rechnungsanschrift an und können sie jederzeit ändern. Bis dahin brauchen Sie keine persönlichen Angaben.</p><p><a class="btn btn-outline" href="#angebot">Angebote ansehen</a></p>`;
+    return;
+  }
+  const show = (x) => {
+    if (!x) return form(null);
+    body.innerHTML = `<dl class="pers-dl"><div><dt>Name</dt><dd>${esc([x.salutation, x.firstName, x.lastName].filter(Boolean).join(' '))}</dd></div>${x.company ? `<div><dt>Firma</dt><dd>${esc(x.company)}</dd></div>` : ''}
+      <div><dt>Rechnungsanschrift</dt><dd>${esc(x.street)}${x.addressExtra ? '<br>' + esc(x.addressExtra) : ''}<br>${esc(x.postalCode)} ${esc(x.city)}${x.country && x.country !== 'DE' ? '<br>' + esc((COUNTRIES.find((c) => c[0] === x.country) || [, x.country])[1]) : ''}</dd></div>
+      ${x.phone ? `<div><dt>Telefon</dt><dd>${esc(x.phone)}</dd></div>` : ''}<div><dt>E-Mail</dt><dd>${esc(r?.email || '')}</dd></div></dl>
+      <p class="form-note">Änderungen gelten ab der nächsten Rechnung. Bereits ausgestellte Rechnungen bleiben unverändert.${x.updatedAt ? ' Zuletzt geändert am ' + new Date(x.updatedAt).toLocaleDateString('de-DE') + '.' : ''}</p>
+      <div class="sess-act"><button class="btn btn-outline" type="button" id="persEdit">Daten ändern</button></div>`;
+    $('persEdit').onclick = () => form(x);
+  };
+  const form = (x) => {
+    const v = (k) => esc(x?.[k] || '');
+    body.innerHTML = `<form id="persF" class="pers-form" autocomplete="on">
+      <label>Anrede<select name="salutation">${['', 'Frau', 'Herr', 'Divers'].map((a) => `<option value="${a}"${(x?.salutation || '') === a ? ' selected' : ''}>${a || 'keine Angabe'}</option>`).join('')}</select></label>
+      <label>Firma (optional)<input name="company" maxlength="120" autocomplete="organization" value="${v('company')}"></label>
+      <label>Vorname*<input name="firstName" required maxlength="80" autocomplete="given-name" value="${v('firstName')}"></label>
+      <label>Nachname*<input name="lastName" required maxlength="80" autocomplete="family-name" value="${v('lastName')}"></label>
+      <label class="full">Straße und Hausnummer*<input name="street" required maxlength="120" autocomplete="address-line1" value="${v('street')}"></label>
+      <label class="full">Adresszusatz<input name="addressExtra" maxlength="120" autocomplete="address-line2" value="${v('addressExtra')}"></label>
+      <label>PLZ*<input name="postalCode" required maxlength="10" inputmode="numeric" autocomplete="postal-code" value="${v('postalCode')}"></label>
+      <label>Ort*<input name="city" required maxlength="80" autocomplete="address-level2" value="${v('city')}"></label>
+      <label>Land<select name="country" autocomplete="country">${COUNTRIES.map(([c, n]) => `<option value="${c}"${(x?.country || 'DE') === c ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+      <label>Telefon (optional)<input name="phone" type="tel" maxlength="30" autocomplete="tel" value="${v('phone')}"></label>
+      <p class="form-note full">Diese Angaben erscheinen auf Ihren Rechnungen. Änderungen gelten ab der nächsten Rechnung; bereits ausgestellte Rechnungen bleiben unverändert.</p>
+      <p class="form-note full" id="persMsg" role="status"></p>
+      <div class="sess-act full"><button class="btn btn-dark" type="submit">Speichern</button>${x ? '<button class="btn btn-ghost" type="button" id="persCancel">Abbrechen</button>' : ''}</div></form>`;
+    $('persCancel')?.addEventListener('click', () => show(x));
+    $('persF').onsubmit = async (e) => {
+      e.preventDefault();
+      const m = $('persMsg'), sb = e.target.querySelector('button[type=submit]');
+      sb.disabled = true; m.className = 'form-note full'; m.textContent = 'Wird gespeichert …';
+      try {
+        const res = await fetch('/api/me/personal', { method: 'PUT', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify(Object.fromEntries(new FormData(e.target))) });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) throw Error(j.error || 'Speichern fehlgeschlagen.');
+        show(j.personal);
+        const note = { updated: 'Gespeichert. Ihre nächste Rechnung wird mit diesen Angaben erstellt.', 'no-customer': 'Gespeichert.', off: 'Gespeichert.', failed: 'Gespeichert. Die Rechnungsdaten werden beim nächsten Speichern erneut übertragen – oder ändern Sie sie unter „Tarif & Rechnungen“ im Kundenportal.' }[j.invoice] || 'Gespeichert.';
+        body.insertAdjacentHTML('afterbegin', `<p class="auth-message ${j.invoice === 'failed' ? 'info' : 'success'}" role="status">${esc(note)}</p>`);
+      } catch (er) { m.className = 'form-note full err'; m.textContent = er.message; sb.disabled = false; }
+    };
+  };
+  show(p);
 }
