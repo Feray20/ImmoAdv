@@ -85,10 +85,41 @@ function chartNk(m) {
   const desc = `Balkendiagramm: Kaufnebenkosten ohne Makler bei 300.000 € Kaufpreis je Bundesland, von ${eur(nkRows[0].v)} (${nkRows[0].name}) bis ${eur(max)}.`;
   return svgTag(W, H, desc, g, m);
 }
+// ---------- 0. Kaufkraft: Geld auf dem Konto bei Inflation ----------
+function chartKaufkraft(m) {
+  const W = m ? 360 : 640, H = m ? 230 : 250, L = m ? 44 : 64, R = m ? 70 : 120, T = 16, B = 36, years = 20, inf = 0.02;
+  const x = (t) => L + (t / years) * (W - L - R), y = (v) => T + (1 - v / 100000) * (H - T - B);
+  let g = '';
+  for (let v = 0; v <= 100000; v += 25000) g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${C.line}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v === 0 ? '0' : Math.round(v / 1000) + (m ? 'T' : ' T€')}</text>`;
+  for (let t = 0; t <= years; t += 5) g += `<text x="${x(t)}" y="${H - B + 20}" text-anchor="middle">${t === 0 ? 'heute' : m ? t + ' J.' : 'Jahr ' + t}</text>`;
+  g += `<line x1="${L}" x2="${W - R}" y1="${y(100000)}" y2="${y(100000)}" stroke="${C.grey}" stroke-width="2.5" stroke-dasharray="6 5"/>`;
+  const pts = Array.from({ length: years + 1 }, (_, t) => `${x(t).toFixed(1)},${y(100000 / Math.pow(1 + inf, t)).toFixed(1)}`);
+  g += `<polygon points="${x(0)},${y(100000)} ${pts.join(' ')} ${x(years)},${y(100000)}" fill="${C.red}" fill-opacity=".12"/>`;
+  g += `<polyline points="${pts.join(' ')}" fill="none" stroke="${C.red}" stroke-width="3"/>`;
+  const end = 100000 / Math.pow(1 + inf, years);
+  g += `<text x="${W - R + 6}" y="${y(100000) + 4}" fill="${C.grey}" font-weight="700">100 T€</text><text x="${W - R + 6}" y="${y(end) + 4}" fill="${C.red}" font-weight="700">${Math.round(end / 1000)} T€</text>`;
+  const desc = `Liniendiagramm: Kaufkraft von 100.000 € ohne Zinsen bei 2 % Inflation sinkt in 20 Jahren auf ${eur(end)}.`;
+  return svgTag(W, H, desc, g, m);
+}
+const kaufkraftLegend = legend([[C.grey, 'Kontostand: 100.000 €', true], [C.red, 'Was man dafür kaufen kann (2 % Inflation)']]);
+const kk20 = 100000 / Math.pow(1.02, 20), kk2225 = 100000 / (1.069 * 1.059 * 1.022 * 1.022);
 const both = (fn) => fn(false) + fn(true);
 
 const n = { min: nkRows[0], max: nkRows[nkRows.length - 1] };
 const html = `<!--charts:start-->
+<section class="section home-why"><div class="container">
+  <h2 class="home-h2">Warum überhaupt investieren?</h2>
+  <p class="hc-lead">Geld, das nur auf dem Konto liegt, wirkt sicher – verliert aber jedes Jahr an Kaufkraft. Wer investiert, geht dagegen Risiken ein. Beides gehört ehrlich auf den Tisch.</p>
+  <div class="why-grid">
+    <figure class="hc-card why-chart"><figcaption><strong>Inflation: das stille Minus</strong><span>100.000 € ohne Zinsen sind bei 2 % Inflation nach 20 Jahren nur noch so viel wert wie heute ${eur(kk20)}. Und es kann schneller gehen: Wer Anfang 2022 100.000 € auf dem Konto hatte, konnte Ende 2025 damit nur noch kaufen, was vorher rund ${eur(Math.round(kk2225 / 100) * 100)} gekostet hat (Inflation 2022: 6,9 %, 2023: 5,9 %, 2024 und 2025: je 2,2 %, Destatis).</span></figcaption>${both(chartKaufkraft)}${kaufkraftLegend}</figure>
+    <div class="why-cards">
+      <article class="why-card"><span class="why-tag">Stagnation</span><h3>Wenn nichts wächst</h3><p>Auf dem Konto wächst bei Nullzins nichts – real schrumpft es. Bei einer vermieteten Immobilie baut die Tilgung auch dann Vermögen auf, wenn die Preise stagnieren. Voraussetzung: Miete und Reserve tragen die Rate.</p></article>
+      <article class="why-card"><span class="why-tag warn">Krisenzeiten</span><h3>Kein Investment ist krisenfest</h3><p>2023 fielen die Preise für Wohnimmobilien im Schnitt um 8,4 % – der stärkste Rückgang seit Beginn der Statistik 2000 (Destatis). Wer mit Reserve, langer Zinsbindung und tragfähiger Miete gekauft hatte, musste nicht verkaufen und konnte abwarten.</p></article>
+      <article class="why-card"><span class="why-tag ok">Mit Verstand</span><h3>Krisen vorher durchrechnen</h3><p>ImmoAdv rechnet jedes Angebot mit Stresstest: Zins plus 2 Prozentpunkte, Mietausfall, Kipp-Zins und Anschlussfinanzierung. So sehen Sie vor dem Kauf, ob ein Objekt auch schlechte Jahre übersteht.</p></article>
+    </div>
+  </div>
+  <p class="hc-note">Allgemeine Information, keine Anlageberatung. Jede Geldanlage hat Risiken; Immobilienpreise können fallen. <a class="ck-link" href="/wissen">Mehr im Lernbereich: Geld, Inflation, Vermögen und klug investieren</a></p>
+</div></section>
 <section class="section home-charts"><div class="container">
   <h2 class="home-h2">Was eine vermietete Wohnung rechnerisch leistet</h2>
   <p class="hc-lead">Ein durchgerechnetes Beispiel: Eigentumswohnung in Hessen, ${eur(EX.price)} Kaufpreis, ${EX.area} m², ${eur(EX.rent)} Kaltmiete, ${eur(EX.equity)} Eigenkapital, ${String(EX.ratePct).replace('.', ',')} % Zins und ${EX.repaymentPct} % Tilgung.</p>

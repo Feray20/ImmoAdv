@@ -26,6 +26,7 @@ const TABS = ['start', 'suche', 'objekte', 'steuer', 'lernen', 'konto'];
 // Lernbereich: Themen frei wählbar (keine feste Reihenfolge). Wissen aus /data/faq.json (Kurz- und Detailantwort).
 // [id, Titel, Kurzbeschreibung, FAQ-Indizes, [Werkzeug-Text, Link], Bereich]
 const LERN = [
+  ['geld', 'Geld-Master: Geld, Inflation, Vermögen', 'Wie Geld entsteht, was Inflation mit Ihrem Geld macht, wie Vermögen wächst und wie Sie klug investieren.', [37, 38, 39, 40, 41, 42, 43], ['Kaufen oder mieten?', '/rechner/kaufen-mieten'], 'Geld & Vermögen'],
   ['budget', 'Was kann ich mir leisten?', 'Rate, Darlehen und Kaufpreis aus Einkommen und Eigenkapital.', [0, 5, 6], ['Budget-Rechner', '/rechner/budget'], 'Leisten & Finanzieren'],
   ['eigenkapital', 'Eigenkapital und Kaufnebenkosten', 'Wie viel eigenes Geld nötig ist und was zum Kaufpreis dazukommt.', [1, 2], ['Kaufnebenkosten-Rechner', '/rechner/kaufnebenkosten'], 'Leisten & Finanzieren'],
   ['annuitaet', 'Zins, Tilgung, Zinsbindung', 'Wie sich die Rate zusammensetzt.', [3], ['Tilgungsplan', '/rechner/tilgungsplan'], 'Leisten & Finanzieren'],
@@ -43,7 +44,7 @@ const LERN = [
 // Phasen = die vier Stufen von „Ihr Weg“. Frei wählbar (profile.phase 0–3), sonst automatisch erkannt.
 // Die gewählte Phase steuert Startaktionen, Reihenfolge im Steuer-Bereich und empfohlene Wissensthemen.
 export const PHASES = [
-  { name: 'Orientieren', steuer: 'kauf', lern: ['budget', 'eigenkapital', 'annuitaet', 'beruf'],
+  { name: 'Orientieren', steuer: 'kauf', lern: ['geld', 'budget', 'eigenkapital', 'annuitaet', 'beruf'],
     actions: [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#lernen', 'Grundlagen auffrischen', 'Eigenkapital, Zins, Tilgung'], ['#suche', 'Immobilien ansehen', 'Suche bei den großen Portalen']] },
   { name: 'Objekte prüfen', steuer: 'kauf', lern: ['suche', 'etw', 'cashflow', 'beleihung'],
     actions: [['#suche', 'Objekt analysieren', 'Inserat übernehmen, Kennzahlen sehen'], ['#objekte', 'Objekte im Konto', 'Anlegen, vergleichen, Bankreife'], ['#steuer', 'Steuern beim Kauf', 'Kaufkosten, Inventar, AfA']] },

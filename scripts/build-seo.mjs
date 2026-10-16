@@ -27,7 +27,7 @@ const APP = {
 // Seitenliste: Pfad, Datei, Titel, Beschreibung, Brotkrumen, Indexierung, Zusatz-JSON-LD.
 const PAGES = [
   { path: '/', file: 'index.html', title: 'Immobilie finden, prüfen, finanzieren | ImmoAdv', desc: 'Immobilie suchen, Rendite und Cashflow nach Steuern berechnen, Bankkennzahlen prüfen und die Kreditmappe fürs Bankgespräch erstellen – kostenlos starten.', crumbs: [], extra: ['website', 'app', 'howto'] },
-  { path: '/wissen', title: 'Immobilienfinanzierung verständlich erklärt – 33 Antworten | ImmoAdv', desc: 'Eigenkapital, Nebenkosten, Beleihungswert, AfA, 15-%-Grenze, Anschlusszins: Antworten in zwei Ebenen mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
+  { path: '/wissen', title: 'Immobilien und Geld verständlich erklärt – 44 Antworten | ImmoAdv', desc: 'Geld, Inflation, Vermögensaufbau, Eigenkapital, Nebenkosten, Beleihungswert, AfA, Anschlusszins: Antworten in zwei Ebenen mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
   { path: '/cockpit', file: null, skip: true, title: '', desc: '' },
   { path: '/suche', file: 'suche/index.html', template: 'wissen/index.html', title: 'Suche | ImmoAdv', desc: 'Rechner, Antworten und Fachbegriffe rund um Immobilienkauf und Finanzierung durchsuchen.', crumbs: ['Suche'] },
   { path: '/wissen/erwerbsstatus', file: 'wissen/erwerbsstatus/index.html', title: 'Immobilienfinanzierung nach Erwerbsstatus: Angestellt, Beamter, Selbstständig | ImmoAdv', desc: 'Was Banken bei Angestellten, Befristeten, Beamten, Selbstständigen, Berufseinsteigern und Rentnern prüfen – mit typischen Unterlagen je Gruppe.', crumbs: ['Wissen', 'Erwerbsstatus'] },

@@ -579,3 +579,13 @@ html.ia-user:not(.ia-paid) .mobile-nav a.nav-acc{margin-top:24px;border:1px soli
 html:not(.ia-user) .mobile-nav a[href="/auth/login"]{background:var(--ia-navy,#0F2C59);color:#fff;border-color:var(--ia-navy,#0F2C59)}
 .hc-wide .hc-d{max-width:780px;margin:0 auto}
 .hc-wide .hc-legend{justify-content:center}
+/* Startseite: Warum investieren */
+.why-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:20px;align-items:start}
+.why-cards{display:grid;gap:14px}
+.why-card{background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:18px 20px}
+.why-card h3{margin:6px 0 6px;font-size:18px;color:#0F2C59}
+.why-card p{margin:0;color:#475569;font-size:15px;line-height:1.6}
+.why-tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#0284C7;background:#E0F2FE;border-radius:999px;padding:3px 10px}
+.why-tag.warn{color:#9A3412;background:#FFEDD5}
+.why-tag.ok{color:#065F46;background:#D1FAE5}
+@media (max-width:900px){.why-grid{grid-template-columns:1fr}}
