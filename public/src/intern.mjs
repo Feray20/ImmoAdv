@@ -68,24 +68,44 @@ async function mfa() {
 }
 
 // ---------- Rahmen ----------
-const TABS = [['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
+// Bereich wie „Einsteiger ⇄ Profi“: B2C (Privatkunden) oder B2B (Unternehmen) – steuert Übersicht und Nutzer-Liste.
+const SEGS = { b2c: 'Privatkunden (B2C)', b2b: 'Unternehmen (B2B)' };
+const getSeg = () => { try { return localStorage.getItem('ia-admin-seg') === 'b2b' ? 'b2b' : 'b2c'; } catch { return 'b2c'; } };
+const setSeg = (x) => { try { localStorage.setItem('ia-admin-seg', x); } catch { /* nur Komfort */ } };
+const TABS = [['uebersicht', 'Übersicht'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
+
+function paintSeg() {
+  const chip = $('#adSeg'); if (!chip) return;
+  const g = getSeg();
+  chip.innerHTML = `${g === 'b2b' ? 'B2B · Unternehmen' : 'B2C · Privatkunden'} <span aria-hidden="true">⇄</span>`;
+  chip.dataset.seg = g; document.body.dataset.adSeg = g;
+}
 
 function frame() {
-  root.innerHTML = `<div class="ad-head"><h1>Admin-Zentrale</h1><button type="button" class="btn btn-outline" id="adLogout">Abmelden</button></div><p class="form-note">Nur für Administratoren · angemeldet mit zweitem Faktor · alle Aktionen werden protokolliert · automatische Abmeldung nach 15 Minuten ohne Aktivität.</p>
+  root.innerHTML = `<div class="ad-head"><h1>Admin-Zentrale</h1><div class="ad-head-act"><button type="button" class="mode-chip ad-seg-chip" id="adSeg" aria-label="Bereich wechseln: Privatkunden oder Unternehmen"></button><button type="button" class="btn btn-outline" id="adLogout">Abmelden</button></div></div><p class="form-note">Nur für Administratoren · angemeldet mit zweitem Faktor · alle Aktionen werden protokolliert · automatische Abmeldung nach 15 Minuten ohne Aktivität.</p>
     <div class="ad-shell"><div class="ad-tabs" role="tablist" aria-label="Bereiche">${TABS.map(([k, l]) => `<button type="button" role="tab" data-t="${k}">${l}</button>`).join('')}</div>
     <div class="ad-main"><p id="adMsg" class="form-note" role="status"></p><div id="adView"></div></div></div>`;
   root.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { location.hash = b.dataset.t; });
   $('#adLogout').onclick = logout;
+  const chip = $('#adSeg');
+  paintSeg();
+  chip.onclick = () => {
+    setSeg(getSeg() === 'b2b' ? 'b2c' : 'b2b'); paintSeg();
+    // Weicher Wechsel wie beim Modus-Umschalter: kurz ausblenden, neu laden, einblenden.
+    const v = $('#adView'); v.classList.add('ad-switching');
+    setTimeout(() => { show(); requestAnimationFrame(() => v.classList.remove('ad-switching')); }, 140);
+  };
 }
 
 function show() {
-  const t = TABS.find(([k]) => k === location.hash.slice(1))?.[0] || 'cockpit';
+  const h = location.hash.slice(1).split('-')[0];
+  const t = TABS.find(([k]) => k === h)?.[0] || 'uebersicht';
   root.querySelectorAll('[data-t]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.t === t)));
   root.querySelector(`[data-t="${t}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
   const v = $('#adView');
   v.innerHTML = '<p class="form-note">Wird geladen …</p>';
   msg('');
-  ({ cockpit, system, nutzer, sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen })[t](v);
+  ({ uebersicht, cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen })[t](v);
 }
 
 // ---------- Nutzer: Konten im Überblick, sperren/entsperren, Passwort-Reset ----------
@@ -106,7 +126,7 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
     </article>`).join('') || '<p class="form-note">Keine Konten gefunden.</p>'}</div>
     <div class="pt-row">${page > 1 ? '<button class="btn btn-ghost" id="usPrev" type="button">← Zurück</button>' : ''}${r.data.more ? '<button class="btn btn-ghost" id="usNext" type="button">Weiter →</button>' : ''}</div></section>`;
   $('#usF').onsubmit = (e) => { e.preventDefault(); nutzer(v, 1, $('#usQ').value.trim(), seg); };
-  v.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => nutzer(v, 1, '', b.dataset.seg));
+  v.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => { if (b.dataset.seg !== 'admin') { setSeg(b.dataset.seg); paintSeg(); } nutzer(v, 1, '', b.dataset.seg); });
   $('#usPrev')?.addEventListener('click', () => nutzer(v, page - 1, q, seg));
   $('#usNext')?.addEventListener('click', () => nutzer(v, page + 1, q, seg));
   v.querySelectorAll('[data-us]').forEach((b) => b.onclick = async () => {
@@ -121,8 +141,122 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
   });
 }
 
+// ---------- Übersicht: Kacheln je Bereich (B2C | B2B) ----------
+const MAILS = {
+  b2c: [
+    ['Registrierung bestätigen', 'immoadv'], ['Passwort zurücksetzen', 'immoadv'], ['Bestätigung erneut / Anmeldelink', 'immoadv'],
+    ['Kündigungsbestätigung', 'resend'], ['Erinnerungen & Datenraum-Freigaben', 'resend'], ['Zahlungsbelege & Rechnungen', 'stripe'],
+  ],
+  b2b: [
+    ['Registrierung bestätigen (Portal)', 'immoadv'], ['Registrierungsnachweis (PDF) an Kunde und Geschäftsadresse', 'b2bmail'],
+    ['Einladungen ins Team', 'resend'], ['Neue Kundenanfragen und Einreichungen', 'resend'], ['Prüfung der Unterlagen (Ergebnis)', 'resend'], ['Rechnungen auf Rechnung (PDF)', 'resend'],
+  ],
+};
+function mailState(kind, m) {
+  if (kind === 'stripe') return ['gelb', 'über Stripe – Logo/Name in Stripe → Branding'];
+  if (kind === 'b2bmail') return m.ready ? (m.b2bNotify ? ['gruen', 'ImmoAdv · an Ihre Geschäftsadresse'] : ['gelb', 'ImmoAdv · Kopie an ADMIN_EMAILS (B2B_NOTIFY_EMAIL fehlt)']) : ['rot', 'wird nicht gesendet'];
+  if (kind === 'immoadv') return m.ready ? ['gruen', 'ImmoAdv-Absender'] : ['gelb', 'übergangsweise Supabase-Absender'];
+  return m.ready ? ['gruen', 'ImmoAdv-Absender'] : ['rot', 'wird nicht gesendet'];
+}
+
+async function uebersicht(v) {
+  const seg = getSeg();
+  const [r, sys] = await Promise.all([api('/api/admin/system?segment=' + seg), api('/api/admin/system')]);
+  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  const d = r.data, x = d[seg] || {}, m = sys.data?.mail || {};
+  const n = (k) => Number(k || 0).toLocaleString('de-DE');
+  const pct = (a, b) => (b ? ` · ${Math.round((a / b) * 100)} %` : '');
+  const tile = (label, val, sub = '', go = '', tone = '') => `<${go ? `a href="#${go}"` : 'div'} class="ad-tile${tone ? ' ' + tone : ''}"><span class="ad-tile-l">${label}</span><strong>${val}</strong>${sub ? `<small>${sub}</small>` : ''}</${go ? 'a' : 'div'}>`;
+  const common = [
+    tile(seg === 'b2b' ? 'Nutzerkonten (Inhaber & Berater)' : 'Konten', n(d.accounts), `${n(d.new7d)} neu in 7 Tagen · ${n(d.new30d)} in 30 Tagen`, 'nutzer'),
+    tile('E-Mail bestätigt', n(d.confirmed), pct(d.confirmed, d.accounts).replace(' · ', '') || '–', 'nutzer', d.accounts && d.confirmed < d.accounts ? 'warn' : ''),
+    tile('Zwei-Faktor aktiv', n(d.mfa), pct(d.mfa, d.accounts).replace(' · ', '') || '–', 'sicherheit'),
+    tile('Aktiv (7 Tage)', n(d.active7d), `${n(d.sessions)} offene Sitzungen`, 'sicherheit'),
+    tile('Gesperrt', n(d.banned), 'Konten ohne Anmeldung', 'nutzer', d.banned ? 'bad' : ''),
+    tile('Kreditmappen (30 Tage)', n(d.kreditmappen30d), `${n(d.documents)} Dokumente gespeichert`),
+  ];
+  const spec = seg === 'b2b' ? [
+    tile('Unternehmen', n(x.companies), `${n(x.verified)} verifiziert · ${n(x.paidPlans)} mit Tarif`, 'partner'),
+    tile('Prüfung offen', n(x.reviewPending), 'eingereichte Unterlagen', 'partner', x.reviewPending ? 'warn' : ''),
+    tile('Gesperrt / inaktiv', n(x.locked), 'Unternehmenskonten', 'partner', x.locked ? 'warn' : ''),
+    tile('Kundenanfragen (30 Tage)', n(x.leads30d), `${n(x.leadsNew)} noch neu`, 'anfragen'),
+    tile('Einreichungen (30 Tage)', n(x.submissions30d), 'Kreditmappen an Partner'),
+    tile('Kontaktanfragen offen', n(x.contactOpen), 'über das B2B-Formular', 'anfragen', x.contactOpen ? 'warn' : ''),
+    tile('Umsatz diesen Monat', eur(x.revenueMonthCents), 'bezahlte B2B-Rechnungen (brutto)', 'cockpit'),
+    tile('Offene Rechnungen', n(x.openInvoices), eur(x.openCents), 'rechnungen', x.openInvoices ? 'warn' : ''),
+  ] : [
+    tile('Zahlende Kunden', n(x.paying), 'aktiver Tarif oder Pass', 'cockpit'),
+    tile('Angelegte Objekte', n(x.objects), 'in allen Konten'),
+    tile('Käufe (30 Tage)', n(x.purchases30d), eur(x.purchasesCents30d), 'cockpit'),
+    tile('Umsatz diesen Monat', eur(x.revenueMonthCents), 'bezahlte Rechnungen (brutto)', 'cockpit'),
+    tile('Offene Rechnungen', n(x.openInvoices), 'Privatkunden', 'rechnungen', x.openInvoices ? 'warn' : ''),
+  ];
+  const mails = MAILS[seg].map(([l, k]) => { const [a, t] = mailState(k, m); return `<li><span class="ad-amp ${a}"></span><span>${l}</span><small>${t}</small></li>`; }).join('');
+  v.innerHTML = `<section class="ad-over">
+    <div class="ad-over-h"><h2>${SEGS[seg]}</h2><p class="form-note">Gleiche Kennzahlen, getrennt nach Bereich. Umschalten oben rechts (${seg === 'b2b' ? 'B2B' : 'B2C'} ⇄). Administratoren zählen nicht mit. Nur Zahlen, keine Inhalte.</p></div>
+    <h3 class="ad-sub">Konten & Nutzung</h3><div class="ad-tiles">${common.join('')}</div>
+    <h3 class="ad-sub">${seg === 'b2b' ? 'Unternehmen, Anfragen & Abrechnung' : 'Kunden & Umsatz'}</h3><div class="ad-tiles">${spec.join('')}</div>
+    <h3 class="ad-sub">E-Mails an ${seg === 'b2b' ? 'Unternehmen' : 'Privatkunden'}</h3>
+    <div class="ad-tiles ad-tiles-wide"><div class="ad-tile ad-mailtile${m.ready ? '' : ' warn'}"><span class="ad-tile-l">Absender</span><strong>${m.ready ? esc(m.from) : 'noch nicht eingerichtet'}</strong>
+      <ul class="ad-mails">${mails}</ul>
+      <a class="btn ${m.ready ? 'btn-outline' : 'btn-dark'}" href="#system-mail">${m.ready ? 'E-Mail-Einstellungen' : 'Jetzt einrichten – Schritt für Schritt'}</a></div></div>
+  </section>`;
+}
+
+// ---------- E-Mail-Versand einrichten (System) ----------
+const SB = 'https://supabase.com/dashboard/project/mieoylqhtvghcnvaxutg';
+function mailSetup(m) {
+  const st = (ok, t) => `<span class="st ${ok === true ? 'ok' : ok === false ? 'bad' : 'warn'}">${t}</span>`;
+  const domOk = m.fromDomain === 'immoadv.de';
+  const steps = [
+    ['Resend-Konto und Domain', `Auf <a href="https://resend.com/domains" target="_blank" rel="noopener">resend.com → Domains</a> „Add Domain“ → <code>immoadv.de</code>, Region <strong>Frankfurt (eu-central-1)</strong>.`, st(m.ready ? true : null, m.ready ? 'erledigt' : 'manuell')],
+    ['DNS bei Hostinger eintragen', 'Hostinger → Domains → immoadv.de → DNS. Die drei Einträge, die Resend anzeigt, genau übernehmen (MX und TXT für „send“, TXT „resend._domainkey“). Zusätzlich empfohlen: TXT <code>_dmarc</code> mit <code>v=DMARC1; p=none;</code>. Danach bei Resend „Verify DNS Records“ (dauert einige Minuten).', st(m.ready ? true : null, m.ready ? 'erledigt' : 'manuell')],
+    ['API-Schlüssel in Vercel', `Resend → API Keys → „Create“ (Sending access, Domain immoadv.de). In <a href="https://vercel.com/klk19/immoadv/settings/environment-variables" target="_blank" rel="noopener">Vercel → Environment Variables</a> eintragen: <code>RESEND_API_KEY</code> (Schlüssel), <code>NOTIFY_FROM_EMAIL</code> = <code>noreply@immoadv.de</code>, <code>B2B_NOTIFY_EMAIL</code> = Ihre Geschäftsadresse. Danach neu deployen. Schlüssel nie per Chat oder E-Mail weitergeben.`,
+      `${st(m.resendKey, m.resendKey ? 'Schlüssel gesetzt' : 'Schlüssel fehlt')} ${st(m.fromSet ? (domOk ? true : null) : false, m.fromSet ? (domOk ? 'Absender @immoadv.de' : 'Absender nicht @immoadv.de') : 'Absender fehlt')} ${st(m.b2bNotify ? true : null, m.b2bNotify ? 'Geschäftsadresse gesetzt' : 'Geschäftsadresse optional')}`],
+    ['Supabase: eigener Absender (SMTP)', `<a href="${SB}/auth/smtp" target="_blank" rel="noopener">Supabase → Authentication → Emails → SMTP Settings</a> → „Enable custom SMTP“. Sender email <code>noreply@immoadv.de</code>, Sender name <code>ImmoAdv</code>, Host <code>smtp.resend.com</code>, Port <code>465</code>, Username <code>resend</code>, Password = Resend-API-Schlüssel. Ersetzt den Absender „Supabase Auth“ in allen übrigen Konto-E-Mails.`, st(null, 'manuell – mit Test 2 prüfen')],
+    ['Supabase: ImmoAdv-Vorlagen', `<a href="${SB}/auth/templates" target="_blank" rel="noopener">Supabase → Authentication → Emails → Templates</a>: je Vorlage Betreff und HTML aus der Liste unten einfügen.`, st(null, 'manuell')],
+    ['Supabase: Adressen', `<a href="${SB}/auth/url-configuration" target="_blank" rel="noopener">URL Configuration</a>: Site URL <code>https://immoadv.de</code>; Redirect URLs <code>https://immoadv.de/auth/login</code>, <code>/auth/reset</code>, <code>/auth/callback</code>, <code>/auth/confirm</code>, <code>/b2b-portal</code>.`, st(null, 'manuell')],
+  ];
+  return `<section class="pt-card ad-mailsetup" id="mailSetup"><h2>E-Mail-Versand (Absender „ImmoAdv“)</h2>
+    <p class="form-note">${m.ready ? `Eigener Versand aktiv: <strong>${esc(m.from)}</strong>. Alle E-Mails von ImmoAdv kommen im ImmoAdv-Design mit Logo.` : 'Noch nicht eingerichtet – Konto-E-Mails kommen übergangsweise vom Absender „Supabase Auth“, andere E-Mails (Nachweise, Rechnungen, Kündigungen) werden nicht gesendet.'}</p>
+    <ol class="ad-steps">${steps.map(([t, b, s2]) => `<li><div class="ad-step-h"><strong>${t}</strong><span class="ad-step-st">${s2}</span></div><p>${b}</p></li>`).join('')}</ol>
+    <h3 class="ad-sub">Testen</h3>
+    <div class="pt-row"><button class="btn btn-dark" id="sysMail" type="button">Test 1: ImmoAdv-E-Mail an mich</button><button class="btn btn-outline" id="sysAuthMail" type="button">Test 2: Konto-E-Mail über Supabase an mich</button></div>
+    <p class="form-note">Test 1 prüft Resend und Ihren Absender. Test 2 schickt einen Passwort-Link über Supabase – kommt er als „ImmoAdv“ mit Logo an, sind SMTP und Vorlagen richtig (Link einfach ignorieren, wenn Sie das Passwort nicht ändern möchten).</p>
+    <h3 class="ad-sub">Vorlagen für Supabase</h3>
+    <div class="ad-wrap"><table class="ad-table ad-tpl"><thead><tr><th>Vorlage in Supabase</th><th>Betreff</th><th></th></tr></thead><tbody>
+    ${(m.templates || []).map((t) => `<tr><td><strong>${esc(t.supabase)}</strong><br><small>${esc(t.label)}</small></td><td><code class="ad-subj">${esc(t.subject)}</code></td><td class="ad-tpl-act"><button type="button" class="btn btn-ghost" data-copy-subj="${esc(t.subject)}">Betreff kopieren</button><button type="button" class="btn btn-outline" data-tpl="${esc(t.id)}" data-act="copy">HTML kopieren</button><button type="button" class="btn btn-ghost" data-tpl="${esc(t.id)}" data-act="dl">Herunterladen</button></td></tr>`).join('')}
+    </tbody></table></div></section>`;
+}
+function bindMailSetup(root2) {
+  const done = (t, bad = false) => msg(t, bad);
+  $('#sysMail', root2).onclick = async (e) => {
+    e.target.disabled = true;
+    const x = await api('/api/admin/system', { method: 'POST', body: JSON.stringify({ action: 'testmail' }) });
+    done(x.ok ? `Test-E-Mail an ${x.data.to} gesendet – bitte Posteingang (und Spam) prüfen.` : x.data?.error || 'Fehler', !x.ok); e.target.disabled = false;
+  };
+  $('#sysAuthMail', root2).onclick = async (e) => {
+    if (!confirm('Passwort-Link über Supabase an Ihre Admin-Adresse senden? Ihr Passwort bleibt unverändert, solange Sie den Link nicht verwenden.')) return;
+    e.target.disabled = true;
+    const x = await api('/api/admin/system', { method: 'POST', body: JSON.stringify({ action: 'testauth' }) });
+    done(x.ok ? `Konto-E-Mail an ${x.data.to} angestoßen – Absender und Design prüfen.` : x.data?.error || 'Fehler', !x.ok); e.target.disabled = false;
+  };
+  const copy = async (text, b) => {
+    try { await navigator.clipboard.writeText(text); const o = b.textContent; b.textContent = 'Kopiert ✓'; setTimeout(() => { b.textContent = o; }, 1600); }
+    catch { done('Kopieren nicht möglich – bitte „Herunterladen“ verwenden.', true); }
+  };
+  root2.querySelectorAll('[data-copy-subj]').forEach((b) => b.onclick = () => copy(b.dataset.copySubj, b));
+  root2.querySelectorAll('[data-tpl]').forEach((b) => b.onclick = async () => {
+    const path = '/api/admin/system?template=' + encodeURIComponent(b.dataset.tpl);
+    if (b.dataset.act === 'dl') { try { await download(path, {}, `immoadv-${b.dataset.tpl}.html`); } catch (e) { done(e.message, true); } return; }
+    const r = await api(path);
+    if (!r.ok) { done('Vorlage nicht verfügbar.', true); return; }
+    copy(await r.res.text(), b);
+  });
+}
+
 // ---------- System: Einrichtung, Test-E-Mail, Nutzer-Suche ----------
-async function system(v) {
+async function system(v, focusMail = false) {
   const r = await api('/api/admin/system');
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
   const c = r.data.checks, need = c.filter((x) => !x.ok && !x.optional);
@@ -131,15 +265,12 @@ async function system(v) {
     <div class="ad-wrap"><table class="ad-table"><thead><tr><th></th><th>Bereich</th><th>Stand</th><th>Was tun?</th></tr></thead><tbody>
     ${c.map((x) => `<tr><td><span class="ad-amp ${x.ok ? 'gruen' : x.optional ? 'gelb' : 'rot'}"></span></td><td>${esc(x.label)}${x.optional ? ' <small>(optional)</small>' : ''}</td><td>${x.ok ? 'eingerichtet' : 'fehlt'}${x.info ? ` · ${esc(x.info)}` : ''}</td><td><small>${x.ok ? '–' : esc(x.fix)}</small></td></tr>`).join('')}
     </tbody></table></div>
-    <h2>E-Mail testen</h2><p><button class="btn btn-outline" id="sysMail" type="button">Test-E-Mail an mich senden</button></p>
+    ${mailSetup(r.data.mail || {})}
     <h2>Nutzer suchen</h2><p class="form-note">Zeigt nur Kennzahlen (Anmeldung, Anzahl Objekte, Dokumente, Kreditmappen) – keine Inhalte. Jede Suche wird protokolliert.</p>
     <div class="pt-row"><input id="sysQ" type="email" placeholder="E-Mail-Adresse" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-dark" id="sysFind" type="button">Suchen</button></div>
     <div id="sysUser"></div>`;
-  $('#sysMail').onclick = async (e) => {
-    e.target.disabled = true;
-    const x = await api('/api/admin/system', { method: 'POST', body: JSON.stringify({ action: 'testmail' }) });
-    msg(x.ok ? `Test-E-Mail an ${x.data.to} gesendet.` : x.data?.error || 'Fehler', !x.ok); e.target.disabled = false;
-  };
+  bindMailSetup(v);
+  if (focusMail) requestAnimationFrame(() => $('#mailSetup')?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
   const find = async () => {
     const q = $('#sysQ').value.trim(); if (!q) return;
     const x = await api('/api/admin/system?user=' + encodeURIComponent(q));

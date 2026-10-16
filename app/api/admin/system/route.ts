@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin, adminList, mfaRequired } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
-import { mailConfigured, sendMail } from '@/lib/notify/mail';
+import { fromAddress, mailConfigured, sendMail } from '@/lib/notify/mail';
+import { SUPABASE_TEMPLATES } from '@/lib/notify/supabase-templates';
 import { billingEnabled } from '@/lib/billing/stripe';
 import { panicState } from '@/lib/security/panic';
 import { adminAudit } from '@/lib/b2b/core';
@@ -46,6 +47,24 @@ export async function GET(req: Request) {
     });
   }
 
+  // Vorlage für Supabase (Authentication → Emails → Templates) als HTML zum Kopieren/Herunterladen.
+  const tpl = q.get('template');
+  if (tpl) {
+    const t = SUPABASE_TEMPLATES.find((x) => x.id === tpl);
+    if (!t) return j({ error: 'Unbekannte Vorlage.' }, 404);
+    return new NextResponse(t.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Disposition': `attachment; filename="immoadv-${t.id}.html"`, 'Content-Security-Policy': "default-src 'none'; img-src https:; style-src 'unsafe-inline'" } });
+  }
+
+  // Kacheln je Bereich (B2C = Privatkunden, B2B = Unternehmen) – nur Zahlen, keine Inhalte.
+  const seg = q.get('segment');
+  if (seg) {
+    if (seg !== 'b2c' && seg !== 'b2b') return j({ error: 'Ungültiger Bereich.' }, 400);
+    if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
+    const { data, error } = await supabaseAdmin().rpc('admin_segment_overview', { seg, admins: adminList() });
+    if (error) return j({ error: 'Übersicht nicht verfügbar.' }, 502);
+    return j(data);
+  }
+
   // Sicherheitsübersicht (Konten, Zwei-Faktor, Sitzungen, Konto-Ereignisse, abgewehrte Zugriffe).
   if (q.get('security')) {
     if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
@@ -76,15 +95,29 @@ export async function GET(req: Request) {
     { key: 'preview', label: 'Vorschau-Sperre (Coming soon)', ok: !has('SITE_PREVIEW_KEY'), info: has('SITE_PREVIEW_KEY') ? `aktiv${has('SITE_PREVIEW_PASSWORD') ? ', mit Passwort' : ', nur Zugangslink'}` : 'Website öffentlich', optional: true, fix: 'Zum Start SITE_PREVIEW_KEY löschen.' },
     { key: 'panic', label: 'Not-Aus', ok: !panic.active, info: panic.active ? 'AKTIV' : 'aus', fix: 'Im Reiter „Sicherheit“ ausschalten.' },
   ];
-  return j({ checks, env: process.env.VERCEL_ENV || 'lokal', commit: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7), region: process.env.VERCEL_REGION || null });
+  const from = fromAddress();
+  const mail = {
+    resendKey: has('RESEND_API_KEY'), fromSet: Boolean(from), from: from || null,
+    fromDomain: (/@([^>\s]+)/.exec(from)?.[1] || '').toLowerCase() || null,
+    b2bNotify: has('B2B_NOTIFY_EMAIL'), ready: mailConfigured(),
+    templates: SUPABASE_TEMPLATES.map(({ id, supabase, label, subject }) => ({ id, supabase, label, subject })),
+  };
+  return j({ checks, mail, env: process.env.VERCEL_ENV || 'lokal', commit: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7), region: process.env.VERCEL_REGION || null });
 }
 
 // Test-E-Mail an die eigene Admin-Adresse.
 export async function POST(req: Request) {
   const auth = await requireAdmin(req);
   if (auth instanceof NextResponse) return auth;
-  const p = z.object({ action: z.literal('testmail') }).safeParse(await req.json().catch(() => null));
+  const p = z.object({ action: z.enum(['testmail', 'testauth']) }).safeParse(await req.json().catch(() => null));
   if (!p.success) return j({ error: 'Ungültig.' }, 400);
+  // Konto-E-Mail über Supabase (prüft „Custom SMTP“ und die Vorlagen): Passwort-Link an die eigene Admin-Adresse.
+  if (p.data.action === 'testauth') {
+    if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
+    const { error } = await supabaseAdmin().auth.resetPasswordForEmail(auth.user.email, { redirectTo: 'https://immoadv.de/auth/reset' });
+    await adminAudit(auth.user.email, 'testmail_auth', null, { ok: !error });
+    return error ? j({ error: /rate|seconds/i.test(error.message) ? 'Bitte eine Minute warten und erneut versuchen.' : 'Versand über Supabase fehlgeschlagen – SMTP-Einstellungen prüfen.' }, 502) : j({ ok: true, to: auth.user.email });
+  }
   if (!mailConfigured()) return j({ error: 'E-Mail-Versand ist nicht eingerichtet (RESEND_API_KEY, NOTIFY_FROM_EMAIL).' }, 503);
   const ok = await sendMail(auth.user.email, 'ImmoAdv: Test-E-Mail', `Diese Test-E-Mail bestätigt, dass der E-Mail-Versand funktioniert.\nZeitpunkt: ${new Date().toISOString()}`);
   await adminAudit(auth.user.email, 'testmail', null, { ok });
