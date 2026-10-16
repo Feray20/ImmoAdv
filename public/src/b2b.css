@@ -248,3 +248,10 @@ a.ad-tile:hover,a.ad-tile:focus-visible{box-shadow:0 6px 18px rgba(15,44,89,.10)
 .ad-mailsetup .pt-row{flex-wrap:wrap}
 @media (max-width:640px){.ad-mailsetup .pt-row .btn{width:100%;justify-content:center;white-space:normal;text-align:center}}
 .ad-tile small,.ad-mails small{text-transform:none;letter-spacing:0;font-weight:500}
+
+/* Handy: kein automatisches Hineinzoomen bei Eingabefeldern, nichts steht seitlich über */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{max-width:100%;overflow-x:clip}
+@media (max-width:1024px),(pointer:coarse){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px!important}
+}

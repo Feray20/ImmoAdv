@@ -756,3 +756,20 @@ input.bad{border-color:#DC2626!important;background:#FEF2F2!important;box-shadow
 .area-links{margin-top:14px}
 @media (max-width:600px){.area-login{margin:16px auto;padding:22px 16px;border-radius:14px}}
 .area-login label.remember small{text-transform:none;letter-spacing:0;font-size:13px;color:#64748B;font-weight:400}
+
+/* Handy: nie automatisch hineinzoomen (iOS zoomt bei Feldern unter 16 px und bleibt vergrößert) und nie seitlich verschiebbar.
+   Eigenes Zoomen mit zwei Fingern bleibt erlaubt. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{max-width:100%;overflow-x:clip}
+@media (max-width:1024px),(pointer:coarse){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px!important}
+}
+img,svg,video,canvas,iframe{max-width:100%}
+/* Lange deutsche Wörter (z. B. „Beleihungswertermittlungsverordnung“) dürfen auf schmalen Handys umbrechen, statt die Seite zu verbreitern. */
+@media (max-width:480px){
+  main,.container{overflow-wrap:anywhere;hyphens:auto;-webkit-hyphens:auto}
+  main *{min-width:0}
+  main input,main select,main textarea,main .btn{max-width:100%}
+  main .btn{white-space:normal}
+}
+.calc-pages,.cancel-form{grid-template-columns:minmax(0,1fr)}
