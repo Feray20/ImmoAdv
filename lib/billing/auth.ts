@@ -18,8 +18,9 @@ function remember(key: string, user: AuthUser, now: number) {
   cache.set(key, { user, until: now + TTL_MS });
 }
 
-export async function userFromRequest(req: Request): Promise<AuthUser | null> {
-  const user = await verifiedUser(req);
+// allowAal1: nur für Stellen, die selbst den zweiten Faktor abfragen (Admin-Prüfung) – liefert den Nutzer auch vor der Code-Eingabe.
+export async function userFromRequest(req: Request, opts: { allowAal1?: boolean } = {}): Promise<AuthUser | null> {
+  const user = await verifiedUser(req, Boolean(opts.allowAal1));
   if (!user) return null;
   // Not-Aus: nur Administratoren bleiben angemeldet.
   const panic = await panicState().catch(() => ({ active: false }));
@@ -30,7 +31,7 @@ export async function userFromRequest(req: Request): Promise<AuthUser | null> {
   return user;
 }
 
-async function verifiedUser(req: Request): Promise<AuthUser | null> {
+async function verifiedUser(req: Request, allowAal1 = false): Promise<AuthUser | null> {
   const header = req.headers.get('authorization') || '';
   if (!header.startsWith('Bearer ') || header.length < 20 || header.length > 4096) return null;
   const url = process.env.SUPABASE_URL;
@@ -38,7 +39,7 @@ async function verifiedUser(req: Request): Promise<AuthUser | null> {
   if (!url || !key) return null;
 
   const now = Date.now();
-  const cacheKey = createHash('sha256').update(header).digest('hex');
+  const cacheKey = createHash('sha256').update(header).digest('hex') + (allowAal1 ? ':a1' : '');
   const hit = cache.get(cacheKey);
   if (hit && hit.until > now) return hit.user;
 
@@ -56,9 +57,18 @@ async function verifiedUser(req: Request): Promise<AuthUser | null> {
     cache.delete(cacheKey);
     return null;
   }
-  const u = (await r.json().catch(() => ({}))) as { id?: string; email?: string };
+  const u = (await r.json().catch(() => ({}))) as { id?: string; email?: string; factors?: { status?: string }[] };
   if (!u.id || !u.email) return null;
+  // Zwei-Faktor-Schutz: Hat das Konto einen bestätigten zweiten Faktor (App oder SMS), gilt die Sitzung erst
+  // nach Eingabe des Codes (aal2). Eine Sitzung nur mit Passwort (aal1) erhält dann keinen Zugriff.
+  if (!allowAal1 && (u.factors || []).some((f) => f.status === 'verified') && tokenAalOf(header) !== 'aal2') return null;
   const user = { id: u.id, email: u.email.toLowerCase() };
   remember(cacheKey, user, now);
   return user;
+}
+
+function tokenAalOf(header: string): string | null {
+  const part = header.replace(/^Bearer\s+/, '').split('.')[1];
+  if (!part) return null;
+  try { const p = JSON.parse(Buffer.from(part, 'base64url').toString('utf8')) as { aal?: string }; return typeof p.aal === 'string' ? p.aal : null; } catch { return null; }
 }

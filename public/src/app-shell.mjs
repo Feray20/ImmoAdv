@@ -123,7 +123,9 @@ export function setupApp({ u, d, saveData, reload }) {
       <label class="chk sess-rem"><input type="checkbox" id="sessRem"${A && A.remembered() ? ' checked' : ''}> Auf diesem Gerät angemeldet bleiben</label>
       <p class="form-note" id="sessNote"></p>
       <div class="sess-act"><button class="btn btn-dark" type="button" id="sessOut">Abmelden</button><a class="btn btn-outline" href="/auth/forgot">Passwort ändern</a></div>
-      <p class="form-note">Ihr Passwort können Sie im Browser bzw. im iPhone-Schlüsselbund speichern lassen – beim Anmelden einfach „Passwort sichern“ bestätigen.</p></article>`);
+      <p class="form-note">Ihr Passwort können Sie im Browser bzw. im iPhone-Schlüsselbund speichern lassen – beim Anmelden einfach „Passwort sichern“ bestätigen.</p>
+      <h4 class="mfa-h">Zwei-Faktor-Schutz (App oder SMS)</h4><div id="mfaBox"><p class="form-note">Wird geladen …</p></div></article>`);
+    import('/src/mfa.mjs').then((m) => m.manageUI($('mfaBox'))).catch(() => { const b = $('mfaBox'); if (b) b.textContent = 'Konnte nicht geladen werden.'; });
     const note = () => { const n = $('sessNote'); if (n) n.textContent = $('sessRem').checked ? 'Sie bleiben angemeldet, bis Sie sich abmelden oder 30 Tage nicht aktiv waren. Nur auf eigenen Geräten verwenden.' : 'Automatische Abmeldung nach 30 Minuten ohne Aktivität.'; };
     note();
     $('sessRem').onchange = () => { if (A) { A.setRemember($('sessRem').checked); try { localStorage.setItem('ia-last-active', String(Date.now())); } catch { /* ignore */ } } note(); };

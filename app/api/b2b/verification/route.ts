@@ -94,7 +94,7 @@ export async function PUT(req: Request) {
   const r = await supabaseAdmin().from('immo_b2b_accounts').update({ verification_status: 'eingereicht', verification_submitted_at: now, verification_note: null, updated_at: now }).eq('id', a.id);
   if (r.error) return json({ error: 'Einreichen fehlgeschlagen.' }, 500);
   if (mailConfigured()) {
-    const text = `Neue Verifizierung zur Prüfung\n\n${a.company_name} (${a.legal_form})\nKundennummer: ${a.customer_number}\nArt: ${a.institution_type}\nRegister/USt: ${a.register_number || '–'} / ${a.tax_id || '–'}\nAnsprechpartner: ${a.advisor_name}, ${a.email}\nAnschrift: ${a.street || ''}, ${a.postal_code} ${a.city}\nNachweise: ${docs.map((d) => KIND_LABEL[d.kind as Kind] ?? d.kind).join(', ')}\n\nPrüfen und freischalten: https://immoadv.de/intern/objektsuche#partner`;
+    const text = `Neue Verifizierung zur Prüfung\n\n${a.company_name} (${a.legal_form})\nKundennummer: ${a.customer_number}\nArt: ${a.institution_type}\nRegister/USt: ${a.register_number || '–'} / ${a.tax_id || '–'}\nAnsprechpartner: ${a.advisor_name}, ${a.email}\nAnschrift: ${a.street || ''}, ${a.postal_code} ${a.city}\nNachweise: ${docs.map((d) => KIND_LABEL[d.kind as Kind] ?? d.kind).join(', ')}\n\nPrüfen und freischalten: https://immoadv.de/intern/web-admin#partner`;
     for (const to of adminList()) await sendMail(to, `Verifizierung: ${a.company_name}`, text);
   }
   return json({ ok: true, status: 'eingereicht' });

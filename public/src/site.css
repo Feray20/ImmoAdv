@@ -740,3 +740,14 @@ details.lt summary{align-items:center}
 details.lt summary .lt-title{flex:1;min-width:0}
 .lt-plan details.lt .lt-state{display:none}
 @media (max-width:600px){details.lt .lt-state{display:none}.lt-num{width:26px;height:26px;margin-right:8px}}
+.mfa-box h2{margin:0 0 8px;font-size:22px;color:#0F2C59}
+.mfa-form{display:flex;gap:8px;margin:12px 0}
+.mfa-form input{flex:1;min-width:0;min-height:48px;font-size:22px;letter-spacing:.25em;text-align:center;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px}
+.mfa-form input[type=tel]{letter-spacing:0;font-size:17px;text-align:left}
+.mfa-form .btn{min-height:48px}
+.mfa-send{margin:6px 0}
+.mfa-h{margin:18px 0 6px;color:#0F2C59}
+.mfa-list{list-style:none;padding:0;margin:8px 0;display:grid;gap:6px}
+.mfa-list li{display:flex;justify-content:space-between;gap:10px;border:1px solid #E2E8F0;border-radius:10px;padding:10px 12px;background:#F8FAFC}
+.mfa-enroll img{display:block;margin:8px 0;border:1px solid #E2E8F0;border-radius:8px;background:#fff}
+.mfa-enroll code{word-break:break-all}

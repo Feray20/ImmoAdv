@@ -11,9 +11,9 @@ const msg = (t, bad = false) => { const el = $('#adMsg'); if (el) { el.textConte
 
 // ---------- Zugang ----------
 async function gate() {
-  if (!token()) { root.innerHTML = '<h1>Interner Bereich</h1><p>Bitte zuerst <a class="ck-link" href="/auth/login?next=/intern/objektsuche">anmelden</a>.</p>'; return false; }
+  if (!token()) { root.innerHTML = '<h1>Interner Bereich</h1><p>Bitte zuerst <a class="ck-link" href="/auth/login?next=/intern/web-admin">anmelden</a>.</p>'; return false; }
   const r = await api('/api/admin/check');
-  if (r.status === 401) { root.innerHTML = '<h1>Interner Bereich</h1><p>Sitzung abgelaufen. Bitte neu <a class="ck-link" href="/auth/login?next=/intern/objektsuche">anmelden</a>.</p>'; return false; }
+  if (r.status === 401) { root.innerHTML = '<h1>Interner Bereich</h1><p>Sitzung abgelaufen. Bitte neu <a class="ck-link" href="/auth/login?next=/intern/web-admin">anmelden</a>.</p>'; return false; }
   if (r.data?.ipBlocked) { root.innerHTML = '<h1>Kein Zugriff</h1><p>Zugriff von dieser IP-Adresse ist nicht freigegeben (ADMIN_IP_ALLOWLIST in Vercel).</p>'; return false; }
   if (!r.data?.admin) {
     root.innerHTML = `<h1>Kein Zugriff</h1><p>Dieser Bereich ist nur für Administratoren.${r.data?.configured === false ? ' (In Vercel ist noch keine Administrator-Adresse hinterlegt: Variable ADMIN_EMAILS.)' : ''}</p>`;
@@ -25,6 +25,12 @@ async function gate() {
 
 // Zweiter Faktor über Supabase MFA (TOTP-App wie Google Authenticator, 1Password).
 async function mfa() {
+  // Bereits eingerichteter zweiter Faktor (App oder SMS): nur Code abfragen.
+  try {
+    const m = await import('./mfa.mjs');
+    const { factors } = await m.factorsOf(token());
+    if (factors.length) { root.innerHTML = '<div class="pt-card ad-mfa" id="adMfa"></div>'; await m.challengeUI($('#adMfa'), session(), () => location.reload()); return; }
+  } catch { /* weiter mit Einrichtung */ }
   const auth = { Authorization: 'Bearer ' + token() };
   const u = await supa('/auth/v1/user', { headers: auth }).then((x) => x.json()).catch(() => ({}));
   const verified = (u.factors || []).find((f) => f.factor_type === 'totp' && f.status === 'verified');
@@ -168,6 +174,24 @@ function bindInv(v, reload) {
 // ---------- Sicherheit ----------
 async function sicherheit(v) {
   const r = await api('/api/admin/check');
+  // Sicherheitsübersicht oben einblenden (lädt parallel).
+  api('/api/admin/system?security=1').then((o) => {
+    const x = o.data || {}; if (!o.ok) return;
+    const ACT = { login: 'Anmeldung', logout: 'Abmeldung', user_signedup: 'Registrierung', user_confirmation_requested: 'Bestätigung angefordert', user_recovery_requested: 'Passwort-Reset angefordert', user_modified: 'Konto geändert', user_deleted: 'Konto gelöscht', factor_in_progress: '2FA-Einrichtung begonnen', mfa_code_login: 'Anmeldung mit 2FA-Code', verification_attempted: 'Code geprüft' };
+    const box = document.createElement('section'); box.className = 'pt-card sec-ov';
+    const pct = x.users ? Math.round((x.mfaUsers / x.users) * 100) : 0;
+    box.innerHTML = `<h2>Sicherheitslage</h2><div class="sec-kpis">
+      <div><small>Konten</small><strong>${x.users ?? '–'}</strong><span>${x.confirmed ?? 0} bestätigt</span></div>
+      <div><small>Zwei-Faktor aktiv</small><strong>${x.mfaUsers ?? 0}</strong><span>${pct} % · App ${x.mfaTotp ?? 0} · SMS ${x.mfaPhone ?? 0}</span></div>
+      <div><small>Aktive Sitzungen (30 T.)</small><strong>${x.activeSessions ?? 0}</strong><span>davon mit 2FA ${x.aal2Sessions ?? 0}</span></div>
+      <div><small>Anmeldungen</small><strong>${x.signIns24h ?? 0}</strong><span>24 h · ${x.signIns7d ?? 0} in 7 Tagen</span></div>
+      <div><small>Passwort-Resets (7 T.)</small><strong>${x.recovery7d ?? 0}</strong><span>auffällig, wenn plötzlich viele</span></div>
+      <div><small>Abgewehrt (7 T.)</small><strong>${Object.values(x.blocked7d || {}).reduce((a, b) => a + Number(b || 0), 0)}</strong><span>${Object.entries(x.blocked7d || {}).map(([k, n]) => `${esc(k)} ${n}`).join(' · ') || 'keine'}</span></div>
+    </div>
+    <h3>Letzte Konto-Ereignisse</h3>${(x.events || []).length ? `<table class="bill-table"><thead><tr><th>Zeit</th><th>Ereignis</th><th>Konto</th><th>IP</th></tr></thead><tbody>${x.events.map((e) => `<tr><td>${dtt(e.at)}</td><td>${esc(ACT[e.action] || e.action)}</td><td>${esc(e.who)}</td><td>${esc(e.ip || '–')}</td></tr>`).join('')}</tbody></table>` : '<p class="form-note">Noch keine Ereignisse protokolliert.</p>'}
+    <p class="form-note">E-Mail-Adressen und IP-Adressen werden gekürzt angezeigt. Empfehlung: Zwei-Faktor-Schutz für alle Administratoren und Unternehmenskonten.</p>`;
+    v.prepend(box);
+  }).catch(() => {});
   const p = r.data?.panic || { active: false };
   v.innerHTML = `<section class="pt-card"><h2>Not-Aus</h2>
     ${p.active ? `<div class="pt-alert bad"><strong>Aktiv seit ${dtt(p.since)}</strong> (${esc(p.by || '')}${p.reason ? ': ' + esc(p.reason) : ''}). Alle Nutzer außer Administratoren sind abgemeldet; Partnerseiten, Widget und Anfragen sind abgeschaltet.</div><button class="btn btn-dark" id="pOff" type="button">Not-Aus beenden</button>`

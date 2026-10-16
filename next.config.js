@@ -69,7 +69,7 @@ module.exports = {
         { source: '/', destination: '/index.html' },
         ...STATIC_PAGES.map((p) => ({ source: `/${p}`, destination: `/${p}/index.html` })),
         { source: '/suche', destination: '/suche/index.html' },
-        { source: '/intern/objektsuche', destination: '/intern/objektsuche/index.html' },
+        { source: '/intern/web-admin', destination: '/intern/web-admin/index.html' },
         { source: '/wissen/erwerbsstatus', destination: '/wissen/erwerbsstatus/index.html' },
         { source: '/wissen/:slug', destination: '/wissen/:slug/index.html' },
         { source: '/wissen/glossar', destination: '/wissen/glossar/index.html' },
@@ -103,6 +103,8 @@ module.exports = {
     const swr = [{ key: 'Cache-Control', value: 'public, max-age=600, stale-while-revalidate=604800' }];
     return [
       { source: '/(.*)', headers: securityHeaders },
+      // Admin-Zentrale: nie indexieren, nie zwischenspeichern.
+      { source: '/intern/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }, { key: 'Cache-Control', value: 'no-store' }] },
       // Next.js-Seiten (Cockpit) brauchen Inline-Skripte für die Hydrierung; alle übrigen Seiten laufen ohne.
       { source: '/cockpit', headers: [{ key: 'Content-Security-Policy', value: cspValue.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'") }] },
       // Partnerseite darf als Widget auf fremden Websites eingebettet werden (Freigabe je Domain prüft die Schnittstelle).

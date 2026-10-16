@@ -190,7 +190,7 @@ export async function POST(req: Request) {
     for (const to of biz.length ? biz : adminList()) {
       await sendMail(to, `Neue B2B-Registrierung: ${b.companyName} (${typeLabel(b.institutionType)})`, `${text}
 
-Prüfen und freischalten: https://immoadv.de/intern/objektsuche#partner`, att);
+Prüfen und freischalten: https://immoadv.de/intern/web-admin#partner`, att);
     }
     await sendMail(user.email, `Ihre Registrierung bei ImmoAdv – Nachweis ${proof.proofId}`,
       `Guten Tag ${b.advisorName},\n\nIhr Unternehmenskonto für ${b.companyName} ist angelegt (Kundennummer ${ins.data.customer_number}). Im Anhang finden Sie den Nachweis über Ihre Angaben und Erklärungen. Bitte prüfen Sie ihn; falsche Angaben teilen Sie uns bitte umgehend an support@immoadv.de mit.\n\nNächster Schritt: Gewerbenachweis im Portal hochladen (https://immoadv.de/b2b-portal#verifizierung). Den Auftragsverarbeitungsvertrag (Version ${AVV_VERSION}) können Sie jederzeit unter https://immoadv.de/b2b-portal#profil herunterladen.\n\n${text}\n\nImmoAdv · Head of Operations: Feray Korkmaz · Georg-August-Zinn-Str. 25 · 64354 Reinheim`, att);

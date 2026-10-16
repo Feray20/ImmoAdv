@@ -222,7 +222,7 @@ function bindActions() {
       fixedYears: num('a_fix'), loan: Math.round(a.loan), nonRecoverable: num('a_nonrec'), maintenance: Math.round(num('a_mqm') * num('a_area') * 100) / 100, vacancyPct: num('a_vac'),
       purchaseCostPct: nk.totalPct, grestPct: GREST[val('a_land')].pct, notaryPct: 2, brokerPct: num('a_broker'), buildingSharePct: num('a_bs'), marginalTaxPct: num('a_tax'),
       vergleichsmieteQm: num('a_vq'), mietpreisbremse: $('a_mpb').checked, efficiencyClass: val('a_ec'), liegenschaftszinsPct: num('a_lz'), restnutzungsdauer: num('a_rnd') };
-    try { localStorage.setItem(PENDING, JSON.stringify({ ...o, source: '/intern/objektsuche', at: Date.now() })); location.href = '/app/dashboard'; } catch { alert('Speichern im Browser nicht möglich.'); }
+    try { localStorage.setItem(PENDING, JSON.stringify({ ...o, source: '/intern/web-admin', at: Date.now() })); location.href = '/app/dashboard'; } catch { alert('Speichern im Browser nicht möglich.'); }
   };
 }
 

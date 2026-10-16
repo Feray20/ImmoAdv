@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 // Zusätzlich verlangt der Bereich einen zweiten Faktor (TOTP), außer ADMIN_MFA=off.
 export async function GET(req: Request) {
   const h = { 'Cache-Control': 'no-store' };
-  const user = await userFromRequest(req);
+  const user = await userFromRequest(req, { allowAal1: true });
   if (!user) return NextResponse.json({ admin: false, reason: 'login' }, { status: 401, headers: h });
   if (!allowRequest(`admin-check:${user.id}`, 30, 60_000)) return NextResponse.json({ admin: false }, { status: 429, headers: h });
   const list = adminList();

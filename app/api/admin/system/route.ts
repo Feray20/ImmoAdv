@@ -46,6 +46,15 @@ export async function GET(req: Request) {
     });
   }
 
+  // Sicherheitsübersicht (Konten, Zwei-Faktor, Sitzungen, Konto-Ereignisse, abgewehrte Zugriffe).
+  if (q.get('security')) {
+    if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
+    const { data, error } = await supabaseAdmin().rpc('admin_security_overview');
+    if (error) return j({ error: 'Übersicht nicht verfügbar.' }, 502);
+    await adminAudit(auth.user.email, 'security_overview', null, {});
+    return j({ ...(data as Record<string, unknown>), mfaRequiredAdmin: mfaRequired() });
+  }
+
   let db_ok = false;
   if (adminConfigured()) {
     try { const r = await supabaseAdmin().from('immo_settings').select('key').limit(1); db_ok = !r.error; } catch { db_ok = false; }

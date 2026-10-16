@@ -30,7 +30,7 @@ function hostTarget(req: NextRequest): string | null {
   const host = (req.headers.get('host') || '').toLowerCase().split(':')[0];
   if (req.nextUrl.pathname !== '/') return null;
   if (host.startsWith('partner.')) return '/b2b-portal/index.html';
-  if (host.startsWith('admin.')) return '/intern/objektsuche/index.html';
+  if (host.startsWith('admin.')) return '/intern/web-admin/index.html';
   return null;
 }
 
