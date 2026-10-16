@@ -56,6 +56,7 @@ function classify(el) {
 export function setupApp({ u, d, saveData, reload }) {
   const app = $('app'), grid = document.querySelector('.dashboard-grid');
   if (!app || !grid) return;
+  try { if (sessionStorage.getItem('ia-import') && !location.hash.startsWith('#suche')) history.replaceState(null, '', location.pathname + location.search + '#suche'); } catch { /* ohne Speicher */ }
   const q = new URLSearchParams(location.search);
   const qm = q.get('modus');
   let mode = qm === 'profi' || qm === 'einsteiger' ? qm : d.profile?.mode;

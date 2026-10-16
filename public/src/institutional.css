@@ -354,3 +354,39 @@ body.is-app .dashboard-grid{gap:16px}
 .obj-grid select{border:1px solid var(--ia-hair,#CBD5E1);border-radius:4px;padding:8px 10px;background:#fff;color:#0F172A}
 @media(min-width:901px) and (max-width:1240px){.site-header .desktop-nav a[href="/suche"],.site-header .desktop-nav a[href="/pro-begleiter"],.site-header .desktop-nav a[href="/fuer-banken"]{display:none}}
 @media(min-width:901px) and (max-width:1040px){.site-header .desktop-nav a[href="/checkliste"]{display:none}}
+/* Ein-Klick-Übernahme und Trefferliste */
+.imp-card{margin-top:16px;background:#fff;color:#334155;border-radius:10px;padding:18px 20px}
+.imp-head{display:flex;gap:16px;align-items:flex-start;justify-content:space-between}.imp-head h3{margin:0 0 4px;color:#0F2C59;font-size:19px}.imp-head p{margin:0;font-size:15px}
+.imp-bm{flex:none;cursor:grab;border:2px dashed #38BDF8;white-space:nowrap}.imp-bm:active{cursor:grabbing}
+.imp-steps{margin:12px 0 6px;padding-left:20px;font-size:14px;display:grid;gap:4px}
+.imp-paste{margin:8px 0;border-top:1px solid #E2E8F0;padding-top:8px}.imp-paste summary{cursor:pointer;font-weight:700;color:#0369A1;padding:4px 0}
+.imp-paste label{display:grid;gap:4px;margin:8px 0;font-size:13px;font-weight:600;color:#475569}
+.imp-paste input,.imp-paste textarea{border:1px solid #CBD5E1;border-radius:6px;padding:9px 10px;font:inherit;font-size:15px;width:100%;min-width:0;color:#0F172A}
+.imp-msg{margin:10px 0 4px;font-size:14px;padding:0}.imp-msg:empty{display:none}
+.imp-msg.ok,.imp-msg.bad{padding:10px 12px;border-radius:6px}.imp-msg.ok{background:#F0FDF4;border-left:4px solid #16A34A}.imp-msg.bad{background:#FEF2F2;border-left:4px solid #DC2626}
+.imp-card>.form-note{font-size:12px;margin:8px 0 0}
+.ml-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.ml-head h2{margin:0 0 10px}
+.ml-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #E2E8F0;border-radius:8px}
+.ml-table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+.ml-table th{position:sticky;top:0;background:#F8FAFC;text-align:left;font-size:12px;color:#475569;padding:8px 10px;border-bottom:1px solid #E2E8F0;white-space:nowrap}
+.ml-table td{padding:10px;border-bottom:1px solid #EEF2F6;vertical-align:top;white-space:nowrap}
+.ml-table tbody tr:hover{background:#F8FAFC}
+.ml-sort{border:0;background:none;font:inherit;font-weight:700;color:inherit;cursor:pointer;padding:0;min-height:0}.ml-sort.on{color:#0369A1}
+.ml-name{white-space:normal!important;min-width:180px;max-width:240px}.ml-name strong{display:block;color:#0F172A}.ml-name small,.ml-url small{display:block;color:#64748B;font-size:12px;margin-top:2px}
+.ml-na{color:#B45309;font-size:12px}.ml-best{color:#0F172A}
+.ml-link{font-weight:700;color:#0369A1}.ml-url{min-width:150px;max-width:190px;white-space:normal!important;word-break:break-all}
+.t-ok{background:#F0FDF4}.t-warn{background:#FFFBEB}.t-bad{background:#FEF2F2}
+.ml-act{white-space:nowrap}
+@media(max-width:760px){
+  .imp-head{flex-direction:column}.imp-bm{display:none}.imp-steps{display:none}.imp-paste{border-top:0;padding-top:0}.imp-paste[open] summary,.imp-paste summary{color:#0369A1}
+  .ml-wrap{border:0;overflow:visible}.ml-table thead{display:none}.ml-table,.ml-table tbody,.ml-table tr,.ml-table td{display:block}
+  .ml-table tr{border:1px solid #E2E8F0;border-radius:8px;margin-bottom:10px;padding:6px 0;display:grid;grid-template-columns:1fr 1fr}
+  .ml-table td{border:0;padding:5px 12px;white-space:normal}.ml-table td[data-l]:not(.ml-name):not(.ml-url)::before{content:attr(data-l);display:block;font-size:11px;color:#64748B}
+  .ml-name,.ml-url,.ml-act{grid-column:1/-1;max-width:none!important}.ml-name{border-bottom:1px solid #EEF2F6!important;padding-bottom:8px!important}
+}
+.ml-table small,.ml-head .form-note{text-transform:none;letter-spacing:0}
+.dashboard-grid>.wide,.dashboard-grid>#sucheView{grid-column:1/-1;min-width:0}
+.ml-table td,.ml-table th{text-align:left}.ml-link{word-break:normal;white-space:nowrap}
+.ml-table td.ml-name,.ml-table th:first-child{position:sticky;left:0;z-index:1;background:#fff;box-shadow:1px 0 0 #E2E8F0}.ml-table th:first-child{background:#F8FAFC;z-index:2}
+.ml-table tbody tr:hover td.ml-name{background:#F8FAFC}
+@media(max-width:760px){.ml-table td.ml-name{position:static;box-shadow:none}}

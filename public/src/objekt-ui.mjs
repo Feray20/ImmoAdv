@@ -3,6 +3,7 @@
 // Die Suche baut nur Links zu den Suchseiten der Portale (Formate an öffentlich indexierten Portalseiten geprüft);
 // die Analyse rechnet ausschließlich mit Angaben, die der Nutzer selbst einträgt.
 import { GREST, kaufnebenkosten, budget, analyse, portalLinks } from './calc.mjs';
+import { parseListing, bookmarklet } from './listing-parse.mjs';
 
 const SESSION = 'immoadv-auth-session-v1';
 const $ = (id) => document.getElementById(id);
@@ -38,7 +39,22 @@ function renderSearch() {
   </div></details>
   <div class="is-result" id="s_out_box" aria-live="polite"></div>
   <div class="is-portals" id="s_links"></div>
-  <p class="form-note">Die Suche öffnet die Trefferlisten direkt bei den Portalen. ImmoAdv lädt, speichert und zeigt keine Inserate. Die Portalnamen sind Marken ihrer Inhaber; ImmoAdv steht mit ihnen in keiner Verbindung. Gefundenes Objekt? Link und Kernfakten unten in die Analyse übernehmen.</p>
+  <p class="form-note">Die Suche öffnet die Trefferlisten direkt bei den Portalen. ImmoAdv lädt keine Inserate von Portalen. Die Portalnamen sind Marken ihrer Inhaber; ImmoAdv steht mit ihnen in keiner Verbindung.</p>
+  <article class="imp-card" id="imp">
+    <div class="imp-head"><div><h3>Inserate mit einem Klick übernehmen</h3>
+      <p>Inserat im Portal öffnen, auf den Button klicken – Kaufpreis, Fläche, Zimmer, Miete, Baujahr, Hausgeld und Provision landen mit dem Link in Ihrer Trefferliste, alle Kennzahlen werden sofort berechnet.</p></div>
+      <a class="btn btn-dark imp-bm" id="imp_bm" href="#" draggable="true" title="In die Lesezeichenleiste ziehen">＋ Zu ImmoAdv</a></div>
+    <ol class="imp-steps"><li><strong>Einmalig:</strong> den Button „＋ Zu ImmoAdv“ mit der Maus in die Lesezeichenleiste ziehen (Leiste einblenden: Strg+Umschalt+B, am Mac ⌘+Umschalt+B).</li>
+      <li>Im Portal ein <strong>einzelnes Inserat</strong> öffnen und in der Lesezeichenleiste auf „＋ Zu ImmoAdv“ klicken.</li>
+      <li>Für jedes weitere Inserat wiederholen – alle erscheinen untereinander in der Trefferliste.</li></ol>
+    <details class="imp-paste"><summary>Am Handy oder ohne Lesezeichen: Inseratstext einfügen</summary>
+      <p class="form-note">Im Inserat den Text markieren und kopieren (am Handy: lange tippen → „Alle auswählen“ → „Kopieren“), hier einfügen und die Adresse des Inserats dazusetzen.</p>
+      <label>Link zum Inserat<input id="imp_url" type="url" placeholder="https://…" autocomplete="off"></label>
+      <label>Text des Inserats<textarea id="imp_text" rows="5" maxlength="30000" placeholder="Kaufpreis 349.000 € · Wohnfläche 72 m² · Zimmer 3 …"></textarea></label>
+      <button class="btn btn-dark" id="imp_go" type="button">Übernehmen</button></details>
+    <p class="imp-msg" id="imp_msg" role="status" aria-live="polite"></p>
+    <p class="form-note">Die Übernahme läuft nur in Ihrem Browser: Gelesen wird ausschließlich das Inserat, das Sie gerade geöffnet haben, und nur Zahlen und Fakten für Ihre eigene Berechnung – keine Texte, Bilder oder Kontaktdaten. An ImmoAdv wird dabei nichts übertragen.</p>
+  </article>
 </section>`;
 }
 
@@ -93,7 +109,7 @@ function renderAnalyse() {
   </div><p class="form-note">Bodenwert: Bodenrichtwert × Grundstücksanteil (BORIS des Landes). Liegenschaftszins und Restnutzungsdauer: Grundstücksmarktbericht des Gutachterausschusses.</p></article>
   </div>
   <div class="an-out" id="a_out"></div>
-  <p class="an-actions" id="a_actions" hidden><button class="btn btn-dark" id="a_keep" type="button">In Merkliste</button> <button class="btn btn-outline" id="a_pdf" type="button">Analyse als PDF</button> <button class="btn btn-outline" id="a_save" type="button">Als Objekt im Konto speichern</button> <button class="btn btn-ghost" id="a_print" type="button">Drucken</button> <span class="form-note" id="a_msg" role="status"></span></p>
+  <p class="an-actions" id="a_actions" hidden><button class="btn btn-dark" id="a_keep" type="button">In Trefferliste</button> <button class="btn btn-outline" id="a_pdf" type="button">Analyse als PDF</button> <button class="btn btn-outline" id="a_save" type="button">Als Objekt im Konto speichern</button> <button class="btn btn-ghost" id="a_print" type="button">Drucken</button> <span class="form-note" id="a_msg" role="status"></span></p>
 </section>`;
 }
 
@@ -135,19 +151,13 @@ function updateAnalyse() {
     subtitle: `${val('a_art')}${num('a_area') ? ` · ${D(num('a_area'), 0)} m²` : ''}${num('a_rooms') ? ` · ${D(num('a_rooms'), 1)} Zimmer` : ''}${num('a_year') ? ` · Baujahr ${num('a_year')}` : ''} · ${GREST[val('a_land')].name}` };
   $('a_out').innerHTML = `<div class="an-grid">${SECTIONS.map((x) => `<article class="dash-card"><h3>${x.title}</h3>${table(x.rows.map((r) => [esc(r[0]), esc(r[1])]))}</article>`).join('')}</div>
   ${a.hints.length ? `<article class="dash-card"><h3>Hinweise</h3><ul class="plain-list">${a.hints.map((h) => `<li>${esc(h)}</li>`).join('')}</ul></article>` : ''}
-  <p class="faq-disclaimer">Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Rechts-, Steuer- oder Finanzierungsberatung gem. § 34i GewO / KWG. Alle Werte beruhen auf Ihren Eingaben; Inseratsinhalte werden nicht übernommen.</p>`;
+  <p class="faq-disclaimer">Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Rechts-, Steuer- oder Finanzierungsberatung gem. § 34i GewO / KWG. Alle Werte beruhen auf Ihren Eingaben bzw. den von Ihnen übernommenen Eckdaten eines Inserats – bitte mit dem Exposé abgleichen.</p>`;
   $('a_actions').hidden = false;
 }
 
 function bindActions() {
   $('a_print').onclick = () => window.print();
-  $('a_keep').onclick = () => {
-    if (!last) return; const { a, ort } = last;
-    const inputs = {}; root.querySelectorAll('.an input, .an select').forEach((el) => { inputs[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
-    const item = { id: Date.now().toString(36), at: new Date().toISOString(), name: ort || 'Objekt ohne Adresse', url: last.url, inputs,
-      k: { price: a.price, pqm: a.pricePerQm, factor: a.factor, gross: a.grossYield, cf: a.cashflow, cfat: a.cashflowAfterTax, dscr: a.dscr, minCap: a.nebenkosten } };
-    const list = readList(); list.unshift(item); writeList(list.slice(0, 50)); renderList(); $('a_msg').textContent = ' In der Merkliste gespeichert (nur in diesem Browser).';
-  };
+  $('a_keep').onclick = () => { if (keepCurrent()) $('a_msg').textContent = ' In der Trefferliste gespeichert (nur in diesem Browser).'; };
   $('a_pdf').onclick = async () => {
     if (!last) return; const { a } = last;
     const b = $('a_pdf'); b.disabled = true; $('a_msg').textContent = ' PDF wird erstellt …';
@@ -171,15 +181,85 @@ function bindActions() {
   };
 }
 
+// Aktuelle Analyse in die Trefferliste; gleiches Inserat (gleiche URL) wird aktualisiert statt doppelt angelegt.
+function keepCurrent(meta = {}) {
+  if (!last) return false; const { a, ort } = last;
+  const inputs = {}; root.querySelectorAll('.an input, .an select').forEach((el) => { inputs[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
+  const list = readList();
+  const prev = last.url ? list.find((x) => x.url === last.url) : null;
+  const item = { id: prev?.id || Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at: new Date().toISOString(), name: meta.name || ort || prev?.name || 'Objekt ohne Adresse', url: last.url,
+    portal: meta.portal ?? prev?.portal ?? '', title: meta.title ?? prev?.title ?? '', missing: meta.missing ?? (a.rent ? [] : ['Miete (Ist)']), inputs,
+    k: { price: a.price, area: num('a_area') || null, rooms: num('a_rooms') || null, rent: a.rent || null, pqm: a.pricePerQm, factor: a.factor, gross: a.grossYield, net: a.netYield, cf: a.cashflow, cfat: a.cashflowAfterTax, dscr: a.dscr, minCap: a.nebenkosten, rate: a.rate } };
+  writeList([item, ...list.filter((x) => x.id !== item.id)].slice(0, 100)); renderList();
+  return true;
+}
+
+// Inserat übernehmen: nur objektbezogene Felder werden ersetzt, Finanzierung und Steuer bleiben wie eingestellt.
+const OBJ_FIELDS = ['a_url', 'a_addr', 'a_price', 'a_area', 'a_rooms', 'a_year', 'a_ec', 'a_rent', 'a_vq', 'a_nonrec', 'a_lv', 'a_lz', 'a_rnd'];
+function importListing(d) {
+  const msg = $('imp_msg');
+  const r = parseListing(d);
+  if (r.price == null) {
+    msg.className = 'imp-msg bad';
+    msg.innerHTML = `Kein Kaufpreis gefunden${r.url ? ` auf <a class="ck-link" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer nofollow">dieser Seite</a>` : ''}. Bitte ein <strong>einzelnes Kaufinserat</strong> öffnen (nicht die Trefferliste) – oder die Werte unten in der Analyse eintragen.`;
+    return null;
+  }
+  OBJ_FIELDS.forEach((id) => { const el = $(id); if (el) el.value = ''; });
+  if ($('a_mpb')) $('a_mpb').checked = false;
+  const set = (id, v) => { if (v != null && v !== '' && $(id)) $(id).value = v; };
+  set('a_url', r.url); set('a_addr', [r.plz, r.city].filter(Boolean).join(' ') || r.title); set('a_price', r.price); set('a_area', r.area); set('a_rooms', r.rooms);
+  set('a_year', r.year); set('a_ec', r.energyClass); set('a_rent', r.rent); set('a_broker', r.brokerPct); set('a_art', r.art);
+  if ($('s_land') && $('a_land')) $('a_land').value = $('s_land').value;
+  updateAnalyse();
+  keepCurrent({ name: r.name, portal: r.portal, title: r.title, missing: r.missing });
+  msg.className = 'imp-msg ok';
+  msg.innerHTML = `<strong>Übernommen${r.portal ? ` von ${esc(r.portal)}` : ''}:</strong> ${esc(r.found.join(', '))}.` +
+    (r.missing.length ? ` <strong>Nicht gefunden:</strong> ${esc(r.missing.join(', '))}${r.missing.includes('Miete (Ist)') ? ' – ohne Miete sind Rendite und Cashflow nicht aussagekräftig; in der Zeile auf „Bearbeiten“ klicken und die erwartete Miete eintragen' : ''}.` : '') +
+    (r.hausgeld ? ` Hausgeld ${E(r.hausgeld)}/Monat: Den nicht umlagefähigen Teil (meist Verwaltung und Rücklage) bitte unter „Nicht umlagefähige Kosten“ eintragen.` : '') +
+    ` Bundesland für die Grunderwerbsteuer: ${esc(GREST[val('a_land')]?.name || '')} – bitte prüfen.` +
+    (r.warnings.length ? ` <strong>${esc(r.warnings.join(' '))}</strong>` : '');
+  $('m_list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  return r;
+}
+
+const IMPORT_KEY = 'ia-import';
+function checkImport() {
+  const m = location.hash.match(/[?&]import=([^&]*)/);
+  if (m) { try { sessionStorage.setItem(IMPORT_KEY, m[1]); } catch { /* ohne Speicher */ } history.replaceState(null, '', location.pathname + location.search + '#suche'); }
+  let raw = m ? m[1] : null;
+  try { raw = raw || sessionStorage.getItem(IMPORT_KEY); sessionStorage.removeItem(IMPORT_KEY); } catch { /* ohne Speicher */ }
+  if (!raw) return;
+  try { const d = JSON.parse(decodeURIComponent(raw)); if (d && typeof d === 'object') importListing({ u: d.u, ti: d.ti, t: d.t, j: d.j }); }
+  catch { $('imp_msg').className = 'imp-msg bad'; $('imp_msg').textContent = 'Die Übernahme war unvollständig. Bitte im Inserat erneut auf „＋ Zu ImmoAdv“ klicken.'; }
+}
+
 const readList = () => { try { return JSON.parse(localStorage.getItem(LIST) || '[]'); } catch { return []; } };
 const writeList = (l) => { try { localStorage.setItem(LIST, JSON.stringify(l)); } catch { /* ohne Speicher */ } };
 function renderList() {
   const box = $('m_list'); if (!box) return;
   const l = readList();
-  if (!l.length) { box.innerHTML = '<p class="form-note">Noch keine Objekte gemerkt. Analyse ausfüllen und „In Merkliste“ wählen.</p>'; return; }
-  const best = (k, hi) => { const v = l.map((x) => x.k[k]).filter((x) => x != null); return v.length > 1 ? (hi ? Math.max(...v) : Math.min(...v)) : null; };
-  const cell = (x, k, f, hi) => { const b = best(k, hi); return x.k[k] == null ? '–' : x.k[k] === b ? `<strong>${f(x.k[k])}</strong>` : f(x.k[k]); };
-  box.innerHTML = `<div class="calc-out"><table class="bill-table"><thead><tr><th>Objekt</th><th>Kaufpreis</th><th>€/m²</th><th>Faktor</th><th>Brutto</th><th>CF v. St.</th><th>CF n. St.</th><th>DSCR</th><th>Mindestkapital</th><th></th></tr></thead><tbody>${l.map((x) => `<tr><td>${x.url ? `<a class="ck-link" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer nofollow">${esc(x.name)}</a>` : esc(x.name)}<br><small class="form-note">${new Date(x.at).toLocaleDateString('de-DE')}</small></td><td>${cell(x, 'price', E, false)}</td><td>${cell(x, 'pqm', E, false)}</td><td>${cell(x, 'factor', (v) => D(v, 1), false)}</td><td>${cell(x, 'gross', (v) => P(v), true)}</td><td>${cell(x, 'cf', E2, true)}</td><td>${cell(x, 'cfat', E2, true)}</td><td>${cell(x, 'dscr', (v) => D(v), true)}</td><td>${cell(x, 'minCap', E, false)}</td><td><button class="text-btn" data-load="${x.id}" type="button">Laden</button> <button class="text-btn del" data-drop="${x.id}" type="button">Entfernen</button></td></tr>`).join('')}</tbody></table></div><p class="form-note">Fett: jeweils bester Wert. Die Merkliste liegt nur in diesem Browser.</p>`;
+  const cnt = $('m_count'); if (cnt) cnt.textContent = l.length ? `${l.length} Objekt${l.length === 1 ? '' : 'e'}` : '';
+  if (!l.length) { box.innerHTML = '<p class="form-note">Noch keine Inserate. Oben mit „＋ Zu ImmoAdv“ übernehmen oder eine Analyse ausfüllen und „In Trefferliste“ wählen.</p>'; return; }
+  const sortKey = box.dataset.sort || 'at', dir = box.dataset.dir === 'asc' ? 1 : -1;
+  const val2 = (x) => (sortKey === 'at' ? x.at : x.k?.[sortKey]);
+  const rows = [...l].sort((x, y) => { const a = val2(x), b = val2(y); if (a == null) return 1; if (b == null) return -1; return (a > b ? 1 : a < b ? -1 : 0) * dir; });
+  const best = (k, hi) => { const v = l.map((x) => x.k?.[k]).filter((x) => x != null); return v.length > 1 ? (hi ? Math.max(...v) : Math.min(...v)) : null; };
+  const noRent = (x) => !x.k?.rent;
+  const cell = (x, k, f, hi, needsRent) => { if (needsRent && noRent(x)) return '<span class="ml-na">–</span>'; const v = x.k?.[k]; const b = best(k, hi); return v == null ? '–' : v === b ? `<strong class="ml-best">${f(v)}</strong>` : f(v); };
+  const tn = (v, good, warn, hi = true) => (v == null ? '' : hi ? (v >= good ? 'ok' : v >= warn ? 'warn' : 'bad') : (v <= good ? 'ok' : v <= warn ? 'warn' : 'bad'));
+  const COLS = [['name', 'Objekt'], ['url', 'Inserat'], ['price', 'Kaufpreis'], ['pqm', '€/m²'], ['rent', 'Miete'], ['factor', 'Faktor'], ['gross', 'Brutto'], ['cf', 'CF v. St.'], ['cfat', 'CF n. St.'], ['dscr', 'DSCR'], ['minCap', 'Mindestkapital'], ['', '']];
+  const th = COLS.map(([k, t]) => (k && k !== 'name' && k !== 'url' ? `<th><button class="ml-sort${sortKey === k ? ' on' : ''}" data-sort="${k}" type="button">${t}${sortKey === k ? (dir === 1 ? ' ▲' : ' ▼') : ''}</button></th>` : `<th>${t}</th>`)).join('');
+  box.innerHTML = `<div class="ml-wrap"><table class="ml-table"><thead><tr>${th}</tr></thead><tbody>${rows.map((x) => `<tr>
+    <td class="ml-name" data-l="Objekt"><strong>${esc(x.name)}</strong>${x.title && x.title !== x.name ? `<small>${esc(x.title)}</small>` : ''}<small>${x.portal ? esc(x.portal) + ' · ' : ''}${new Date(x.at).toLocaleDateString('de-DE')}${x.missing?.length ? ` · <span class="ml-na">fehlt: ${esc(x.missing.join(', '))}</span>` : ''}</small></td>
+    <td data-l="Inserat" class="ml-url">${x.url ? `<a class="ml-link" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer nofollow" title="${esc(x.url)}">${esc(x.portal || 'Inserat')} ↗</a><small>${esc(x.url.replace(/^https:\/\/(www\.)?/, '').slice(0, 42))}${x.url.length > 50 ? '…' : ''}</small>` : '–'}</td>
+    <td data-l="Kaufpreis">${cell(x, 'price', E, false)}</td>
+    <td data-l="€/m²">${cell(x, 'pqm', E, false)}</td><td data-l="Miete">${x.k?.rent ? E(x.k.rent) : `<button class="text-btn ml-na" data-load="${x.id}" type="button">Miete eintragen</button>`}</td>
+    <td data-l="Faktor" class="t-${tn(x.k?.factor, 22, 28, false)}">${cell(x, 'factor', (v) => D(v, 1), false, true)}</td><td data-l="Brutto">${cell(x, 'gross', (v) => P(v), true, true)}</td>
+    <td data-l="CF v. St." class="t-${noRent(x) ? '' : tn(x.k?.cf, 0, -100)}">${cell(x, 'cf', E2, true, true)}</td><td data-l="CF n. St." class="t-${noRent(x) ? '' : tn(x.k?.cfat, 0, -100)}">${cell(x, 'cfat', E2, true, true)}</td>
+    <td data-l="DSCR" class="t-${noRent(x) ? '' : tn(x.k?.dscr, 1.2, 1)}">${cell(x, 'dscr', (v) => D(v), true, true)}</td><td data-l="Mindestkapital">${cell(x, 'minCap', E, false)}</td>
+    <td class="ml-act"><button class="text-btn" data-load="${x.id}" type="button">Bearbeiten</button> <button class="text-btn del" data-drop="${x.id}" type="button" aria-label="${esc(x.name)} entfernen">Entfernen</button></td></tr>`).join('')}</tbody></table></div>
+  <p class="form-note">Fett: bester Wert der Liste. Farbe: Faktor ≤ 22 / Cashflow ≥ 0 / DSCR ≥ 1,2 grün (ImmoAdv-Annahmen). Spaltenköpfe sortieren. Finanzierung (Eigenkapital, Zins, Tilgung) gilt wie in der Analyse eingestellt. Die Liste liegt nur in diesem Browser.</p>`;
+  box.querySelectorAll('[data-sort]').forEach((b) => b.onclick = () => { const k = b.dataset.sort; box.dataset.dir = box.dataset.sort === k && box.dataset.dir !== 'asc' ? 'asc' : 'desc'; box.dataset.sort = k; renderList(); });
   box.querySelectorAll('[data-drop]').forEach((b) => b.onclick = () => { writeList(readList().filter((x) => x.id !== b.dataset.drop)); renderList(); });
   box.querySelectorAll('[data-load]').forEach((b) => b.onclick = () => {
     const x = readList().find((y) => y.id === b.dataset.load); if (!x) return;
@@ -191,7 +271,20 @@ function renderList() {
 // Baut Suche, Analyse und Merkliste in einen Container. opts.pdf: Analyse-PDF anbieten.
 export function mountObjekt(container, opts = {}) {
   root = container;
-  root.insertAdjacentHTML('beforeend', `<h2 class="is-h">Immobiliensuche</h2>${renderSearch()}${renderAnalyse()}<section class="dash-card"><h2>Merkliste</h2><div id="m_list"></div></section>`);
+  root.insertAdjacentHTML('beforeend', `<h2 class="is-h">Immobiliensuche</h2>${renderSearch()}${renderAnalyse()}<section class="dash-card ml-card"><div class="ml-head"><h2>Trefferliste</h2><span class="form-note" id="m_count"></span></div><div id="m_list"></div></section>`);
+  const bm = $('imp_bm');
+  if (bm) {
+    bm.href = bookmarklet(location.origin);
+    bm.addEventListener('click', (e) => { e.preventDefault(); $('imp_msg').className = 'imp-msg'; $('imp_msg').textContent = 'Nicht hier klicken, sondern den Button in die Lesezeichenleiste ziehen. Danach im Portal auf ein Inserat gehen und dort das Lesezeichen anklicken.'; });
+  }
+  $('imp_go')?.addEventListener('click', () => {
+    const t = $('imp_text').value.trim(), u = $('imp_url').value.trim();
+    if (!t) { $('imp_text').focus(); return; }
+    if (importListing({ u, t, ti: '' })) { $('imp_text').value = ''; $('imp_url').value = ''; }
+  });
+  if (window.__iaImport) window.removeEventListener('hashchange', window.__iaImport);
+  window.__iaImport = () => { if (/[?&]import=/.test(location.hash)) checkImport(); };
+  window.addEventListener('hashchange', window.__iaImport);
   if (!opts.pdf) $('a_pdf')?.remove();
   const KEY = 'ia-objekt-v1';
   const ids = [...root.querySelectorAll('.is-search input, .is-search select, .an input, .an select')].map((e) => e.id).filter(Boolean);
@@ -201,5 +294,5 @@ export function mountObjekt(container, opts = {}) {
   [['ort', 's_ort'], ['land', 's_land'], ['art', 's_art'], ['preisab', 's_pmin'], ['preis', 's_price'], ['flaeche', 's_area'], ['zimmer', 's_rooms']].forEach(([k, id]) => { if (q.get(k) && $(id)) $(id).value = q.get(k); });
   root.addEventListener('input', (e) => { if (!e.target.id) return; if (e.target.id.startsWith('s_')) updateSearch(); else if (e.target.id.startsWith('a_')) updateAnalyse(); save(); });
   root.addEventListener('change', (e) => { if (e.target.tagName !== 'SELECT' && e.target.type !== 'checkbox') return; if (e.target.id.startsWith('s_')) updateSearch(); else updateAnalyse(); save(); });
-  bindActions(); updateSearch(); updateAnalyse(); renderList();
+  bindActions(); updateSearch(); updateAnalyse(); renderList(); checkImport();
 }
