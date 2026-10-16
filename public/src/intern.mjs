@@ -58,7 +58,7 @@ async function mfa() {
 }
 
 // ---------- Rahmen ----------
-const TABS = [['cockpit', 'Finanz-Cockpit'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen'], ['objekt', 'Objektsuche']];
+const TABS = [['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen'], ['objekt', 'Objektsuche']];
 
 function frame() {
   root.innerHTML = `<h1>Admin-Zentrale</h1><p class="form-note">Nur für Administratoren · angemeldet mit zweitem Faktor · alle Aktionen werden protokolliert.</p>
@@ -73,7 +73,39 @@ function show() {
   const v = $('#adView');
   v.innerHTML = '<p class="form-note">Wird geladen …</p>';
   msg('');
-  ({ cockpit, sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, objekt })[t](v);
+  ({ cockpit, system, sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, objekt })[t](v);
+}
+
+// ---------- System: Einrichtung, Test-E-Mail, Nutzer-Suche ----------
+async function system(v) {
+  const r = await api('/api/admin/system');
+  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  const c = r.data.checks, need = c.filter((x) => !x.ok && !x.optional);
+  v.innerHTML = `<h2>Einrichtung</h2>
+    <p class="form-note">${need.length ? `<strong>${need.length} Punkt(e) offen.</strong> Die Werte werden in Vercel unter Settings → Environment Variables eingetragen (nie per Chat oder E-Mail weitergeben), danach neu deployen.` : 'Alle Pflichtpunkte eingerichtet.'} Umgebung: ${esc(r.data.env)}${r.data.commit ? ` · Version ${esc(r.data.commit)}` : ''}</p>
+    <div class="ad-wrap"><table class="ad-table"><thead><tr><th></th><th>Bereich</th><th>Stand</th><th>Was tun?</th></tr></thead><tbody>
+    ${c.map((x) => `<tr><td><span class="ad-amp ${x.ok ? 'gruen' : x.optional ? 'gelb' : 'rot'}"></span></td><td>${esc(x.label)}${x.optional ? ' <small>(optional)</small>' : ''}</td><td>${x.ok ? 'eingerichtet' : 'fehlt'}${x.info ? ` · ${esc(x.info)}` : ''}</td><td><small>${x.ok ? '–' : esc(x.fix)}</small></td></tr>`).join('')}
+    </tbody></table></div>
+    <h2>E-Mail testen</h2><p><button class="btn btn-outline" id="sysMail" type="button">Test-E-Mail an mich senden</button></p>
+    <h2>Nutzer suchen</h2><p class="form-note">Zeigt nur Kennzahlen (Anmeldung, Anzahl Objekte, Dokumente, Kreditmappen) – keine Inhalte. Jede Suche wird protokolliert.</p>
+    <div class="pt-row"><input id="sysQ" type="email" placeholder="E-Mail-Adresse" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-dark" id="sysFind" type="button">Suchen</button></div>
+    <div id="sysUser"></div>`;
+  $('#sysMail').onclick = async (e) => {
+    e.target.disabled = true;
+    const x = await api('/api/admin/system', { method: 'POST', body: JSON.stringify({ action: 'testmail' }) });
+    msg(x.ok ? `Test-E-Mail an ${x.data.to} gesendet.` : x.data?.error || 'Fehler', !x.ok); e.target.disabled = false;
+  };
+  const find = async () => {
+    const q = $('#sysQ').value.trim(); if (!q) return;
+    const x = await api('/api/admin/system?user=' + encodeURIComponent(q));
+    const box = $('#sysUser');
+    if (!x.ok) { box.innerHTML = `<p class="form-note">${esc(x.data?.error)}</p>`; return; }
+    if (!x.data.found) { box.innerHTML = '<p class="form-note">Kein Konto mit dieser E-Mail-Adresse.</p>'; return; }
+    const u = x.data.user;
+    box.innerHTML = `<dl class="pt-dl">${[['Konto seit', dtt(u.createdAt)], ['Zuletzt angemeldet', dtt(u.lastSignIn)], ['E-Mail bestätigt', u.confirmed ? 'ja' : 'nein'], ['Zweiter Faktor', u.mfa ? 'ja' : 'nein'], ['Modus / Phase', `${u.mode || '–'} / ${u.phase == null ? 'automatisch' : u.phase + 1}`], ['Objekte', u.objects], ['Dokumente', u.documents], ['Kreditmappen', u.kreditmappen], ['Unternehmenskonto', u.b2b ? (u.b2b.role === 'owner' ? 'Inhaber' : 'Berater') : 'nein'], ['Zuletzt gespeichert', dtt(u.updatedAt)]].map(([k, val]) => `<div><dt>${k}</dt><dd>${esc(String(val))}</dd></div>`).join('')}</dl>`;
+  };
+  $('#sysFind').onclick = find;
+  $('#sysQ').onkeydown = (e) => { if (e.key === 'Enter') find(); };
 }
 
 // ---------- Finanz-Cockpit ----------
