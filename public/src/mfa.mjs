@@ -1,6 +1,8 @@
 // Zwei-Faktor-Schutz (Supabase MFA): Authenticator-App (TOTP, kostenlos) oder SMS-Code an die Handynummer.
 // Gemeinsam genutzt von Anmeldung, Konto und Admin-Zentrale.
 const KEY = 'immoadv-auth-session-v1';
+// SMS als zweiter Faktor ist vorbereitet, aber ausgeblendet (verursacht Kosten pro SMS). Zum Aktivieren auf true setzen.
+const SMS_ENABLED = false;
 let cfg = null;
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -90,8 +92,8 @@ export async function manageUI(box) {
   const label = (f) => (f.factor_type === 'phone' ? `SMS an ${esc(maskPhone(f.phone))}` : `Authenticator-App${f.friendly_name ? ` (${esc(f.friendly_name)})` : ''}`);
   box.innerHTML = `<p class="form-note"><strong>${factors.length ? '✓ Zwei-Faktor-Schutz ist aktiv.' : 'Zwei-Faktor-Schutz ist aus.'}</strong> ${factors.length ? 'Bei jeder Anmeldung wird zusätzlich ein Code abgefragt.' : 'Schützt Ihr Konto zusätzlich mit einem Code – auch wenn jemand Ihr Passwort kennt.'}</p>
     ${factors.length ? `<ul class="mfa-list">${factors.map((f) => `<li><span>${label(f)}</span><button type="button" class="link-btn" data-unenroll="${esc(f.id)}">Entfernen</button></li>`).join('')}</ul>` : ''}
-    <div class="sess-act">${factors.some((f) => f.factor_type === 'totp') ? '' : '<button type="button" class="btn btn-dark" id="mfaTotp">Authenticator-App einrichten</button>'}${factors.some((f) => f.factor_type === 'phone') ? '' : '<button type="button" class="btn btn-outline" id="mfaPhone">SMS-Code einrichten</button>'}</div>
-    <p class="form-note">Empfehlung: Die Authenticator-App (z. B. Google Authenticator, Microsoft Authenticator, Apple Passwörter) ist kostenlos und sicherer als SMS.</p>
+    <div class="sess-act">${factors.some((f) => f.factor_type === 'totp') ? '' : '<button type="button" class="btn btn-dark" id="mfaTotp">Authenticator-App einrichten</button>'}${!SMS_ENABLED || factors.some((f) => f.factor_type === 'phone') ? '' : '<button type="button" class="btn btn-outline" id="mfaPhone">SMS-Code einrichten</button>'}</div>
+    <p class="form-note">Kostenlos mit einer Authenticator-App, z. B. Google Authenticator (iPhone und Android), Microsoft Authenticator oder Apple Passwörter.</p>
     <div id="mfaFlow"></div><p class="form-note" id="mfaMsg2" role="status"></p>`;
   const flow = box.querySelector('#mfaFlow');
   const msg = (t, bad) => { const m = box.querySelector('#mfaMsg2'); m.textContent = t; m.className = 'form-note ' + (bad ? 'st bad' : 'st ok'); };
