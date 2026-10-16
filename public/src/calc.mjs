@@ -641,7 +641,7 @@ const slug = (t) => String(t).trim().toLowerCase().replace(/ä/g, 'ae').replace(
   .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 const CITY_STATES = new Set(['berlin', 'hamburg', 'bremen']);
 
-export function portalLinks({ land, kreis, ort, art, maxPrice, minArea, minRooms }) {
+export function portalLinks({ land, kreis, ort, art, minPrice = 0, maxPrice, minArea, minRooms }) {
   const o = slug(ort), k = slug(kreis);
   const out = [];
   // ImmoScout24: /Suche/de/{land}[/{kreis}-kreis]/{ort}/{typ}?price=-X.0&livingspace=Y.0-&numberofrooms=Z.0-
@@ -654,10 +654,10 @@ export function portalLinks({ land, kreis, ort, art, maxPrice, minArea, minRooms
     if (art !== 'mfh') {
       if (minArea > 0) q.set('livingspace', `${minArea.toFixed(1)}-`);
       if (minRooms > 0) q.set('numberofrooms', `${minRooms.toFixed(1)}-`);
-      if (maxPrice > 0) q.set('price', `-${maxPrice.toFixed(1)}`);
+      if (maxPrice > 0 || minPrice > 0) q.set('price', `${minPrice > 0 ? minPrice.toFixed(1) : ''}-${maxPrice > 0 ? maxPrice.toFixed(1) : ''}`);
     }
     out.push({ name: 'ImmoScout24', url: `https://www.immobilienscout24.de${path}/${type}${q.toString() ? '?' + q.toString() : ''}`,
-      filters: art === 'mfh' ? 'Ort und Objektart; Preis, Fläche und Zimmer bitte im Portal setzen.' : 'Ort, Objektart, Höchstpreis, Mindestfläche, Mindestzimmer.' });
+      filters: art === 'mfh' ? 'Ort und Objektart; Preis, Fläche und Zimmer bitte im Portal setzen.' : 'Ort, Objektart, Preisrahmen, Mindestfläche, Mindestzimmer.' });
   }
   // Immowelt: /suche/{ort}/{wohnungen|haeuser}/kaufen?roomi=Z  bzw. /suche/bl-{land}/…
   {

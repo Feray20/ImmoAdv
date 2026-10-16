@@ -26,6 +26,7 @@ function renderSearch() {
     <label class="is-what">Objektart<select id="s_art"><option value="wohnung">Wohnung kaufen</option><option value="haus">Haus kaufen</option><option value="mfh">Mehrfamilienhaus kaufen</option></select></label>
     <label class="is-where">Ort<input id="s_ort" type="text" placeholder="z. B. Darmstadt" autocomplete="off"></label>
     <label>Bundesland<select id="s_land">${LAND_OPTS}</select></label>
+    <label>Preis ab (€)<input id="s_pmin" type="number" min="0" step="1000" value=""></label>
     <label>Preis bis (€)<input id="s_price" type="number" min="0" step="1000" value="350000"></label>
     <label>Fläche ab (m²)<input id="s_area" type="number" min="0" step="1" value="50"></label>
     <label>Zimmer ab<input id="s_rooms" type="number" min="0" step="0.5" value="2"></label>
@@ -43,7 +44,7 @@ function renderSearch() {
 
 function updateSearch() {
   const land = val('s_land'), price = num('s_price');
-  const links = portalLinks({ land, kreis: val('s_kreis'), ort: val('s_ort'), art: val('s_art'), maxPrice: price, minArea: num('s_area'), minRooms: num('s_rooms') });
+  const links = portalLinks({ land, kreis: val('s_kreis'), ort: val('s_ort'), art: val('s_art'), minPrice: num('s_pmin'), maxPrice: price, minArea: num('s_area'), minRooms: num('s_rooms') });
   $('s_links').innerHTML = links.map((l) => `<a class="is-portal" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer nofollow"><strong>Treffer bei ${l.name} öffnen ↗</strong><small>Übergeben: ${esc(l.filters)}</small></a>`).join('');
   const nk = price > 0 ? kaufnebenkosten({ price, land, brokerPct: num('s_broker') }) : null;
   const eq = num('s_eq');
@@ -197,7 +198,7 @@ export function mountObjekt(container, opts = {}) {
   try { const s = JSON.parse(localStorage.getItem(KEY) || '{}'); ids.forEach((id) => { if (s[id] !== undefined) { const el = $(id); if (el.type === 'checkbox') el.checked = s[id]; else el.value = s[id]; } }); } catch { /* ohne Speicher */ }
   const save = () => { try { const o = {}; ids.forEach((id) => { const el = $(id); o[id] = el.type === 'checkbox' ? el.checked : el.value; }); localStorage.setItem(KEY, JSON.stringify(o)); } catch { /* ohne Speicher */ } };
   const q = new URLSearchParams(location.search);
-  [['ort', 's_ort'], ['land', 's_land'], ['art', 's_art'], ['preis', 's_price'], ['flaeche', 's_area'], ['zimmer', 's_rooms']].forEach(([k, id]) => { if (q.get(k) && $(id)) $(id).value = q.get(k); });
+  [['ort', 's_ort'], ['land', 's_land'], ['art', 's_art'], ['preisab', 's_pmin'], ['preis', 's_price'], ['flaeche', 's_area'], ['zimmer', 's_rooms']].forEach(([k, id]) => { if (q.get(k) && $(id)) $(id).value = q.get(k); });
   root.addEventListener('input', (e) => { if (!e.target.id) return; if (e.target.id.startsWith('s_')) updateSearch(); else if (e.target.id.startsWith('a_')) updateAnalyse(); save(); });
   root.addEventListener('change', (e) => { if (e.target.tagName !== 'SELECT' && e.target.type !== 'checkbox') return; if (e.target.id.startsWith('s_')) updateSearch(); else updateAnalyse(); save(); });
   bindActions(); updateSearch(); updateAnalyse(); renderList();

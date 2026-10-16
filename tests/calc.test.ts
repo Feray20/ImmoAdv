@@ -295,4 +295,8 @@ test('portalLinks: geprüfte URL-Formate der Portale', async () => {
   assert.equal(k[2].url, 'https://www.kleinanzeigen.de/s-haus-kaufen/mehrfamilienhaus-k%C3%B6ln/k0c208');
   const b = portalLinks({ land: 'berlin', kreis: '', ort: 'Berlin', art: 'wohnung', maxPrice: 0, minArea: 0, minRooms: 0 });
   assert.equal(b[0].url, 'https://www.immobilienscout24.de/Suche/de/berlin/berlin/wohnung-kaufen');
+  const r = portalLinks({ land: 'hessen', kreis: '', ort: 'Darmstadt', art: 'wohnung', minPrice: 150000, maxPrice: 300000, minArea: 0, minRooms: 0 });
+  assert.equal(r[0].url, 'https://www.immobilienscout24.de/Suche/de/hessen/darmstadt/wohnung-kaufen?price=150000.0-300000.0');
+  const m = portalLinks({ land: 'hessen', kreis: '', ort: 'Darmstadt', art: 'wohnung', minPrice: 150000, maxPrice: 0, minArea: 0, minRooms: 0 });
+  assert.equal(m[0].url, 'https://www.immobilienscout24.de/Suche/de/hessen/darmstadt/wohnung-kaufen?price=150000.0-');
 });
