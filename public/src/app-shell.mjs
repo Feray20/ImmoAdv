@@ -82,7 +82,8 @@ function openStage() {
   dlg.innerHTML = `<form method="dialog" class="stage-in"><div class="stage-head"><div><span class="stage-k">Einstellung</span><h2>Ihre Stufe</h2></div><button class="stage-x" value="x" aria-label="Schließen">×</button></div>
     <p class="form-note">Wählen Sie, wo Sie gerade stehen. Die ganze Anwendung stellt sich darauf ein: Startseite, Lernplan, Reihenfolge im Wissen und der Steuer-Bereich. Sie können jederzeit wechseln.</p>
     <div class="stage-opts">${PHASES.map((p, i) => `<button type="button" class="stage-opt${cur.chosen && cur.idx === i ? ' on' : ''}" data-stage="${i}"><b class="stage-n">${i + 1}</b><span><strong>${p.name}</strong><small>${p.plan}</small><em>${STAGE_EFFECT[i]}</em></span></button>`).join('')}
-    <button type="button" class="stage-opt stage-auto${cur.chosen ? '' : ' on'}" data-stage="auto"><b class="stage-n">A</b><span><strong>Automatisch</strong><small>ImmoAdv erkennt die Stufe aus Ihren Daten (Finanzprofil, Objekte, Bankreife) und stellt sie selbst um.</small></span></button></div></form>`;
+    <button type="button" class="stage-opt stage-auto${cur.chosen ? '' : ' on'}" data-stage="auto"><b class="stage-n">A</b><span><strong>Automatisch</strong><small>ImmoAdv erkennt die Stufe aus Ihren Daten (Finanzprofil, Objekte, Bankreife) und stellt sie selbst um.</small></span></button></div>
+    <p class="form-note wiz-again">Ziel geändert? <button type="button" class="link-btn wiz-open">Einrichtung neu starten</button> – Ziel, Stufe und Ansicht in drei Fragen.</p></form>`;
   dlg.querySelectorAll('[data-stage]').forEach((b) => b.onclick = () => {
     const v = b.dataset.stage === 'auto' ? null : Number(b.dataset.stage);
     dlg.close();
@@ -93,6 +94,94 @@ function openStage() {
   if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
 }
 document.addEventListener('click', (e) => { if (e.target.closest?.('.stage-open')) { e.preventDefault(); openStage(); } });
+// ---------- Einstiegs-Assistent: Ziel, Stand, Zahlen → Modus, Stufe, Lernplan, Finanzprofil ----------
+let APP = null; // { u, d, saveData, reload } – wird in setupApp gesetzt
+const GOALS = {
+  selbst: { name: 'Selbst einziehen', sub: 'Eigene Wohnung oder eigenes Haus kaufen', lern: ['budget', 'eigenkapital'] },
+  anlage: { name: 'Kapitalanlage', sub: 'Kaufen und vermieten, Vermögen aufbauen', lern: ['cashflow', 'steuer'] },
+  bestand: { name: 'Schon Eigentümer', sub: 'Bestehende Immobilien gut führen', lern: ['steuer', 'fristen'] },
+};
+const WIZ_STAND = ['Ich informiere mich erst', 'Ich prüfe konkrete Objekte', 'Ich bereite das Bankgespräch vor', 'Ich habe bereits gekauft'];
+// Empfohlene Lernthemen: Stufe plus Ziel (ohne Dopplung).
+const recLern = (d) => [...new Set([...PHASES[phaseOf(d).idx].lern, ...(GOALS[d.profile?.goal]?.lern || [])])];
+function openWizard() {
+  if (!APP) return;
+  const pr = APP.d.profile || {};
+  const st = { goal: pr.goal || '', phase: Number.isInteger(pr.phase) ? pr.phase : null, income: pr.netIncome || '', equity: pr.equity ?? '', mode: pr.mode || '' };
+  let step = 0;
+  let dlg = document.getElementById('wizDlg');
+  if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'wizDlg'; dlg.className = 'stage-dlg wiz-dlg'; document.body.append(dlg); }
+  const autoMode = () => (st.goal === 'bestand' || (st.goal === 'anlage' && st.phase >= 2) ? 'profi' : 'einsteiger');
+  const draw = () => {
+    const dots = `<div class="wiz-dots" aria-label="Schritt ${step + 1} von 4">${[0, 1, 2, 3].map((i) => `<i class="${i <= step ? 'on' : ''}"></i>`).join('')}</div>`;
+    let body = '';
+    if (step === 0) body = `<h2>Was haben Sie vor?</h2><div class="stage-opts">${Object.entries(GOALS).map(([k, g]) => `<button type="button" class="stage-opt${st.goal === k ? ' on' : ''}" data-goal="${k}"><b class="stage-n">${{ selbst: '⌂', anlage: '€', bestand: '✓' }[k]}</b><span><strong>${g.name}</strong><small>${g.sub}</small></span></button>`).join('')}</div>`;
+    if (step === 1) body = `<h2>Wo stehen Sie gerade?</h2><div class="stage-opts">${WIZ_STAND.map((t, i) => `<button type="button" class="stage-opt${st.phase === i ? ' on' : ''}" data-ph="${i}"><b class="stage-n">${i + 1}</b><span><strong>${t}</strong><small>Stufe ${i + 1} · ${PHASES[i].name}</small></span></button>`).join('')}</div>`;
+    if (step === 2) body = `<h2>Ihre Zahlen <small class="wiz-opt">optional</small></h2><p class="form-note">Damit rechnet ImmoAdv Budget und Bankreife für Sie. Sie können das auch später im Konto eintragen.</p>
+      <label class="wiz-f">Nettoeinkommen im Monat (Haushalt)<input id="wizInc" type="number" inputmode="decimal" min="0" step="50" placeholder="z. B. 4200" value="${st.income}"></label>
+      <label class="wiz-f">Eigenkapital<input id="wizEq" type="number" inputmode="decimal" min="0" step="1000" placeholder="z. B. 60000" value="${st.equity}"></label>`;
+    if (step === 3) {
+      const m = st.mode || autoMode();
+      body = `<h2>So stellen wir ImmoAdv für Sie ein</h2><ul class="wiz-sum"><li><span>Ziel</span><strong>${GOALS[st.goal]?.name || '–'}</strong></li><li><span>Stufe</span><strong>${st.phase + 1} · ${PHASES[st.phase].name}</strong></li><li><span>Lernplan</span><strong>${[...new Set([...PHASES[st.phase].lern, ...(GOALS[st.goal]?.lern || [])])].length} passende Themen</strong></li>${st.income ? `<li><span>Finanzprofil</span><strong>wird ausgefüllt</strong></li>` : ''}</ul>
+        <p class="form-note">Ansicht:</p><div class="seg wiz-mode" role="group"><button type="button" data-mode="einsteiger" aria-pressed="${m === 'einsteiger'}">Einsteiger – mit Fahrplan und Erklärungen</button><button type="button" data-mode="profi" aria-pressed="${m === 'profi'}">Profi – nur Werkzeuge</button></div>
+        <p class="form-note">Alles bleibt jederzeit änderbar: Stufe über „Stufe ändern“, Ansicht oben rechts, den Assistenten können Sie neu starten.</p>`;
+    }
+    const can = step === 0 ? Boolean(st.goal) : step === 1 ? st.phase !== null : true;
+    dlg.innerHTML = `<form method="dialog" class="stage-in"><div class="stage-head"><div><span class="stage-k">Einrichtung · Schritt ${step + 1} von 4</span>${dots}</div><button class="stage-x" value="x" aria-label="Schließen">×</button></div>${body}
+      <div class="wiz-nav">${step > 0 ? '<button type="button" class="btn btn-outline" data-nav="back">Zurück</button>' : '<span></span>'}${step < 3 ? `<button type="button" class="btn btn-dark" data-nav="next"${can ? '' : ' disabled'}>${step === 2 ? (st.income || st.equity ? 'Weiter' : 'Überspringen') : 'Weiter'}</button>` : '<button type="button" class="btn btn-dark" data-nav="save">Übernehmen</button>'}</div></form>`;
+    dlg.querySelectorAll('[data-goal]').forEach((b) => b.onclick = () => { st.goal = b.dataset.goal; if (st.goal === 'bestand' && st.phase === null) st.phase = 3; step = 1; draw(); });
+    dlg.querySelectorAll('[data-ph]').forEach((b) => b.onclick = () => { st.phase = Number(b.dataset.ph); step = 2; draw(); });
+    dlg.querySelectorAll('[data-mode]').forEach((b) => b.onclick = () => { st.mode = b.dataset.mode; draw(); });
+    const keep = () => { const i = dlg.querySelector('#wizInc'), e = dlg.querySelector('#wizEq'); if (i) st.income = i.value; if (e) st.equity = e.value; };
+    dlg.querySelector('[data-nav="back"]')?.addEventListener('click', () => { keep(); step--; draw(); });
+    dlg.querySelector('[data-nav="next"]')?.addEventListener('click', () => { keep(); step++; draw(); });
+    dlg.querySelector('[data-nav="save"]')?.addEventListener('click', async () => {
+      const { d, u, saveData, reload } = APP;
+      const prof = { ...(d.profile || {}), goal: st.goal, phase: st.phase, mode: st.mode || autoMode(), onboardedAt: new Date().toISOString() };
+      if (st.income !== '' && Number(st.income) > 0) prof.netIncome = Number(st.income);
+      if (st.equity !== '' && Number(st.equity) >= 0) prof.equity = Number(st.equity);
+      d.profile = prof;
+      dlg.close();
+      try { sessionStorage.setItem('ia-stage-msg', 'wiz'); } catch { /* ignore */ }
+      saveData(u, d).catch(() => { /* wird nachgeholt */ });
+      reload();
+    });
+  };
+  draw();
+  if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+}
+document.addEventListener('click', (e) => { if (e.target.closest?.('.wiz-open')) { e.preventDefault(); document.getElementById('stageDlg')?.close?.(); openWizard(); } });
+
+// ---------- Einladung eines Beraters annehmen (ausdrückliche Einwilligung) ----------
+async function checkBerater() {
+  let x = null;
+  try { x = JSON.parse(localStorage.getItem('ia-berater') || 'null'); } catch { x = null; }
+  if (!x || Date.now() - x.at > 14 * 864e5) { try { localStorage.removeItem('ia-berater'); } catch { /* ignore */ } return; }
+  const tok = (() => { try { return JSON.parse(localStorage.getItem('immoadv-auth-session-v1') || 'null')?.access_token; } catch { return null; } })();
+  if (!tok) return;
+  const H = { Authorization: 'Bearer ' + tok };
+  const r = await fetch('/api/me/berater?token=' + encodeURIComponent(x.t), { headers: H, cache: 'no-store' }).catch(() => null);
+  const j = r ? await r.json().catch(() => ({})) : {};
+  try { localStorage.removeItem('ia-berater'); } catch { /* ignore */ }
+  if (!r || !r.ok) { stageToast(esc(j.error || 'Die Einladung konnte nicht geladen werden.')); return; }
+  let dlg = document.getElementById('berDlg');
+  if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'berDlg'; dlg.className = 'stage-dlg'; document.body.append(dlg); }
+  dlg.innerHTML = `<form method="dialog" class="stage-in"><div class="stage-head"><div><span class="stage-k">Einladung</span><h2>${esc(j.invite.company)}</h2></div><button class="stage-x" value="x" aria-label="Schließen">×</button></div>
+    <p>${esc(j.invite.company)}${j.invite.city ? ` aus ${esc(j.invite.city)}` : ''} begleitet Sie bei Ihrer Finanzierung und möchte Ihren Fortschritt in ImmoAdv sehen.${j.invite.verified ? ' <span class="st ok">geprüftes Unternehmen</span>' : ''}</p>
+    <div class="ber-grid"><div><strong>Sichtbar</strong><ul><li>Ihre Stufe</li><li>Bankreife in Prozent</li><li>Anzahl Objekte und Unterlagen</li><li>letzte Aktivität</li></ul></div><div><strong>Nicht sichtbar</strong><ul><li>Dokumente und Inhalte</li><li>Einkommen und Zahlen</li><li>Objektadressen</li></ul></div></div>
+    <label class="consent"><input type="checkbox" id="berOk"> ${esc(j.consent)}</label>
+    <div class="wiz-nav"><button type="button" class="btn btn-outline" value="x" id="berNo">Ablehnen</button><button type="button" class="btn btn-dark" id="berYes">Zustimmen und verbinden</button></div></form>`;
+  dlg.querySelector('#berNo').onclick = () => dlg.close();
+  dlg.querySelector('#berYes').onclick = async () => {
+    if (!dlg.querySelector('#berOk').checked) { dlg.querySelector('#berOk').closest('label').classList.add('consent-missing'); return; }
+    const p = await fetch('/api/me/berater', { method: 'POST', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify({ token: x.t, consent: true }) }).catch(() => null);
+    const pj = p ? await p.json().catch(() => ({})) : {};
+    dlg.close();
+    stageToast(p && p.ok ? `<strong>Verbunden mit ${esc(pj.company)}.</strong> Trennen jederzeit im Konto unter „Berater-Freigaben“.` : esc(pj.error || 'Verbinden fehlgeschlagen.'));
+  };
+  if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+}
+
 
 const PROFI = [
   ['Szenarien: Anschlusszins und Verkauf', '/szenarien'], ['AfA-Plan inkl. Sonder-AfA § 7b', '/rechner/afa'], ['Mieterhöhung mit Briefentwurf', '/rechner/mieterhoehung'],
@@ -121,13 +210,15 @@ export function setupApp({ u, d, saveData, reload }) {
     if (m != null) {
       sessionStorage.removeItem('ia-stage-msg');
       const ph = phaseOf(d);
-      setTimeout(() => stageToast(`<strong>Auf Stufe ${ph.idx + 1} · ${PHASES[ph.idx].name} umgestellt${m === 'auto' ? ' (automatisch)' : ''}.</strong> Startseite, Lernplan und Steuer-Bereich sind angepasst.`), 250);
+      setTimeout(() => stageToast(m === 'wiz' ? `<strong>ImmoAdv ist eingerichtet: ${GOALS[d.profile?.goal]?.name || ''} · Stufe ${ph.idx + 1} · ${d.profile?.mode === 'profi' ? 'Profi' : 'Einsteiger'}.</strong> ${d.profile?.mode === 'profi' ? 'Werkzeuge, Lernplan und Steuer-Bereich' : 'Startseite, Fahrplan, Lernplan und Steuer-Bereich'} sind angepasst.` : `<strong>Auf Stufe ${ph.idx + 1} · ${PHASES[ph.idx].name} umgestellt${m === 'auto' ? ' (automatisch)' : ''}.</strong> Startseite, Lernplan und Steuer-Bereich sind angepasst.`), 250);
     }
   } catch { /* ignore */ }
   // Kaufwunsch von der Angebotsseite (vor der Anmeldung gemerkt): direkt weiter zur Bezahlseite.
   resumeIntent((t) => alert(t));
   const reloadFull = reload;
   reload = () => { document.body.classList.add('ia-switching'); reloadFull({ u, d }); };
+  APP = { u, d, saveData, reload };
+  setTimeout(() => { checkBerater().catch(() => { /* still */ }); }, 400);
   requestAnimationFrame(() => document.body.classList.remove('ia-switching'));
   const app = $('app'), grid = document.querySelector('.dashboard-grid');
   if (!app || !grid) return;
@@ -159,6 +250,28 @@ export function setupApp({ u, d, saveData, reload }) {
   // Eigene Karten: Start, Suche, Lernpfad, Angebot
   grid.insertAdjacentHTML('afterbegin', kmCard());
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide fin-card" data-view="konto" id="finCard"><h3>Tarif &amp; Rechnungen</h3><div id="finBody"><p class="form-note">Wird geladen …</p></div></article>`);
+  // Berater-Freigaben: nur sichtbar, wenn der Kunde mit einem Unternehmen verbunden ist; jederzeit trennbar.
+  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide ber-card" data-view="konto" id="berCard" hidden><h3>Berater-Freigaben</h3><div id="berBody"></div></article>`);
+  (async () => {
+    const tok = (() => { try { return JSON.parse(localStorage.getItem('immoadv-auth-session-v1') || 'null')?.access_token; } catch { return null; } })();
+    if (!tok) return;
+    const H = { Authorization: 'Bearer ' + tok };
+    const load = async () => {
+      const r = await fetch('/api/me/berater', { headers: H, cache: 'no-store' }).catch(() => null);
+      const jj = r && r.ok ? await r.json().catch(() => ({})) : {};
+      const list = jj.connections || [], card = $('berCard'), body = $('berBody');
+      if (!card || !body) return;
+      card.hidden = !list.length;
+      body.innerHTML = `<p class="form-note">Diese Unternehmen sehen Ihren Fortschritt (Stufe, Bankreife, Anzahl Unterlagen) – keine Dokumente und keine Inhalte.</p><ul class="ber-list">${list.map((c) => `<li><span><strong>${esc(c.company)}</strong><small>${c.city ? esc(c.city) + ' · ' : ''}verbunden seit ${c.since ? new Date(c.since).toLocaleDateString('de-DE') : '–'}</small></span><button type="button" class="btn btn-outline" data-ber-end="${esc(c.id)}">Trennen</button></li>`).join('')}</ul>`;
+      body.querySelectorAll('[data-ber-end]').forEach((b) => b.onclick = async () => {
+        if (!confirm('Verbindung trennen? Das Unternehmen sieht Ihren Fortschritt danach nicht mehr.')) return;
+        b.disabled = true;
+        await fetch('/api/me/berater', { method: 'DELETE', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify({ id: b.dataset.berEnd }) }).catch(() => null);
+        load();
+      });
+    };
+    load();
+  })();
   grid.insertAdjacentHTML('afterbegin', startCard(mode, d));
   // Sitzung: Angemeldet bleiben, automatische Abmeldung, Abmelden (auch auf dem Handy erreichbar).
   {
@@ -582,9 +695,9 @@ function fahrplan(idx, d) {
 function startCard(mode, d) {
   const done = Object.values(d.progress?.lern || {}).filter(Boolean).length;
   if (!d.profile?.mode && !new URLSearchParams(location.search).get('modus')) {
-    return `<article class="dash-card wide start-card" data-view="start"><h3>Willkommen! Wo stehen Sie gerade?</h3><p class="form-note">Sie können jederzeit wechseln – oben rechts.</p>
-      <div class="mode-pick"><button class="mode-card" type="button" data-pick="einsteiger"><span class="mode-tag">Einsteiger</span><strong>Ich fange gerade an</strong><span>Lernpfad, Erklärungen, Schritt für Schritt zur Finanzierung.</span></button>
-      <button class="mode-card pro" type="button" data-pick="profi"><span class="mode-tag">Profi</span><strong>Ich investiere schon</strong><span>Cockpit mit Kennzahlen, Portfolio, Datenraum.</span></button></div></article>`;
+    return `<article class="dash-card wide start-card wiz-card" data-view="start"><span class="stage-k">Willkommen bei ImmoAdv</span><h3>In drei kurzen Fragen auf Sie eingestellt</h3>
+      <p class="form-note">Ziel, Stand und – wenn Sie möchten – Ihre Zahlen. Danach passt sich alles an: Startseite, Fahrplan, Lernplan und Steuer-Bereich. Jederzeit änderbar.</p>
+      <div class="wiz-start"><button class="btn btn-dark wiz-open" type="button">Los geht's – 1 Minute</button><button class="btn btn-outline" type="button" data-pick="einsteiger">Überspringen</button></div></article>`;
   }
   const ph = phaseOf(d);
   if (mode === 'profi') {
@@ -652,7 +765,7 @@ function lernCard(mode, d) {
     <div class="lp-bar" role="progressbar" aria-label="Verstandene Themen" aria-valuenow="${n}" aria-valuemin="0" aria-valuemax="${LERN.length}"><span style="width:${Math.round((n / LERN.length) * 100)}%"></span></div>
     <p class="form-note" id="lpNote">${n} von ${LERN.length} Themen verstanden.</p>
     ${phasePicker(phaseOf(d).idx, phaseOf(d).chosen)}
-    <div class="lt-list">${lernTopics(st, PHASES[phaseOf(d).idx].lern, PHASES[phaseOf(d).idx].name, PHASES[phaseOf(d).idx].plan)}</div></article>`;
+    <div class="lt-list">${lernTopics(st, recLern(d), PHASES[phaseOf(d).idx].name + (GOALS[d.profile?.goal] ? ' · ' + GOALS[d.profile.goal].name : ''), PHASES[phaseOf(d).idx].plan)}</div></article>`;
 }
 
 let FAQ = null;

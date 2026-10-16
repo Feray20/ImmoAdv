@@ -5,7 +5,7 @@ import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSessio
 const root = document.getElementById('portal');
 const $ = (s, el = document) => el.querySelector(s);
 const VIEWS = [
-  ['start', 'Übersicht'], ['wissen', 'Fachwissen'], ['verifizierung', 'Verifizierung'], ['anfragen', 'Anfragen'], ['einreichungen', 'Einreichungen'], ['werkzeuge', 'Widget & QR'], ['team', 'Team'], ['profil', 'Profil'], ['tarif', 'Tarif & Rechnungen'],
+  ['start', 'Übersicht'], ['wissen', 'Fachwissen'], ['verifizierung', 'Verifizierung'], ['anfragen', 'Anfragen'], ['kunden', 'Kunden'], ['einreichungen', 'Einreichungen'], ['werkzeuge', 'Widget & QR'], ['team', 'Team'], ['profil', 'Profil'], ['tarif', 'Tarif & Rechnungen'],
 ];
 const TYPE = { BANK: 'Kreditinstitut', BROKER: 'Finanzierungsvermittler (§ 34i GewO)', REALTOR: 'Immobilienmakler (§ 34c GewO)', OTHER: 'Sonstiges Unternehmen' };
 const TIER = { BASIC: 'Makler & Vermittler Basic', PRO: 'Kanzlei & Baufi Pro', ENTERPRISE: 'Bank & Filiale Enterprise' };
@@ -49,7 +49,46 @@ function route() {
   $('#ptTitle').textContent = VIEWS.find(([k]) => k === view)[1];
   const box = $('#ptView');
   box.innerHTML = '<p class="form-note">Wird geladen …</p>';
-  ({ start: vStart, wissen: (b) => import('./b2b-wissen.mjs').then((m) => m.renderWissen(b)).catch(() => { b.innerHTML = '<p class="form-note">Fachwissen konnte nicht geladen werden.</p>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: vTeam, profil: vProfil, tarif: vTarif })[view](box);
+  ({ start: vStart, kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs').then((m) => m.renderWissen(b)).catch(() => { b.innerHTML = '<p class="form-note">Fachwissen konnte nicht geladen werden.</p>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: vTeam, profil: vProfil, tarif: vTarif })[view](box);
+}
+
+// ---------- Kunden: einladen und Fortschritt sehen (nur mit Einwilligung des Kunden) ----------
+const PH = ['Orientieren', 'Objekte prüfen', 'Bankgespräch', 'Bestand'];
+let KD_LAST = null; // zuletzt erstellte Einladung (Link bleibt nach dem Neuladen sichtbar)
+const kdLinkHtml = (x) => `<div class="pt-alert ok"><strong>${x.mailed ? 'Einladung per E-Mail gesendet.' : 'Einladung erstellt.'}</strong> ${x.mailed ? 'Zusätzlich können Sie den Link selbst weitergeben:' : 'Bitte den Link an Ihren Kunden senden (E-Mail-Versand ist noch nicht eingerichtet):'}<div class="pt-row kd-copy"><input readonly value="${esc(x.link)}" aria-label="Einladungslink"><button type="button" class="btn btn-outline" id="kdCopy">Kopieren</button></div><small>Gültig 14 Tage, nur einmal verwendbar.</small></div>`;
+async function vKunden(box) {
+  const r = await api('/api/b2b/clients');
+  if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  const all = r.data.clients || [];
+  const con = all.filter((c) => c.status === 'verbunden').sort((a, b) => (b.progress?.best ?? -1) - (a.progress?.best ?? -1));
+  const inv = all.filter((c) => c.status === 'eingeladen');
+  const ready = con.filter((c) => (c.progress?.best ?? 0) >= 90).length;
+  const card = (c) => {
+    const p = c.progress || {}, best = p.best ?? 0;
+    return `<article class="kd-card"><div class="kd-top"><strong>${esc(c.name || c.email || 'Kunde')}</strong>${best >= 90 ? '<span class="st ok">bankreif</span>' : best >= 60 ? '<span class="st warn">fast</span>' : '<span class="st">in Vorbereitung</span>'}</div>
+      ${c.name && c.email ? `<small class="kd-mail">${esc(c.email)}</small>` : ''}
+      <div class="kd-bar" role="img" aria-label="Bankreife ${best} %"><span style="width:${Math.max(2, Math.min(100, best))}%"></span></div>
+      <dl class="kd-dl"><div><dt>Bankreife</dt><dd>${p.best == null ? '–' : best + ' %'}</dd></div><div><dt>Stufe</dt><dd>${p.stage ? `${p.stage} · ${PH[p.stage - 1]}` : '–'}</dd></div><div><dt>Objekte</dt><dd>${p.objects ?? '–'}</dd></div><div><dt>Unterlagen</dt><dd>${p.docs ?? '–'}</dd></div><div><dt>Finanzprofil</dt><dd>${p.profile == null ? '–' : p.profile ? 'ausgefüllt' : 'offen'}</dd></div><div><dt>Zuletzt aktiv</dt><dd>${p.lastActive ? dt(p.lastActive) : '–'}</dd></div></dl>
+      <div class="kd-act"><small>verbunden seit ${c.since ? dt(c.since) : '–'}</small><button type="button" class="btn btn-ghost" data-kd-end="${esc(c.id)}">Trennen</button></div></article>`;
+  };
+  box.innerHTML = `<section class="pt-card"><h2>Kunde einladen</h2>
+      <p class="form-note">Ihr Kunde bereitet Finanzprofil, Objekt und Unterlagen in ImmoAdv vor – kostenlos. Stimmt er zu, sehen Sie hier seinen Fortschritt: Stufe, Bankreife, Anzahl Objekte und Unterlagen. Dokumente und Inhalte sehen Sie nicht; der Kunde kann die Verbindung jederzeit trennen.</p>
+      <form class="pt-row kd-form" id="kdF"><input id="kdMail" type="email" required placeholder="E-Mail des Kunden" aria-label="E-Mail des Kunden" autocomplete="off"><input id="kdName" type="text" placeholder="Name (optional)" aria-label="Name (optional)" maxlength="120"><button class="btn btn-dark" type="submit">Einladen</button></form>
+      <div id="kdLink">${KD_LAST ? kdLinkHtml(KD_LAST) : ''}</div></section>
+    <section class="pt-card"><div class="kd-head"><h2>Ihre Kunden</h2><span class="form-note">${con.length} verbunden · ${ready} bankreif · ${inv.length} Einladung${inv.length === 1 ? '' : 'en'} offen</span></div>
+      ${con.length ? `<p class="form-note">Sortiert nach Bankreife – die abschlussreifen Fälle stehen oben.</p><div class="kd-list">${con.map(card).join('')}</div>` : '<p class="form-note">Noch keine verbundenen Kunden. Laden Sie Ihren ersten Kunden oben ein.</p>'}
+      ${inv.length ? `<h3 class="kd-sub">Offene Einladungen</h3><ul class="kd-inv">${inv.map((c) => `<li><span><strong>${esc(c.name || c.email)}</strong><small>${c.name ? esc(c.email) + ' · ' : ''}gültig bis ${dt(c.expiresAt)}</small></span><button type="button" class="btn btn-ghost" data-kd-end="${esc(c.id)}">Zurückziehen</button></li>`).join('')}</ul>` : ''}</section>`;
+  $('#kdF').onsubmit = (e) => { e.preventDefault(); const b = e.target.querySelector('button'); busy(b, async () => {
+    const x = await api('/api/b2b/clients', { method: 'POST', body: JSON.stringify({ email: $('#kdMail').value.trim(), name: $('#kdName').value.trim() || undefined }) });
+    if (!x.ok) throw Error(x.data?.error || 'Einladung fehlgeschlagen.');
+    KD_LAST = x.data;
+    await vKunden(box);
+  }); };
+  $('#kdCopy')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(KD_LAST.link); toast('Link kopiert.'); } catch { toast('Bitte den Link markieren und kopieren.', true); } });
+  box.querySelectorAll('[data-kd-end]').forEach((b) => b.onclick = () => {
+    if (!confirm(b.textContent === 'Trennen' ? 'Verbindung zu diesem Kunden trennen? Sie sehen seinen Fortschritt danach nicht mehr.' : 'Einladung zurückziehen? Der Link wird ungültig.')) return;
+    busy(b, async () => { const x = await api('/api/b2b/clients', { method: 'DELETE', body: JSON.stringify({ id: b.dataset.kdEnd }) }); if (!x.ok) throw Error(x.data?.error || 'Fehlgeschlagen.'); toast('Erledigt.'); vKunden(box); });
+  });
 }
 
 // ---------- Übersicht ----------
