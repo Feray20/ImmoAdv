@@ -168,7 +168,7 @@ async function checkBerater() {
   if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'berDlg'; dlg.className = 'stage-dlg'; document.body.append(dlg); }
   dlg.innerHTML = `<form method="dialog" class="stage-in"><div class="stage-head"><div><span class="stage-k">Einladung</span><h2>${esc(j.invite.company)}</h2></div><button class="stage-x" value="x" aria-label="Schließen">×</button></div>
     <p>${esc(j.invite.company)}${j.invite.city ? ` aus ${esc(j.invite.city)}` : ''} begleitet Sie bei Ihrer Finanzierung und möchte Ihren Fortschritt in ImmoAdv sehen.${j.invite.verified ? ' <span class="st ok">geprüftes Unternehmen</span>' : ''}</p>
-    <div class="ber-grid"><div><strong>Sichtbar</strong><ul><li>Ihre Stufe</li><li>Bankreife in Prozent</li><li>Anzahl Objekte und Unterlagen</li><li>letzte Aktivität</li></ul></div><div><strong>Nicht sichtbar</strong><ul><li>Dokumente und Inhalte</li><li>Einkommen und Zahlen</li><li>Objektadressen</li></ul></div></div>
+    <div class="ber-grid"><div><strong>Sichtbar</strong><ul><li>Ihre Stufe</li><li>Bankreife in Prozent</li><li>Anzahl Objekte und Unterlagen</li><li>welche Unterlagen-Arten fehlen</li><li>letzte Aktivität</li></ul></div><div><strong>Nicht sichtbar</strong><ul><li>Dokumente und Inhalte</li><li>Einkommen und Zahlen</li><li>Objektadressen</li></ul></div></div>
     <label class="consent"><input type="checkbox" id="berOk"> ${esc(j.consent)}</label>
     <div class="wiz-nav"><button type="button" class="btn btn-outline" value="x" id="berNo">Ablehnen</button><button type="button" class="btn btn-dark" id="berYes">Zustimmen und verbinden</button></div></form>`;
   dlg.querySelector('#berNo').onclick = () => dlg.close();
@@ -262,7 +262,18 @@ export function setupApp({ u, d, saveData, reload }) {
       const list = jj.connections || [], card = $('berCard'), body = $('berBody');
       if (!card || !body) return;
       card.hidden = !list.length;
-      body.innerHTML = `<p class="form-note">Diese Unternehmen sehen Ihren Fortschritt (Stufe, Bankreife, Anzahl Unterlagen) – keine Dokumente und keine Inhalte.</p><ul class="ber-list">${list.map((c) => `<li><span><strong>${esc(c.company)}</strong><small>${c.city ? esc(c.city) + ' · ' : ''}verbunden seit ${c.since ? new Date(c.since).toLocaleDateString('de-DE') : '–'}</small></span><button type="button" class="btn btn-outline" data-ber-end="${esc(c.id)}">Trennen</button></li>`).join('')}</ul>`;
+      // Bitte eines Beraters um fehlende Unterlagen: Hinweis oben in der Übersicht.
+      document.getElementById('reqBanner')?.remove();
+      const req = list.find((c) => c.request);
+      if (req) {
+        const miss = (d.progress?.summary?.missing || []).slice(0, 6);
+        grid.insertAdjacentHTML('afterbegin', `<article class="dash-card wide req-banner" data-view="start" id="reqBanner"><span class="stage-k">Bitte Ihres Beraters</span><h3>${esc(req.company)} bittet um Ihre fehlenden Unterlagen</h3>${req.note ? `<p class="req-note">„${esc(req.note)}“</p>` : ''}${miss.length ? `<ul class="req-miss">${miss.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>` : '<p class="form-note">Öffnen Sie Ihr Objekt und ergänzen Sie die Unterlagen, die bei „Bankreife“ als offen markiert sind.</p>'}<div class="wiz-start"><a class="btn btn-dark" href="#objekte" id="reqGo">Unterlagen ergänzen</a><button type="button" class="btn btn-outline" id="reqSeen">Ausblenden</button></div></article>`);
+        const seen = () => fetch('/api/me/berater', { method: 'POST', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify({ seen: req.id }) }).catch(() => null);
+        $('reqSeen').onclick = async () => { await seen(); document.getElementById('reqBanner')?.remove(); };
+        $('reqGo').onclick = () => { seen(); };
+        if (typeof window.__iaApplyView === 'function') window.__iaApplyView();
+      }
+      body.innerHTML = `<p class="form-note">Diese Unternehmen sehen Ihren Fortschritt (Stufe, Bankreife, Anzahl Unterlagen, fehlende Unterlagen-Arten) – keine Dokumente und keine Inhalte.</p><ul class="ber-list">${list.map((c) => `<li><span><strong>${esc(c.company)}</strong><small>${c.city ? esc(c.city) + ' · ' : ''}verbunden seit ${c.since ? new Date(c.since).toLocaleDateString('de-DE') : '–'}</small></span><button type="button" class="btn btn-outline" data-ber-end="${esc(c.id)}">Trennen</button></li>`).join('')}</ul>`;
       body.querySelectorAll('[data-ber-end]').forEach((b) => b.onclick = async () => {
         if (!confirm('Verbindung trennen? Das Unternehmen sieht Ihren Fortschritt danach nicht mehr.')) return;
         b.disabled = true;
@@ -316,6 +327,7 @@ export function setupApp({ u, d, saveData, reload }) {
   if (window.__iaHash) window.removeEventListener('hashchange', window.__iaHash);
   window.__iaHash = () => { apply(); window.scrollTo(0, 0); };
   window.addEventListener('hashchange', window.__iaHash);
+  window.__iaApplyView = apply;
   new MutationObserver(apply).observe(grid, { childList: true });
   apply();
 }

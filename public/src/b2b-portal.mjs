@@ -69,6 +69,9 @@ async function vKunden(box) {
       ${c.name && c.email ? `<small class="kd-mail">${esc(c.email)}</small>` : ''}
       <div class="kd-bar" role="img" aria-label="Bankreife ${best} %"><span style="width:${Math.max(2, Math.min(100, best))}%"></span></div>
       <dl class="kd-dl"><div><dt>Bankreife</dt><dd>${p.best == null ? '–' : best + ' %'}</dd></div><div><dt>Stufe</dt><dd>${p.stage ? `${p.stage} · ${PH[p.stage - 1]}` : '–'}</dd></div><div><dt>Objekte</dt><dd>${p.objects ?? '–'}</dd></div><div><dt>Unterlagen</dt><dd>${p.docs ?? '–'}</dd></div><div><dt>Finanzprofil</dt><dd>${p.profile == null ? '–' : p.profile ? 'ausgefüllt' : 'offen'}</dd></div><div><dt>Zuletzt aktiv</dt><dd>${p.lastActive ? dt(p.lastActive) : '–'}</dd></div></dl>
+      ${p.missing && p.missing.length ? `<div class="kd-miss"><strong>Fehlt noch:</strong> ${p.missing.map(esc).join(' · ')}</div>` : p.missing ? '<div class="kd-miss ok">Alle Unterlagen-Arten vorhanden.</div>' : ''}
+      <div class="kd-btns"><button type="button" class="btn btn-dark" data-kd-req="${esc(c.id)}"${c.lastRequestAt && Date.now() - new Date(c.lastRequestAt).getTime() < 864e5 ? ' disabled title="Heute bereits erinnert"' : ''}>Unterlagen anfordern</button><button type="button" class="btn btn-outline" data-kd-pdf="${esc(c.id)}">Kurzbericht (PDF)</button></div>
+      ${c.lastRequestAt ? `<small class="kd-last">Zuletzt erinnert: ${dtt(c.lastRequestAt)}</small>` : ''}
       <div class="kd-act"><small>verbunden seit ${c.since ? dt(c.since) : '–'}</small><button type="button" class="btn btn-ghost" data-kd-end="${esc(c.id)}">Trennen</button></div></article>`;
   };
   box.innerHTML = `<section class="pt-card"><h2>Kunde einladen</h2>
@@ -85,6 +88,17 @@ async function vKunden(box) {
     await vKunden(box);
   }); };
   $('#kdCopy')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(KD_LAST.link); toast('Link kopiert.'); } catch { toast('Bitte den Link markieren und kopieren.', true); } });
+  box.querySelectorAll('[data-kd-req]').forEach((b) => b.onclick = () => {
+    const note = prompt('Optional: kurze Nachricht an Ihren Kunden (z. B. „Bitte bis Freitag“). Leer lassen für die Standard-Erinnerung.');
+    if (note === null) return;
+    busy(b, async () => {
+      const x = await api('/api/b2b/clients/request', { method: 'POST', body: JSON.stringify({ id: b.dataset.kdReq, note: note.trim() || undefined }) });
+      if (!x.ok) throw Error(x.data?.error || 'Erinnerung fehlgeschlagen.');
+      toast(x.data.mailed ? 'Erinnerung per E-Mail gesendet und in der App angezeigt.' : 'Erinnerung wird dem Kunden in der App angezeigt (E-Mail-Versand noch nicht eingerichtet).');
+      vKunden(box);
+    });
+  });
+  box.querySelectorAll('[data-kd-pdf]').forEach((b) => b.onclick = () => busy(b, async () => { await download('/api/b2b/clients/report?id=' + encodeURIComponent(b.dataset.kdPdf), {}, 'ImmoAdv-Kurzbericht.pdf'); }));
   box.querySelectorAll('[data-kd-end]').forEach((b) => b.onclick = () => {
     if (!confirm(b.textContent === 'Trennen' ? 'Verbindung zu diesem Kunden trennen? Sie sehen seinen Fortschritt danach nicht mehr.' : 'Einladung zurückziehen? Der Link wird ungültig.')) return;
     busy(b, async () => { const x = await api('/api/b2b/clients', { method: 'DELETE', body: JSON.stringify({ id: b.dataset.kdEnd }) }); if (!x.ok) throw Error(x.data?.error || 'Fehlgeschlagen.'); toast('Erledigt.'); vKunden(box); });

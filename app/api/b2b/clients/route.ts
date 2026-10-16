@@ -8,16 +8,16 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // Unternehmensportal → Kunden: Kunden einladen und – nach ausdrücklicher Einwilligung des Kunden – ihren Fortschritt sehen.
-// Sichtbar sind nur Zahlen (Stufe, Bankreife, Anzahl Objekte und Unterlagen), nie Dokumente oder Inhalte.
+// Sichtbar sind nur Zahlen (Stufe, Bankreife, Anzahl Objekte und Unterlagen) und die Arten fehlender Unterlagen – nie Dokumente oder Inhalte.
 const INVITE_DAYS = 14;
 
-type Summary = { stage?: number; level?: number; best?: number; objects?: number; docs?: number; profile?: boolean; at?: string };
+type Summary = { stage?: number; level?: number; best?: number; objects?: number; docs?: number; profile?: boolean; missing?: string[]; at?: string };
 
 export async function GET(req: Request) {
   const ctx = await requireMember(req, { bucket: 'b2b-clients' });
   if (ctx instanceof Response) return ctx;
   const db = supabaseAdmin();
-  const { data: rows } = await db.from('immo_b2b_clients').select('id, client_name, client_email, status, client_user_id, consent_at, expires_at, created_at, ended_at')
+  const { data: rows } = await db.from('immo_b2b_clients').select('id, client_name, client_email, status, client_user_id, consent_at, expires_at, created_at, ended_at, last_request_at')
     .eq('account_id', ctx.account.id).neq('status', 'getrennt').order('created_at', { ascending: false }).limit(500);
   const now = Date.now();
   const list = (rows ?? []).filter((r) => r.status === 'verbunden' || (r.expires_at && new Date(r.expires_at).getTime() > now));
@@ -29,7 +29,8 @@ export async function GET(req: Request) {
     const s = ((u?.progress as { summary?: Summary } | null)?.summary) || {};
     return {
       id: r.id, name: r.client_name, email: r.client_email, status: r.status, since: r.consent_at, invitedAt: r.created_at, expiresAt: r.expires_at,
-      progress: r.status === 'verbunden' ? { stage: s.stage ?? null, level: s.level ?? null, best: s.best ?? null, objects: s.objects ?? null, docs: s.docs ?? null, profile: s.profile ?? null, lastActive: u?.updated_at ?? null } : null,
+      progress: r.status === 'verbunden' ? { stage: s.stage ?? null, level: s.level ?? null, best: s.best ?? null, objects: s.objects ?? null, docs: s.docs ?? null, profile: s.profile ?? null, missing: Array.isArray(s.missing) ? s.missing.slice(0, 8).map(String) : null, lastActive: u?.updated_at ?? null } : null,
+      lastRequestAt: r.last_request_at,
     };
   });
   return json({ clients });

@@ -404,3 +404,26 @@ body{max-width:100%;overflow-x:clip}
 .kd-sub{margin:18px 0 8px;font-size:15px;color:#0F2C59}
 .kd-inv{list-style:none;margin:0;padding:0;display:grid;gap:6px}.kd-inv li{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px dashed #CBD5E1;border-radius:10px;padding:8px 12px}
 .kd-inv span{display:grid}.kd-inv small{color:#64748B;font-size:12.5px}
+.kd-miss{font-size:13.5px;line-height:1.45;color:#7C2D12;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:8px 10px}
+.kd-miss.ok{color:#14532D;background:#F0FDF4;border-color:#BBF7D0}
+.kd-btns{display:flex;gap:8px;flex-wrap:wrap}.kd-btns .btn{flex:1 1 140px;min-height:42px;justify-content:center;font-size:14px}
+.kd-last{color:#64748B;font-size:12.5px}
+/* Web-Admin: Funnel */
+.fn{display:grid;gap:8px}
+.fn-row{display:grid;grid-template-columns:minmax(150px,240px) minmax(0,1fr) 64px 150px;gap:10px;align-items:center;font-size:14px}
+.fn-l{color:#0F2C59;font-weight:600}
+.fn-bar{height:14px;border-radius:99px;background:#E2E8F0;overflow:hidden}.fn-bar i{display:block;height:100%;background:linear-gradient(90deg,#0F2C59,#0284C7)}
+.fn-n{text-align:right;color:#0F2C59;font-variant-numeric:tabular-nums}
+.fn-c{color:#64748B;font-size:12.5px;text-transform:none;letter-spacing:0}
+.fn-period{margin:0 0 10px}
+@media (max-width:700px){.fn-row{grid-template-columns:1fr auto;grid-template-areas:"l n" "b b" "c c";gap:4px 10px;padding-bottom:6px;border-bottom:1px solid #E2E8F0}.fn-l{grid-area:l}.fn-n{grid-area:n}.fn-bar{grid-area:b}.fn-c{grid-area:c}}
+.fn-period{display:flex;gap:6px;flex-wrap:wrap}
+.fn-period button{border:1px solid #CBD5E1;background:#fff;border-radius:999px;padding:6px 14px;font:inherit;font-size:13.5px;font-weight:600;color:#334155;cursor:pointer;min-height:36px}
+.fn-period button[aria-pressed="true"]{background:#0F2C59;color:#fff;border-color:#0F2C59}
+/* Finanz-Cockpit: weicher Wechsel */
+.ck-res{transition:opacity .18s ease}
+.ck-res.ck-busy{opacity:.45;pointer-events:none}
+.ad-period .seg button{transition:background .15s,color .15s}
+.de-date{position:relative;display:block}
+.de-txt{display:flex;align-items:center;justify-content:center;min-height:46px;border:1px solid #CBD5E1;border-radius:8px;background:#fff;font-size:16px;font-weight:600;color:#0F172A;pointer-events:none}
+.de-date input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}

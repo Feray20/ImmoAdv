@@ -191,16 +191,31 @@ async function uebersicht(v) {
     tile('Umsatz diesen Monat', eur(x.revenueMonthCents), 'bezahlte Rechnungen (brutto)', 'cockpit'),
     tile('Offene Rechnungen', n(x.openInvoices), 'Privatkunden', 'rechnungen', x.openInvoices ? 'warn' : ''),
   ];
+  const funnelBox = '<h3 class="ad-sub">Funnel: wo Nutzer abspringen</h3><div class="ad-period fn-period" role="group" aria-label="Zeitraum">' + [['30', '30 Tage'], ['90', '90 Tage'], ['', 'Gesamt']].map(([k, l]) => `<button type="button" data-fn="${k}" aria-pressed="${k === ''}">${l}</button>`).join('') + '</div><div id="funnel" class="fn"><p class="form-note">Wird geladen …</p></div>';
   const mails = MAILS[seg].map(([l, k]) => { const [a, t] = mailState(k, m); return `<li><span class="ad-amp ${a}"></span><span>${l}</span><small>${t}</small></li>`; }).join('');
   v.innerHTML = `<section class="ad-over">
     <div class="ad-over-h"><h2>${SEGS[seg]}</h2><p class="form-note">Gleiche Kennzahlen, getrennt nach Bereich. Umschalten oben rechts (${seg === 'b2b' ? 'B2B' : 'B2C'} ⇄). Administratoren zählen nicht mit. Nur Zahlen, keine Inhalte.</p></div>
     <h3 class="ad-sub">Konten & Nutzung</h3><div class="ad-tiles">${common.join('')}</div>
     <h3 class="ad-sub">${seg === 'b2b' ? 'Unternehmen, Anfragen & Abrechnung' : 'Kunden & Umsatz'}</h3><div class="ad-tiles">${spec.join('')}</div>
+    ${funnelBox}
     <h3 class="ad-sub">E-Mails an ${seg === 'b2b' ? 'Unternehmen' : 'Privatkunden'}</h3>
     <div class="ad-tiles ad-tiles-wide"><div class="ad-tile ad-mailtile${m.ready ? '' : ' warn'}"><span class="ad-tile-l">Absender</span><strong>${m.ready ? esc(m.from) : 'noch nicht eingerichtet'}</strong>
       <ul class="ad-mails">${mails}</ul>
       <a class="btn ${m.ready ? 'btn-outline' : 'btn-dark'}" href="#system-mail">${m.ready ? 'E-Mail-Einstellungen' : 'Jetzt einrichten – Schritt für Schritt'}</a></div></div>
   </section>`;
+  loadFunnel(seg);
+  v.querySelectorAll('[data-fn]').forEach((b) => b.onclick = () => { v.querySelectorAll('[data-fn]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); loadFunnel(seg, b.dataset.fn); });
+}
+
+async function loadFunnel(seg, days = '') {
+  const box = $('#funnel'); if (!box) return;
+  const r = await api(`/api/admin/system?funnel=${seg}${days ? `&days=${days}` : ''}`);
+  if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  const steps = r.data.steps || [], first = Number(steps[0]?.[1] || 0);
+  box.innerHTML = steps.map(([l, n], i) => {
+    const prev = i ? Number(steps[i - 1][1]) : n, pct = first ? Math.round((n / first) * 100) : 0, conv = prev ? Math.round((n / prev) * 100) : 0;
+    return `<div class="fn-row"><span class="fn-l">${esc(l)}</span><span class="fn-bar"><i style="width:${first ? Math.max(2, pct) : 0}%"></i></span><strong class="fn-n">${Number(n).toLocaleString('de-DE')}</strong><small class="fn-c">${i ? (prev ? `${conv} % vom Schritt davor` : '–') : 'Start'}</small></div>`;
+  }).join('') + (first ? '' : '<p class="form-note">Noch keine Daten in diesem Zeitraum.</p>') + '<p class="form-note">Nur Zahlen, keine Personen. Administratoren zählen nicht mit. Der größte Abfall zwischen zwei Schritten zeigt, wo Hilfe am meisten bringt.</p>';
 }
 
 // ---------- E-Mail-Versand einrichten (System) ----------
@@ -330,16 +345,20 @@ async function system(v, focusMail = false) {
 }
 
 // ---------- Finanz-Cockpit ----------
-async function cockpit(v, zeitraum = 'monat', von = '', bis = '') {
-  const r = await api(`/api/admin/finance?zeitraum=${zeitraum}&von=${von}&bis=${bis}`);
-  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
-  const d = r.data;
+// Finanz-Cockpit: Zeitraum-Leiste bleibt stehen; nur die Ergebnisse werden (weich) ausgetauscht. Ergebnisse je Zeitraum zwischengespeichert.
+const CK_CACHE = new Map();
+const isoD = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+function rangeOf(z) {
+  const now = new Date(), t = isoD(now);
+  if (z === 'heute') return [t, t];
+  if (z === 'woche') { const m = new Date(now); m.setDate(now.getDate() - ((now.getDay() + 6) % 7)); return [isoD(m), t]; }
+  if (z === 'monat') return [isoD(new Date(now.getFullYear(), now.getMonth(), 1)), t];
+  if (z === 'jahr') return [isoD(new Date(now.getFullYear(), 0, 1)), t];
+  return ['', t];
+}
+function ckResults(d) {
   const tile = (l, x, s = '') => `<div class="pt-kpi"><small>${l}</small><strong>${x}</strong>${s ? `<span class="form-note">${s}</span>` : ''}</div>`;
-  const iso = (x) => x.toISOString().slice(0, 10);
-  const now = new Date();
-  const dv = von || iso(new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1))), db = bis || iso(now);
-  v.innerHTML = `<div class="ad-period"><div class="seg" role="tablist" aria-label="Zeitraum">${[['heute', 'Heute'], ['woche', 'Woche'], ['monat', 'Monat'], ['jahr', 'Jahr'], ['gesamt', 'Gesamt']].map(([k, l]) => `<button type="button" data-z="${k}" aria-selected="${k === zeitraum}">${l}</button>`).join('')}</div>
-      <div class="ad-range"><label>Von<input type="date" id="zv" value="${esc(dv)}" max="${esc(iso(now))}"></label><label>Bis<input type="date" id="zb" value="${esc(db)}" max="${esc(iso(now))}"></label><button class="btn btn-outline" id="zf" type="button">Eigener Zeitraum</button></div></div>
+  return `
     <h2>${esc(d.range.label)}</h2>
     <div class="pt-kpis">${tile('Umsatz netto', eur(d.revenue.net), `${d.revenue.count} Rechnungen${d.revenue.stornos ? `, ${d.revenue.stornos} Korrekturen` : ''}`)}${tile('Umsatzsteuer 19 %', eur(d.revenue.vat))}${tile('Umsatz brutto', eur(d.revenue.gross))}${tile('Offene Posten', String(d.openItems.length), eur(d.openItems.reduce((s, x) => s + Number(x.gross_cents), 0)))}</div>
     <div class="pt-kpis">${tile('MRR netto', eur(d.recurring.mrrNet), 'aus Stripe-Abos zum Listenpreis')}${tile('ARR netto', eur(d.recurring.arrNet))}${tile('Aktive Tarife', String(d.recurring.activeAccounts), `Basic ${d.recurring.byTier.BASIC} · Pro ${d.recurring.byTier.PRO} · Enterprise ${d.recurring.byTier.ENTERPRISE}${d.recurring.manualWithoutPrice ? ` · ${d.recurring.manualWithoutPrice} manuell` : ''}`)}${tile('Abgelaufen im Zeitraum', String(d.recurring.expiredInRange))}</div>
@@ -349,9 +368,43 @@ async function cockpit(v, zeitraum = 'monat', von = '', bis = '') {
     <h2>Offene Posten</h2>${d.openItems.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Ampel</th><th>Nummer</th><th>Kunde</th><th>Fällig</th><th>Brutto</th><th></th></tr></thead><tbody>
       ${d.openItems.map((x) => `<tr><td><span class="ad-amp ${x.ampel}"></span>${x.daysOverdue > 0 ? `${x.daysOverdue} Tage` : 'fristgerecht'}</td><td>${esc(x.invoice_number)}</td><td>${esc(x.buyer?.company)}</td><td>${dt(x.due_date)}</td><td>${eur(x.gross_cents)}</td><td class="ad-actions"><button data-paid="${x.id}" type="button">Als bezahlt markieren</button><button data-remind="${x.id}" type="button">Zahlungserinnerung senden</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine offenen Posten.</p>'}
     <h2>Rechnungen im Zeitraum</h2>${invTable(d.invoices)}`;
-  v.querySelectorAll('[data-z]').forEach((b) => b.onclick = () => cockpit(v, b.dataset.z));
-  $('#zf').onclick = () => cockpit(v, 'frei', $('#zv').value, $('#zb').value);
-  bindInv(v, () => cockpit(v, zeitraum, von, bis));
+}
+async function cockpit(v, zeitraum = 'monat', von = '', bis = '') {
+  const today = isoD(new Date());
+  // Rahmen nur einmal aufbauen
+  if (!v.querySelector('#ckRes')) {
+    const [dv, db] = rangeOf(zeitraum);
+    v.innerHTML = `<div class="ad-period"><div class="seg" role="tablist" aria-label="Zeitraum">${[['heute', 'Heute'], ['woche', 'Woche'], ['monat', 'Monat'], ['jahr', 'Jahr'], ['gesamt', 'Gesamt']].map(([k, l]) => `<button type="button" role="tab" data-z="${k}" aria-selected="${k === zeitraum}">${l}</button>`).join('')}</div>
+      <div class="ad-range"><label>Von<span class="de-date"><span class="de-txt" data-for="zv"></span><input type="date" id="zv" value="${esc(von || dv)}" max="${today}"></span></label><label>Bis<span class="de-date"><span class="de-txt" data-for="zb"></span><input type="date" id="zb" value="${esc(bis || db)}" max="${today}"></span></label><button class="btn btn-outline" id="zf" type="button">Eigener Zeitraum</button></div></div>
+      <div id="ckRes" class="ck-res" aria-live="polite"><p class="form-note">Wird geladen …</p></div>`;
+    v.querySelectorAll('[data-z]').forEach((b) => b.onclick = () => {
+      v.querySelectorAll('[data-z]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+      const [a1, b1] = rangeOf(b.dataset.z); $('#zv').value = a1; $('#zb').value = b1; v.__deTxt?.();
+      ckLoad(v, b.dataset.z, '', '');
+    });
+    // Deutsche Datumsanzeige über dem nativen Feld (iPhone zeigt sonst die Gerätesprache).
+    const deTxt = () => v.querySelectorAll('.de-txt').forEach((t) => { const val = $('#' + t.dataset.for).value; t.textContent = val ? new Date(val + 'T12:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'seit Beginn'; });
+    ['#zv', '#zb'].forEach((id) => $(id).addEventListener('change', deTxt)); deTxt(); v.__deTxt = deTxt;
+    $('#zf').onclick = () => { v.querySelectorAll('[data-z]').forEach((x) => x.setAttribute('aria-selected', 'false')); ckLoad(v, 'frei', $('#zv').value, $('#zb').value); };
+  }
+  await ckLoad(v, zeitraum, von, bis);
+}
+let ckSeq = 0;
+async function ckLoad(v, zeitraum, von, bis, fresh = false) {
+  const box = v.querySelector('#ckRes'); if (!box) return;
+  const key = `${zeitraum}|${von}|${bis}`, my = ++ckSeq;
+  const paint = (d) => {
+    box.innerHTML = ckResults(d);
+    box.classList.remove('ck-busy');
+    bindInv(box, () => { CK_CACHE.clear(); ckLoad(v, zeitraum, von, bis, true); });
+  };
+  if (!fresh && CK_CACHE.has(key)) { paint(CK_CACHE.get(key)); return; }
+  box.classList.add('ck-busy');
+  const r = await api(`/api/admin/finance?zeitraum=${zeitraum}&von=${von}&bis=${bis}`);
+  if (my !== ckSeq) return; // veraltete Antwort (inzwischen anderer Zeitraum gewählt)
+  if (!r.ok) { box.classList.remove('ck-busy'); box.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  CK_CACHE.set(key, r.data);
+  paint(r.data);
 }
 
 // Einfache Balken mit Wertbeschriftung; Monate ohne Umsatz bleiben sichtbar (0 €). Kurze Monatsnamen, Jahr nur im Januar.

@@ -65,6 +65,17 @@ export async function GET(req: Request) {
     return j(data);
   }
 
+  // Funnel je Bereich: wie viele Nutzer welchen Schritt erreichen (nur Zahlen).
+  const fseg = q.get('funnel');
+  if (fseg) {
+    if (fseg !== 'b2c' && fseg !== 'b2b') return j({ error: 'Ungültiger Bereich.' }, 400);
+    if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
+    const days = Number(q.get('days')) || null;
+    const { data, error } = await supabaseAdmin().rpc('admin_funnel', { seg: fseg, admins: adminList(), days: days && [30, 90, 365].includes(days) ? days : null });
+    if (error) return j({ error: 'Funnel nicht verfügbar.' }, 502);
+    return j(data);
+  }
+
   // Sicherheitsübersicht (Konten, Zwei-Faktor, Sitzungen, Konto-Ereignisse, abgewehrte Zugriffe).
   if (q.get('security')) {
     if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);

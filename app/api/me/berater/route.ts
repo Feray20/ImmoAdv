@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 // Kunde (Website-Konto): Einladung eines Beraters ansehen, zustimmen, Verbindungen anzeigen und trennen.
 const j = (b: unknown, s = 200) => NextResponse.json(b, { status: s, headers: { 'Cache-Control': 'no-store' } });
-const CONSENT = 'Ich willige ein, dass das genannte Unternehmen meinen Fortschritt in ImmoAdv sieht: Stufe, Bankreife in Prozent, Anzahl meiner Objekte und Unterlagen, Zeitpunkt der letzten Aktivität. Dokumente und Inhalte werden nicht geteilt. Ich kann die Einwilligung jederzeit in meinem Konto widerrufen.';
+const CONSENT = 'Ich willige ein, dass das genannte Unternehmen meinen Fortschritt in ImmoAdv sieht: Stufe, Bankreife in Prozent, Anzahl meiner Objekte und Unterlagen, welche Arten von Unterlagen noch fehlen (z. B. „Grundbuch und Flurkarte“) und den Zeitpunkt meiner letzten Aktivität. Dokumente und Inhalte werden nicht geteilt. Das Unternehmen kann mich per E-Mail an fehlende Unterlagen erinnern. Ich kann die Einwilligung jederzeit in meinem Konto widerrufen.';
 const Tok = z.string().regex(/^[A-Za-z0-9_-]{20,100}$/);
 
 async function ctx(req: Request) {
@@ -39,16 +39,26 @@ export async function GET(req: Request) {
     return j({ invite: { company: inv.company.company_name, city: inv.company.city, verified: Boolean(inv.company.verified_at) }, consent: CONSENT });
   }
   const db = supabaseAdmin();
-  const { data } = await db.from('immo_b2b_clients').select('id, account_id, consent_at').eq('client_user_id', c.user!.id).eq('status', 'verbunden');
+  const { data } = await db.from('immo_b2b_clients').select('id, account_id, consent_at, last_request_at, request_note, request_seen_at').eq('client_user_id', c.user!.id).eq('status', 'verbunden');
   const accIds = [...new Set((data ?? []).map((x) => x.account_id))];
   const { data: accs } = accIds.length ? await db.from('immo_b2b_accounts').select('id, company_name, city').in('id', accIds) : { data: [] };
   const byId = new Map((accs ?? []).map((a) => [a.id, a]));
-  return j({ connections: (data ?? []).map((x) => ({ id: x.id, company: byId.get(x.account_id)?.company_name || 'Unternehmen', city: byId.get(x.account_id)?.city || null, since: x.consent_at })) });
+  return j({ connections: (data ?? []).map((x) => ({
+    id: x.id, company: byId.get(x.account_id)?.company_name || 'Unternehmen', city: byId.get(x.account_id)?.city || null, since: x.consent_at,
+    // Offene Bitte des Beraters um fehlende Unterlagen (bis der Kunde sie gesehen hat).
+    request: x.last_request_at && (!x.request_seen_at || new Date(x.request_seen_at) < new Date(x.last_request_at)) ? { at: x.last_request_at, note: x.request_note || null } : null,
+  })) });
 }
 
 export async function POST(req: Request) {
   const c = await ctx(req); if (c.err) return c.err;
-  const p = z.object({ token: Tok, consent: z.literal(true) }).safeParse(await req.json().catch(() => null));
+  const body = await req.json().catch(() => null);
+  const seen = z.object({ seen: z.string().uuid() }).safeParse(body);
+  if (seen.success) {
+    await supabaseAdmin().from('immo_b2b_clients').update({ request_seen_at: new Date().toISOString() }).eq('id', seen.data.seen).eq('client_user_id', c.user!.id);
+    return j({ ok: true });
+  }
+  const p = z.object({ token: Tok, consent: z.literal(true) }).safeParse(body);
   if (!p.success) return j({ error: 'Bitte der Freigabe ausdrücklich zustimmen.' }, 400);
   const inv = await inviteByToken(p.data.token);
   if (!inv) return j({ error: 'Diese Einladung ist abgelaufen oder wurde schon verwendet.' }, 404);
