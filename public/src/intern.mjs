@@ -1,7 +1,7 @@
 // Admin-Zentrale (nur ADMIN_EMAILS, mit zweitem Faktor): Finanz-Cockpit, Partner, Rechnungsarchiv,
 // Steuer-Export, Anfragen und Codes, Protokoll, Betreiber-Kennzahlen sowie Objektsuche und Analyse.
 import { mountObjekt } from './objekt-ui.mjs';
-import { api, download, dt, dtt, esc, eur, logout, session, setSession, supa, token } from './sess.mjs';
+import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs';
 
 const root = document.getElementById('intern');
 const $ = (s, el = document) => el.querySelector(s);
@@ -11,9 +11,14 @@ const msg = (t, bad = false) => { const el = $('#adMsg'); if (el) { el.textConte
 
 // ---------- Zugang ----------
 async function gate() {
-  if (!token()) { root.innerHTML = '<h1>Interner Bereich</h1><p>Bitte zuerst <a class="ck-link" href="/auth/login?next=/intern/web-admin">anmelden</a>.</p>'; return false; }
+  const adminLogin = () => loginForm(root, {
+    title: 'Web-Admin', lead: 'Anmeldung nur für Administratoren. Getrennt vom Kundenkonto und vom Unternehmensportal.',
+    note: 'Nach dem Passwort folgt der Code aus Google Authenticator.',
+    check: async (d) => { const r = await fetch('/api/admin/check', { headers: { Authorization: 'Bearer ' + d.access_token }, cache: 'no-store' }); const j = await r.json().catch(() => ({})); return j.admin ? null : (j.ipBlocked ? 'Kein Zugriff von dieser IP-Adresse.' : 'Falsche Anmeldedaten oder kein Zugang zum Web-Admin.'); },
+  });
+  if (!token()) { adminLogin(); return false; }
   const r = await api('/api/admin/check');
-  if (r.status === 401) { root.innerHTML = '<h1>Interner Bereich</h1><p>Sitzung abgelaufen. Bitte neu <a class="ck-link" href="/auth/login?next=/intern/web-admin">anmelden</a>.</p>'; return false; }
+  if (r.status === 401) { setSession(null); adminLogin(); return false; }
   if (r.data?.ipBlocked) { root.innerHTML = '<h1>Kein Zugriff</h1><p>Zugriff von dieser IP-Adresse ist nicht freigegeben (ADMIN_IP_ALLOWLIST in Vercel).</p>'; return false; }
   if (!r.data?.admin) {
     root.innerHTML = `<h1>Kein Zugriff</h1><p>Dieser Bereich ist nur für Administratoren.${r.data?.configured === false ? ' (In Vercel ist noch keine Administrator-Adresse hinterlegt: Variable ADMIN_EMAILS.)' : ''}</p>`;

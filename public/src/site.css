@@ -751,3 +751,21 @@ details.lt summary .lt-title{flex:1;min-width:0}
 .mfa-list li{display:flex;justify-content:space-between;gap:10px;border:1px solid #E2E8F0;border-radius:10px;padding:10px 12px;background:#F8FAFC}
 .mfa-enroll img{display:block;margin:8px 0;border:1px solid #E2E8F0;border-radius:8px;background:#fff}
 .mfa-enroll code{word-break:break-all}
+input.bad{border-color:#DC2626!important;background:#FEF2F2!important;box-shadow:0 0 0 3px rgba(220,38,38,.12)}
+.auth-message.error{background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;border-radius:10px;padding:12px 14px;font-size:15px}
+.shake{animation:iaShake .35s ease}
+@keyframes iaShake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+@media (prefers-reduced-motion:reduce){.shake{animation:none}}
+.area-login{max-width:440px;margin:40px auto;padding:28px 24px;background:#fff;border:1px solid #E2E8F0;border-radius:16px;box-shadow:0 10px 30px rgba(15,44,89,.06)}
+.area-login h1{margin:14px 0 6px;font-size:28px;color:#0F2C59}
+.area-login form{display:grid;gap:12px;margin-top:14px}
+.area-login label{display:grid;gap:6px;font-weight:600;color:#334155;font-size:14px}
+.area-login input[type=email],.area-login input[type=password],.area-login input[type=text]{min-height:48px;border:1px solid #CBD5E1;border-radius:10px;padding:0 12px;font-size:16px;width:100%;box-sizing:border-box}
+.area-login label.remember{display:flex;flex-direction:row;align-items:center;gap:10px;font-weight:500}
+.area-login label.remember input{width:22px;height:22px;margin:0}
+.area-login .btn-lg{min-height:50px;width:100%}
+.area-seg{display:flex;width:100%;margin:12px 0 0}
+.area-seg button{flex:1;min-height:42px}
+.area-links{margin-top:14px}
+@media (max-width:600px){.area-login{margin:16px auto;padding:22px 16px;border-radius:14px}}
+.area-login label.remember small{text-transform:none;letter-spacing:0;font-size:13px;color:#64748B;font-weight:400}

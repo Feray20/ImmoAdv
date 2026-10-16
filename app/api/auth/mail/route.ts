@@ -21,8 +21,9 @@ const Body = z.object({
   password: z.string().min(8).max(200).optional(),
   ref: z.string().regex(/^[a-z0-9-]{3,40}$/).optional(),
   website: z.string().optional(),
+  next: z.enum(['/b2b-portal']).optional(),
 });
-const confirmUrl = (hash: string, type: string) => `${SITE}/auth/confirm?th=${encodeURIComponent(hash)}&type=${type}`;
+const confirmUrl = (hash: string, type: string, next?: string) => `${SITE}/auth/confirm?th=${encodeURIComponent(hash)}&type=${type}${next ? `&next=${encodeURIComponent(next)}` : ''}`;
 const DONE = { ok: true };
 
 export async function POST(req: Request) {
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
   const ip = anonymizedIpHash(req) ?? 'x';
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return j({ error: 'Bitte E-Mail-Adresse und Passwort prüfen.' }, 400);
-  const { action, email, password, ref, website } = p.data;
+  const { action, email, password, ref, website, next } = p.data;
   if (honeypotTripped(website)) return j(DONE);
   if (!allowRequest(`authmail:${ip}`, 8, 10 * 60_000) || !allowRequest(`authmail:${email}`, 4, 10 * 60_000)) {
     return j({ error: 'Zu viele Anfragen. Bitte einige Minuten warten.', code: 'over_request_rate_limit' }, 429);
@@ -61,7 +62,7 @@ export async function POST(req: Request) {
     if (!hash) return j({ error: 'Registrierung fehlgeschlagen.' }, 502);
     const ok = await sendMail(email, 'Bitte bestätigen Sie Ihre E-Mail-Adresse – ImmoAdv',
       'Willkommen bei ImmoAdv!\n\nBitte bestätigen Sie Ihre E-Mail-Adresse, damit wir Ihr Konto freischalten können. Danach können Sie sofort loslegen: Lernbereich, Rechner, RenditeRadar und BankReady.',
-      [], { title: 'E-Mail-Adresse bestätigen', button: { label: 'E-Mail-Adresse bestätigen', url: confirmUrl(hash, 'signup') }, note: 'Der Link ist 24 Stunden gültig und kann nur einmal verwendet werden. Wenn Sie sich nicht registriert haben, ignorieren Sie diese E-Mail einfach.' });
+      [], { title: 'E-Mail-Adresse bestätigen', button: { label: 'E-Mail-Adresse bestätigen', url: confirmUrl(hash, 'signup', next) }, note: 'Der Link ist 24 Stunden gültig und kann nur einmal verwendet werden. Wenn Sie sich nicht registriert haben, ignorieren Sie diese E-Mail einfach.' });
     return ok ? j(DONE) : j({ error: 'Die E-Mail konnte nicht gesendet werden. Bitte später erneut versuchen.' }, 502);
   }
 

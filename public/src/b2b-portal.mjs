@@ -1,6 +1,6 @@
 // Unternehmensportal (/b2b-portal): Registrierung mit § 14 BGB und AVV, Anfragen-Pipeline,
 // Widget- und QR-Studio, Team, Profil mit Co-Branding, Tarif und Rechnungen.
-import { api, download, dt, dtt, esc, eur, logout, session } from './sess.mjs';
+import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession } from './sess.mjs';
 
 const root = document.getElementById('portal');
 const $ = (s, el = document) => el.querySelector(s);
@@ -501,21 +501,23 @@ async function onboarding(avvVersion) {
 async function acceptInvite(tok) {
   const r = await api('/api/b2b/team', { method: 'PUT', body: JSON.stringify({ token: tok }) });
   history.replaceState(null, '', location.pathname + '#start');
-  if (!r.ok) { root.innerHTML = `<div class="pt-onb"><h1>Einladung</h1><p>${esc(r.data?.error || 'Fehler')}</p><p><a class="btn btn-dark" href="/auth/login?next=/b2b-portal">Mit anderer Adresse anmelden</a></p></div>`; return false; }
+  if (!r.ok) { root.innerHTML = `<div class="pt-onb"><h1>Einladung</h1><p>${esc(r.data?.error || 'Fehler')}</p><p><button class="btn btn-dark" type="button" id="ptOtherLogin">Mit anderer Adresse anmelden</button></p></div>`; root.querySelector('#ptOtherLogin').onclick = () => { setSession(null); location.reload(); }; return false; }
   toast('Sie sind dem Team beigetreten.');
   return true;
 }
 
 async function start() {
+  // Rückkehr aus der Bestätigungs-E-Mail (Supabase-Standardversand): Sitzung aus dem Link übernehmen.
+  const hp = new URLSearchParams(location.hash.slice(1));
+  if (hp.get('access_token')) { setSession({ access_token: hp.get('access_token'), refresh_token: hp.get('refresh_token'), expires_in: Number(hp.get('expires_in')) || 3600, token_type: 'bearer' }); history.replaceState(null, '', location.pathname + '#start'); }
   if (!session()?.access_token) {
-    root.innerHTML = `<div class="pt-onb"><a class="pt-brand dark" href="/"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><h1>Unternehmensportal</h1><p>Bitte zuerst anmelden oder ein kostenloses Konto anlegen. Danach registrieren Sie hier Ihr Unternehmen.</p>
-      <p class="pt-row"><a class="btn btn-dark" href="/auth/login?next=${encodeURIComponent('/b2b-portal' + location.hash)}">Anmelden</a><a class="btn btn-ghost" href="/auth/register?next=${encodeURIComponent('/b2b-portal' + location.hash)}">Konto anlegen</a><a class="btn btn-ghost" href="/b2b">Angebot für Unternehmen</a></p></div>`;
+    loginForm(root, { title: 'Unternehmensportal', lead: 'Anmeldung für Unternehmen – getrennt vom privaten ImmoAdv-Konto.', note: 'Noch kein Unternehmenskonto? Oben „Konto anlegen“ wählen.', signup: { next: '/b2b-portal' } });
     return;
   }
   const inv = /einladung=([A-Za-z0-9_-]{20,80})/.exec(location.hash);
   if (inv && !(await acceptInvite(inv[1]))) return;
   const r = await api('/api/b2b/account');
-  if (r.status === 401) { root.innerHTML = '<div class="pt-onb"><h1>Sitzung abgelaufen</h1><p><a class="btn btn-dark" href="/auth/login?next=/b2b-portal">Neu anmelden</a></p></div>'; return; }
+  if (r.status === 401) { setSession(null); return start(); }
   if (!r.ok) { root.innerHTML = `<div class="pt-onb"><h1>Unternehmensportal</h1><p>${esc(r.data?.error || 'Nicht verfügbar.')}</p></div>`; return; }
   if (!r.data.account) { await onboarding(r.data.avvVersion); return; }
   me = r.data;

@@ -6,7 +6,9 @@
 //  - Abmeldung in einem Tab meldet alle Tabs ab; das Refresh-Token wird bei Supabase widerrufen.
 (function () {
   'use strict';
-  var K = 'immoadv-auth-session-v1', ACT = 'ia-last-active', REM = 'ia-remember', WHY = 'ia-logout-reason';
+  var AREA = location.pathname.indexOf('/intern') === 0 ? 'admin' : location.pathname.indexOf('/b2b-portal') === 0 ? 'b2b' : 'app';
+  var SFX = AREA === 'app' ? '' : '-' + AREA;
+  var K = AREA === 'app' ? 'immoadv-auth-session-v1' : 'immoadv-' + AREA + '-session-v1', ACT = 'ia-last-active' + SFX, REM = 'ia-remember' + SFX, WHY = 'ia-logout-reason' + SFX;
   var MIN = 60 * 1000, DAY = 24 * 60 * MIN;
   var path = location.pathname.replace(/\/+$/, '') || '/';
   var isAdmin = path.indexOf('/intern') === 0;
@@ -34,6 +36,7 @@
 
   function loginUrl() {
     var next = location.pathname + location.search + location.hash;
+    if (AREA !== 'app') return location.pathname;
     return '/auth/login' + (isProtected ? '?next=' + encodeURIComponent(next) : '');
   }
 
@@ -44,7 +47,7 @@
     if (reason) s(WHY, reason);
     hideWarn();
     var go = isProtected || reason === 'manuell';
-    var target = reason === 'manuell' ? '/' : loginUrl();
+    var target = reason === 'manuell' ? (AREA === 'app' ? '/' : location.pathname) : loginUrl();
     // Weiterleitung erst nach dem Widerruf (höchstens 1,5 s warten).
     var done = false, nav = function () { if (!done && go) { done = true; location.replace(target); } };
     var p = revoke(raw);

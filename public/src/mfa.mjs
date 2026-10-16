@@ -1,6 +1,8 @@
 // Zwei-Faktor-Schutz (Supabase MFA): Authenticator-App (TOTP, kostenlos) oder SMS-Code an die Handynummer.
 // Gemeinsam genutzt von Anmeldung, Konto und Admin-Zentrale.
-const KEY = 'immoadv-auth-session-v1';
+const AREA = location.pathname.startsWith('/intern') ? 'admin' : location.pathname.startsWith('/b2b-portal') ? 'b2b' : 'app';
+const KEY = AREA === 'app' ? 'immoadv-auth-session-v1' : `immoadv-${AREA}-session-v1`;
+const ACT = AREA === 'app' ? 'ia-last-active' : `ia-last-active-${AREA}`;
 // SMS als zweiter Faktor ist vorbereitet, aber ausgeblendet (verursacht Kosten pro SMS). Zum Aktivieren auf true setzen.
 const SMS_ENABLED = false;
 let cfg = null;
@@ -20,7 +22,7 @@ async function sb(path, token, opts = {}) {
   if (!r.ok) throw Object.assign(new Error(d.msg || d.error_description || d.message || 'Fehler'), { code: d.error_code || d.code, status: r.status });
   return d;
 }
-const saveSession = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); localStorage.setItem('ia-last-active', String(Date.now())); } catch { /* ignore */ } };
+const saveSession = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); localStorage.setItem(ACT, String(Date.now())); } catch { /* ignore */ } };
 export const currentSession = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; } };
 export const aalOf = (token) => { try { return JSON.parse(atob(String(token).split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).aal || 'aal1'; } catch { return 'aal1'; } };
 export const maskPhone = (p) => { const s = String(p || ''); return s.length > 6 ? s.slice(0, 3) + ' ••• ' + s.slice(-3) : s; };
