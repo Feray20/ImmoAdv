@@ -24,9 +24,10 @@ export async function GET(req: Request) {
   }
   const skr = (u.searchParams.get('skr') === 'SKR04' ? 'SKR04' : 'SKR03') as Kontenrahmen;
   try {
-    const a = await generateMonthlyTaxArchive(monat, skr);
+    const withDatev = u.searchParams.get('datev') !== '0';
+    const a = await generateMonthlyTaxArchive(monat, skr, withDatev);
     await adminAudit(auth.user.email, 'datev_export', monat, { skr, count: a.count, problems: a.problems.length });
-    const url = await storeExport('datev', `ImmoAdv_Steuerexport_${monat}.zip`, a.zip, 'application/zip');
+    const url = await storeExport('datev', `ImmoAdv_Rechnungen_${monat}.zip`, a.zip, 'application/zip');
     return j({ url, count: a.count, problems: a.problems });
   } catch (e) {
     return j({ error: e instanceof Error ? e.message : 'Fehler' }, 400);

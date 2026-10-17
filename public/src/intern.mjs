@@ -72,7 +72,7 @@ async function mfa() {
 const SEGS = { b2c: 'Privatkunden (B2C)', b2b: 'Unternehmen (B2B)' };
 const getSeg = () => { try { return localStorage.getItem('ia-admin-seg') === 'b2b' ? 'b2b' : 'b2c'; } catch { return 'b2c'; } };
 const setSeg = (x) => { try { localStorage.setItem('ia-admin-seg', x); } catch { /* nur Komfort */ } };
-const TABS = [['uebersicht', 'Übersicht'], ['einrichtung', 'Einrichtung'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
+const TABS = [['uebersicht', 'Übersicht'], ['einrichtung', 'Einrichtung'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Rechnungen-ZIP'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
 
 function paintSeg() {
   const chip = $('#adSeg'); if (!chip) return;
@@ -363,7 +363,7 @@ async function testkauf(v) {
     <li><div class="ad-step-h"><strong>Testschlüssel erzeugen</strong></div><p><a href="https://dashboard.stripe.com/test/apikeys" target="_blank" rel="noopener">Stripe → Entwickler → API-Schlüssel (Testmodus)</a> → „Secret key“ neu erzeugen (der alte Testschlüssel wurde im Chat gezeigt und sollte ohnehin ersetzt werden).</p></li>
     <li><div class="ad-step-h"><strong>In Vercel eintragen</strong></div><p><a href="https://vercel.com/klk19/immoadv/settings/environment-variables" target="_blank" rel="noopener">Vercel → Environment Variables</a>: <code>STRIPE_TEST_SECRET_KEY</code> = <code>sk_test_…</code>, Umgebung <strong>Production</strong>. Danach neu deployen. Der Schlüssel funktioniert nur im Testmodus – es kann kein echtes Geld fließen.</p></li>
     <li><div class="ad-step-h"><strong>PayPal im Testmodus aktivieren</strong></div><p><a href="https://dashboard.stripe.com/test/settings/payment_methods" target="_blank" rel="noopener">Stripe → Einstellungen → Zahlungsmethoden (Testmodus)</a> → PayPal einschalten. Für den Live-Betrieb dasselbe im Live-Modus (dort PayPal-Geschäftskonto verbinden).</p></li>
-    <li><div class="ad-step-h"><strong>Logo und Farben</strong></div><p><a href="https://dashboard.stripe.com/settings/branding" target="_blank" rel="noopener">Stripe → Einstellungen → Branding</a>: Logo <a class="ck-link" href="/brand/immoadv-stripe-logo.png" download>immoadv-stripe-logo.png</a> und Symbol <a class="ck-link" href="/brand/immoadv-stripe-icon.png" download>immoadv-stripe-icon.png</a> hochladen, Markenfarbe <code>#0F2C59</code>, Akzentfarbe <code>#0284C7</code>. Gilt für Bezahlseite, Rechnungen, Belege und Kundenportal.</p></li>
+    <li><div class="ad-step-h"><strong>Logo und Farben</strong></div><p><a href="https://dashboard.stripe.com/settings/branding" target="_blank" rel="noopener">Stripe → Einstellungen → Branding</a>: Logo <a class="ck-link" href="/brand/immoadv-stripe-logo.png" download>immoadv-stripe-logo.png</a> und Symbol <a class="ck-link" href="/brand/immoadv-stripe-icon.png" download>immoadv-stripe-icon.png</a> hochladen, Markenfarbe <code>#0F2C59</code>, Akzent-/Buttonfarbe <code>#000000</code> (schwarz wie Apple Pay). Gilt für Bezahlseite, Rechnungen, Belege und Kundenportal.</p></li>
   </ol></section>`;
   if (!d.available) { v.innerHTML = `<section class="pt-card"><h2>Testkauf</h2><p class="form-note">Noch nicht eingerichtet: Es fehlt ein Stripe-Testschlüssel. Nach den Schritten unten können Sie hier jeden Tarif mit Testkarte oder PayPal-Testkonto kaufen – genau wie ein Kunde, aber ohne echtes Geld.</p></section>${setup}`; return; }
   let res = '';
@@ -382,7 +382,7 @@ async function testkauf(v) {
     <div class="tk-pm">${(d.methods || []).map((m) => `<span class="st ${m.on ? 'ok' : ''}">${m.on ? '✓' : '○'} ${esc(m.label)}</span>`).join('')}</div>
     ${(d.methods || []).some((m) => m.key === 'paypal' && m.on) ? '' : '<p class="form-note">PayPal ist im Testmodus noch nicht eingeschaltet – siehe Schritt 3 unten.</p>'}
     <h3 class="ad-sub">Tarif wählen</h3>
-    <div class="tk-plans">${d.plans.map((p) => `<button type="button" class="tk-plan" data-tk="${esc(p.id)}"><strong>${esc(p.name)}</strong><span>${eur(p.cents)}${p.mode === 'subscription' ? ' / Monat' : ''}</span><small>Testkauf starten →</small></button>`).join('')}</div>
+    <div class="tk-plans">${d.plans.map((p) => `<button type="button" class="tk-plan btn-pay" data-tk="${esc(p.id)}"><strong>${esc(p.name)}</strong><span>${eur(p.cents)}${p.mode === 'subscription' ? ' / Monat' : ''}</span><small>Testkauf starten →</small></button>`).join('')}</div>
   </section>
   <section class="pt-card"><h2>Letzte Testkäufe</h2>${d.recent?.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Zeit</th><th>Tarif</th><th>Betrag</th><th>Zahlart</th><th>Status</th><th>Rechnung</th></tr></thead><tbody>${d.recent.map(row).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine Testkäufe.</p>'}</section>${setup}`;
   if (back) history.replaceState(null, '', location.pathname + '#testkauf');
@@ -742,21 +742,26 @@ function steuer(v) {
   const now = new Date();
   const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const m = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
-  v.innerHTML = `<section class="pt-card"><h2>Monatsarchiv für die Steuerkanzlei</h2>
-    <p>ZIP mit allen Rechnungen (Ordner <code>Rechnungen</code>), Stornos und Gutschriften (<code>Korrekturen</code>), <code>DATEV_Buchungsstapel.csv</code> und <code>Monatsjournal_Umsatzsteuer.csv</code> (Kennzahl 81).</p>
-    <div class="pt-row ad-form"><label class="form-note">Monat <input type="month" id="mon" value="${m}"></label><label class="form-note">Kontenrahmen <select id="skr"><option value="SKR03">SKR03 – am häufigsten</option><option value="SKR04">SKR04</option></select></label><button class="btn btn-dark" id="zip" type="button">ZIP herunterladen</button></div>
-    <details class="ad-help"><summary>Was ist der Kontenrahmen (SKR03 / SKR04)?</summary><p>Ein Kontenrahmen ist die feste Nummernliste, nach der Buchhaltungen ihre Konten ordnen. In Deutschland nutzen Steuerkanzleien fast immer einen der beiden DATEV-Standardkontenrahmen: <strong>SKR03</strong> (sehr verbreitet bei kleinen Unternehmen und Freiberuflern) oder <strong>SKR04</strong> (häufig bei Kapitalgesellschaften).</p><p>Die Auswahl bestimmt nur, unter welchen Kontonummern Ihre Umsätze in der DATEV-Datei landen – z. B. Forderungen 1400 und Erlöse 19 % auf 8400 (SKR03) bzw. 1200 und 4400 (SKR04). Am Inhalt der Rechnungen ändert sich nichts.</p><p><strong>Was tun?</strong> Einmal bei Ihrer Steuerkanzlei nachfragen, welchen Kontenrahmen sie für ImmoAdv führt, und den hier wählen. Im Zweifel SKR03 – die Kanzlei kann notfalls umschlüsseln.</p></details>
-    <p class="form-note" id="taxAuto">Automatischer Versand wird geprüft …</p>
-    <p class="form-note">Bitte die Übernahme in die Umsatzsteuer-Voranmeldung von der Kanzlei prüfen lassen.</p></section>`;
-  api('/api/admin/datev?info=1').then((r) => {
-    const i = r.data || {};
-    $('#taxAuto').innerHTML = i.advisorEmail && i.mail && i.cron
-      ? `<strong>Automatischer Versand aktiv:</strong> am ${i.workday}. Werktag jedes Monats geht das Archiv des Vormonats (${esc(i.skr)}) an ${esc(i.advisorEmail)}. Versand und Fehler stehen im Protokoll.`
-      : `<strong>Automatischer Versand aus.</strong> Dafür in Vercel setzen: ${[!i.advisorEmail && 'TAX_ADVISOR_EMAIL (Adresse der Kanzlei)', !i.mail && 'RESEND_API_KEY und NOTIFY_FROM_EMAIL', !i.cron && 'CRON_SECRET'].filter(Boolean).join(', ')}. Optional: TAX_DISPATCH_WORKDAY (Standard 3), TAX_SKR (SKR03/SKR04).`;
-  });
+  const q = Math.floor(prev.getMonth() / 3) + 1;
+  v.innerHTML = `<section class="pt-card"><h2>Rechnungen für die Steuerkanzlei (ZIP)</h2>
+    <p>Alle Rechnungen eines Zeitraums als ZIP zum Herunterladen und Weitergeben. Jede Datei beginnt mit dem Rechnungsdatum – <code>2026-10-14_IMMO-2026-0042_Kunde.pdf</code> –, damit die Kanzlei sie sofort zuordnen kann. Stornos und Gutschriften liegen im Ordner <code>Korrekturen</code>.</p>
+    <div class="pt-row ad-form"><label class="form-note">Zeitraum <select id="per"><option value="m">Monat</option><option value="q">Quartal</option><option value="y">Jahr</option></select></label>
+      <label class="form-note" id="perM">Monat <input type="month" id="mon" value="${m}"></label>
+      <label class="form-note" id="perQ" hidden>Quartal <select id="qq">${[1, 2, 3, 4].map((x) => `<option value="${x}"${x === q ? ' selected' : ''}>Q${x}</option>`).join('')}</select> <input type="number" id="qy" value="${prev.getFullYear()}" min="2024" max="2100" style="width:90px"></label>
+      <label class="form-note" id="perY" hidden>Jahr <input type="number" id="yy" value="${prev.getFullYear()}" min="2024" max="2100" style="width:90px"></label>
+      <label class="chk form-note"><input type="checkbox" id="dv"> zusätzlich DATEV-Datei und USt-Journal</label>
+      <label class="form-note" id="skrL" hidden>Kontenrahmen <select id="skr"><option value="SKR03">SKR03 – am häufigsten</option><option value="SKR04">SKR04</option></select></label>
+      <button class="btn btn-dark" id="zip" type="button">ZIP herunterladen</button></div>
+    <details class="ad-help"><summary>Was ist der Kontenrahmen (SKR03 / SKR04)?</summary><p>Nur relevant, wenn Sie die DATEV-Datei mitgeben: Der Kontenrahmen bestimmt die Kontonummern (z. B. Erlöse 19 % auf 8400 bei SKR03 bzw. 4400 bei SKR04). Fragen Sie Ihre Kanzlei, welchen sie führt – im Zweifel SKR03.</p></details>
+    <p class="form-note">Es wird nichts automatisch versendet – Sie laden das ZIP herunter und geben es Ihrer Kanzlei (z. B. per DATEV Unternehmen online, Upload-Portal oder E-Mail).</p></section>`;
+  const per = $('#per');
+  const sync = () => { $('#perM').hidden = per.value !== 'm'; $('#perQ').hidden = per.value !== 'q'; $('#perY').hidden = per.value !== 'y'; $('#skrL').hidden = !$('#dv').checked; };
+  per.onchange = sync; $('#dv').onchange = sync;
   $('#zip').onclick = async (e) => {
+    const p = per.value === 'm' ? $('#mon').value : per.value === 'q' ? `${$('#qy').value}-Q${$('#qq').value}` : $('#yy').value;
     e.target.disabled = true;
-    const r = await api(`/api/admin/datev?monat=${$('#mon').value}&skr=${$('#skr').value}`); if (r.ok) { location.href = r.data.url; msg(`Export mit ${r.data.count} Belegen erstellt.${r.data.problems.length ? ' Hinweise: ' + r.data.problems.join(' · ') : ''}`, r.data.problems.length > 0); } else msg(r.data?.error || 'Fehler', true);
+    const r = await api(`/api/admin/datev?monat=${encodeURIComponent(p)}&skr=${$('#skr').value}&datev=${$('#dv').checked ? 1 : 0}`);
+    if (r.ok) { location.href = r.data.url; msg(`ZIP mit ${r.data.count} Rechnungen erstellt.${r.data.problems.length ? ' Hinweise: ' + r.data.problems.join(' · ') : ''}`, r.data.problems.length > 0); } else msg(r.data?.error || 'Fehler', true);
     e.target.disabled = false;
   };
 }

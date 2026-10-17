@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     const f = await loadInvoicePdf(r);
     if (!f) return j({ error: 'PDF nicht verfügbar.' }, 404);
     return new NextResponse(new Uint8Array(f.pdf), {
-      headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${r.invoice_number}.pdf"`, 'X-Integrity': f.intact ? 'ok' : 'mismatch', 'Access-Control-Expose-Headers': 'X-Integrity', 'Cache-Control': 'no-store' },
+      headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${String(r.issue_date || "").slice(0, 10)}_${r.invoice_number}.pdf"`, 'X-Integrity': f.intact ? 'ok' : 'mismatch', 'Access-Control-Expose-Headers': 'X-Integrity', 'Cache-Control': 'no-store' },
     });
   }
   const q = (u.searchParams.get('q') || '').trim();

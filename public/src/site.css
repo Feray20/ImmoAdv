@@ -1007,3 +1007,8 @@ main table td{min-width:max-content}
 .fh-box{display:block;margin-top:6px;padding:8px 10px;border-radius:8px;background:#F0F9FF;border:1px solid #BAE6FD;color:#0F2C59;font-size:13px;font-weight:500;line-height:1.5;text-transform:none;letter-spacing:0}
 .fh-box[hidden]{display:none}.fh-box a{color:#0369A1;font-weight:700;white-space:nowrap}
 .fh-box{grid-column:1/-1}
+.btn-pay{background:#000!important;color:#fff!important;border:1px solid #000!important;border-radius:10px;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;font-weight:600;letter-spacing:.01em;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;box-shadow:none}
+.btn-pay:hover{background:#1d1d1f!important;border-color:#1d1d1f!important;color:#fff!important}
+.btn-pay:focus-visible{outline:3px solid #0A84FF;outline-offset:2px}
+.btn-pay:disabled,.btn-pay[disabled]{background:#3a3a3c!important;border-color:#3a3a3c!important;opacity:.6;cursor:not-allowed}
+.btn-pay .pay-lock{flex:none}
