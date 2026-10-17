@@ -6,6 +6,7 @@
     "prebuild": "node scripts/bundle-css.mjs && node scripts/build-seo.mjs && node scripts/version-assets.mjs",
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/indexnow.mjs",
     "start": "next start",
     "lint": "next lint",
     "export:faq": "node scripts/export-faq.mjs",

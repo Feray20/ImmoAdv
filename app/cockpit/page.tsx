@@ -4,7 +4,7 @@ import { underwrite, type StressCase } from '@/lib/underwriting/engine';
 import { bankReadyScore } from '@/lib/underwriting/score';
 
 const DISCLAIMER =
-  'Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Rechts-, Steuer- oder Finanzierungsberatung gem. § 34i GewO / KWG.';
+  'Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Kreditvermittlung oder Darlehensberatung (§ 34i GewO, KWG), keine Steuerberatung (StBerG), keine Rechtsdienstleistung (RDG).';
 
 const nf = (d: number) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
 const ok = (n: number | null): n is number => n !== null && Number.isFinite(n);

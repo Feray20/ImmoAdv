@@ -155,7 +155,7 @@ function updateAnalyse() {
     subtitle: `${val('a_art')}${num('a_area') ? ` · ${D(num('a_area'), 0)} m²` : ''}${num('a_rooms') ? ` · ${D(num('a_rooms'), 1)} Zimmer` : ''}${num('a_year') ? ` · Baujahr ${num('a_year')}` : ''} · ${GREST[val('a_land')].name}` };
   $('a_out').innerHTML = `<div class="an-grid">${SECTIONS.map((x) => `<article class="dash-card"><h3>${x.title}</h3>${table(x.rows.map((r) => [esc(r[0]), esc(r[1])]))}</article>`).join('')}</div>
   ${a.hints.length ? `<article class="dash-card"><h3>Hinweise</h3><ul class="plain-list">${a.hints.map((h) => `<li>${esc(h)}</li>`).join('')}</ul></article>` : ''}
-  <p class="faq-disclaimer">Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Rechts-, Steuer- oder Finanzierungsberatung gem. § 34i GewO / KWG. Alle Werte beruhen auf Ihren Eingaben bzw. den von Ihnen übernommenen Eckdaten eines Inserats – bitte mit dem Exposé abgleichen.</p>`;
+  <p class="faq-disclaimer">Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Kreditvermittlung oder Darlehensberatung (§ 34i GewO, KWG), keine Steuerberatung (StBerG), keine Rechtsdienstleistung (RDG). Alle Werte beruhen auf Ihren Eingaben bzw. den von Ihnen übernommenen Eckdaten eines Inserats – bitte mit dem Exposé abgleichen.</p>`;
   $('a_actions').hidden = false;
 }
 

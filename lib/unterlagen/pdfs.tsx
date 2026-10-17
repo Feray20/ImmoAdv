@@ -2,7 +2,7 @@ import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import { BRAND, Logo, SecureWatermark } from '@/lib/pdf/brand';
 
 const C = { navy: BRAND.navy, text: '#334155', muted: '#64748B', hair: '#CBD5E1', bg: '#F8FAFC', okBg: '#DCFCE7', ok: '#166534', noneBg: '#F1F5F9', none: '#64748B' };
-const DISCLAIMER = 'Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Rechts-, Steuer- oder Finanzierungsberatung gem. § 34i GewO / KWG.';
+const DISCLAIMER = 'Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Kreditvermittlung oder Darlehensberatung (§ 34i GewO, KWG), keine Steuerberatung (StBerG), keine Rechtsdienstleistung (RDG).';
 const CONTACT = 'ImmoAdv · Feray Korkmaz · Georg-August-Zinn-Str. 25 · 64354 Reinheim · support@immoadv.de · immoadv.de';
 
 const s = StyleSheet.create({

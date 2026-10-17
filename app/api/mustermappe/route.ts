@@ -40,7 +40,7 @@ export async function GET(req: Request) {
   if (q.get('art') === 'analyse') {
     const el = createElement(ReportDocument, { r: analyseBeispiel(), reportId: 'MUSTER-ANALYSE', createdAt: new Date().toISOString(), watermark: MUSTER }) as unknown as Parameters<typeof renderToBuffer>[0];
     const pdf = await renderToBuffer(el);
-    return new NextResponse(new Uint8Array(pdf), { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `${disp}; filename="ImmoAdv_Muster_Objekt-Analyse.pdf"`, 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' } });
+    return new NextResponse(new Uint8Array(pdf), { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `${disp}; filename="ImmoAdv_Muster_Objekt-Analyse.pdf"`, 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800' } });
   }
   const mappe = buildKreditmappe(
     ObjectSchema.parse({
@@ -66,7 +66,7 @@ export async function GET(req: Request) {
       'Content-Disposition': `${disp}; filename="ImmoAdv_Muster_Kreditmappe.pdf"`,
       'X-Robots-Tag': 'noindex, nofollow',
       'X-Document-SHA256': sha256,
-      'Cache-Control': 'no-store',
+      'Cache-Control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800',
     },
   });
 }

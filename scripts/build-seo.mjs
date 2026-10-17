@@ -3,6 +3,7 @@
 // FAQPage, HowTo, BreadcrumbList), Kaufnebenkosten-Seiten je Bundesland, sitemap.xml und robots.txt.
 // Idempotent: ersetzt nur <title> und den Block zwischen <!--seo:start--> und <!--seo:end-->; vorgerenderter Inhalt bleibt.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { GREST } from '../public/src/calc.mjs';
 
 const ORIGIN = 'https://immoadv.de';
@@ -27,9 +28,9 @@ const APP = {
 // Seitenliste: Pfad, Datei, Titel, Beschreibung, Brotkrumen, Indexierung, Zusatz-JSON-LD.
 const PAGES = [
   { path: '/', file: 'index.html', title: 'In 5 Minuten wissen, ob sich Ihre Immobilie rechnet | ImmoAdv', desc: 'Kostenloser Schnellrechner für Kapitalanlage und Eigenheim: Rendite, Cashflow, Rate, Stresstest – plus bankfertige Kreditmappe. Unabhängig, ohne Provision.', crumbs: [], extra: ['website', 'app', 'howto'] },
-  { path: '/wissen', title: 'Immobilien und Geld verständlich erklärt – 44 Antworten | ImmoAdv', desc: 'Geld, Inflation, Vermögensaufbau, Eigenkapital, Nebenkosten, Beleihungswert, AfA, Anschlusszins: Antworten in zwei Ebenen mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
+  { path: '/wissen', title: `Immobilien und Geld verständlich erklärt – ${((f) => (Array.isArray(f) ? f : f.entries).length)(JSON.parse(readFileSync(new URL('../public/data/faq.json', import.meta.url), 'utf8')))} Antworten | ImmoAdv`, desc: 'Wissen in vier Phasen: Leistbarkeit, Objektprüfung, Steuern und Cashflow, Bankgespräch – verständlich erklärt, mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
   { path: '/cockpit', file: null, skip: true, title: '', desc: '' },
-  { path: '/suche', file: 'suche/index.html', template: 'wissen/index.html', title: 'Suche | ImmoAdv', desc: 'Rechner, Antworten und Fachbegriffe rund um Immobilienkauf und Finanzierung durchsuchen.', crumbs: ['Suche'] },
+  { path: '/suche', file: 'suche/index.html', template: 'wissen/index.html', title: 'Suche | ImmoAdv', noindex: true, desc: 'Rechner, Antworten und Fachbegriffe rund um Immobilienkauf und Finanzierung durchsuchen.', crumbs: ['Suche'] },
   { path: '/wissen/erwerbsstatus', file: 'wissen/erwerbsstatus/index.html', title: 'Immobilienfinanzierung nach Erwerbsstatus: Angestellt, Beamter, Selbstständig | ImmoAdv', desc: 'Was Banken bei Angestellten, Befristeten, Beamten, Selbstständigen, Berufseinsteigern und Rentnern prüfen – mit typischen Unterlagen je Gruppe.', crumbs: ['Wissen', 'Erwerbsstatus'] },
   { path: '/wissen/glossar', title: 'Glossar Immobilienfinanzierung: Begriffe von A bis Z | ImmoAdv', desc: 'Annuität, Beleihungswert, Zinsbindung, Kappungsgrenze, Grundschuld und mehr: die wichtigsten Begriffe zu Kauf, Finanzierung, Miete und Steuer kurz erklärt.', crumbs: ['Wissen', 'Glossar'], extra: ['glossar'] },
   { path: '/start', title: 'Meine erste Immobilie durchrechnen – in drei Schritten | ImmoAdv', desc: 'Kaufpreis, Miete, Eigenkapital: Rate, Tilgungshebel, Cashflow, Notgroschen und das Bild nach zehn Jahren – mit Erklärungen aller Fachbegriffe.', crumbs: ['Meine erste Immobilie'], extra: ['app'] },
@@ -50,7 +51,6 @@ const PAGES = [
   { path: '/pro-begleiter', title: '12-Monats-Programm für Kapitalanleger | ImmoAdv', desc: 'Vom Kassensturz bis zum verwalteten Bestand: ein Thema pro Monat mit Aufgaben, Werkzeug und Gesetzestext zum Nachlesen.', crumbs: ['Pro-Begleiter'] },
   { path: '/profiler', title: 'Investor-Profiler: Welche Strategie passt zu Ihnen? | ImmoAdv', desc: 'Sechs Fragen zu Eigenkapital, Cashflow, Steuer und Horizont – mit den Kennzahlen, auf die Sie besonders achten sollten.', crumbs: ['Investor-Profiler'] },
   { path: '/angebote', title: 'Preise und Angebote | ImmoAdv', desc: 'Alle Rechner kostenlos. BankReady Kreditmappe 39 € einmalig, Käufer-Pass 49 € für 90 Tage (kein Abo), Investor Pro 29 €/Monat – Endpreise inkl. USt.', crumbs: ['Angebote'] },
-  { path: '/fuer-banken', title: 'Für Banken und Finanzierungsberater | ImmoAdv', desc: 'Vorbereitete Finanzierungsanfragen mit Kreditmappe, Prüf-QR und Datenraum. Keine Vermittlung, keine Provision – Pilotpartner gesucht.', crumbs: ['Für Banken'] },
   { path: '/sicherheit', title: 'Sicherheit und Datenschutz | ImmoAdv', desc: 'Speicherung in Frankfurt, Prüfsummen, befristete Freigabelinks und Zugriffsprotokoll – und was noch geplant ist.', crumbs: ['Sicherheit'] },
   { path: '/impressum', title: 'Impressum | ImmoAdv', desc: 'Anbieterkennzeichnung nach § 5 DDG.', crumbs: ['Impressum'] },
   { path: '/datenschutz', title: 'Datenschutzerklärung | ImmoAdv', desc: 'Welche Daten ImmoAdv verarbeitet, wo sie gespeichert werden und welche Rechte Sie haben.', crumbs: ['Datenschutz'] },
@@ -122,6 +122,8 @@ function headBlock(p, html) {
   const ogImg = ogKey && existsSync(new URL(`og/${ogKey}.png`, pub)) ? `${ORIGIN}/og/${ogKey}.png` : `${ORIGIN}/og-image.png`;
   const lines = [
     `<meta name="description" content="${esc(p.desc)}">`,
+    // Inhaberschafts-Nachweis für Google Search Console und Bing Webmaster Tools (Werte aus Vercel-Variablen, nur Startseite).
+    ...(p.path === '/' ? [['google-site-verification', process.env.GOOGLE_SITE_VERIFICATION], ['msvalidate.01', process.env.BING_SITE_VERIFICATION]].filter(([, v]) => v && /^[A-Za-z0-9_\-]{10,120}$/.test(String(v).trim())).map(([n, v]) => `<meta name="${n}" content="${esc(String(v).trim())}">`) : []),
     `<meta name="robots" content="${p.noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large'}">`,
   ];
   if (!p.noCanonical) lines.push(`<link rel="canonical" href="${url}">`);
@@ -173,7 +175,12 @@ for (const p of PAGES) {
 
 // Sitemap und robots.txt
 const indexable = results.filter((p) => !p.noindex);
+// Letzte inhaltliche Änderung je Seite aus der Git-Historie (Fallback: heute).
+const lastmod = (p) => {
+  const file = p.file || (p.path === '/' ? 'index.html' : `${p.path.slice(1)}/index.html`);
+  try { const d = execSync(`git log -1 --format=%cs -- "public/${file}"`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : today; } catch { return today; }
+};
 const prio = (p) => (p.path === '/' ? '1.0' : p.path.split('/').length > 3 ? '0.6' : ['/impressum', '/datenschutz', '/nutzungsbedingungen', '/kuendigen'].includes(p.path) ? '0.3' : '0.8');
-write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${indexable.map((p) => `  <url><loc>${ORIGIN}${p.path === '/' ? '/' : p.path}</loc><lastmod>${today}</lastmod><priority>${prio(p)}</priority></url>`).join('\n')}\n</urlset>\n`);
-write('robots.txt', `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app/\nDisallow: /auth/\nDisallow: /datenraum\nDisallow: /pruefen\nDisallow: /verify/\nDisallow: /p/\nDisallow: /partner\nDisallow: /intern\n\nSitemap: ${ORIGIN}/sitemap.xml\n`);
+write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${indexable.map((p) => `  <url><loc>${ORIGIN}${p.path === '/' ? '/' : p.path}</loc><lastmod>${lastmod(p)}</lastmod><priority>${prio(p)}</priority></url>`).join('\n')}\n</urlset>\n`);
+write('robots.txt', `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app/\nDisallow: /auth/\nDisallow: /datenraum\nDisallow: /pruefen\nDisallow: /verify/\nDisallow: /p/\nDisallow: /partner\nDisallow: /intern\nDisallow: /b2b-portal\n\nSitemap: ${ORIGIN}/sitemap.xml\n`);
 console.log(`SEO: ${results.length} Seiten, ${indexable.length} in der Sitemap`);

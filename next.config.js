@@ -7,7 +7,6 @@ const STATIC_PAGES = [
   'pro-begleiter',
   'checkliste',
   'angebote',
-  'fuer-banken',
   'sicherheit',
   'mustermappe',
   'impressum',
@@ -62,6 +61,14 @@ module.exports = {
     '/api/admin/invoices': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
     '/api/analyse-pdf': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
     '/api/unterlagen/[doc]': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
+  },
+  // Entfernte bzw. zusammengelegte Seiten: dauerhaft weiterleiten, damit Links und Suchmaschinen-Einträge nicht ins Leere führen.
+  async redirects() {
+    return [
+      { source: '/fuer-banken', destination: '/b2b', permanent: true },
+      { source: '/fuer-banken/:path*', destination: '/b2b', permanent: true },
+      { source: '/wissen/klug-investieren-wie-werde-ich-zum-geld-master', destination: '/wissen/klug-investieren-worauf-kommt-es-an', permanent: true },
+    ];
   },
   async rewrites() {
     return {
