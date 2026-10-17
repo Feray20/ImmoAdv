@@ -568,3 +568,18 @@ body.dk-open{overflow:hidden}
 .kd-rlist li span{display:grid}.kd-rlist small{color:#64748B}.kd-rlist b{color:#0F2C59}.kd-rlist em{font-style:normal;font-size:12px;font-weight:700;color:#0369A1;background:#E0F2FE;border-radius:999px;padding:3px 8px}
 .kd-rlist li.hot{border-color:#FCA5A5;background:#FEF2F2}.kd-rlist li.hot b{color:#B91C1C}.kd-rlist li.warm{border-color:#FCD34D;background:#FFFBEB}
 @media (max-width:560px){.kd-rlist li{grid-template-columns:1fr auto}.kd-rlist em{grid-column:1/-1;justify-self:start}}
+/* Akquise und Werbung */
+.mk-bar{margin-bottom:10px;gap:8px;flex-wrap:wrap}.mk-bar input,.mk-bar select{border:1px solid #CBD5E1;border-radius:8px;padding:8px 10px;font:inherit;min-width:0}.mk-bar input#mkQ{flex:1 1 220px}
+.mk-table select,.mk-table input[type=date]{border:1px solid #E2E8F0;border-radius:6px;padding:4px 6px;font:inherit;font-size:13px;max-width:150px}.mk-table input.due{border-color:#F59E0B;background:#FFFBEB}
+.mk-off{opacity:.55}
+.mk-log{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;margin:10px 0}.mk-log input,.mk-log select{border:1px solid #CBD5E1;border-radius:8px;padding:8px;font:inherit;min-width:0}
+.mk-acts{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:320px;overflow:auto}.mk-acts li{display:grid;grid-template-columns:110px 1fr auto;gap:8px;padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;font-size:13.5px}.mk-acts small{color:#64748B}
+.mk-tpl{width:100%;border:1px solid #E2E8F0;border-radius:8px;padding:10px;font:inherit;font-size:13.5px;background:#F8FAFC;box-sizing:border-box}
+.mk-camp{display:grid;grid-template-columns:2fr 1.4fr 1fr .7fr 1fr auto;gap:8px;margin-bottom:12px}.mk-camp input,.mk-camp select{border:1px solid #CBD5E1;border-radius:8px;padding:8px;font:inherit;min-width:0}
+.mk-del{color:#B91C1C!important}
+.pt-toast.on{transform:translate(-50%,0);opacity:1}
+@media (max-width:760px){.mk-camp{grid-template-columns:1fr 1fr}.mk-log{grid-template-columns:1fr 1fr}.mk-acts li{grid-template-columns:1fr}}
+#wSend .full,#mkF .full,#mkLF .full{grid-column:1/-1}
+#wSend label,#mkF label,#mkLF label{display:grid;gap:4px;align-content:start;font-size:13px;font-weight:600;color:#475569}
+#wSend input,#wSend select,#wSend textarea,#mkF input,#mkF select,#mkF textarea,#mkLF input,#mkLF select,#mkLF textarea{border:1px solid #CBD5E1;border-radius:8px;padding:8px 10px;font:inherit;font-size:14.5px;min-width:0;width:100%;box-sizing:border-box}
+#wSend .pt-row{gap:10px}

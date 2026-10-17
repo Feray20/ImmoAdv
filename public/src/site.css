@@ -1001,3 +1001,4 @@ main table td{min-width:max-content}
 .ret-card small{text-transform:none!important;letter-spacing:0!important;font-weight:500}
 .ret-form input{width:100%;min-width:0;box-sizing:border-box}.ret-form label{min-width:0}
 @media (max-width:700px){.ret-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ret-kpis{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.nl-banner{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:300;background:#0F2C59;color:#fff;padding:12px 18px;border-radius:12px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:calc(100vw - 32px)}

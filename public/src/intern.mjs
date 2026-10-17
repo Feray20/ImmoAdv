@@ -72,7 +72,7 @@ async function mfa() {
 const SEGS = { b2c: 'Privatkunden (B2C)', b2b: 'Unternehmen (B2B)' };
 const getSeg = () => { try { return localStorage.getItem('ia-admin-seg') === 'b2b' ? 'b2b' : 'b2c'; } catch { return 'b2c'; } };
 const setSeg = (x) => { try { localStorage.setItem('ia-admin-seg', x); } catch { /* nur Komfort */ } };
-const TABS = [['uebersicht', 'Übersicht'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
+const TABS = [['uebersicht', 'Übersicht'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
 
 function paintSeg() {
   const chip = $('#adSeg'); if (!chip) return;
@@ -105,7 +105,7 @@ function show() {
   const v = $('#adView');
   v.innerHTML = '<p class="form-note">Wird geladen …</p>';
   msg('');
-  ({ uebersicht, analyse, testkauf, cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen })[t](v);
+  ({ uebersicht, analyse, testkauf, cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)) })[t](v);
 }
 
 // ---------- Nutzer: Konten im Überblick, sperren/entsperren, Passwort-Reset ----------

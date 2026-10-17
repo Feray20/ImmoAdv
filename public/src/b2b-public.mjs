@@ -40,15 +40,21 @@ function contact() {
     if (d.kind === 'konto') {
       const pf = fd.get('proof');
       if (pf && pf.size > 4 * 1024 * 1024) { msg.textContent = 'Der Nachweis ist größer als 4 MB. Bitte verkleinern oder als PDF speichern.'; return; }
-      fd.set('ts', String(ts)); btn.disabled = true;
+      fd.set('ts', String(ts)); fd.delete('newsletter'); const cp = new URLSearchParams(location.search).get('utm_campaign'); if (cp && /^[a-z0-9-]{3,40}$/.test(cp)) fd.set('camp', cp); btn.disabled = true;
       r = await fetch('/api/b2b/contact', { method: 'POST', body: fd });
     } else {
       delete d.proof; btn.disabled = true;
-      r = await fetch('/api/b2b/contact', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...d, privacy: d.privacy === 'on', ts }) });
+      const cp = new URLSearchParams(location.search).get('utm_campaign');
+      const { newsletter: _nl, ...rest } = d; // eslint-disable-line no-unused-vars
+      r = await fetch('/api/b2b/contact', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...rest, privacy: d.privacy === 'on', ts, ...(cp && /^[a-z0-9-]{3,40}$/.test(cp) ? { camp: cp } : {}) }) });
     }
     const j = await r.json().catch(() => ({}));
     btn.disabled = false;
-    if (r.ok) { f.innerHTML = '<div class="pt-alert full"><strong>Danke!</strong> Ihre Anfrage ist eingegangen. Wir melden uns innerhalb von zwei Werktagen.</div>'; }
+    if (r.ok) {
+      let nl = '';
+      if (d.newsletter === 'on') { const x = await fetch('/api/newsletter', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: d.email, name: d.name, company: d.company, segment: 'b2b', source: 'b2b-formular', consent: true, ts }) }).catch(() => null); if (x && x.ok) nl = ' Für die Neuigkeiten haben wir Ihnen eine Bestätigungs-E-Mail geschickt.'; }
+      f.innerHTML = `<div class="pt-alert full"><strong>Danke!</strong> Ihre Anfrage ist eingegangen. Wir melden uns innerhalb von zwei Werktagen.${nl}</div>`;
+    }
     else { msg.textContent = j.error || 'Senden fehlgeschlagen.'; if (j.field === 'email') f.email?.focus(); }
   };
 }
@@ -63,6 +69,8 @@ function init(tries = 0) {
   });
   contact();
 }
+// Rückmeldung nach Bestätigen/Abmelden der Neuigkeiten.
+{ const nl = new URLSearchParams(location.search).get('newsletter'); const t = { bestaetigt: 'Danke – Ihre Anmeldung für die Neuigkeiten ist bestätigt.', abgemeldet: 'Sie sind abgemeldet und erhalten keine Neuigkeiten mehr.', ungueltig: 'Dieser Link ist ungültig oder abgelaufen.' }[nl]; if (t) { const show = () => { const m = document.createElement('div'); m.className = 'nl-banner'; m.setAttribute('role', 'status'); m.textContent = t; document.body.prepend(m); setTimeout(() => m.remove(), 8000); }; if (document.readyState === 'loading') addEventListener('DOMContentLoaded', show); else show(); } }
 init();
 
 // Kontoanfrage: eingetragene Gesellschaften → Registernummer genügt; sonst Steuernummer und Nachweis (Datei) Pflicht.

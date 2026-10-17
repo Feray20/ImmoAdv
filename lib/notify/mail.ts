@@ -67,7 +67,7 @@ Technisches Analyse- und Vorbereitungswerkzeug – keine Kreditvermittlung, kein
 </td></tr></table></td></tr></table></body></html>`;
 }
 
-export type MailOptions = { title?: string; button?: MailButton; note?: string; replyTo?: string };
+export type MailOptions = { title?: string; button?: MailButton; note?: string; replyTo?: string; headers?: Record<string, string> };
 
 export async function sendMail(to: string, subject: string, text: string, attachments: Attachment[] = [], opts: MailOptions = {}): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
@@ -82,6 +82,7 @@ export async function sendMail(to: string, subject: string, text: string, attach
         from, to: [to], subject, text: plain,
         html: brandedHtml({ title: opts.title, text, button: opts.button, note: opts.note }),
         reply_to: opts.replyTo || 'support@immoadv.de',
+        ...(opts.headers ? { headers: opts.headers } : {}),
         ...(attachments.length ? { attachments: attachments.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })) } : {}),
       }),
       signal: AbortSignal.timeout(attachments.length ? 30000 : 8000),
