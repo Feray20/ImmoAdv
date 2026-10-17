@@ -2,7 +2,7 @@
 // Käufer-Pass: Angebotsvergleich der Bankangebote, Bankgespräch-Vorbereitung.
 // Investor Pro: zusätzlich Anschlussfinanzierung mit Forward-Aufschlag und Kündigungsrecht nach § 489 BGB.
 // Die Freischaltung im Browser ist eine Komfortfunktion; die Rechenwege sind offen dokumentiert.
-import { monthlyRate, balanceAfterMonths } from './calc.mjs';
+import { monthlyRate, balanceAfterMonths, tilgungsplan, kaufnebenkosten, GREST } from './calc.mjs';
 
 const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -49,6 +49,24 @@ export function kuendigungsrecht489(payout) {
   const from = new Date(d); from.setFullYear(from.getFullYear() + 10);
   const end = new Date(from); end.setMonth(end.getMonth() + 6);
   return { from, end };
+}
+
+
+// Höchster Kaufpreis, bei dem Ziel-Cashflow bzw. Ziel-Bruttorendite erreicht werden.
+export function maxPrice({ rent, costPct, equity, rate, repay, nkPct, targetCf, targetYield }) {
+  const costs = rent * costPct / 100;
+  const ann = (rate + repay) / 100;
+  const byCf = ann > 0 ? (((rent - costs - targetCf) * 12) / ann + equity) / (1 + nkPct / 100) : 0;
+  const byYield = targetYield > 0 ? (rent * 12) / (targetYield / 100) : Infinity;
+  return { byCf: Math.max(0, byCf), byYield, max: Math.max(0, Math.min(byCf, byYield)) };
+}
+
+// Betriebskostenabrechnung: Kosten nach Umlageschlüssel auf die Mietpartei verteilen, Vorauszahlungen abziehen.
+export function betriebskosten({ rows, flaecheGesamt, flaecheMieter, personenGesamt, personenMieter, einheitenGesamt, monate = 12, vorauszahlung }) {
+  const share = (k) => k === 'flaeche' ? (flaecheGesamt > 0 ? flaecheMieter / flaecheGesamt : 0) : k === 'personen' ? (personenGesamt > 0 ? personenMieter / personenGesamt : 0) : k === 'einheit' ? (einheitenGesamt > 0 ? 1 / einheitenGesamt : 0) : 1;
+  const out = rows.filter((r) => r.betrag > 0).map((r) => ({ ...r, anteil: r.betrag * share(r.key) * (monate / 12) }));
+  const summe = out.reduce((a, r) => a + r.anteil, 0);
+  return { rows: out, summe, saldo: summe - vorauszahlung };
 }
 
 // ---------- Oberfläche ----------
@@ -141,6 +159,94 @@ function forwardTool(box, ok, d) {
   run();
 }
 
+
+function priceTool(box, ok) {
+  const st = store('price') || { rent: 1100, costPct: 15, equity: 60000, rate: 3.6, repay: 2, land: 'hessen', broker: 3.57, targetCf: 0, targetYield: 4.5, asking: 340000 };
+  const lands = Object.entries(GREST).map(([k, g]) => `<option value="${k}"${k === st.land ? ' selected' : ''}>${esc(g.name)}</option>`).join('');
+  box.innerHTML = `<h3>Kaufpreis-Verhandlung</h3><p class="form-note">Bis zu welchem Kaufpreis rechnet sich das Objekt für Sie? Daraus entsteht Ihr Verhandlungsspielraum – und ein höfliches, begründetes Angebot an den Verkäufer.</p>
+    <div class="tl-grid">
+      <label>Angebotspreis im Exposé (€)<input data-p="asking" type="number" step="any" value="${st.asking}"></label>
+      <label>Kaltmiete / Monat (€)<input data-p="rent" type="number" step="any" value="${st.rent}"></label>
+      <label>Nicht umlagefähige Kosten (% der Miete)<input data-p="costPct" type="number" step="1" value="${st.costPct}"></label>
+      <label>Eigenkapital (€)<input data-p="equity" type="number" step="any" value="${st.equity}"></label>
+      <label>Sollzins (%)<input data-p="rate" type="number" step="0.05" value="${st.rate}"></label>
+      <label>Tilgung (%)<input data-p="repay" type="number" step="0.1" value="${st.repay}"></label>
+      <label>Bundesland<select data-p="land">${lands}</select></label>
+      <label>Makler Käufer (%)<input data-p="broker" type="number" step="0.01" value="${st.broker}"></label>
+      <label>Ziel-Cashflow / Monat (€)<input data-p="targetCf" type="number" step="10" value="${st.targetCf}"></label>
+      <label>Mindest-Bruttorendite (%)<input data-p="targetYield" type="number" step="0.1" value="${st.targetYield}"></label>
+    </div><div id="prOut" aria-live="polite"></div>${ok ? '<p class="tl-act"><button type="button" class="btn btn-outline" id="prCopy">Angebotsschreiben kopieren</button></p>' : lock('pass')}`;
+  let letter = '';
+  const run = () => {
+    box.querySelectorAll('[data-p]').forEach((el) => { st[el.dataset.p] = el.tagName === 'SELECT' ? el.value : num(el.value); });
+    store('price', st);
+    const nk = kaufnebenkosten({ price: 100000, land: st.land, brokerPct: st.broker });
+    const r = maxPrice({ ...st, nkPct: nk ? nk.totalPct : 10 });
+    const gap = st.asking - r.max;
+    const offer = Math.floor(r.max / 1000) * 1000;
+    letter = `Sehr geehrte Damen und Herren,\n\nvielen Dank für die Informationen zum Objekt. Nach sorgfältiger Prüfung möchte ich Ihnen ein Kaufpreisangebot über ${E(offer)} unterbreiten.\n\nMeine Kalkulation: Bei einer Kaltmiete von ${E(st.rent)} im Monat, nicht umlagefähigen Kosten und Rücklagen sowie Kaufnebenkosten von rund ${nk ? P(nk.totalPct, 1) : '10 %'} trägt sich die Finanzierung nur bis zu diesem Preis. Die Bruttomietrendite liegt beim Angebotspreis bei ${P(st.asking ? st.rent * 12 / st.asking * 100 : 0)}.\n\nDas Angebot ist unverbindlich und steht unter dem Vorbehalt der Finanzierungszusage. Über eine Rückmeldung freue ich mich.\n\nMit freundlichen Grüßen`;
+    box.querySelector('#prOut').innerHTML = `<div class="tl-facts"><div><small>Höchstpreis (Ziel-Cashflow)</small><strong>${E(r.byCf)}</strong></div><div><small>Höchstpreis (Mindestrendite)</small><strong>${Number.isFinite(r.byYield) ? E(r.byYield) : '–'}</strong></div><div><small>Ihr Höchstpreis</small><strong>${E(r.max)}</strong></div><div><small>${gap > 0 ? 'Zu verhandeln' : 'Puffer'}</small><strong>${E(Math.abs(gap))}</strong><span>${st.asking ? P(Math.abs(gap) / st.asking * 100, 1) : ''} ${gap > 0 ? 'unter Angebotspreis' : 'unter Ihrem Höchstpreis'}</span></div></div>
+      <p class="tl-verdict">${gap > 0 ? (gap / st.asking > 0.15 ? `<strong>Zum Angebotspreis verfehlen Sie Ihr Ziel deutlich.</strong> Rechnerisch begründbar wären ${E(offer)} – ein so großer Abschlag wird selten akzeptiert. Prüfen Sie Ihre Ziele, die Miete (Mietspiegel) oder suchen Sie ein anderes Objekt.` : `<strong>Zum Angebotspreis rechnet es sich nicht ganz.</strong> Ein Angebot um ${E(offer)} ist begründbar.`) : '<strong>Der Angebotspreis liegt in Ihrem Rahmen.</strong> Verhandeln lohnt sich trotzdem – jeder Euro senkt Rate und Nebenkosten.'}</p>`;
+  };
+  box.addEventListener('input', run); box.addEventListener('change', run);
+  run();
+  $('prCopy')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(letter); $('prCopy').textContent = 'Kopiert ✓'; } catch { /* ohne Zwischenablage */ } });
+}
+
+function specialTool(box, ok) {
+  const st = store('special') || { loan: 300000, rate: 3.6, repay: 2, special: 5000, years: 10 };
+  box.innerHTML = `<h3>Sondertilgung planen</h3><p class="form-note">Was bringt eine jährliche Sondertilgung? Kürzere Laufzeit, weniger Zinsen und niedrigere Restschuld am Ende der Zinsbindung.</p>
+    <div class="tl-grid"><label>Darlehen (€)<input data-s="loan" type="number" step="any" value="${st.loan}"></label><label>Sollzins (%)<input data-s="rate" type="number" step="0.05" value="${st.rate}"></label><label>Tilgung (%)<input data-s="repay" type="number" step="0.1" value="${st.repay}"></label><label>Sondertilgung pro Jahr (€)<input data-s="special" type="number" step="500" value="${st.special}"></label><label>Zinsbindung (Jahre)<input data-s="years" type="number" step="1" value="${st.years}"></label></div>
+    <div id="spOut" aria-live="polite"></div>${ok ? '' : lock('pass')}`;
+  const run = () => {
+    box.querySelectorAll('[data-s]').forEach((el) => { st[el.dataset.s] = num(el.value); });
+    store('special', st);
+    const a = tilgungsplan({ loan: st.loan, ratePa: st.rate / 100, repaymentPa: st.repay / 100, fixedYears: st.years });
+    const b = tilgungsplan({ loan: st.loan, ratePa: st.rate / 100, repaymentPa: st.repay / 100, fixedYears: st.years, specialPa: st.special });
+    if (!a || !b) { box.querySelector('#spOut').innerHTML = '<p class="form-note">Bitte Darlehen, Zins und Tilgung eintragen.</p>'; return; }
+    const restA = a.years[st.years - 1]?.balance ?? 0, restB = b.years[st.years - 1]?.balance ?? 0;
+    const yA = a.months ? a.months / 12 : null, yB = b.months ? b.months / 12 : null;
+    box.querySelector('#spOut').innerHTML = `<div class="tl-facts"><div><small>Zinsersparnis gesamt</small><strong>${E(a.totalInterest - b.totalInterest)}</strong></div><div><small>Laufzeit</small><strong>${yB ? yB.toFixed(1).replace('.', ',') : '–'} statt ${yA ? yA.toFixed(1).replace('.', ',') : '–'} Jahre</strong></div><div><small>Restschuld nach ${st.years} Jahren</small><strong>${E(restB)}</strong><span>statt ${E(restA)}</span></div></div>
+      <p class="tl-verdict">Prüfen Sie, wie viel Sondertilgung Ihr Vertrag kostenlos erlaubt (oft 5 % des Darlehens pro Jahr = ${E(st.loan * 0.05)}). Behalten Sie eine Rücklage – Sondertilgungen bekommen Sie nicht zurück.</p>`;
+  };
+  box.addEventListener('input', run);
+  run();
+}
+
+function bkTool(box, ok) {
+  const DEF = [['Grundsteuer', 'flaeche'], ['Wasser/Abwasser', 'personen'], ['Müllabfuhr', 'personen'], ['Gebäudeversicherung', 'flaeche'], ['Hausmeister', 'flaeche'], ['Treppenhausreinigung', 'einheit'], ['Gartenpflege', 'flaeche'], ['Allgemeinstrom', 'einheit'], ['Schornsteinfeger', 'einheit'], ['Aufzug', 'flaeche']];
+  const st = store('bk') || { mieter: '', zeitraum: `${new Date().getFullYear() - 1}`, flaecheGesamt: 480, flaecheMieter: 72, personenGesamt: 11, personenMieter: 2, einheitenGesamt: 6, monate: 12, vorauszahlung: 1560, rows: DEF.map(([t, key]) => ({ t, key, betrag: 0 })) };
+  const KEYS = [['flaeche', 'Wohnfläche'], ['personen', 'Personen'], ['einheit', 'Wohneinheiten'], ['direkt', 'direkt (100 %)']];
+  box.innerHTML = `<h3>Betriebskostenabrechnung erstellen</h3><p class="form-note">Kosten des Hauses eintragen, Umlageschlüssel wählen – das Programm verteilt auf Ihre Mietpartei, zieht die Vorauszahlungen ab und erstellt die Abrechnung zum Ausdrucken. Heizkosten nach Heizkostenverordnung bitte separat (Messdienst).</p>
+    <div class="tl-grid"><label>Mieter<input data-b="mieter" type="text" maxlength="80" value="${esc(st.mieter)}"></label><label>Abrechnungsjahr<input data-b="zeitraum" type="text" maxlength="20" value="${esc(st.zeitraum)}"></label><label>Monate im Zeitraum bewohnt<input data-b="monate" type="number" min="1" max="12" value="${st.monate}"></label>
+      <label>Wohnfläche gesamt (m²)<input data-b="flaecheGesamt" type="number" step="any" value="${st.flaecheGesamt}"></label><label>Wohnfläche Mieter (m²)<input data-b="flaecheMieter" type="number" step="any" value="${st.flaecheMieter}"></label><label>Personen gesamt<input data-b="personenGesamt" type="number" step="1" value="${st.personenGesamt}"></label>
+      <label>Personen Mieter<input data-b="personenMieter" type="number" step="1" value="${st.personenMieter}"></label><label>Wohneinheiten gesamt<input data-b="einheitenGesamt" type="number" step="1" value="${st.einheitenGesamt}"></label><label>Vorauszahlungen im Zeitraum (€)<input data-b="vorauszahlung" type="number" step="any" value="${st.vorauszahlung}"></label></div>
+    <div class="tl-tablewrap"><table class="tl-table"><thead><tr><th>Kostenart</th><th>Gesamtbetrag Haus (€)</th><th>Umlageschlüssel</th><th>Anteil Mieter</th></tr></thead><tbody>${st.rows.map((r, i) => `<tr><td><input data-r="${i}" data-rk="t" type="text" maxlength="40" value="${esc(r.t)}"></td><td><input data-r="${i}" data-rk="betrag" type="number" step="any" value="${r.betrag || ''}"></td><td><select data-r="${i}" data-rk="key">${KEYS.map(([k, l]) => `<option value="${k}"${r.key === k ? ' selected' : ''}>${l}</option>`).join('')}</select></td><td class="bk-a" id="bk${i}">–</td></tr>`).join('')}</tbody></table></div>
+    <div id="bkOut" aria-live="polite"></div>${ok ? '<p class="tl-act"><button type="button" class="btn btn-dark" id="bkPrint">Abrechnung drucken / als PDF</button></p>' : lock('pro')}`;
+  let res;
+  const run = () => {
+    box.querySelectorAll('[data-b]').forEach((el) => { st[el.dataset.b] = el.type === 'text' ? el.value : num(el.value); });
+    box.querySelectorAll('[data-r]').forEach((el) => { st.rows[+el.dataset.r][el.dataset.rk] = el.dataset.rk === 'betrag' ? num(el.value) : el.value; });
+    store('bk', st);
+    res = betriebskosten(st);
+    st.rows.forEach((r, i) => { const x = res.rows.find((y) => y.t === r.t && y.betrag === r.betrag); const c = $('bk' + i); if (c) c.textContent = x ? E2(x.anteil) : '–'; });
+    box.querySelector('#bkOut').innerHTML = `<div class="tl-facts"><div><small>Kosten Mieter</small><strong>${E2(res.summe)}</strong></div><div><small>Vorauszahlungen</small><strong>${E2(st.vorauszahlung)}</strong></div><div><small>${res.saldo >= 0 ? 'Nachzahlung' : 'Guthaben'}</small><strong>${E2(Math.abs(res.saldo))}</strong></div></div>
+      <p class="tl-verdict">Die Abrechnung muss dem Mieter spätestens 12 Monate nach Ende des Abrechnungszeitraums zugehen (§ 556 Abs. 3 BGB); danach sind Nachforderungen meist ausgeschlossen. Umlagefähig sind nur Kosten nach der Betriebskostenverordnung, die im Mietvertrag vereinbart sind.</p>`;
+  };
+  box.addEventListener('input', run); box.addEventListener('change', run);
+  run();
+  $('bkPrint')?.addEventListener('click', () => {
+    const w = window.open('', '_blank'); if (!w) return;
+    const keyL = Object.fromEntries(KEYS);
+    w.document.write(`<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Betriebskostenabrechnung ${esc(st.zeitraum)}</title><style>body{font:13.5px/1.5 system-ui,sans-serif;margin:28px;color:#0F172A}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #CBD5E1;padding:6px;text-align:left}td.r,th.r{text-align:right}h1{font-size:20px}.n{font-size:11px;color:#475569;margin-top:18px}</style></head><body>
+      <h1>Betriebskostenabrechnung ${esc(st.zeitraum)}</h1><p>Mieter: <strong>${esc(st.mieter || '–')}</strong> · Wohnfläche ${st.flaecheMieter} von ${st.flaecheGesamt} m² · Personen ${st.personenMieter} von ${st.personenGesamt} · Einheiten ${st.einheitenGesamt} · Zeitraum ${st.monate} Monate</p>
+      <table><tr><th>Kostenart</th><th class="r">Gesamtkosten</th><th>Schlüssel</th><th class="r">Ihr Anteil</th></tr>${res.rows.map((r) => `<tr><td>${esc(r.t)}</td><td class="r">${E2(r.betrag)}</td><td>${keyL[r.key]}</td><td class="r">${E2(r.anteil)}</td></tr>`).join('')}
+      <tr><th colspan="3">Summe Ihrer Kosten</th><th class="r">${E2(res.summe)}</th></tr><tr><td colspan="3">abzüglich Vorauszahlungen</td><td class="r">− ${E2(st.vorauszahlung)}</td></tr><tr><th colspan="3">${res.saldo >= 0 ? 'Nachzahlung' : 'Guthaben'}</th><th class="r">${E2(Math.abs(res.saldo))}</th></tr></table>
+      <p>Die Belege können nach Absprache eingesehen werden.</p><p class="n">Erstellt mit ImmoAdv am ${new Date().toLocaleDateString('de-DE')}. Vorlage ohne Gewähr für die rechtliche Wirksamkeit im Einzelfall; keine Rechtsdienstleistung.</p></body></html>`);
+    w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
+  });
+}
+
 function printBox(box, title) {
   const w = window.open('', '_blank');
   if (!w) return;
@@ -156,8 +262,11 @@ export function mountTools(view, { d, tier = 'free', b2b = false }) {
   const pass = b2b || tier === 'starter' || tier === 'pro';
   const pro = b2b || tier === 'pro';
   view.innerHTML = `<h2 class="tl-h">Werkzeuge</h2><p class="form-note">Werkzeuge, die Ihnen Stunden sparen – vom Bankangebot bis zur Anschlussfinanzierung. Alles rechnet in Ihrem Browser.</p>
-    <nav class="tl-nav" aria-label="Werkzeuge"><a href="#t-offers">Bankangebote vergleichen</a><a href="#t-bank">Bankgespräch vorbereiten</a><a href="#t-fwd">Anschluss &amp; Forward</a><a href="#steuer">Steuer-Werkzeuge</a><a href="/rechner">Alle Rechner</a></nav>
-    <section class="tl-card" id="t-offers"></section><section class="tl-card" id="t-bank"></section><section class="tl-card" id="t-fwd"></section>`;
+    <nav class="tl-nav" aria-label="Werkzeuge"><a href="#t-price">Kaufpreis verhandeln</a><a href="#t-offers">Bankangebote vergleichen</a><a href="#t-bank">Bankgespräch vorbereiten</a><a href="#t-special">Sondertilgung</a><a href="#t-fwd">Anschluss &amp; Forward</a><a href="#t-bk">Betriebskosten</a><a href="#steuer">Steuer-Werkzeuge</a><a href="/rechner">Alle Rechner</a></nav>
+    <section class="tl-card" id="t-price"></section><section class="tl-card" id="t-offers"></section><section class="tl-card" id="t-bank"></section><section class="tl-card" id="t-special"></section><section class="tl-card" id="t-fwd"></section><section class="tl-card" id="t-bk"></section>`;
+  priceTool($('t-price'), pass);
+  specialTool($('t-special'), pass);
+  bkTool($('t-bk'), pro);
   offersTool($('t-offers'), pass);
   bankTool($('t-bank'), pass, d);
   forwardTool($('t-fwd'), pro, d);

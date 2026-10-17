@@ -42,6 +42,7 @@
      "90 Tage unbegrenzt Objekte und Exposé-Analysen",
      "Vergleichsmatrix: Objekte nebeneinander bewerten",
      "Angebotsvergleich der Bankangebote und Bankgespräch-Vorbereitung",
+     "Kaufpreis-Verhandlung mit Angebotsschreiben und Sondertilgungs-Planer",
      "Inklusive 1 BankReady Kreditmappe (Wert 39 €)",
      "Analyse-PDF für jedes Objekt",
      "Endet automatisch – kein Abo, keine Kündigung nötig"
@@ -60,6 +61,7 @@
      "Fristenwächter mit Erinnerungen per E-Mail",
      "CSV-Export für die Anlage V und Monatsbericht",
      "Anschlussfinanzierungs-Rechner mit Forward-Aufschlag",
+     "Betriebskostenabrechnung für Ihre Mieter erstellen",
      "Monatlich kündbar"
     ]
    }
@@ -83,6 +85,7 @@
      "10 Fall-Analysen pro Monat (Unterlagen-Paket hochladen, sofort geprüft)",
      "3 Kunden-Präsentationen pro Monat",
      "20 Kreditmappen (Prüfdossiers) pro Monat",
+     "Programme: Haushaltsrechnung, Unterlagen-Anforderung, Provisionsrechner, GEG-Inseratscheck, Ertragswert",
      "Website-Widget, Exposé-QR-Codes, Anfragen im Portal",
      "Praxis-Toolkit für Ihre Branche"
     ]
@@ -114,6 +117,7 @@
      "Bis zu 3 Berater-Zugänge",
      "100 Fall-Analysen pro Monat",
      "Kunden-Präsentationen unbegrenzt – mit Ihrem Logo, Ihren Farben und Ihrer Schrift",
+     "Alle Programme, zusätzlich Beratungsprotokoll (§ 511 BGB), Bankangebote vergleichen, Vorfälligkeit & Anschluss",
      "Bestandskunden-Radar: Kunden mit Zinsbindungsende in den nächsten 36 Monaten (mit deren Einwilligung)",
      "Kreditmappen ohne Monatslimit, Gesamtdossier mit Unterlagen",
      "Eigene Partnerseite mit Terminlink"
@@ -142,6 +146,7 @@
    "features": [
     "Bis zu 10 Berater-Zugänge (erweiterbar)",
     "Fall-Analysen und Präsentationen unbegrenzt",
+    "Alle Programme für jeden Berater",
     "White-Label: Unterlagen komplett im Erscheinungsbild Ihres Hauses – Logo, Farben, Schrift, Absender, Fußzeile, ohne ImmoAdv",
     "Teamverwaltung mit Berater-Zuordnung, Bestandskunden-Radar",
     "Kauf auf Rechnung möglich",
