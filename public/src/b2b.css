@@ -583,3 +583,12 @@ body.dk-open{overflow:hidden}
 #wSend label,#mkF label,#mkLF label{display:grid;gap:4px;align-content:start;font-size:13px;font-weight:600;color:#475569}
 #wSend input,#wSend select,#wSend textarea,#mkF input,#mkF select,#mkF textarea,#mkLF input,#mkLF select,#mkLF textarea{border:1px solid #CBD5E1;border-radius:8px;padding:8px 10px;font:inherit;font-size:14.5px;min-width:0;width:100%;box-sizing:border-box}
 #wSend .pt-row{gap:10px}
+/* Einrichtung */
+.su-bar{height:10px;border-radius:99px;background:#E2E8F0;overflow:hidden;margin:6px 0 4px}.su-bar i{display:block;height:100%;background:linear-gradient(90deg,#0284C7,#16A34A)}
+.su-list{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:10px}
+.su-item{border:1px solid #E2E8F0;border-left:4px solid #DC2626;border-radius:12px;padding:12px 14px;background:#fff}.su-item.opt{border-left-color:#F59E0B}
+.su-h{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.su-h strong{color:#0F2C59;font-size:15.5px;margin-right:auto}
+.su-tag{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:999px;background:#F1F5F9;color:#475569}.su-tag.auto{background:#E0F2FE;color:#0369A1}.su-tag.man{background:#FEF3C7;color:#92400E}
+.su-steps{margin:6px 0 4px;padding-left:20px;display:grid;gap:5px;font-size:14px;line-height:1.5;color:#334155}.su-steps code{background:#F1F5F9;border-radius:4px;padding:1px 5px;font-size:12.5px}
+.su-done{display:inline-flex!important;gap:8px;align-items:center;margin-top:6px;font-weight:700;color:#166534}
+.su-done-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}.su-done-list li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #F1F5F9;font-size:14px}.su-done-list small{color:#64748B}

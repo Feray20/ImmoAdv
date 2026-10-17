@@ -72,7 +72,7 @@ async function mfa() {
 const SEGS = { b2c: 'Privatkunden (B2C)', b2b: 'Unternehmen (B2B)' };
 const getSeg = () => { try { return localStorage.getItem('ia-admin-seg') === 'b2b' ? 'b2b' : 'b2c'; } catch { return 'b2c'; } };
 const setSeg = (x) => { try { localStorage.setItem('ia-admin-seg', x); } catch { /* nur Komfort */ } };
-const TABS = [['uebersicht', 'Übersicht'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
+const TABS = [['uebersicht', 'Übersicht'], ['einrichtung', 'Einrichtung'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
 
 function paintSeg() {
   const chip = $('#adSeg'); if (!chip) return;
@@ -105,7 +105,7 @@ function show() {
   const v = $('#adView');
   v.innerHTML = '<p class="form-note">Wird geladen …</p>';
   msg('');
-  ({ uebersicht, analyse, testkauf, cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)) })[t](v);
+  ({ uebersicht, einrichtung, analyse, testkauf, cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)) })[t](v);
 }
 
 // ---------- Nutzer: Konten im Überblick, sperren/entsperren, Passwort-Reset ----------
@@ -232,9 +232,10 @@ function mailSetup(m) {
     ['Supabase: ImmoAdv-Vorlagen', `<a href="${SB}/auth/templates" target="_blank" rel="noopener">Supabase → Authentication → Emails → Templates</a>: je Vorlage Betreff und HTML aus der Liste unten einfügen.`, st(null, 'manuell')],
     ['Supabase: Adressen', `<a href="${SB}/auth/url-configuration" target="_blank" rel="noopener">URL Configuration</a>: Site URL <code>https://immoadv.de</code>; Redirect URLs <code>https://immoadv.de/auth/login</code>, <code>/auth/reset</code>, <code>/auth/callback</code>, <code>/auth/confirm</code>, <code>/b2b-portal</code>.`, st(null, 'manuell')],
   ];
+  if (m.ready) steps.splice(0, 3); // Resend-Konto, DNS und Schlüssel erledigt → ausblenden
   return `<section class="pt-card ad-mailsetup" id="mailSetup"><h2>E-Mail-Versand (Absender „ImmoAdv“)</h2>
     <p class="form-note">${m.ready ? `Eigener Versand aktiv: <strong>${esc(m.from)}</strong>. Alle E-Mails von ImmoAdv kommen im ImmoAdv-Design mit Logo.` : 'Noch nicht eingerichtet – Konto-E-Mails kommen übergangsweise vom Absender „Supabase Auth“, andere E-Mails (Nachweise, Rechnungen, Kündigungen) werden nicht gesendet.'}</p>
-    <ol class="ad-steps">${steps.map(([t, b, s2]) => `<li><div class="ad-step-h"><strong>${t}</strong><span class="ad-step-st">${s2}</span></div><p>${b}</p></li>`).join('')}</ol>
+    ${steps.length ? '' : ''}<ol class="ad-steps">${steps.map(([t, b, s2]) => `<li><div class="ad-step-h"><strong>${t}</strong><span class="ad-step-st">${s2}</span></div><p>${b}</p></li>`).join('')}</ol>
     <h3 class="ad-sub">Testen</h3>
     <div class="pt-row"><button class="btn btn-dark" id="sysMail" type="button">Test 1: ImmoAdv-E-Mail an mich</button><button class="btn btn-outline" id="sysAuthMail" type="button">Test 2: Konto-E-Mail über Supabase an mich</button></div>
     <p class="form-note">Test 1 prüft Resend und Ihren Absender. Test 2 schickt einen Passwort-Link über Supabase – kommt er als „ImmoAdv“ mit Logo an, sind SMTP und Vorlagen richtig (Link einfach ignorieren, wenn Sie das Passwort nicht ändern möchten).</p>
@@ -401,8 +402,9 @@ async function system(v, focusMail = false) {
   v.innerHTML = `<h2>Einrichtung</h2>
     <p class="form-note">${need.length ? `<strong>${need.length} Punkt(e) offen.</strong> Die Werte werden in Vercel unter Settings → Environment Variables eingetragen (nie per Chat oder E-Mail weitergeben), danach neu deployen.` : 'Alle Pflichtpunkte eingerichtet.'} Umgebung: ${esc(r.data.env)}${r.data.commit ? ` · Version ${esc(r.data.commit)}` : ''}</p>
     <div class="ad-wrap"><table class="ad-table"><thead><tr><th></th><th>Bereich</th><th>Stand</th><th>Was tun?</th></tr></thead><tbody>
-    ${c.map((x) => `<tr><td><span class="ad-amp ${x.ok ? 'gruen' : x.optional ? 'gelb' : 'rot'}"></span></td><td>${esc(x.label)}${x.optional ? ' <small>(optional)</small>' : ''}</td><td>${x.ok ? 'eingerichtet' : 'fehlt'}${x.info ? ` · ${esc(x.info)}` : ''}</td><td><small>${x.ok ? '–' : esc(x.fix)}</small></td></tr>`).join('')}
+    ${c.filter((x) => !x.ok).map((x) => `<tr><td><span class="ad-amp ${x.ok ? 'gruen' : x.optional ? 'gelb' : 'rot'}"></span></td><td>${esc(x.label)}${x.optional ? ' <small>(optional)</small>' : ''}</td><td>${x.ok ? 'eingerichtet' : 'fehlt'}${x.info ? ` · ${esc(x.info)}` : ''}</td><td><small>${x.ok ? '–' : esc(x.fix)}</small></td></tr>`).join('')}
     </tbody></table></div>
+    <p class="form-note">${c.filter((x) => x.ok).length} Punkte sind eingerichtet und ausgeblendet. Die vollständige Liste mit Anleitung steht im Reiter <a href="#einrichtung">Einrichtung</a>.</p>
     ${mailSetup(r.data.mail || {})}
     <h2>Nutzer suchen</h2><p class="form-note">Zeigt nur Kennzahlen (Anmeldung, Anzahl Objekte, Dokumente, Kreditmappen) – keine Inhalte. Jede Suche wird protokolliert.</p>
     <div class="pt-row"><input id="sysQ" type="email" placeholder="E-Mail-Adresse" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-dark" id="sysFind" type="button">Suchen</button></div>
@@ -846,4 +848,25 @@ function chart(series) {
   const lab = series.map((x, i) => ((i % every === 0 && series.length - 1 - i >= every / 2) || i === series.length - 1) ? `<text x="${X(i)}" y="${H - 8}" text-anchor="middle" class="an-t">${new Date(x[0]).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}</text>` : '').join('');
   const dots = series.length <= 31 ? series.map((x, i) => `<circle cx="${X(i)}" cy="${Y(x[1])}" r="3" class="an-dv"><title>${new Date(x[0]).toLocaleDateString('de-DE')}: ${x[1]} Besucher, ${x[2]} Aufrufe</title></circle>`).join('') : '';
   return `<div class="an-legend"><span class="an-lv">Besucher</span><span class="an-lp">Seitenaufrufe</span></div><svg class="an-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Besucher und Seitenaufrufe je Tag">${grid.join('')}<path d="${line(2)}" class="an-p"/><path d="${line(1)}" class="an-v"/>${dots}${lab}</svg>`;
+}
+
+// ---------- Einrichtung: offene Punkte mit Anleitung, Erledigtes eingeklappt ----------
+async function einrichtung(v) {
+  const r = await api('/api/admin/setup');
+  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  const all = r.data.items || [];
+  const open = all.filter((x) => !x.ok), done = all.filter((x) => x.ok);
+  const must = open.filter((x) => !x.optional);
+  const pct = all.length ? Math.round((done.length / all.length) * 100) : 0;
+  const groups = [...new Set(all.map((x) => x.group))];
+  const card = (x) => `<li class="su-item${x.optional ? ' opt' : ''}"><div class="su-h"><strong>${esc(x.title)}</strong><span class="su-tag ${x.auto ? 'auto' : 'man'}">${x.auto ? 'wird automatisch erkannt' : 'selbst abhaken'}</span>${x.optional ? '<span class="su-tag">optional</span>' : ''}</div>
+      <p class="form-note">${esc(x.why)}${x.info ? ` <em>${esc(x.info)}</em>` : ''}</p><ol class="su-steps">${x.steps.map((st) => `<li>${st}</li>`).join('')}</ol>
+      ${x.auto ? '' : `<label class="chk su-done"><input type="checkbox" data-su="${x.id}"> Erledigt</label>`}</li>`;
+  v.innerHTML = `<section class="ad-over"><div class="ad-over-h"><h2>Einrichtung</h2><p class="form-note">${must.length ? `<strong>${must.length} Pflichtpunkt${must.length === 1 ? '' : 'e'} offen</strong>${open.length > must.length ? `, ${open.length - must.length} optional` : ''}.` : '<strong>Alle Pflichtpunkte erledigt.</strong>'} Erledigtes wird automatisch ausgeblendet. Werte nie per Chat oder E-Mail weitergeben – immer direkt in Vercel eintragen.</p></div>
+    <div class="su-bar" role="img" aria-label="${pct} Prozent erledigt"><i style="width:${pct}%"></i></div><p class="form-note">${done.length} von ${all.length} erledigt</p>
+    ${groups.map((g) => { const o = open.filter((x) => x.group === g); return o.length ? `<h3 class="ad-sub">${esc(g)}</h3><ol class="su-list">${o.map(card).join('')}</ol>` : ''; }).join('') || '<p class="pt-alert ok">Alles eingerichtet.</p>'}
+    ${done.length ? `<details class="ad-help"><summary>Erledigt (${done.length})</summary><ul class="su-done-list">${done.map((x) => `<li><span>✓ ${esc(x.title)}</span>${x.auto ? '<small>automatisch erkannt</small>' : `<button type="button" class="text-btn" data-undo="${x.id}">wieder öffnen</button>`}</li>`).join('')}</ul></details>` : ''}</section>`;
+  const mark = async (id, val) => { const x = await api('/api/admin/setup', { method: 'POST', body: JSON.stringify({ id, done: val }) }); if (!x.ok) msg(x.data?.error || 'Fehler', true); einrichtung(v); };
+  v.querySelectorAll('[data-su]').forEach((b) => b.onchange = () => mark(b.dataset.su, b.checked));
+  v.querySelectorAll('[data-undo]').forEach((b) => b.onclick = () => mark(b.dataset.undo, false));
 }
