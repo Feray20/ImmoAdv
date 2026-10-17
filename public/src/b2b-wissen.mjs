@@ -1,5 +1,5 @@
-// Unternehmensportal → Fachwissen: Mindmap, Struktogramm, Prozess-Swimlane, Kennzahlenbaum, Diagramme und Fachglossar
-// für Makler, Finanzierungsvermittler und Banken. Alle Beispielzahlen werden hier nachvollziehbar berechnet.
+// Unternehmensportal → Praxis-Toolkit für erfahrene Berater: Gesprächsgrafiken, Sonderfälle, Einwände, Prüfpfade,
+// Unterlagen-Checklisten und Pflichten-Check (keine Grundlagen). Alle Beispielzahlen werden hier nachvollziehbar berechnet.
 // Hinweis: Orientierungswissen, keine Rechts- oder Finanzierungsberatung; bankindividuelle Vorgaben gehen vor.
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -272,46 +272,52 @@ const GLOSSAR = [
   ['Zweckerklärung', 'Sicherungsabrede, welche Forderungen die Grundschuld absichert (eng oder weit).'],
 ];
 
-const CHAPTERS = [
-  ['mind', 'Mindmap'], ['ns', 'Struktogramm'], ['prozess', 'Prozess'], ['kpi', 'Kennzahlen'], ['charts', 'Diagramme'], ['recht', 'Rechtsrahmen'], ['glossar', 'Glossar'],
+// ---------- Praxis: Sonderfälle und Einwände (für erfahrene Berater, keine Grundlagen) ----------
+const SONDER = [
+  ['Selbstständig unter 3 Jahren', 'Viele Banken verlangen zwei bis drei Jahresabschlüsse; einzelne akzeptieren ein volles Geschäftsjahr bei einschlägiger Vorerfahrung.', 'Branchenerfahrung und Vortätigkeit belegen, aktuelle BWA mit Vorjahresvergleich, höhere Eigenkapitalquote, gezielt Banken mit Selbstständigen-Fokus ansprechen.'],
+  ['Probezeit oder Befristung', 'Bankindividuell: teils Ablehnung, teils Zusage bei gefragten Berufen oder langer Beschäftigungshistorie.', 'Arbeitgeberbestätigung (Übernahmeabsicht), lückenloser Lebenslauf, Einkommen des Mitantragstellers tragend rechnen.'],
+  ['Elternzeit', 'Elterngeld wird meist nicht dauerhaft angerechnet; das Einkommen nach Rückkehr teils schon.', 'Rückkehrbestätigung mit Datum und Stundenumfang; Kapitaldienst für die Elternzeit-Phase separat darstellen.'],
+  ['Beleihungsauslauf über 100 %', 'Kleiner Anbieterkreis, spürbare Zinsaufschläge, sehr gute Bonität und Haushaltsüberschuss nötig.', 'Höhere Anfangstilgung, Förderbausteine (KfW, Landesförderbanken) einbinden, Überschuss nach Stresszins belegen.'],
+  ['Kapitalanleger mit Bestand', 'Mieten werden häufig nur zu 70–80 % angesetzt; der Bestand wird gesamthaft gerechnet.', 'Objektliste mit Restschulden, Mieten und Bewirtschaftung; DSCR je Objekt und gesamt; Anlage V der letzten Jahre.'],
+  ['Erbbaurecht', 'Restlaufzeit muss die Darlehenslaufzeit deutlich übersteigen; Zustimmung des Grundstückseigentümers zur Belastung erforderlich.', 'Erbbaurechtsvertrag früh anfordern, Restlaufzeit und Erbbauzins prüfen, Zustimmung vor Einreichung klären.'],
+  ['Energieeffizienzklasse G / H', 'Abschläge beim Beleihungswert möglich; Sanierungsbedarf fließt in die Bewertung ein.', 'Sanierungsfahrplan und Kostenschätzung beilegen, Modernisierung mitfinanzieren, Förderprogramme für Sanierung prüfen.'],
+  ['Einkommen aus dem Ausland', 'Bankindividuell, oft mit Abschlägen (Währung, Rechtsdurchsetzung) oder nur bei ausgewählten Banken.', 'Bankauswahl vor Unterlagensammlung; Steuerbescheide, Arbeitsvertrag und Übersetzungen bereithalten.'],
+];
+const EINWAND = [
+  ['„Ich warte, bis die Zinsen fallen.“', 'Rate bei ±1 Prozentpunkt zeigen (Grafik Stresstest). Ein Forward-Darlehen oder ein variabler Baustein kann Zeit gewinnen – ohne Zinsprognose zu versprechen.'],
+  ['„Die Rate soll so niedrig wie möglich sein.“', 'Grafik Anfangstilgung: Restschuld nach 10 Jahren bei 1 % vs. 3 %. Mittelweg: moderate Tilgung plus Sondertilgungsrecht und Tilgungssatzwechsel.'],
+  ['„Eine lange Zinsbindung ist zu teuer.“', 'Aufschlag für längere Bindung gegen das Risiko der Anschlussrate stellen. Nach 10 Jahren besteht ohnehin das Kündigungsrecht nach § 489 BGB.'],
+  ['„Warum so viele Unterlagen?“', 'Die Bank ist zur Kreditwürdigkeitsprüfung verpflichtet (§ 505b BGB). Vollständige Mappe = weniger Rückfragen, schnellere Zusage. ImmoAdv zeigt dem Kunden, was fehlt.'],
+  ['„Meine Hausbank ist günstiger.“', 'Effektivzins und Konditionen aus dem ESIS-Merkblatt nebeneinanderlegen – inklusive Sondertilgung, Bereitstellungszinsfreiheit und Tilgungswechsel.'],
 ];
 
+const CHAPTERS = [
+  ['charts', 'Gesprächsgrafiken'], ['sonder', 'Sonderfälle'], ['einwand', 'Einwände'], ['ns', 'Prüfpfade'], ['unterlagen', 'Unterlagen'], ['recht', 'Pflichten'],
+];
 
-// ---------- Handy: kompakte App-Ansicht (Kernaussagen statt großer Grafiken) ----------
+// ---------- Handy: kompakte Ansicht ----------
 const VIEW_KEY = 'bw-view';
 const viewPref = () => { try { return localStorage.getItem(VIEW_KEY); } catch { return null; } };
 const setView = (v) => { try { localStorage.setItem(VIEW_KEY, v); } catch { /* nur Komfort */ } };
-const KERN = [
-  ['Was die Bank prüft', ['Kapitaldienstfähigkeit: Rate muss aus dem Einkommen tragbar sein – auch bei höherem Anschlusszins.', 'Objekt: Beleihungswert liegt meist 10–20 % unter dem Marktwert.', 'Bonität, Eigenkapital und vollständige Unterlagen entscheiden über Zinsstufe und Tempo.']],
-  ['Vorprüfung in 5 Schritten', ['Unterlagen vollständig machen.', 'Darlehensbedarf und Beleihungsauslauf berechnen.', 'Haushaltsrechnung mit Stresszins prüfen.', 'Bei Auslauf über 80 %: mehr Eigenkapital oder höhere Tilgung.', 'Kreditmappe mit Prüfsumme erzeugen und einreichen.']],
-  ['Anschlussfinanzierung', ['Bis 60 Monate vorher: Forward-Darlehen möglich (mit Aufschlag).', 'Bis 6 Monate vorher: Prolongation mit Marktangeboten vergleichen.', 'Bankwechsel: Grundschuld abtreten statt neu bestellen.', 'Nach 10 Jahren: Kündigungsrecht nach § 489 BGB.']],
-  ['Unterlagen je Kundentyp', ['Angestellte: 3 Gehaltsabrechnungen, Dezember-Abrechnung.', 'Selbstständige: 2–3 Jahresabschlüsse, Steuerbescheide, aktuelle BWA.', 'Kapitalanleger: Mietverträge, Anlage V, Bestandsliste.', 'Eigentumswohnung: Teilungserklärung, Protokolle, Wirtschaftsplan.']],
-  ['Rechtsrahmen kurz', ['Makler: § 34c GewO. Baufinanzierungs-Vermittler: § 34i GewO.', 'Banken: KWG, CRR, MaRisk; § 18 KWG ab 750.000 €.', 'Verbraucher: Kreditwürdigkeitsprüfung und ESIS-Merkblatt (§§ 505a ff. BGB).', 'ImmoAdv vermittelt keine Kredite – reine Analyse und Vorbereitung.']],
-];
+const ANSCHLUSS = ['Bis 60 Monate vorher: Forward-Darlehen (Aufschlag je Vorlaufmonat).', 'Ab etwa 12 Monate vorher: Prolongationsangebot gegen Marktangebote stellen.', 'Bankwechsel: Grundschuldabtretung statt Neubestellung spart Notar- und Grundbuchkosten.', 'Nach 10 Jahren ab Vollauszahlung: Kündigungsrecht nach § 489 BGB (6 Monate Frist).'];
 function renderCompact(box) {
-  const f = FALL, plan = tilgungsplan(f.darlehen, f.zins, f.tilgung, 30), noi = (f.kaltmiete - f.nichtUmlage) * 12;
-  const st = stress();
-  const kpi = [['Darlehen', E(f.darlehen)], ['Rate', E(f.rate) + ' mtl.'], ['Beleihungsauslauf', P(f.darlehen / f.beleihungswert)], ['Restschuld nach 10 J.', E(plan[9].rest)], ['Rate bei 6 % Anschluss', E(st[2].rate)], ['DSCR bei Vermietung', N(noi / f.annuitaet)]];
+  const f = FALL, plan = tilgungsplan(f.darlehen, f.zins, f.tilgung, 30), st = stress();
   box.innerHTML = `<div class="bw bw-compact">
-    <section class="pt-card bw-hero"><span class="bw-kick">ImmoAdv Academy</span><h2>Fachwissen Baufinanzierung</h2>
-      <p>Das Wichtigste kompakt. Die ausführliche Fassung mit Struktogrammen, Mindmaps und Diagrammen ist für Computer und Tablet gemacht.</p>
-      <button type="button" class="btn bw-switch" data-view="voll">Ausführliche Ansicht mit Grafiken</button></section>
-    <section class="pt-card"><h2>Beispielfall in Zahlen</h2><div class="bw-kpis">${kpi.map(([k, v]) => `<div><small>${k}</small><strong>${v}</strong></div>`).join('')}</div>
-      <p class="form-note">Kaufpreis ${E(f.kaufpreis)}, Eigenkapital ${E(f.eigenkapital)}, Sollzins ${P(f.zins, 2)}, Tilgung ${P(f.tilgung, 0)}.</p></section>
-    ${KERN.map(([t, pts], i) => `<details class="pt-card bw-acc"${i === 0 ? ' open' : ''}><summary><b class="bw-no">${i + 1}</b>${t}</summary><ul>${pts.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>`).join('')}
-    <details class="pt-card bw-acc"><summary><b class="bw-no">${KERN.length + 1}</b>Fachglossar</summary>
-      <input type="search" id="bwQ" class="bw-q" placeholder="Begriff suchen" aria-label="Fachbegriff suchen">
-      <dl class="bw-gl">${GLOSSAR.map(([t, d]) => `<div data-q="${esc((t + ' ' + d).toLowerCase())}"><dt>${t}</dt><dd>${d}</dd></div>`).join('')}</dl><p class="form-note" id="bwCount">${GLOSSAR.length} Begriffe</p></details>
+    <section class="pt-card bw-hero"><span class="bw-kick">Praxis-Toolkit</span><h2>Für Ihre Kundentermine</h2>
+      <p>Sonderfälle, Einwände, Prüfpfade und Grafiken zum Zeigen – kurz gefasst.</p>
+      <button type="button" class="btn bw-switch" data-view="voll">Gesprächsgrafiken öffnen</button></section>
+    <details class="pt-card bw-acc" open><summary><b class="bw-no">1</b>Sonderfälle &amp; Lösungsansätze</summary>${SONDER.map(([t, a, b]) => `<div class="bw-sf"><strong>${t}</strong><p>${a}</p><p class="bw-sf-a">→ ${b}</p></div>`).join('')}</details>
+    <details class="pt-card bw-acc"><summary><b class="bw-no">2</b>Einwände im Gespräch</summary>${EINWAND.map(([t, a]) => `<div class="bw-sf"><strong>${t}</strong><p>${a}</p></div>`).join('')}</details>
+    <details class="pt-card bw-acc"><summary><b class="bw-no">3</b>Anschlussfinanzierung: Zeitfenster</summary><ul>${ANSCHLUSS.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>
+    <details class="pt-card bw-acc"><summary><b class="bw-no">4</b>Unterlagen je Kundentyp</summary>${MIND2.map((b) => `<div class="bw-sf"><strong>${b.t}</strong><p>${b.k.map(esc).join(' · ')}</p></div>`).join('')}</details>
+    <details class="pt-card bw-acc"><summary><b class="bw-no">5</b>Rechenbeispiel zum Zeigen</summary><div class="bw-kpis">${[['Darlehen', E(f.darlehen)], ['Rate', E(f.rate) + ' mtl.'], ['Restschuld nach 10 J.', E(plan[9].rest)], ['Rate bei 6 % Anschluss', E(st[2].rate)]].map(([k, v]) => `<div><small>${k}</small><strong>${v}</strong></div>`).join('')}</div>
+      <p class="form-note">Kaufpreis ${E(f.kaufpreis)}, Eigenkapital ${E(f.eigenkapital)}, Sollzins ${P(f.zins, 2)}, Tilgung ${P(f.tilgung, 0)}.</p></details>
+    <details class="pt-card bw-acc"><summary><b class="bw-no">6</b>Pflichten-Check</summary><ul>${RECHT.map(([a, , c]) => `<li><strong>${a}:</strong> ${c}</li>`).join('')}</ul></details>
+    <p class="form-note">Erfahrungswerte aus der Praxis; Vorgaben der einzelnen Banken gehen vor. Keine Rechtsberatung.</p>
   </div>`;
   bindCommon(box);
 }
 function bindCommon(box) {
-  const q = box.querySelector('#bwQ');
-  if (q) q.oninput = () => {
-    const t = q.value.trim().toLowerCase(); let n = 0;
-    box.querySelectorAll('.bw-gl > div').forEach((d) => { const ok = !t || d.dataset.q.includes(t); d.hidden = !ok; if (ok) n++; });
-    box.querySelector('#bwCount').textContent = `${n} von ${GLOSSAR.length} Begriffen`;
-  };
   box.querySelectorAll('.bw-switch').forEach((b) => b.onclick = () => { setView(b.dataset.view === 'voll' ? 'voll' : 'kompakt'); renderWissen(box); box.scrollIntoView({ block: 'start' }); });
 }
 
@@ -321,52 +327,48 @@ export function renderWissen(box) {
   const f = FALL;
   const noi = (f.kaltmiete - f.nichtUmlage) * 12;
   box.innerHTML = `<div class="bw">
-    <section class="pt-card bw-hero"><span class="bw-kick">ImmoAdv Academy · für Makler, Vermittler und Banken</span>
-      <h2>Fachwissen Baufinanzierung – visuell erklärt</h2>
-      <p>Wie Banken eine Wohnimmobilienfinanzierung prüfen, welche Kennzahlen entscheiden und wo ImmoAdv im Prozess unterstützt. Alle Grafiken beruhen auf einem durchgängigen, nachrechenbaren Beispielfall.</p>
+    <section class="pt-card bw-hero"><span class="bw-kick">Praxis-Toolkit · für erfahrene Berater, Makler und Banken</span>
+      <h2>Material für Ihre Kundentermine</h2>
+      <p>Keine Grundlagen – sondern Grafiken zum Zeigen, Lösungsansätze für schwierige Konstellationen, Antworten auf typische Einwände und Prüfpfade vor der Einreichung. Alle Zahlen beruhen auf einem nachrechenbaren Beispielfall.</p>
       <nav class="bw-toc" aria-label="Kapitel">${CHAPTERS.map(([k, l], i) => `<a href="#wissen=${k}" data-ch="${k}"><b>${i + 1}</b>${l}</a>`).join('')}</nav>
       <button type="button" class="btn bw-switch bw-switch-m" data-view="kompakt">Kompakte Ansicht</button>
       <div class="bw-case"><strong>Beispielfall</strong><span>Kaufpreis ${E(f.kaufpreis)}</span><span>Nebenkosten ${P(f.nebenkosten)}</span><span>Eigenkapital ${E(f.eigenkapital)}</span><span>Darlehen ${E(f.darlehen)}</span><span>Sollzins ${P(f.zins, 2)} · Tilgung ${P(f.tilgung, 0)}</span><span>Rate ${E(f.rate, 2)} mtl.</span></div>
     </section>
 
-    <section class="pt-card" id="bw-mind"><h2><b class="bw-no">1</b> Mindmap: Was die Kreditentscheidung bestimmt</h2>
-      <p class="form-note">Sechs Prüffelder, die in jedem Kreditvotum zusammenlaufen. Schwächen in einem Feld lassen sich teilweise durch Stärken in einem anderen ausgleichen – etwa ein hoher Beleihungsauslauf durch sehr gute Bonität.</p>${mindmap()}
-      <h3 class="bw-h3">Unterlagen je Kundentyp</h3><p class="form-note">Was die Bank für eine vollständige Kreditmappe erwartet – je nach Einkommensart und Objekt. Vollständige Unterlagen sind der größte Hebel für eine schnelle Zusage.</p>${mindmap(MIND2, 'Kredit&shy;mappe', 'vollständig einreichen', 'Mindmap: Unterlagen je Kundentyp')}</section>
-
-    <section class="pt-card" id="bw-ns"><h2><b class="bw-no">2</b> Struktogramm: Kreditvorprüfung</h2>
-      <p class="form-note">Nassi-Shneiderman-Darstellung des typischen Prüfablaufs: Sequenzen (Rechteck), Verzweigungen (Dreieck mit ja / nein) und Wiederholung (Schleife). So bereiten Sie Fälle vor, bevor sie zur Bank gehen.</p>${ns()}
-      <h3 class="bw-h3">Anschlussfinanzierung</h3><p class="form-note">Ablauf für Bestandskunden vor dem Ende der Zinsbindung – Prolongation, Forward-Darlehen oder Umschuldung.</p>${ns2()}</section>
-
-    <section class="pt-card" id="bw-prozess"><h2><b class="bw-no">3</b> Prozess: Von der Anfrage bis zur Auszahlung</h2>
-      <p class="form-note">Swimlane-Diagramm mit vier Beteiligten. ImmoAdv bereitet Daten und Unterlagen technisch auf – Beratung, Vermittlung und Kreditentscheidung bleiben bei Ihnen bzw. der Bank.</p>${swimlane()}</section>
-
-    <section class="pt-card" id="bw-kpi"><h2><b class="bw-no">4</b> Kennzahlenbaum mit Formeln</h2>
-      <p class="form-note">Wie die Kennzahlen voneinander abhängen – berechnet für den Beispielfall.</p>${baum()}</section>
-
-    <section class="pt-card" id="bw-charts"><h2><b class="bw-no">5</b> Diagramme</h2>
+    <section class="pt-card" id="bw-charts"><h2><b class="bw-no">1</b> Gesprächsgrafiken zum Zeigen</h2>
+      <p class="form-note">Im Termin auf dem Bildschirm zeigen – sie machen Zinsrisiko und Tilgungswahl für Kunden greifbar.</p>
       <div class="bw-grid">
-        <figure class="bw-fig"><figcaption><strong>Beleihungswert und Beleihungsauslauf</strong><span>Sicherheitsabschlag ${P(f.abschlag, 0)} · Beleihungsauslauf ${P(f.darlehen / f.beleihungswert)} · LTV ${P(f.darlehen / f.marktwert)}</span></figcaption>${chartBeleihung()}
-          <p class="form-note">Der Teil des Darlehens oberhalb von 60 % des Beleihungswerts ist für die Bank kein „Realkredit“ und wird vorsichtiger bewertet. Faustregel: Jede Stufe beim Beleihungsauslauf (60 / 80 / 90 / 100 %) kann die Zinskondition verändern – die genaue Staffel ist bankindividuell.</p></figure>
-        <figure class="bw-fig"><figcaption><strong>Haushaltsrechnung (Wasserfall)</strong><span>Kapitaldienstfähigkeit im Beispielfall</span></figcaption>${chartWasserfall()}
-          <p class="form-note">Banken setzen Lebenshaltungskosten pauschal je Person an und prüfen die Rate zusätzlich mit einem Stresszins nach Ablauf der Zinsbindung.</p></figure>
-        <figure class="bw-fig bw-wide"><figcaption><strong>Annuitätendarlehen über 30 Jahre</strong><span>${E(f.darlehen)} · ${P(f.zins, 2)} Sollzins · ${P(f.tilgung, 0)} Anfangstilgung</span></figcaption>${chartAnnuitaet()}
-          <p class="form-note">Die Rate bleibt gleich, der Zinsanteil sinkt. Die Restschuld am Ende der Zinsbindung ist das Zinsänderungsrisiko – deshalb gehört sie in jedes Beratungsprotokoll.</p></figure>
-        <figure class="bw-fig"><figcaption><strong>DSCR – wenn die Wohnung vermietet wird</strong><span>Nettomietertrag ${E(noi)} p. a. ÷ Kapitaldienst ${E(f.annuitaet)}</span></figcaption>${dscrGauge()}
-          <p class="form-note">Rot: Miete deckt den Kapitaldienst nicht (unter 1,0). Gelb: knapp (1,0–1,2). Grün: komfortabel (ab 1,2). Bei Kapitalanlagen rechnen viele Banken die Miete nur zu 70–80 % an.</p></figure>
         <figure class="bw-fig"><figcaption><strong>Stresstest: Rate nach der Zinsbindung</strong><span>Restschuld nach 10 Jahren, Anschlusszins 3,6 bis 7 %</span></figcaption>${chartStress()}
-          <p class="form-note">Grün: Rate bleibt etwa gleich. Gelb: bis +20 %. Rot: mehr als +20 %. Genau diesen Stresstest machen Banken bei der Kapitaldienstfähigkeit.</p></figure>
+          <p class="form-note"><b>Impuls:</b> „Was passiert mit Ihrer Rate, wenn der Zins in zehn Jahren bei 6 % liegt?“</p></figure>
+        <figure class="bw-fig"><figcaption><strong>Haushaltsrechnung (Wasserfall)</strong><span>Was nach der Rate übrig bleibt</span></figcaption>${chartWasserfall()}
+          <p class="form-note"><b>Impuls:</b> Puffer nach Rate sichtbar machen – Grundlage für die Wahl von Tilgung und Zinsbindung.</p></figure>
         <figure class="bw-fig bw-wide"><figcaption><strong>Anfangstilgung entscheidet über die Restschuld</strong><span>Gleiches Darlehen, gleicher Zins, 1 bis 4 % Anfangstilgung</span></figcaption>${chartTilgung()}
-          <p class="form-note">Höhere Tilgung bedeutet höhere Rate heute, aber deutlich weniger Zinsänderungsrisiko in zehn Jahren – ein starkes Argument im Kundengespräch.</p></figure>
+          <p class="form-note"><b>Impuls:</b> Höhere Rate heute gegen deutlich weniger Zinsänderungsrisiko in zehn Jahren abwägen.</p></figure>
+        <figure class="bw-fig bw-wide"><figcaption><strong>Zins- und Tilgungsanteil über 30 Jahre</strong><span>${E(f.darlehen)} · ${P(f.zins, 2)} Sollzins · ${P(f.tilgung, 0)} Anfangstilgung</span></figcaption>${chartAnnuitaet()}
+          <p class="form-note"><b>Impuls:</b> Restschuld am Ende der Zinsbindung gehört ins Beratungsprotokoll.</p></figure>
+        <figure class="bw-fig"><figcaption><strong>Beleihungsauslauf</strong><span>Sicherheitsabschlag ${P(f.abschlag, 0)} · Auslauf ${P(f.darlehen / f.beleihungswert)} · LTV ${P(f.darlehen / f.marktwert)}</span></figcaption>${chartBeleihung()}
+          <p class="form-note"><b>Impuls:</b> Wie viel zusätzliches Eigenkapital die nächste Zinsstufe erreicht.</p></figure>
+        <figure class="bw-fig"><figcaption><strong>DSCR bei Vermietung</strong><span>Nettomietertrag ${E(noi)} p. a. ÷ Kapitaldienst ${E(f.annuitaet)}</span></figcaption>${dscrGauge()}
+          <p class="form-note"><b>Impuls:</b> Für Kapitalanleger – wie viel der Kapitaldienst aus anderem Einkommen getragen werden muss.</p></figure>
       </div></section>
 
-    <section class="pt-card" id="bw-recht"><h2><b class="bw-no">6</b> Rechtsrahmen: Wer darf was?</h2>
+    <section class="pt-card" id="bw-sonder"><h2><b class="bw-no">2</b> Sonderfälle &amp; Lösungsansätze</h2>
+      <div class="ad-wrap"><table class="bw-table"><thead><tr><th>Konstellation</th><th>Typische Bankhaltung</th><th>Lösungsansatz</th></tr></thead><tbody>${SONDER.map(([a, b, c]) => `<tr><td><strong>${a}</strong></td><td>${b}</td><td>${c}</td></tr>`).join('')}</tbody></table></div>
+      <p class="form-note">Erfahrungswerte; die Vorgaben der einzelnen Banken gehen vor.</p></section>
+
+    <section class="pt-card" id="bw-einwand"><h2><b class="bw-no">3</b> Einwände im Kundengespräch</h2>
+      <div class="bw-ew">${EINWAND.map(([t, a]) => `<article><strong>${t}</strong><p>${a}</p></article>`).join('')}</div></section>
+
+    <section class="pt-card" id="bw-ns"><h2><b class="bw-no">4</b> Prüfpfade vor der Einreichung</h2>
+      <p class="form-note">Neufinanzierung und Anschluss als Ablauf – zum Abgleich mit Ihrem eigenen Prozess oder für neue Teammitglieder.</p>${ns()}
+      <h3 class="bw-h3">Anschlussfinanzierung</h3>${ns2()}</section>
+
+    <section class="pt-card" id="bw-unterlagen"><h2><b class="bw-no">5</b> Unterlagen je Kundentyp</h2>
+      <p class="form-note">Als Checkliste für den Kunden – ImmoAdv zeigt ihm in der App automatisch, welche Unterlagen-Arten noch fehlen.</p>${mindmap(MIND2, 'Kredit&shy;mappe', 'vollständig einreichen', 'Mindmap: Unterlagen je Kundentyp')}</section>
+
+    <section class="pt-card" id="bw-recht"><h2><b class="bw-no">6</b> Pflichten-Check</h2>
       <div class="ad-wrap"><table class="bw-table"><thead><tr><th>Norm</th><th>Gilt für</th><th>Kernpflichten</th></tr></thead><tbody>${RECHT.map(([a, b, c]) => `<tr><td><strong>${a}</strong></td><td>${b}</td><td>${c}</td></tr>`).join('')}</tbody></table></div>
       <p class="form-note">ImmoAdv ist ein technisches Analyse- und Vorbereitungswerkzeug und vermittelt keine Kredite. Stand: Oktober 2026 – Orientierung, keine Rechtsberatung.</p></section>
-
-    <section class="pt-card" id="bw-glossar"><h2><b class="bw-no">7</b> Fachglossar</h2>
-      <input type="search" id="bwQ" class="bw-q" placeholder="Fachbegriff suchen, z. B. Beleihungswert" aria-label="Fachbegriff suchen">
-      <dl class="bw-gl">${GLOSSAR.map(([t, d]) => `<div data-q="${esc((t + ' ' + d).toLowerCase())}"><dt>${t}</dt><dd>${d}</dd></div>`).join('')}</dl>
-      <p class="form-note" id="bwCount">${GLOSSAR.length} Begriffe</p></section>
   </div>`;
   bindCommon(box);
   box.querySelectorAll('[data-ch]').forEach((a) => a.onclick = (e) => { e.preventDefault(); box.querySelector('#bw-' + a.dataset.ch)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });

@@ -5,7 +5,14 @@ import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSessio
 const root = document.getElementById('portal');
 const $ = (s, el = document) => el.querySelector(s);
 const VIEWS = [
-  ['start', 'Übersicht'], ['wissen', 'Fachwissen'], ['verifizierung', 'Verifizierung'], ['anfragen', 'Anfragen'], ['kunden', 'Kunden'], ['einreichungen', 'Einreichungen'], ['werkzeuge', 'Widget & QR'], ['team', 'Team'], ['profil', 'Profil'], ['tarif', 'Tarif & Rechnungen'],
+  ['start', 'Übersicht'], ['kunden', 'Kunden'], ['anfragen', 'Anfragen'], ['einreichungen', 'Einreichungen'], ['wissen', 'Praxis-Toolkit'], ['werkzeuge', 'Widget & QR'], ['verifizierung', 'Verifizierung'], ['team', 'Team'], ['profil', 'Profil'], ['tarif', 'Tarif & Rechnungen'],
+];
+// Handy-Leiste: vier Hauptbereiche plus „Mehr“ (alle übrigen Bereiche als Liste).
+const MAIN = [
+  ['start', 'Start', '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'],
+  ['kunden', 'Kunden', '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2 .7 3.5 2.6 3.5 6"/>'],
+  ['anfragen', 'Anfragen', '<path d="M4 5h16v11H8l-4 4z"/>'],
+  ['einreichungen', 'Postkorb', '<path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 2h6l1-2h5"/>'],
 ];
 const TYPE = { BANK: 'Kreditinstitut', BROKER: 'Finanzierungsvermittler (§ 34i GewO)', REALTOR: 'Immobilienmakler (§ 34c GewO)', OTHER: 'Sonstiges Unternehmen' };
 const TIER = { BASIC: 'Makler & Vermittler Basic', PRO: 'Kanzlei & Baufi Pro', ENTERPRISE: 'Bank & Filiale Enterprise' };
@@ -36,16 +43,23 @@ function shell() {
     <section class="pt-main"><header class="pt-top"><h1 id="ptTitle"></h1><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
       ${a.status === 'locked' ? `<div class="pt-alert bad"><strong>Konto gesperrt.</strong> ${esc(a.lockReason || '')} Rechnungen und AVV bleiben abrufbar. Fragen an support@immoadv.de.</div>` : ''}
       <div id="ptView"></div></section>
-    <nav class="pt-tabs">${VIEWS.filter(([v]) => me.role === 'owner' || !['tarif', 'profil'].includes(v)).map(([v, l]) => `<a href="#${v}" data-v="${v}">${{ start: 'Start', wissen: 'Wissen', einreichungen: 'Postkorb', werkzeuge: 'Widget' }[v] || l.split(' ')[0]}</a>`).join('')}</nav>
+    <nav class="pt-tabs" aria-label="Bereiche">${MAIN.map(([v, l, ic]) => `<a href="#${v}" data-v="${v}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${l}</span>${v === 'anfragen' && me.usage.leadsNew ? `<b class="pt-dot">${me.usage.leadsNew}</b>` : ''}</a>`).join('')}<button type="button" id="ptMore" aria-expanded="false" aria-controls="ptSheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>Mehr</span></button></nav>
+    <div class="pt-sheet" id="ptSheet" hidden><div class="pt-sheet-bg" data-close></div><div class="pt-sheet-in" role="dialog" aria-label="Alle Bereiche"><div class="pt-sheet-h"><strong>${esc(a.companyName)}</strong><button type="button" class="stage-x" data-close aria-label="Schließen">×</button></div>
+      <nav>${VIEWS.filter(([v]) => !MAIN.some(([m]) => m === v) && (me.role === 'owner' || !['tarif', 'profil'].includes(v))).map(([v, l]) => `<a href="#${v}" data-v="${v}">${l}</a>`).join('')}<a href="/app/dashboard">Zur Anwendung</a><button type="button" class="pt-logout" id="ptLogoutS">Abmelden</button></nav></div></div>
   </div>`;
-  root.querySelectorAll('#ptLogout,#ptLogoutM').forEach((b) => { b.onclick = logout; });
+  root.querySelectorAll('#ptLogout,#ptLogoutM,#ptLogoutS').forEach((b) => { b.onclick = logout; });
+  const sheet = $('#ptSheet'), more = $('#ptMore');
+  const openSheet = (on) => { sheet.hidden = !on; more.setAttribute('aria-expanded', String(on)); document.body.classList.toggle('pt-sheet-open', on); };
+  more.onclick = () => openSheet(sheet.hidden);
+  sheet.addEventListener('click', (e) => { if (e.target.closest('[data-close]') || e.target.closest('a')) openSheet(false); });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheet.hidden) openSheet(false); });
 }
 
 function route() {
   const v = (location.hash.slice(1).split('=')[0] || 'start');
   const view = VIEWS.find(([k]) => k === v) ? v : 'start';
   document.querySelectorAll('[data-v]').forEach((a) => a.classList.toggle('on', a.dataset.v === view));
-  document.querySelector(`.pt-tabs [data-v="${view}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  $('#ptMore')?.classList.toggle('on', !MAIN.some(([m]) => m === view));
   $('#ptTitle').textContent = VIEWS.find(([k]) => k === view)[1];
   const box = $('#ptView');
   box.innerHTML = '<p class="form-note">Wird geladen …</p>';
@@ -590,12 +604,13 @@ function portalGate() {
       <label>Geschäftliche E-Mail*<input name="email" type="email" required autocomplete="email"></label>
       <label>Telefon<input name="phone" autocomplete="tel"></label>
       <label>Ort<input name="city" autocomplete="address-level2" maxlength="80"></label>
-      <fieldset class="b2b-proof full" data-konto><legend>Nachweis Ihres Unternehmens</legend><p class="form-note">Zugänge erhalten ausschließlich Unternehmen. Bitte laden Sie einen Nachweis hoch – er wird nur zur Prüfung verwendet und nach der Entscheidung gelöscht (spätestens nach 180 Tagen).</p><label>Rechtsform<input name="legalForm" maxlength="60" placeholder="z. B. GmbH, e. K., Einzelunternehmen"></label><label>Handelsregister- oder Vermittlerregister-Nr.<input name="registerNumber" maxlength="60" placeholder="HRB … / D-…"></label><label>USt-IdNr. oder Steuernummer<input name="taxId" maxlength="40"></label><p class="form-note full">Register-Nr. oder USt-IdNr./Steuernummer – eines von beiden genügt.</p><label>Art des Nachweises*<select name="proofKind"><option value="gewerbe">Gewerbeanmeldung</option><option value="handelsregister">Handelsregisterauszug</option><option value="erlaubnis">Erlaubnis § 34c / § 34i GewO</option><option value="sonstiges">Sonstiger Nachweis</option></select></label><label>Datei (PDF, JPG oder PNG, max. 4 MB)*<input name="proof" type="file" accept="application/pdf,image/jpeg,image/png" required></label></fieldset>
+      <fieldset class="b2b-proof full" data-konto><legend>Angaben zu Ihrem Unternehmen</legend><p class="form-note">Zugänge erhalten ausschließlich Unternehmen. Bei eingetragenen Gesellschaften genügt die Registernummer; Einzelunternehmen und Freiberufler laden bitte einen Nachweis hoch.</p><label>Rechtsform*<select name="legalForm" required><option value="" selected disabled>Bitte wählen</option><optgroup label="Im Handels- oder Partnerschaftsregister"><option data-hr="1">GmbH</option><option data-hr="1">UG (haftungsbeschränkt)</option><option data-hr="1">AG</option><option data-hr="1">KG</option><option data-hr="1">GmbH & Co. KG</option><option data-hr="1">OHG</option><option data-hr="1">e. K. (eingetragener Kaufmann)</option><option data-hr="1">PartG / PartG mbB</option><option data-hr="1">eG</option><option data-hr="1">SE</option></optgroup><optgroup label="Ohne Registereintrag"><option>Einzelunternehmen</option><option>Freiberufler</option><option>GbR</option><option>Sonstige Rechtsform</option></optgroup></select></label><label data-hr-only hidden>Handelsregisternummer*<input name="registerNumber" maxlength="60" placeholder="z. B. HRB 12345, Amtsgericht Darmstadt"></label><label data-nohr-only hidden>Steuernummer oder USt-IdNr.*<input name="taxId" maxlength="40"></label><div class="b2b-proof-up full" data-nohr-only hidden><label>Art des Nachweises*<select name="proofKind"><option value="gewerbe">Gewerbeanmeldung</option><option value="erlaubnis">Erlaubnis § 34c / § 34i GewO</option><option value="sonstiges">Sonstiger Nachweis (z. B. Bescheinigung des Finanzamts)</option></select></label><label>Datei (PDF, JPG oder PNG, max. 4 MB)*<input name="proof" type="file" accept="application/pdf,image/jpeg,image/png"></label><p class="form-note">Der Nachweis wird nur zur Prüfung verwendet und nach der Entscheidung gelöscht (spätestens nach 180 Tagen).</p></div></fieldset>
       <label class="full">Nachricht (optional)<textarea name="message" rows="3" maxlength="2000" placeholder="z. B. Anzahl Berater, gewünschter Starttermin"></textarea></label>
       <div class="pp-hp" aria-hidden="true"><input name="website" tabindex="-1" autocomplete="off"></div>
       <label class="consent full"><input type="checkbox" name="privacy" required> Ich habe die <a class="ck-link" href="/datenschutz" target="_blank" rel="noopener">Datenschutzhinweise</a> gelesen. Die Angaben werden nur zur Bearbeitung der Anfrage gespeichert.</label>
       <div class="full"><button class="btn btn-dark btn-lg" type="submit">Anfrage senden</button></div>
       <p class="form-note full" id="reqMsg" role="status"></p></form></div>`;
+  $('#reqF [name=legalForm]').addEventListener('change', () => syncLegal($('#reqF'))); syncLegal($('#reqF'));
   $('#reqF').onsubmit = (e) => {
     e.preventDefault();
     const fd = new FormData(e.target), d = Object.fromEntries(fd);
@@ -703,3 +718,14 @@ async function start() {
 
 window.addEventListener('hashchange', () => { if (me) route(); });
 start();
+
+// Kontoanfrage: eingetragene Gesellschaften → Registernummer genügt; sonst Steuernummer und Nachweis (Datei) Pflicht.
+function syncLegal(f) {
+  const sel = f.querySelector('[name=legalForm]'); if (!sel) return;
+  const on = !f.querySelector('[data-konto]')?.disabled;
+  const hr = sel.selectedOptions[0]?.dataset.hr === '1', chosen = Boolean(sel.value);
+  f.querySelectorAll('[data-hr-only]').forEach((x) => { x.hidden = !(chosen && hr); });
+  f.querySelectorAll('[data-nohr-only]').forEach((x) => { x.hidden = !(chosen && !hr); });
+  const req = (n, v) => { const i = f.querySelector(`[name=${n}]`); if (i) i.required = on && v; };
+  req('registerNumber', chosen && hr); req('taxId', chosen && !hr); req('proof', chosen && !hr);
+}

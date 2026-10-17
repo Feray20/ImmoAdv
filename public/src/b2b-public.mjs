@@ -28,8 +28,8 @@ function contact() {
   const kind = new URLSearchParams(location.search).get('anliegen');
   if (kind && f.kind.querySelector(`option[value="${kind}"]`)) f.kind.value = kind;
   // Nachweis-Felder nur bei der Kontoanfrage (dort Pflicht).
-  const sync = () => { const on = f.kind.value === 'konto'; f.querySelectorAll('[data-konto]').forEach((x) => { x.hidden = !on; x.disabled = !on; }); };
-  f.kind.addEventListener('change', sync); sync();
+  const sync = () => { const on = f.kind.value === 'konto'; f.querySelectorAll('[data-konto]').forEach((x) => { x.hidden = !on; x.disabled = !on; }); syncLegal(f); };
+  f.kind.addEventListener('change', sync); f.legalForm?.addEventListener('change', () => syncLegal(f)); sync();
   f.onsubmit = async (e) => {
     e.preventDefault();
     const msg = document.getElementById('b2bMsg');
@@ -64,3 +64,14 @@ function init(tries = 0) {
   contact();
 }
 init();
+
+// Kontoanfrage: eingetragene Gesellschaften → Registernummer genügt; sonst Steuernummer und Nachweis (Datei) Pflicht.
+function syncLegal(f) {
+  const sel = f.querySelector('[name=legalForm]'); if (!sel) return;
+  const on = !f.querySelector('[data-konto]')?.disabled;
+  const hr = sel.selectedOptions[0]?.dataset.hr === '1', chosen = Boolean(sel.value);
+  f.querySelectorAll('[data-hr-only]').forEach((x) => { x.hidden = !(chosen && hr); });
+  f.querySelectorAll('[data-nohr-only]').forEach((x) => { x.hidden = !(chosen && !hr); });
+  const req = (n, v) => { const i = f.querySelector(`[name=${n}]`); if (i) i.required = on && v; };
+  req('registerNumber', chosen && hr); req('taxId', chosen && !hr); req('proof', chosen && !hr);
+}

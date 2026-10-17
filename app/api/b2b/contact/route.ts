@@ -12,6 +12,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const MAX = 4 * 1024 * 1024;
+const HR_FORMS = ['GmbH', 'UG (haftungsbeschränkt)', 'AG', 'KG', 'GmbH & Co. KG', 'OHG', 'e. K. (eingetragener Kaufmann)', 'PartG / PartG mbB', 'eG', 'SE'];
 function sniff(b: Buffer): 'application/pdf' | 'image/png' | 'image/jpeg' | null {
   if (b.length > 4 && b.subarray(0, 5).toString() === '%PDF-') return 'application/pdf';
   if (b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
@@ -64,11 +65,17 @@ export async function POST(req: Request) {
   const flag = guard.action === 'allow' && guard.flagged ? ' [Spam-Verdacht]' : '';
   const db = supabaseAdmin();
   const id = randomUUID();
-  // Kontoanfrage: Nachweis der Gewerbetätigkeit ist Pflicht (Gewerbeanmeldung, Handelsregisterauszug oder Erlaubnis § 34c/§ 34i GewO).
   let proof: { proof_kind: string; proof_path: string; proof_name: string; proof_size: number; proof_sha256: string } | null = null;
+  // Eingetragene Gesellschaften (HR/PR/GnR): Registernummer genügt, Nachweis optional.
+  // Einzelunternehmen, Freiberufler, GbR und sonstige: Steuernummer/USt-IdNr. und Nachweis sind Pflicht.
+  const registered = HR_FORMS.includes(b.legalForm);
   if (b.kind === 'konto') {
-    if (!file) return json({ error: 'Bitte einen Nachweis hochladen (z. B. Gewerbeanmeldung oder Handelsregisterauszug als PDF).', field: 'proof' }, 400);
-    if (!b.registerNumber && !b.taxId) return json({ error: 'Bitte Handelsregisternummer oder USt-IdNr./Steuernummer angeben.', field: 'registerNumber' }, 400);
+    if (!b.legalForm) return json({ error: 'Bitte die Rechtsform wählen.', field: 'legalForm' }, 400);
+    if (registered && !/[0-9]{2,}/.test(b.registerNumber)) return json({ error: 'Bitte die Handelsregisternummer angeben (z. B. HRB 12345, Amtsgericht).', field: 'registerNumber' }, 400);
+    if (!registered && !b.taxId) return json({ error: 'Bitte Steuernummer oder USt-IdNr. angeben.', field: 'taxId' }, 400);
+    if (!registered && !file) return json({ error: 'Bitte einen Nachweis hochladen (z. B. Gewerbeanmeldung als PDF).', field: 'proof' }, 400);
+  }
+  if (b.kind === 'konto' && file) {
     if (file.size > MAX) return json({ error: 'Der Nachweis ist größer als 4 MB.', field: 'proof' }, 413);
     const buf = Buffer.from(await file.arrayBuffer());
     const type = sniff(buf);
