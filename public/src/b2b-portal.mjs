@@ -77,6 +77,8 @@ function route() {
   $('#ptMore')?.classList.toggle('on', !MAIN.some(([m]) => m === view));
   $('#ptTitle').textContent = vLabel(view, VIEWS.find(([k]) => k === view)[1]);
   const box = $('#ptView');
+  // Neuer Bereich: immer oben beginnen (Kapitel-Sprünge innerhalb eines Bereichs behalten ihre Position).
+  if (route.last !== view) { window.scrollTo(0, 0); route.last = view; }
   box.innerHTML = '<p class="form-note">Wird geladen …</p>';
   ({ start: vStart, tools: (b) => import('./b2b-tools.mjs').then((m) => m.renderPrograms(b, { tier: me.tier, branche: br(), toast, brand: { color: me.limits?.cobranding && me.account.brandColor ? me.account.brandColor : '#0F2C59', logo: me.limits?.cobranding && me.account.hasLogo && me.account.slug ? `/api/b2b/logo?slug=${encodeURIComponent(me.account.slug)}` : '', sender: [me.account.companyName, me.account.advisorName].filter(Boolean).join(' · ') } })).catch(() => { b.innerHTML = '<p class="form-note">Programme konnten nicht geladen werden.</p>'; }), fall: (b) => import('./b2b-fall.mjs').then((m) => m.renderFall(b, { api, toast, me })).catch(() => { b.innerHTML = '<p class="form-note">Fall-Analyse konnte nicht geladen werden.</p>'; }), kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs').then((m) => m.renderWissen(b, br())).catch(() => { b.innerHTML = '<p class="form-note">Fachwissen konnte nicht geladen werden.</p>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: (b) => vTeam(b).then(() => addPw(b)), profil: (b) => { vProfil(b); addPw(b); }, tarif: vTarif })[view](box);
 }

@@ -330,8 +330,8 @@ function renderCompact(box, branche) {
   };
   const label = (k) => (k === 'ns' ? 'Anschlussfinanzierung: Zeitfenster' : k === 'charts' ? 'Rechenbeispiel zum Zeigen' : KAPITEL[k]?.t || ({ sonder: 'Sonderfälle & Lösungsansätze', einwand: 'Einwände im Kundengespräch', unterlagen: 'Unterlagen je Kundentyp', recht: 'Pflichten-Check' })[k]);
   box.innerHTML = `<div class="bw bw-compact">
-    <section class="pt-card bw-hero"><span class="bw-kick">Beratungskompass · ${esc(B.label)}</span><h2>Fachwissen für Ihren Alltag</h2>
-      <p>Kurz gefasst für das Handy – ausführlich mit Grafiken und Tabellen in der vollen Ansicht.</p>
+    <section class="pt-card bw-hero"><span class="bw-kick">Beratungskompass · ${esc(B.label)}</span><h2>Ihre Hilfe im Beratungsalltag</h2>
+      <p>Schnelle Antworten für den nächsten Termin – kurz fürs Handy, mit Grafiken in der vollen Ansicht.</p>
       <button type="button" class="btn bw-switch" data-view="voll">Volle Ansicht mit Grafiken</button></section>
     ${B.chapters.map((k, i) => `<details class="pt-card bw-acc"${i === 0 ? ' open' : ''}><summary><b class="bw-no">${i + 1}</b>${label(k)}</summary>${body(k)}</details>`).join('')}
     <p class="form-note">Erfahrungswerte und Normen, Stand Oktober 2026. Vorgaben der einzelnen Banken gehen vor. Keine Rechts- oder Steuerberatung.</p>
@@ -373,8 +373,8 @@ export function renderWissen(box, branche = 'allgemein') {
   const head = (k) => (KAPITEL[k] ? KAPITEL[k].t : ({ charts: 'Gesprächsgrafiken zum Zeigen', sonder: 'Sonderfälle & Lösungsansätze', einwand: 'Einwände im Kundengespräch', ns: 'Prüfpfade vor der Einreichung', unterlagen: 'Unterlagen je Kundentyp', recht: 'Pflichten-Check' })[k]);
   box.innerHTML = `<div class="bw">
     <section class="pt-card bw-hero"><span class="bw-kick">Beratungskompass · ${esc(B.label)}</span>
-      <h2>Fachwissen für Ihren Alltag</h2>
-      <p>Zugeschnitten auf ${esc(B.desc)}: Abläufe, Normen, Kennzahlen, Sonderfälle und Gesprächsmaterial. Branche oben rechts jederzeit wechselbar.</p>
+      <h2>Ihre Hilfe im Beratungsalltag</h2>
+      <p>Damit Sie im nächsten Kundentermin schnell die richtige Antwort parat haben: Gesprächsgrafiken, Abläufe, Sonderfälle und Checklisten – passend für ${esc(B.desc)}.</p>
       <nav class="bw-toc" aria-label="Kapitel">${B.chapters.map((k, i) => `<a href="#wissen=${k}" data-ch="${k}"><b>${i + 1}</b>${chTitle(k)}</a>`).join('')}</nav>
       <button type="button" class="btn bw-switch bw-switch-m" data-view="kompakt">Kompakte Ansicht</button>
       ${B.chapters.includes('charts') ? `<div class="bw-case"><strong>Beispielfall</strong><span>Kaufpreis ${E(f.kaufpreis)}</span><span>Nebenkosten ${P(f.nebenkosten)}</span><span>Eigenkapital ${E(f.eigenkapital)}</span><span>Darlehen ${E(f.darlehen)}</span><span>Sollzins ${P(f.zins, 2)} · Tilgung ${P(f.tilgung, 0)}</span><span>Rate ${E(f.rate, 2)} mtl.</span></div>` : ''}
