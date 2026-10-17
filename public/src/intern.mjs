@@ -882,14 +882,33 @@ async function einrichtung(v) {
   const must = open.filter((x) => !x.optional);
   const pct = all.length ? Math.round((done.length / all.length) * 100) : 0;
   const groups = [...new Set(all.map((x) => x.group))];
-  const card = (x) => `<li class="su-item${x.optional ? ' opt' : ''}"><div class="su-h"><strong>${esc(x.title)}</strong><span class="su-tag ${x.auto ? 'auto' : 'man'}">${x.auto ? 'wird automatisch erkannt' : 'selbst abhaken'}</span>${x.optional ? '<span class="su-tag">optional</span>' : ''}</div>
-      <p class="form-note">${esc(x.why)}${x.info ? ` <em>${esc(x.info)}</em>` : ''}</p><ol class="su-steps">${x.steps.map((st) => `<li>${st}</li>`).join('')}</ol>
-      ${x.auto ? '' : `<label class="chk su-done"><input type="checkbox" data-su="${x.id}"> Erledigt</label>`}</li>`;
-  v.innerHTML = `<section class="ad-over"><div class="ad-over-h"><h2>Einrichtung</h2><p class="form-note">${must.length ? `<strong>${must.length} Pflichtpunkt${must.length === 1 ? '' : 'e'} offen</strong>${open.length > must.length ? `, ${open.length - must.length} optional` : ''}.` : '<strong>Alle Pflichtpunkte erledigt.</strong>'} Erledigtes wird automatisch ausgeblendet. Werte nie per Chat oder E-Mail weitergeben – immer direkt in Vercel eintragen.</p></div>
+  const card = (x) => `<li><button type="button" class="su-item su-row${x.optional ? ' opt' : ''}" data-open="${x.id}"><span class="su-h"><strong>${esc(x.title)}</strong>${x.optional ? '<span class="su-tag">optional</span>' : ''}<span class="su-tag ${x.auto ? 'auto' : 'man'}">${x.auto ? 'wird automatisch erkannt' : 'selbst abhaken'}</span></span>
+      <span class="su-sub">${esc(x.why)}</span><span class="su-go">${x.time ? `ca. ${esc(x.time)} · ` : ''}Anleitung öffnen ›</span></button></li>`;
+  v.innerHTML = `<section class="ad-over"><div class="ad-over-h"><h2>Einrichtung</h2><p class="form-note">${must.length ? `<strong>${must.length} Pflichtpunkt${must.length === 1 ? '' : 'e'} offen</strong>${open.length > must.length ? `, ${open.length - must.length} optional` : ''}.` : '<strong>Alle Pflichtpunkte erledigt.</strong>'} Tippen Sie auf einen Punkt – dann kommt die genaue Schritt-für-Schritt-Anleitung. Werte nie per Chat oder E-Mail weitergeben, immer direkt in Vercel eintragen.</p></div>
     <div class="su-bar" role="img" aria-label="${pct} Prozent erledigt"><i style="width:${pct}%"></i></div><p class="form-note">${done.length} von ${all.length} erledigt</p>
     ${groups.map((g) => { const o = open.filter((x) => x.group === g); return o.length ? `<h3 class="ad-sub">${esc(g)}</h3><ol class="su-list">${o.map(card).join('')}</ol>` : ''; }).join('') || '<p class="pt-alert ok">Alles eingerichtet.</p>'}
-    ${done.length ? `<details class="ad-help"><summary>Erledigt (${done.length})</summary><ul class="su-done-list">${done.map((x) => `<li><span>✓ ${esc(x.title)}</span>${x.auto ? '<small>automatisch erkannt</small>' : `<button type="button" class="text-btn" data-undo="${x.id}">wieder öffnen</button>`}</li>`).join('')}</ul></details>` : ''}</section>`;
+    ${done.length ? `<details class="ad-help"><summary>Erledigt (${done.length})</summary><ul class="su-done-list">${done.map((x) => `<li><button type="button" class="text-btn" data-open="${x.id}">✓ ${esc(x.title)}</button>${x.auto ? '<small>automatisch erkannt</small>' : `<button type="button" class="text-btn" data-undo="${x.id}">wieder öffnen</button>`}</li>`).join('')}</ul></details>` : ''}</section>`;
   const mark = async (id, val) => { const x = await api('/api/admin/setup', { method: 'POST', body: JSON.stringify({ id, done: val }) }); if (!x.ok) msg(x.data?.error || 'Fehler', true); einrichtung(v); };
-  v.querySelectorAll('[data-su]').forEach((b) => b.onchange = () => mark(b.dataset.su, b.checked));
+  const guide = (x) => {
+    let d = document.getElementById('suDlg');
+    if (!d) { d = document.createElement('dialog'); d.id = 'suDlg'; d.className = 'ad-dlg'; document.body.append(d); }
+    const n = x.steps.length;
+    d.innerHTML = `<div class="ad-dlg-in su-guide"><div class="ad-dlg-h"><h2>${esc(x.title)}</h2><button type="button" class="stage-x" data-x aria-label="Schließen">×</button></div>
+      <p class="su-state ${x.ok ? 'ok' : 'open'}">${x.ok ? '✓ Erledigt' : 'Offen'}${x.time ? ` · Dauer ca. ${esc(x.time)}` : ''} · ${n} Schritt${n === 1 ? '' : 'e'}${x.info ? ` · ${esc(x.info)}` : ''}</p>
+      <div class="su-why"><strong>Wozu?</strong> ${esc(x.why)}</div>
+      ${x.need ? `<div class="su-need"><strong>Vorher bereitlegen:</strong> ${esc(x.need)}</div>` : ''}
+      <ol class="su-gsteps">${x.steps.map((st, i) => `<li><label><input type="checkbox" data-st="${i}"><span class="su-num">${i + 1}</span><span class="su-txt">${st}</span></label></li>`).join('')}</ol>
+      ${x.check ? `<div class="su-check"><strong>So prüfen Sie, ob es geklappt hat:</strong> ${x.check}</div>` : ''}
+      <p class="form-note">Die Häkchen an den Schritten sind nur Ihre Merkhilfe und werden in diesem Browser gespeichert.</p>
+      <div class="wiz-nav"><button type="button" class="btn btn-outline" data-x>Schließen</button>${x.auto ? `<button type="button" class="btn btn-dark" data-re>Erneut prüfen</button>` : x.ok ? `<button type="button" class="btn btn-outline" data-un>Wieder öffnen</button>` : `<button type="button" class="btn btn-dark" data-ok>Fertig – als erledigt markieren</button>`}</div></div>`;
+    const K = 'su_' + x.id; let st = {}; try { st = JSON.parse(localStorage.getItem(K) || '{}'); } catch { /* privat */ }
+    d.querySelectorAll('[data-st]').forEach((c) => { c.checked = Boolean(st[c.dataset.st]); c.onchange = () => { st[c.dataset.st] = c.checked; try { localStorage.setItem(K, JSON.stringify(st)); } catch { /* privat */ } }; });
+    d.querySelectorAll('[data-x]').forEach((b) => b.onclick = () => d.close());
+    d.querySelector('[data-re]')?.addEventListener('click', () => { d.close(); einrichtung(v); });
+    d.querySelector('[data-ok]')?.addEventListener('click', () => { d.close(); mark(x.id, true); });
+    d.querySelector('[data-un]')?.addEventListener('click', () => { d.close(); mark(x.id, false); });
+    d.showModal();
+  };
+  v.querySelectorAll('[data-open]').forEach((b) => b.onclick = () => guide(all.find((x) => x.id === b.dataset.open)));
   v.querySelectorAll('[data-undo]').forEach((b) => b.onclick = () => mark(b.dataset.undo, false));
 }

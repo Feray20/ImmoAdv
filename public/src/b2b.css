@@ -598,3 +598,10 @@ body.dk-open{overflow:hidden}
 .btn-pay{background:#000!important;color:#fff!important;border:1px solid #000!important;border-radius:10px;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px}
 .btn-pay:hover{background:#1d1d1f!important}.btn-pay:disabled{background:#3a3a3c!important;opacity:.6}
 .tk-plan.btn-pay strong,.tk-plan.btn-pay span,.tk-plan.btn-pay small{color:#fff!important}
+.su-row{display:grid;gap:4px;width:100%;text-align:left;font:inherit;cursor:pointer}.su-row:hover{border-color:#94A3B8;box-shadow:0 4px 14px rgba(15,44,89,.08)}
+.su-sub{font-size:13.5px;color:#475569;line-height:1.45}.su-go{font-size:13px;font-weight:700;color:#0369A1}
+.su-state{margin:0;font-size:13px;font-weight:700;color:#92400E}.su-state.ok{color:#166534}
+.su-why,.su-need,.su-check{border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.5}.su-why{background:#F8FAFC}.su-need{background:#FEF3C7}.su-check{background:#DCFCE7}
+.su-gsteps{list-style:none;margin:0;padding:0;display:grid;gap:8px}.su-gsteps label{display:grid;grid-template-columns:20px 28px 1fr;gap:8px;align-items:start;border:1px solid #E2E8F0;border-radius:10px;padding:10px;font-size:14.5px;line-height:1.55;color:#1E293B;cursor:pointer}
+.su-gsteps input{margin-top:4px}.su-gsteps input:checked~.su-txt{color:#94A3B8;text-decoration:line-through}.su-num{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#0F2C59;color:#fff;font-weight:700;font-size:13px}
+.su-gsteps code,.su-check code{background:#F1F5F9;border-radius:4px;padding:1px 5px;font-size:12.5px;word-break:break-all}.su-guide a{color:#0369A1;font-weight:600}
