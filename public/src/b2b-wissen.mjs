@@ -1,6 +1,7 @@
 // Unternehmensportal → Praxis-Toolkit für erfahrene Berater: Gesprächsgrafiken, Sonderfälle, Einwände, Prüfpfade,
 // Unterlagen-Checklisten und Pflichten-Check (keine Grundlagen). Alle Beispielzahlen werden hier nachvollziehbar berechnet.
 // Hinweis: Orientierungswissen, keine Rechts- oder Finanzierungsberatung; bankindividuelle Vorgaben gehen vor.
+import { BRANCHEN, KAPITEL } from './b2b-branche.mjs';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const E = (v, d = 0) => v.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: d, maximumFractionDigits: d });
@@ -235,7 +236,13 @@ const RECHT = [
   ['KWG / CRR', 'Kreditinstitute', 'Erlaubnis BaFin, Eigenmittel nach CRR (Basel III), § 18 KWG: Offenlegung der wirtschaftlichen Verhältnisse ab 750.000 €'],
   ['MaRisk BTO 1', 'Kreditgeschäft der Banken', 'Funktionstrennung Markt / Marktfolge, Votierung, Kreditprozesse, Risikoklassifizierung'],
   ['§§ 491 ff., 505a–505e BGB', 'Immobiliar-Verbraucherdarlehen (Umsetzung der Wohnimmobilienkreditrichtlinie)', 'Kreditwürdigkeitsprüfung, ESIS-Merkblatt (Art. 247 EGBGB), Widerrufsrecht, Beratungsstandards'],
-  ['§ 656c BGB', 'Maklerprovision bei Wohnung / Einfamilienhaus an Verbraucher', 'Halbteilungsgrundsatz: Käufer zahlt höchstens so viel wie der Verkäufer'],
+  ['§§ 656a–656d BGB', 'Maklerverträge über Wohnung / Einfamilienhaus mit Verbrauchern', 'Textform; Halbteilung der Provision; Abwälzung höchstens zur Hälfte nach Zahlungsnachweis'],
+  ['§ 511 BGB', 'Beratungsleistungen bei Immobiliar-Verbraucherdarlehen', 'Information vor der Beratung, Empfehlung aus ausreichender Zahl von Verträgen, Dokumentation'],
+  ['§§ 655a–655e BGB', 'Darlehensvermittlungsverträge mit Verbrauchern', 'Textform, Offenlegung der Vergütung, Vergütung erst bei Auszahlung'],
+  ['§ 87 GEG', 'Immobilienanzeigen (Verkauf, Vermietung)', 'Pflichtangaben aus dem Energieausweis in der Anzeige'],
+  ['GwG', 'Immobilienmakler als Verpflichtete (§ 2 Abs. 1 Nr. 14 GwG)', 'Identifizierung, Risikomanagement, Aufzeichnung, Verdachtsmeldung an die FIU'],
+  ['§ 34f / § 34h GewO', 'Finanzanlagenvermittler und Honorar-Finanzanlagenberater', 'Sachkunde, Haftpflicht, Register; keine Erlaubnis für Immobiliardarlehen'],
+  ['§ 34d GewO', 'Versicherungsvermittler und -berater', 'Erlaubnis, Sachkunde, Register, Weiterbildung 15 Stunden je Kalenderjahr'],
   ['Art. 28 DSGVO', 'Verarbeitung von Kundendaten im Auftrag', 'Auftragsverarbeitungsvertrag (AVV) – im Portal unter „Profil“ abgeschlossen'],
 ];
 
@@ -291,87 +298,92 @@ const EINWAND = [
   ['„Meine Hausbank ist günstiger.“', 'Effektivzins und Konditionen aus dem ESIS-Merkblatt nebeneinanderlegen – inklusive Sondertilgung, Bereitstellungszinsfreiheit und Tilgungswechsel.'],
 ];
 
-const CHAPTERS = [
-  ['charts', 'Gesprächsgrafiken'], ['sonder', 'Sonderfälle'], ['einwand', 'Einwände'], ['ns', 'Prüfpfade'], ['unterlagen', 'Unterlagen'], ['recht', 'Pflichten'],
-];
+const TITLES = { charts: 'Gesprächsgrafiken', sonder: 'Sonderfälle', einwand: 'Einwände', ns: 'Prüfpfade', unterlagen: 'Unterlagen', recht: 'Pflichten-Check' };
+const chTitle = (k) => TITLES[k] || KAPITEL[k]?.t.split(/ [–-] /)[0] || k;
+const recht = (b) => (BRANCHEN[b]?.recht ? RECHT.filter(([n]) => BRANCHEN[b].recht.includes(n)) : RECHT);
+// Kapitel aus der Branchen-Datei als HTML (Tabelle, Karten oder Schritte).
+function kapitelHtml(k, full) {
+  const c = KAPITEL[k]; if (!c) return '';
+  if (c.typ === 'table') return full
+    ? `<div class="ad-wrap"><table class="bw-table"><thead><tr>${c.head.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${c.rows.map((r) => `<tr>${r.map((x, i) => `<td>${i ? x : `<strong>${x}</strong>`}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+    : c.rows.map((r) => `<div class="bw-sf"><strong>${r[0]}</strong>${r.slice(1).map((x, i) => `<p${i === r.length - 2 ? ' class="bw-sf-a"' : ''}>${i ? '→ ' : ''}${x}</p>`).join('')}</div>`).join('');
+  if (c.typ === 'steps') return `<ol class="bw-steps">${c.items.map(([t, x]) => `<li><strong>${t}</strong><p>${x}</p></li>`).join('')}</ol>`;
+  return full ? `<div class="bw-ew">${c.items.map(([t, x]) => `<article><strong>${t}</strong><p>${x}</p></article>`).join('')}</div>` : c.items.map(([t, x]) => `<div class="bw-sf"><strong>${t}</strong><p>${x}</p></div>`).join('');
+}
 
 // ---------- Handy: kompakte Ansicht ----------
 const VIEW_KEY = 'bw-view';
 const viewPref = () => { try { return localStorage.getItem(VIEW_KEY); } catch { return null; } };
 const setView = (v) => { try { localStorage.setItem(VIEW_KEY, v); } catch { /* nur Komfort */ } };
 const ANSCHLUSS = ['Bis 60 Monate vorher: Forward-Darlehen (Aufschlag je Vorlaufmonat).', 'Ab etwa 12 Monate vorher: Prolongationsangebot gegen Marktangebote stellen.', 'Bankwechsel: Grundschuldabtretung statt Neubestellung spart Notar- und Grundbuchkosten.', 'Nach 10 Jahren ab Vollauszahlung: Kündigungsrecht nach § 489 BGB (6 Monate Frist).'];
-function renderCompact(box) {
-  const f = FALL, plan = tilgungsplan(f.darlehen, f.zins, f.tilgung, 30), st = stress();
+function renderCompact(box, branche) {
+  const B = BRANCHEN[branche] || BRANCHEN.allgemein, f = FALL, plan = tilgungsplan(f.darlehen, f.zins, f.tilgung, 30), st = stress();
+  const body = (k) => {
+    if (KAPITEL[k]) return kapitelHtml(k, false);
+    if (k === 'sonder') return SONDER.map(([t, a, b]) => `<div class="bw-sf"><strong>${t}</strong><p>${a}</p><p class="bw-sf-a">→ ${b}</p></div>`).join('');
+    if (k === 'einwand') return EINWAND.map(([t, a]) => `<div class="bw-sf"><strong>${t}</strong><p>${a}</p></div>`).join('');
+    if (k === 'ns') return `<ul>${ANSCHLUSS.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    if (k === 'unterlagen') return MIND2.map((b) => `<div class="bw-sf"><strong>${b.t}</strong><p>${b.k.map(esc).join(' · ')}</p></div>`).join('');
+    if (k === 'recht') return `<ul>${recht(branche).map(([a, , c]) => `<li><strong>${a}:</strong> ${c}</li>`).join('')}</ul>`;
+    if (k === 'charts') return `<div class="bw-kpis">${[['Darlehen', E(f.darlehen)], ['Rate', E(f.rate) + ' mtl.'], ['Restschuld nach 10 J.', E(plan[9].rest)], ['Rate bei 6 % Anschluss', E(st[2].rate)]].map(([a, v]) => `<div><small>${a}</small><strong>${v}</strong></div>`).join('')}</div><p class="form-note">Kaufpreis ${E(f.kaufpreis)}, Eigenkapital ${E(f.eigenkapital)}, Sollzins ${P(f.zins, 2)}, Tilgung ${P(f.tilgung, 0)}. Die Grafiken dazu: „Gesprächsgrafiken öffnen“.</p>`;
+    return '';
+  };
+  const label = (k) => (k === 'ns' ? 'Anschlussfinanzierung: Zeitfenster' : k === 'charts' ? 'Rechenbeispiel zum Zeigen' : KAPITEL[k]?.t || ({ sonder: 'Sonderfälle & Lösungsansätze', einwand: 'Einwände im Kundengespräch', unterlagen: 'Unterlagen je Kundentyp', recht: 'Pflichten-Check' })[k]);
   box.innerHTML = `<div class="bw bw-compact">
-    <section class="pt-card bw-hero"><span class="bw-kick">Praxis-Toolkit</span><h2>Für Ihre Kundentermine</h2>
-      <p>Sonderfälle, Einwände, Prüfpfade und Grafiken zum Zeigen – kurz gefasst.</p>
-      <button type="button" class="btn bw-switch" data-view="voll">Gesprächsgrafiken öffnen</button></section>
-    <details class="pt-card bw-acc" open><summary><b class="bw-no">1</b>Sonderfälle &amp; Lösungsansätze</summary>${SONDER.map(([t, a, b]) => `<div class="bw-sf"><strong>${t}</strong><p>${a}</p><p class="bw-sf-a">→ ${b}</p></div>`).join('')}</details>
-    <details class="pt-card bw-acc"><summary><b class="bw-no">2</b>Einwände im Gespräch</summary>${EINWAND.map(([t, a]) => `<div class="bw-sf"><strong>${t}</strong><p>${a}</p></div>`).join('')}</details>
-    <details class="pt-card bw-acc"><summary><b class="bw-no">3</b>Anschlussfinanzierung: Zeitfenster</summary><ul>${ANSCHLUSS.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>
-    <details class="pt-card bw-acc"><summary><b class="bw-no">4</b>Unterlagen je Kundentyp</summary>${MIND2.map((b) => `<div class="bw-sf"><strong>${b.t}</strong><p>${b.k.map(esc).join(' · ')}</p></div>`).join('')}</details>
-    <details class="pt-card bw-acc"><summary><b class="bw-no">5</b>Rechenbeispiel zum Zeigen</summary><div class="bw-kpis">${[['Darlehen', E(f.darlehen)], ['Rate', E(f.rate) + ' mtl.'], ['Restschuld nach 10 J.', E(plan[9].rest)], ['Rate bei 6 % Anschluss', E(st[2].rate)]].map(([k, v]) => `<div><small>${k}</small><strong>${v}</strong></div>`).join('')}</div>
-      <p class="form-note">Kaufpreis ${E(f.kaufpreis)}, Eigenkapital ${E(f.eigenkapital)}, Sollzins ${P(f.zins, 2)}, Tilgung ${P(f.tilgung, 0)}.</p></details>
-    <details class="pt-card bw-acc"><summary><b class="bw-no">6</b>Pflichten-Check</summary><ul>${RECHT.map(([a, , c]) => `<li><strong>${a}:</strong> ${c}</li>`).join('')}</ul></details>
-    <p class="form-note">Erfahrungswerte aus der Praxis; Vorgaben der einzelnen Banken gehen vor. Keine Rechtsberatung.</p>
+    <section class="pt-card bw-hero"><span class="bw-kick">Praxis-Toolkit · ${esc(B.label)}</span><h2>Fachwissen für Ihren Alltag</h2>
+      <p>Kurz gefasst für das Handy – ausführlich mit Grafiken und Tabellen in der vollen Ansicht.</p>
+      <button type="button" class="btn bw-switch" data-view="voll">Volle Ansicht mit Grafiken</button></section>
+    ${B.chapters.map((k, i) => `<details class="pt-card bw-acc"${i === 0 ? ' open' : ''}><summary><b class="bw-no">${i + 1}</b>${label(k)}</summary>${body(k)}</details>`).join('')}
+    <p class="form-note">Erfahrungswerte und Normen, Stand Oktober 2026. Vorgaben der einzelnen Banken gehen vor. Keine Rechts- oder Steuerberatung.</p>
   </div>`;
-  bindCommon(box);
+  bindCommon(box, branche);
 }
-function bindCommon(box) {
-  box.querySelectorAll('.bw-switch').forEach((b) => b.onclick = () => { setView(b.dataset.view === 'voll' ? 'voll' : 'kompakt'); renderWissen(box); box.scrollIntoView({ block: 'start' }); });
+function bindCommon(box, branche) {
+  box.querySelectorAll('.bw-switch').forEach((b) => b.onclick = () => { setView(b.dataset.view === 'voll' ? 'voll' : 'kompakt'); renderWissen(box, branche); box.scrollIntoView({ block: 'start' }); });
 }
 
-export function renderWissen(box) {
+export function renderWissen(box, branche = 'allgemein') {
+  const B = BRANCHEN[branche] || BRANCHEN.allgemein;
   const pref = viewPref();
-  if (pref ? pref === 'kompakt' : innerWidth < 900) { renderCompact(box); return; }
+  if (pref ? pref === 'kompakt' : innerWidth < 900) { renderCompact(box, branche); return; }
   const f = FALL;
   const noi = (f.kaltmiete - f.nichtUmlage) * 12;
-  box.innerHTML = `<div class="bw">
-    <section class="pt-card bw-hero"><span class="bw-kick">Praxis-Toolkit · für erfahrene Berater, Makler und Banken</span>
-      <h2>Material für Ihre Kundentermine</h2>
-      <p>Keine Grundlagen – sondern Grafiken zum Zeigen, Lösungsansätze für schwierige Konstellationen, Antworten auf typische Einwände und Prüfpfade vor der Einreichung. Alle Zahlen beruhen auf einem nachrechenbaren Beispielfall.</p>
-      <nav class="bw-toc" aria-label="Kapitel">${CHAPTERS.map(([k, l], i) => `<a href="#wissen=${k}" data-ch="${k}"><b>${i + 1}</b>${l}</a>`).join('')}</nav>
-      <button type="button" class="btn bw-switch bw-switch-m" data-view="kompakt">Kompakte Ansicht</button>
-      <div class="bw-case"><strong>Beispielfall</strong><span>Kaufpreis ${E(f.kaufpreis)}</span><span>Nebenkosten ${P(f.nebenkosten)}</span><span>Eigenkapital ${E(f.eigenkapital)}</span><span>Darlehen ${E(f.darlehen)}</span><span>Sollzins ${P(f.zins, 2)} · Tilgung ${P(f.tilgung, 0)}</span><span>Rate ${E(f.rate, 2)} mtl.</span></div>
-    </section>
-
-    <section class="pt-card" id="bw-charts"><h2><b class="bw-no">1</b> Gesprächsgrafiken zum Zeigen</h2>
-      <p class="form-note">Im Termin auf dem Bildschirm zeigen – sie machen Zinsrisiko und Tilgungswahl für Kunden greifbar.</p>
+  const sec = {
+    charts: () => `<p class="form-note">Im Termin auf dem Bildschirm zeigen – sie machen Zinsrisiko und Tilgungswahl greifbar.</p>
       <div class="bw-grid">
         <figure class="bw-fig"><figcaption><strong>Stresstest: Rate nach der Zinsbindung</strong><span>Restschuld nach 10 Jahren, Anschlusszins 3,6 bis 7 %</span></figcaption>${chartStress()}
           <p class="form-note"><b>Impuls:</b> „Was passiert mit Ihrer Rate, wenn der Zins in zehn Jahren bei 6 % liegt?“</p></figure>
         <figure class="bw-fig"><figcaption><strong>Haushaltsrechnung (Wasserfall)</strong><span>Was nach der Rate übrig bleibt</span></figcaption>${chartWasserfall()}
-          <p class="form-note"><b>Impuls:</b> Puffer nach Rate sichtbar machen – Grundlage für die Wahl von Tilgung und Zinsbindung.</p></figure>
+          <p class="form-note"><b>Impuls:</b> Puffer nach Rate sichtbar machen – Grundlage für Tilgung und Zinsbindung.</p></figure>
         <figure class="bw-fig bw-wide"><figcaption><strong>Anfangstilgung entscheidet über die Restschuld</strong><span>Gleiches Darlehen, gleicher Zins, 1 bis 4 % Anfangstilgung</span></figcaption>${chartTilgung()}
-          <p class="form-note"><b>Impuls:</b> Höhere Rate heute gegen deutlich weniger Zinsänderungsrisiko in zehn Jahren abwägen.</p></figure>
+          <p class="form-note"><b>Impuls:</b> Höhere Rate heute gegen weniger Zinsänderungsrisiko in zehn Jahren abwägen.</p></figure>
         <figure class="bw-fig bw-wide"><figcaption><strong>Zins- und Tilgungsanteil über 30 Jahre</strong><span>${E(f.darlehen)} · ${P(f.zins, 2)} Sollzins · ${P(f.tilgung, 0)} Anfangstilgung</span></figcaption>${chartAnnuitaet()}
-          <p class="form-note"><b>Impuls:</b> Restschuld am Ende der Zinsbindung gehört ins Beratungsprotokoll.</p></figure>
+          <p class="form-note"><b>Impuls:</b> Die Restschuld am Ende der Zinsbindung gehört ins Beratungsprotokoll.</p></figure>
         <figure class="bw-fig"><figcaption><strong>Beleihungsauslauf</strong><span>Sicherheitsabschlag ${P(f.abschlag, 0)} · Auslauf ${P(f.darlehen / f.beleihungswert)} · LTV ${P(f.darlehen / f.marktwert)}</span></figcaption>${chartBeleihung()}
           <p class="form-note"><b>Impuls:</b> Wie viel zusätzliches Eigenkapital die nächste Zinsstufe erreicht.</p></figure>
         <figure class="bw-fig"><figcaption><strong>DSCR bei Vermietung</strong><span>Nettomietertrag ${E(noi)} p. a. ÷ Kapitaldienst ${E(f.annuitaet)}</span></figcaption>${dscrGauge()}
-          <p class="form-note"><b>Impuls:</b> Für Kapitalanleger – wie viel der Kapitaldienst aus anderem Einkommen getragen werden muss.</p></figure>
-      </div></section>
-
-    <section class="pt-card" id="bw-sonder"><h2><b class="bw-no">2</b> Sonderfälle &amp; Lösungsansätze</h2>
-      <div class="ad-wrap"><table class="bw-table"><thead><tr><th>Konstellation</th><th>Typische Bankhaltung</th><th>Lösungsansatz</th></tr></thead><tbody>${SONDER.map(([a, b, c]) => `<tr><td><strong>${a}</strong></td><td>${b}</td><td>${c}</td></tr>`).join('')}</tbody></table></div>
-      <p class="form-note">Erfahrungswerte; die Vorgaben der einzelnen Banken gehen vor.</p></section>
-
-    <section class="pt-card" id="bw-einwand"><h2><b class="bw-no">3</b> Einwände im Kundengespräch</h2>
-      <div class="bw-ew">${EINWAND.map(([t, a]) => `<article><strong>${t}</strong><p>${a}</p></article>`).join('')}</div></section>
-
-    <section class="pt-card" id="bw-ns"><h2><b class="bw-no">4</b> Prüfpfade vor der Einreichung</h2>
-      <p class="form-note">Neufinanzierung und Anschluss als Ablauf – zum Abgleich mit Ihrem eigenen Prozess oder für neue Teammitglieder.</p>${ns()}
-      <h3 class="bw-h3">Anschlussfinanzierung</h3>${ns2()}</section>
-
-    <section class="pt-card" id="bw-unterlagen"><h2><b class="bw-no">5</b> Unterlagen je Kundentyp</h2>
-      <p class="form-note">Als Checkliste für den Kunden – ImmoAdv zeigt ihm in der App automatisch, welche Unterlagen-Arten noch fehlen.</p>${mindmap(MIND2, 'Kredit&shy;mappe', 'vollständig einreichen', 'Mindmap: Unterlagen je Kundentyp')}</section>
-
-    <section class="pt-card" id="bw-recht"><h2><b class="bw-no">6</b> Pflichten-Check</h2>
-      <div class="ad-wrap"><table class="bw-table"><thead><tr><th>Norm</th><th>Gilt für</th><th>Kernpflichten</th></tr></thead><tbody>${RECHT.map(([a, b, c]) => `<tr><td><strong>${a}</strong></td><td>${b}</td><td>${c}</td></tr>`).join('')}</tbody></table></div>
-      <p class="form-note">ImmoAdv ist ein technisches Analyse- und Vorbereitungswerkzeug und vermittelt keine Kredite. Stand: Oktober 2026 – Orientierung, keine Rechtsberatung.</p></section>
+          <p class="form-note"><b>Impuls:</b> Wie viel des Kapitaldienstes aus anderem Einkommen getragen werden muss.</p></figure>
+      </div>`,
+    sonder: () => `<div class="ad-wrap"><table class="bw-table"><thead><tr><th>Konstellation</th><th>Typische Bankhaltung</th><th>Lösungsansatz</th></tr></thead><tbody>${SONDER.map(([a, b, c]) => `<tr><td><strong>${a}</strong></td><td>${b}</td><td>${c}</td></tr>`).join('')}</tbody></table></div><p class="form-note">Erfahrungswerte; die Vorgaben der einzelnen Banken gehen vor.</p>`,
+    einwand: () => `<div class="bw-ew">${EINWAND.map(([t, a]) => `<article><strong>${t}</strong><p>${a}</p></article>`).join('')}</div>`,
+    ns: () => `<p class="form-note">Neufinanzierung und Anschluss als Ablauf – zum Abgleich mit Ihrem Prozess oder für neue Teammitglieder.</p>${ns()}<h3 class="bw-h3">Anschlussfinanzierung</h3>${ns2()}`,
+    unterlagen: () => `<p class="form-note">Als Checkliste für den Kunden – ImmoAdv zeigt ihm in der App automatisch, welche Unterlagen-Arten noch fehlen.</p>${mindmap(MIND2, 'Kredit&shy;mappe', 'vollständig einreichen', 'Mindmap: Unterlagen je Kundentyp')}`,
+    recht: () => `<div class="ad-wrap"><table class="bw-table"><thead><tr><th>Norm</th><th>Gilt für</th><th>Kernpflichten</th></tr></thead><tbody>${recht(branche).map(([a, b, c]) => `<tr><td><strong>${a}</strong></td><td>${b}</td><td>${c}</td></tr>`).join('')}</tbody></table></div><p class="form-note">ImmoAdv ist ein technisches Analyse- und Vorbereitungswerkzeug und vermittelt keine Kredite. Stand: Oktober 2026 – Orientierung, keine Rechtsberatung.</p>`,
+  };
+  const head = (k) => (KAPITEL[k] ? KAPITEL[k].t : ({ charts: 'Gesprächsgrafiken zum Zeigen', sonder: 'Sonderfälle & Lösungsansätze', einwand: 'Einwände im Kundengespräch', ns: 'Prüfpfade vor der Einreichung', unterlagen: 'Unterlagen je Kundentyp', recht: 'Pflichten-Check' })[k]);
+  box.innerHTML = `<div class="bw">
+    <section class="pt-card bw-hero"><span class="bw-kick">Praxis-Toolkit · ${esc(B.label)}</span>
+      <h2>Fachwissen für Ihren Alltag</h2>
+      <p>Zugeschnitten auf ${esc(B.desc)}: Abläufe, Normen, Kennzahlen, Sonderfälle und Gesprächsmaterial. Branche oben rechts jederzeit wechselbar.</p>
+      <nav class="bw-toc" aria-label="Kapitel">${B.chapters.map((k, i) => `<a href="#wissen=${k}" data-ch="${k}"><b>${i + 1}</b>${chTitle(k)}</a>`).join('')}</nav>
+      <button type="button" class="btn bw-switch bw-switch-m" data-view="kompakt">Kompakte Ansicht</button>
+      ${B.chapters.includes('charts') ? `<div class="bw-case"><strong>Beispielfall</strong><span>Kaufpreis ${E(f.kaufpreis)}</span><span>Nebenkosten ${P(f.nebenkosten)}</span><span>Eigenkapital ${E(f.eigenkapital)}</span><span>Darlehen ${E(f.darlehen)}</span><span>Sollzins ${P(f.zins, 2)} · Tilgung ${P(f.tilgung, 0)}</span><span>Rate ${E(f.rate, 2)} mtl.</span></div>` : ''}
+    </section>
+    ${B.chapters.map((k, i) => `<section class="pt-card" id="bw-${k}"><h2><b class="bw-no">${i + 1}</b> ${head(k)}</h2>${KAPITEL[k]?.intro ? `<p class="form-note">${KAPITEL[k].intro}</p>` : ''}${KAPITEL[k] ? kapitelHtml(k, true) : sec[k]()}</section>`).join('')}
+    <p class="form-note">Erfahrungswerte und Normen, Stand Oktober 2026. Vorgaben der einzelnen Banken gehen vor. Keine Rechts- oder Steuerberatung.</p>
   </div>`;
-  bindCommon(box);
+  bindCommon(box, branche);
   box.querySelectorAll('[data-ch]').forEach((a) => a.onclick = (e) => { e.preventDefault(); box.querySelector('#bw-' + a.dataset.ch)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
-  const want = /wissen=([a-z]+)/.exec(location.hash)?.[1];
+  const want = /wissen=([a-zA-Z]+)/.exec(location.hash)?.[1];
   if (want) requestAnimationFrame(() => box.querySelector('#bw-' + want)?.scrollIntoView({ block: 'start' }));
 }

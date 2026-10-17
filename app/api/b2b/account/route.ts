@@ -80,6 +80,9 @@ function view(a: B2BAccount, role: string) {
   };
 }
 
+// Branchen-Ansicht je Berater (in den eigenen Kontodaten gespeichert, jederzeit im Portal wechselbar).
+const BRANCHEN = ['bank', 'vermittler', 'makler', 'finanzberater', 'allgemein'];
+
 export async function GET(req: Request) {
   if (!adminConfigured()) return json({ error: 'Nicht konfiguriert.' }, 503);
   const user = await userFromRequest(req);
@@ -94,10 +97,14 @@ export async function GET(req: Request) {
     db.from('immo_b2b_leads').select('id', { count: 'exact', head: true }).eq('account_id', m.account.id).eq('status', 'neu'),
   ]);
   // Erstanmeldung: Startpasswort ändern; Inhaber bestätigt § 14 BGB und schließt den AVV ab.
-  let mustChange = false;
-  try { mustChange = Boolean((await db.auth.admin.getUserById(user.id)).data?.user?.user_metadata?.must_change_password); } catch { mustChange = false; }
+  let mustChange = false, branche: string | null = null;
+  try {
+    const meta = (await db.auth.admin.getUserById(user.id)).data?.user?.user_metadata || {};
+    mustChange = Boolean(meta.must_change_password);
+    branche = BRANCHEN.includes(meta.b2b_branche) ? meta.b2b_branche : null;
+  } catch { mustChange = false; }
   const consentsMissing = m.role === 'owner' && (!m.account.unternehmer_confirmed_at || !m.account.avv_accepted_at);
-  return json({ ...view(m.account, m.role), usage: { seats: seats ?? 1, dossiersThisMonth: used, leadsNew: leadsNew ?? 0 }, avvVersion: AVV_VERSION, onboarding: { mustChange, consentsMissing } });
+  return json({ ...view(m.account, m.role), usage: { seats: seats ?? 1, dossiersThisMonth: used, leadsNew: leadsNew ?? 0 }, avvVersion: AVV_VERSION, branche, onboarding: { mustChange, consentsMissing } });
 }
 
 // Registrierung eines Unternehmenskontos (nur Unternehmer nach § 14 BGB, mit AVV nach Art. 28 DSGVO).
