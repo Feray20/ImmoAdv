@@ -342,8 +342,13 @@ export function setupApp({ u, d, saveData, reload }) {
     if (cur === 'angebot' && !$('angebotView').dataset.ready) { $('angebotView').dataset.ready = '1'; renderOffers(mode); }
   };
   if (window.__iaHash) window.removeEventListener('hashchange', window.__iaHash);
-  window.__iaHash = () => { apply(); window.scrollTo(0, 0); };
+  // Bereichswechsel beginnt immer ganz oben – auch beim erneuten Tippen auf den aktiven Bereich und ohne
+  // Scroll-Animation oder vom Browser wiederhergestellte Position.
+  const toTop = () => { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })); };
+  try { history.scrollRestoration = 'manual'; } catch { /* ältere Browser */ }
+  window.__iaHash = () => { const v = (location.hash.slice(1) || 'start').split('?')[0]; apply(); if (v === '' || views.some((x) => x[0] === v)) toTop(); };
   window.addEventListener('hashchange', window.__iaHash);
+  if (!window.__iaTopBound) { window.__iaTopBound = true; document.addEventListener('click', (e) => { const a = e.target.closest?.('a[data-go], .app-tab, .app-nav'); if (a && a.getAttribute('href') === location.hash) toTop(); }); }
   window.__iaApplyView = apply;
   new MutationObserver(apply).observe(grid, { childList: true });
   apply();
