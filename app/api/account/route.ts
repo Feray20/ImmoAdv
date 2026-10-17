@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { userFromRequest } from '@/lib/billing/auth';
 import { billingEnabled, entitlementsFor } from '@/lib/billing/stripe';
 import { allowRequest } from '@/lib/security/rate-limit';
-import { adminConfigured, DOCUMENT_BUCKET, supabaseAdmin } from '@/lib/supabase/admin';
+import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
+import { purgeUser } from '@/lib/account/purge';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -58,19 +59,6 @@ export async function GET(req: Request) {
   });
 }
 
-async function removeFolder(bucket: string, prefix: string): Promise<void> {
-  const store = supabaseAdmin().storage.from(bucket);
-  for (let round = 0; round < 50; round++) {
-    const { data, error } = await store.list(prefix, { limit: 1000 });
-    if (error || !data?.length) return;
-    const files = data.filter((f) => f.id).map((f) => `${prefix}/${f.name}`);
-    const dirs = data.filter((f) => !f.id).map((f) => `${prefix}/${f.name}`);
-    for (const d of dirs) await removeFolder(bucket, d);
-    if (files.length) await store.remove(files);
-    if (data.length < 1000) return;
-  }
-}
-
 // Konto löschen (Art. 17 DSGVO): Dateien, Datensätze und Zugang endgültig entfernen.
 export async function DELETE(req: Request) {
   if (!adminConfigured()) return json({ error: 'Nicht konfiguriert.' }, 503);
@@ -99,29 +87,7 @@ export async function DELETE(req: Request) {
     return json({ error: 'Bitte zuerst das Abo des Unternehmenskontos kündigen (Unternehmensportal → Tarif & Rechnungen → Abo verwalten).' }, 409);
   }
   try {
-    if (b2b) await removeFolder('b2b-logos', b2b.id);
-    await removeFolder(DOCUMENT_BUCKET, user.id);
-    await removeFolder('bank-ready-pdf', user.id);
-
-    // Protokolle mit SET NULL und Tabellen ohne Fremdschlüssel ausdrücklich löschen.
-    await db.from('immo_data_room_access_log').delete().eq('owner_id', user.id);
-    await db.from('immo_access_audit').delete().eq('owner_id', user.id);
-    await db.from('immo_kreditmappe_credits').delete().eq('owner_id', user.id);
-    await db.from('immo_audit_log').delete().eq('actor_user_id', user.id);
-
-    // Ältere Bank-Pakete (falls vorhanden) haben RESTRICT-Abhängigkeiten.
-    const { data: pk } = await db.from('immo_bank_packages').select('id').eq('owner_id', user.id);
-    const ids = (pk ?? []).map((x) => x.id as string);
-    if (ids.length) {
-      await db.from('immo_bank_share_events').delete().in('package_id', ids);
-      await db.from('immo_bank_share_links').delete().in('package_id', ids);
-      await db.from('immo_bank_pdf_audit').delete().in('package_id', ids);
-      await db.from('immo_bank_pdf_versions').delete().in('package_id', ids);
-    }
-
-    // Zugang löschen; abhängige Daten (Profil, Objekte, Dokumente, Freigaben, Versionen) folgen per CASCADE.
-    const del = await db.auth.admin.deleteUser(user.id);
-    if (del.error) throw new Error(del.error.message);
+    await purgeUser(user.id, b2b?.id || null);
   } catch (e) {
     console.error('account_delete_error', e instanceof Error ? e.message : e);
     return json({ error: 'Löschen nicht vollständig möglich. Bitte an support@immoadv.de wenden.' }, 500);

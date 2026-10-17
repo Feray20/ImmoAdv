@@ -108,7 +108,7 @@ function show() {
   ({ uebersicht, einrichtung, analyse, testkauf, cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)) })[t](v);
 }
 
-// ---------- Nutzer: Konten im Überblick, sperren/entsperren, Passwort-Reset ----------
+// ---------- Nutzer: Konten im Überblick, sperren/entsperren, Passwort-Reset, löschen ----------
 async function nutzer(v, page = 1, q = '', seg = 'b2c') {
   const r = await api(`/api/admin/users?page=${page}&seg=${seg}&q=${encodeURIComponent(q)}`);
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
@@ -122,7 +122,7 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
       <div class="us-top"><strong>${esc(u.email || '(ohne E-Mail)')}</strong><span class="us-tags">${u.admin ? '<span class="st ok">Admin</span>' : ''}${u.banned ? '<span class="st bad">gesperrt</span>' : ''}${u.confirmed ? '' : '<span class="st warn">unbestätigt</span>'}${u.mfa ? '<span class="st ok">2FA</span>' : '<span class="st">ohne 2FA</span>'}</span></div>
       ${u.company ? `<p class="us-co"><strong>${esc(u.company.name)}</strong> · ${esc(u.company.number || '')} · ${u.company.role === 'owner' ? 'Inhaber' : 'Berater'} · ${u.company.verified ? '<span class="st ok">verifiziert</span>' : `<span class="st warn">${esc(u.company.status || 'offen')}</span>`}</p>` : ''}
       <dl class="us-meta"><div><dt>Registriert</dt><dd>${dt(u.createdAt)}</dd></div><div><dt>Letzte Anmeldung</dt><dd>${ago(u.lastSignIn)}</dd></div></dl>
-      <div class="us-act">${u.confirmed ? '' : `<button type="button" class="btn btn-dark" data-us="confirm" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Bestätigung erneut senden</button>`}<button type="button" class="btn btn-outline" data-us="reset" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Passwort-Reset senden</button>${u.admin ? '' : `<button type="button" class="btn ${u.banned ? 'btn-outline' : 'btn-danger'}" data-us="${u.banned ? 'unban' : 'ban'}" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">${u.banned ? 'Entsperren' : 'Sperren'}</button>`}</div>
+      <div class="us-act">${u.confirmed ? '' : `<button type="button" class="btn btn-dark" data-us="confirm" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Bestätigung erneut senden</button>`}<button type="button" class="btn btn-outline" data-us="reset" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Passwort-Reset senden</button>${u.admin ? '' : `<button type="button" class="btn ${u.banned ? 'btn-outline' : 'btn-danger'}" data-us="${u.banned ? 'unban' : 'ban'}" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">${u.banned ? 'Entsperren' : 'Sperren'}</button><button type="button" class="btn btn-danger" data-us="delete" data-id="${esc(u.id)}" data-mail="${esc(u.email)}" data-co="${u.company ? esc(u.company.role) : ''}">Konto löschen</button>`}</div>
     </article>`).join('') || '<p class="form-note">Keine Konten gefunden.</p>'}</div>
     <div class="pt-row">${page > 1 ? '<button class="btn btn-ghost" id="usPrev" type="button">← Zurück</button>' : ''}${r.data.more ? '<button class="btn btn-ghost" id="usNext" type="button">Weiter →</button>' : ''}</div></section>`;
   $('#usF').onsubmit = (e) => { e.preventDefault(); nutzer(v, 1, $('#usQ').value.trim(), seg); };
@@ -132,11 +132,17 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
   v.querySelectorAll('[data-us]').forEach((b) => b.onclick = async () => {
     const a = b.dataset.us, m = b.dataset.mail;
     const ask = { ban: `Konto ${m} sperren? Anmelden ist dann nicht mehr möglich; offene Sitzungen laufen spätestens nach einer Stunde aus.`, unban: `Konto ${m} wieder freigeben?`, confirm: `Bestätigungs-E-Mail erneut an ${m} senden?`, reset: `E-Mail zum Zurücksetzen des Passworts an ${m} senden?` }[a];
-    if (!confirm(ask)) return;
+    let confirmEmail;
+    if (a === 'delete') {
+      const warn = b.dataset.co === 'owner' ? ' Das Unternehmenskonto wird mit allen Beratern, Anfragen und Unterlagen gelöscht; Rechnungen bleiben gesetzlich archiviert.' : '';
+      confirmEmail = prompt(`Konto ${m} endgültig löschen?${warn} Profil, Objekte, Dokumente und Zugang werden entfernt – das lässt sich nicht rückgängig machen.\n\nZur Bestätigung die E-Mail-Adresse eingeben:`);
+      if (confirmEmail === null) return;
+      if (confirmEmail.trim().toLowerCase() !== m.toLowerCase()) { msg('Die E-Mail-Adresse stimmt nicht überein – nichts gelöscht.', true); return; }
+    } else if (!confirm(ask)) return;
     b.disabled = true;
-    const x = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ action: a, id: b.dataset.id }) });
+    const x = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ action: a, id: b.dataset.id, ...(confirmEmail ? { confirmEmail } : {}) }) });
     if (!x.ok) { msg(x.data?.error || 'Aktion fehlgeschlagen.', true); b.disabled = false; return; }
-    msg({ ban: 'Konto gesperrt.', unban: 'Konto freigegeben.', confirm: 'Bestätigungs-E-Mail gesendet.', reset: 'E-Mail zum Zurücksetzen gesendet.' }[a]);
+    msg({ ban: 'Konto gesperrt.', unban: 'Konto freigegeben.', confirm: 'Bestätigungs-E-Mail gesendet.', reset: 'E-Mail zum Zurücksetzen gesendet.', delete: 'Konto gelöscht.' }[a]);
     nutzer(v, page, q, seg);
   });
 }

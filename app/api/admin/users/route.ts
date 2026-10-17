@@ -4,6 +4,8 @@ import { requireAdmin, isAdminEmail } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
 import { adminAudit } from '@/lib/b2b/core';
+import { purgeUser } from '@/lib/account/purge';
+import { billingEnabled, entitlementsFor } from '@/lib/billing/stripe';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,7 +13,8 @@ export const dynamic = 'force-dynamic';
 const j = (b: unknown, s = 200) => NextResponse.json(b, { status: s, headers: { 'Cache-Control': 'no-store' } });
 const SITE = 'https://immoadv.de';
 
-// Web-Admin → Nutzer: Konten auflisten (ohne Inhalte), sperren/entsperren, Passwort-Reset senden.
+// Web-Admin → Nutzer: Konten auflisten (ohne Inhalte), sperren/entsperren, Passwort-Reset senden, Konto löschen.
+export const maxDuration = 60;
 export async function GET(req: Request) {
   const auth = await requireAdmin(req);
   if (auth instanceof NextResponse) return auth;
@@ -48,7 +51,7 @@ export async function GET(req: Request) {
   return j({ users, page, seg, more: (data.users || []).length === 200 });
 }
 
-const Body = z.object({ action: z.enum(['ban', 'unban', 'reset', 'confirm']), id: z.string().uuid() });
+const Body = z.object({ action: z.enum(['ban', 'unban', 'reset', 'confirm', 'delete']), id: z.string().uuid(), confirmEmail: z.string().max(200).optional() });
 
 export async function POST(req: Request) {
   const auth = await requireAdmin(req);
@@ -62,8 +65,33 @@ export async function POST(req: Request) {
   const u = got?.user;
   if (!u) return j({ error: 'Konto nicht gefunden.' }, 404);
   const email = (u.email || '').toLowerCase();
-  if ((action === 'ban') && (email === auth.user.email.toLowerCase() || isAdminEmail(email))) {
-    return j({ error: 'Administratoren können hier nicht gesperrt werden.' }, 409);
+  if ((action === 'ban' || action === 'delete') && (email === auth.user.email.toLowerCase() || isAdminEmail(email))) {
+    return j({ error: action === 'delete' ? 'Administratoren können hier nicht gelöscht werden.' : 'Administratoren können hier nicht gesperrt werden.' }, 409);
+  }
+  // Konto löschen (B2C oder B2B): endgültig, nur nach Eingabe der E-Mail-Adresse; laufende Abos zuerst kündigen.
+  if (action === 'delete') {
+    if ((p.data.confirmEmail || '').trim().toLowerCase() !== email) return j({ error: 'Zur Bestätigung bitte die E-Mail-Adresse des Kontos genau eingeben.' }, 400);
+    const db = supabaseAdmin();
+    const { data: acc } = await db.from('immo_b2b_accounts').select('id, plan_source, plan_tier, plan_until, stripe_subscription_id').eq('owner_id', id).maybeSingle();
+    if (acc?.plan_source === 'stripe' && acc.plan_tier && acc.stripe_subscription_id && !acc.plan_until) {
+      return j({ error: 'Das Unternehmenskonto hat ein laufendes Abo. Bitte zuerst in Stripe kündigen, dann löschen.' }, 409);
+    }
+    if (billingEnabled()) {
+      try {
+        const ent = await entitlementsFor(id, email);
+        if (ent.pro && ent.proSource === 'subscription') return j({ error: 'Das Konto hat ein laufendes Investor-Pro-Abo. Bitte zuerst in Stripe kündigen, dann löschen.' }, 409);
+      } catch {
+        return j({ error: 'Abo-Status konnte nicht geprüft werden. Bitte später erneut versuchen.' }, 502);
+      }
+    }
+    try {
+      await purgeUser(id, acc?.id || null);
+    } catch (e) {
+      console.error('admin_user_delete', e instanceof Error ? e.message : e);
+      return j({ error: 'Löschen nicht vollständig möglich.' }, 500);
+    }
+    await adminAudit(auth.user.email, 'user_delete', id, { bereich: acc ? 'b2b' : 'b2c' });
+    return j({ ok: true });
   }
   if (action === 'ban' || action === 'unban') {
     const { error } = await admin.updateUserById(id, { ban_duration: action === 'ban' ? '876000h' : 'none' });
