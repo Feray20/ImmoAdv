@@ -315,6 +315,7 @@ export function setupApp({ u, d, saveData, reload }) {
   bindKm(d, u, saveData, reload);
   renderFin();
   bindLern(d, u, saveData);
+  import('/src/field-help.mjs').then((m) => m.watchHelp(grid)).catch(() => {});
   import('/src/retention.mjs').then(async (m) => { m.mountRetention(grid, { mode, d, u, saveData, paid: (await getAccess()).paid }); if (typeof window.__iaApplyView === 'function') window.__iaApplyView(); }).catch(() => {});
 
   const apply = () => {
