@@ -15,3 +15,13 @@ test('E-Mail: Knopf hat einen Ersatzlink, Vorschautext ist gesetzt', async () =>
   assert.match(h, /Falls der Knopf nicht funktioniert/);
   assert.match(h, /display:none[^>]*>Erste Zeile/);
 });
+
+test('E-Mail: Unternehmenskunden erhalten Mails getrennt als „ImmoAdv Business“', async () => {
+  const { fromAddress, brandedHtml } = await import('../lib/notify/mail.ts');
+  process.env.NOTIFY_FROM_EMAIL = 'noreply@immoadv.de';
+  assert.equal(fromAddress('b2b'), 'ImmoAdv Business <noreply@immoadv.de>');
+  assert.equal(fromAddress(), 'ImmoAdv <noreply@immoadv.de>');
+  assert.match(brandedHtml({ text: 'x', area: 'b2b' }), /Unternehmensportal<\/td>/);
+  assert.doesNotMatch(brandedHtml({ text: 'x' }), /Unternehmensportal/);
+  delete process.env.NOTIFY_FROM_EMAIL;
+});

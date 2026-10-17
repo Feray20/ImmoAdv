@@ -32,6 +32,9 @@ export async function POST(req: Request) {
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return j({ error: 'Bitte E-Mail-Adresse und Passwort prüfen.' }, 400);
   const { action, email, password, ref, website, next } = p.data;
+  // Unternehmensportal und Privatkundenbereich sind getrennt: eigene Texte, eigener Absender, Links ins jeweilige Portal.
+  const biz = next === '/b2b-portal';
+  const area = biz ? 'b2b' as const : 'b2c' as const;
   if (honeypotTripped(website)) return j(DONE);
   if (!allowRequest(`authmail:${ip}`, 8, 10 * 60_000) || !allowRequest(`authmail:${email}`, 4, 10 * 60_000)) {
     return j({ error: 'Zu viele Anfragen. Bitte einige Minuten warten.', code: 'over_request_rate_limit' }, 429);
@@ -51,7 +54,7 @@ export async function POST(req: Request) {
       if (/already|exists|registered/i.test(error.message)) {
         await sendMail(email, 'Sie haben bereits ein ImmoAdv-Konto',
           'Guten Tag,\n\njemand (vermutlich Sie) wollte mit dieser E-Mail-Adresse ein neues ImmoAdv-Konto anlegen. Für diese Adresse besteht bereits ein Konto.\n\nMelden Sie sich einfach an – oder setzen Sie Ihr Passwort zurück, falls Sie es vergessen haben.',
-          [], { title: 'Ihr Konto besteht bereits', button: { label: 'Zur Anmeldung', url: `${SITE}/auth/login` }, note: `Passwort vergessen? ${SITE}/auth/forgot – Wenn Sie das nicht waren, können Sie diese E-Mail ignorieren.` });
+          [], { area, title: 'Ihr Konto besteht bereits', button: { label: 'Zur Anmeldung', url: biz ? `${SITE}/b2b-portal` : `${SITE}/auth/login` }, note: `Passwort vergessen? ${SITE}/auth/forgot${biz ? '?bereich=b2b' : ''} – Wenn Sie das nicht waren, können Sie diese E-Mail ignorieren.` });
         return j(DONE);
       }
       if (/password/i.test(error.message)) return j({ error: 'Das Passwort ist zu schwach. Bitte mindestens 8 Zeichen mit Buchstaben und Zahlen wählen.', code: 'weak_password' }, 400);
@@ -60,9 +63,10 @@ export async function POST(req: Request) {
     }
     const hash = data.properties?.hashed_token;
     if (!hash) return j({ error: 'Registrierung fehlgeschlagen.' }, 502);
-    const ok = await sendMail(email, 'Bitte bestätigen Sie Ihre E-Mail-Adresse – ImmoAdv',
-      'Willkommen bei ImmoAdv!\n\nBitte bestätigen Sie Ihre E-Mail-Adresse, damit wir Ihr Konto freischalten können. Danach können Sie sofort loslegen: Lernbereich, Rechner, RenditeRadar und BankReady.',
-      [], { title: 'E-Mail-Adresse bestätigen', button: { label: 'E-Mail-Adresse bestätigen', url: confirmUrl(hash, 'signup', next) }, note: 'Der Link ist 24 Stunden gültig und kann nur einmal verwendet werden. Wenn Sie sich nicht registriert haben, ignorieren Sie diese E-Mail einfach.' });
+    const ok = await sendMail(email, biz ? 'Bitte bestätigen Sie Ihre E-Mail-Adresse – ImmoAdv Unternehmensportal' : 'Bitte bestätigen Sie Ihre E-Mail-Adresse – ImmoAdv',
+      biz ? 'Willkommen im ImmoAdv-Unternehmensportal!\n\nBitte bestätigen Sie Ihre E-Mail-Adresse. Danach richten Sie Ihr Unternehmenskonto ein: Unternehmensdaten, Auftragsverarbeitungsvertrag und Gewerbenachweis.'
+        : 'Willkommen bei ImmoAdv!\n\nBitte bestätigen Sie Ihre E-Mail-Adresse, damit wir Ihr Konto freischalten können. Danach können Sie sofort loslegen: Lernbereich, Rechner, RenditeRadar und BankReady.',
+      [], { area, title: 'E-Mail-Adresse bestätigen', button: { label: 'E-Mail-Adresse bestätigen', url: confirmUrl(hash, 'signup', next) }, note: 'Der Link ist 24 Stunden gültig und kann nur einmal verwendet werden. Wenn Sie sich nicht registriert haben, ignorieren Sie diese E-Mail einfach.' });
     return ok ? j(DONE) : j({ error: 'Die E-Mail konnte nicht gesendet werden. Bitte später erneut versuchen.' }, 502);
   }
 
@@ -70,17 +74,18 @@ export async function POST(req: Request) {
     const { data, error } = await admin.generateLink({ type: 'recovery', email, options: { redirectTo: `${SITE}/auth/reset` } });
     // Gleiche Antwort, ob ein Konto besteht oder nicht (kein Rückschluss auf registrierte Adressen).
     if (error || !data.properties?.hashed_token) return j(DONE);
-    await sendMail(email, 'Passwort zurücksetzen – ImmoAdv',
-      'Guten Tag,\n\nSie haben angefordert, Ihr ImmoAdv-Passwort zurückzusetzen. Über den Knopf legen Sie ein neues Passwort fest.',
-      [], { title: 'Neues Passwort festlegen', button: { label: 'Neues Passwort festlegen', url: confirmUrl(data.properties.hashed_token, 'recovery') }, note: 'Der Link ist nur kurze Zeit gültig und kann einmal verwendet werden. Wenn Sie das nicht angefordert haben, ignorieren Sie diese E-Mail – Ihr Passwort bleibt unverändert.' });
+    await sendMail(email, biz ? 'Passwort zurücksetzen – ImmoAdv Unternehmensportal' : 'Passwort zurücksetzen – ImmoAdv',
+      biz ? 'Guten Tag,\n\nSie haben angefordert, Ihr Passwort für das ImmoAdv-Unternehmensportal zurückzusetzen. Über den Knopf legen Sie ein neues Passwort fest und gelangen danach direkt ins Portal.'
+        : 'Guten Tag,\n\nSie haben angefordert, Ihr ImmoAdv-Passwort zurückzusetzen. Über den Knopf legen Sie ein neues Passwort fest.',
+      [], { area, title: 'Neues Passwort festlegen', button: { label: 'Neues Passwort festlegen', url: confirmUrl(data.properties.hashed_token, 'recovery', next) }, note: 'Der Link ist nur kurze Zeit gültig und kann einmal verwendet werden. Wenn Sie das nicht angefordert haben, ignorieren Sie diese E-Mail – Ihr Passwort bleibt unverändert.' });
     return j(DONE);
   }
 
   // resend: Bestätigung erneut senden (Anmeldelink bestätigt die Adresse zugleich).
-  const { data, error } = await admin.generateLink({ type: 'magiclink', email, options: { redirectTo: `${SITE}/app/dashboard` } });
+  const { data, error } = await admin.generateLink({ type: 'magiclink', email, options: { redirectTo: biz ? `${SITE}/b2b-portal` : `${SITE}/app/dashboard` } });
   if (error || !data.properties?.hashed_token) return j(DONE);
-  await sendMail(email, 'Ihr Bestätigungslink – ImmoAdv',
-    'Guten Tag,\n\nhier ist Ihr neuer Link. Er bestätigt Ihre E-Mail-Adresse und meldet Sie direkt bei ImmoAdv an.',
-    [], { title: 'E-Mail-Adresse bestätigen', button: { label: 'Bestätigen und anmelden', url: confirmUrl(data.properties.hashed_token, 'magiclink') }, note: 'Der Link ist nur kurze Zeit gültig und kann einmal verwendet werden.' });
+  await sendMail(email, biz ? 'Ihr Bestätigungslink – ImmoAdv Unternehmensportal' : 'Ihr Bestätigungslink – ImmoAdv',
+    biz ? 'Guten Tag,\n\nhier ist Ihr neuer Link. Er bestätigt Ihre E-Mail-Adresse und meldet Sie direkt im Unternehmensportal an.' : 'Guten Tag,\n\nhier ist Ihr neuer Link. Er bestätigt Ihre E-Mail-Adresse und meldet Sie direkt bei ImmoAdv an.',
+    [], { area, title: 'E-Mail-Adresse bestätigen', button: { label: 'Bestätigen und anmelden', url: confirmUrl(data.properties.hashed_token, 'magiclink', next) }, note: 'Der Link ist nur kurze Zeit gültig und kann einmal verwendet werden.' });
   return j(DONE);
 }

@@ -70,7 +70,7 @@ async function radarNotify(today: string): Promise<Record<string, unknown>> {
     if (!hits.length) continue;
     const ok = await sendMail(acc.email, `Bestandskunden-Radar ${ym}: ${hits.length} Anschlussfinanzierung${hits.length === 1 ? '' : 'en'} in Sicht`,
       `Guten Tag${acc.advisor_name ? ' ' + acc.advisor_name : ''},\n\nbei diesen Kunden endet die Zinsbindung demnächst (nur Kunden, die dem Radar zugestimmt haben):\n\n${hits.join('\n')}\n\nAlle Details im Portal unter „Kunden“.\n\nDiese E-Mail wurde automatisch erstellt.`,
-      [], { title: 'Bestandskunden-Radar', button: { label: 'Kunden im Portal öffnen', url: (process.env.PUBLIC_SITE_URL || 'https://immoadv.de') + '/b2b-portal#kunden' } });
+      [], { area: 'b2b', title: 'Bestandskunden-Radar', button: { label: 'Kunden im Portal öffnen', url: (process.env.PUBLIC_SITE_URL || 'https://immoadv.de') + '/b2b-portal#kunden' } });
     await db.from('immo_admin_audit').insert({ actor_email: 'cron', action: 'radar_notify', target: tag, meta: { count: hits.length, sent: ok } });
     if (ok) sent++;
   }

@@ -14,11 +14,14 @@ export function mailConfigured(): boolean {
 }
 
 // Absender immer als „ImmoAdv <adresse>“ – auch wenn in Vercel nur die Adresse eingetragen ist.
-export function fromAddress(): string {
+// Unternehmenskunden (area 'b2b') erhalten Mails als „ImmoAdv Business“ – getrennt vom Privatkundenbereich.
+export type MailArea = 'b2c' | 'b2b';
+export function fromAddress(area: MailArea = 'b2c'): string {
   const raw = (process.env.NOTIFY_FROM_EMAIL || process.env.CANCEL_FROM_EMAIL || '').trim();
   if (!raw) return '';
-  if (/<[^>]+>/.test(raw)) return raw.replace(/^[^<]*</, 'ImmoAdv <');
-  return `ImmoAdv <${raw}>`;
+  const name = area === 'b2b' ? 'ImmoAdv Business' : 'ImmoAdv';
+  if (/<[^>]+>/.test(raw)) return raw.replace(/^[^<]*</, `${name} <`);
+  return `${name} <${raw}>`;
 }
 
 export type Attachment = { filename: string; content: Uint8Array | Buffer };
@@ -51,14 +54,15 @@ function buttonHtml(b: MailButton): string {
 }
 
 // Vollständiges gebrandetes E-Mail-HTML.
-export function brandedHtml({ title, text, button, note }: { title?: string; text: string; button?: MailButton; note?: string }): string {
+export function brandedHtml({ title, text, button, note, area = 'b2c' }: { title?: string; text: string; button?: MailButton; note?: string; area?: MailArea }): string {
+  const biz = area === 'b2b';
   const pre = html((text.split('\n').find((l) => l.trim()) || '').slice(0, 120)) + '&#8199;&#65279;&#847;'.repeat(30);
   return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${html(title || 'ImmoAdv')}</title></head>
 <body style="margin:0;padding:0;background:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${pre}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F5F9;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E2E8F0">
-<tr><td style="padding:26px 28px 18px;border-bottom:3px solid #0F2C59"><a href="${SITE}" style="text-decoration:none"><img src="${LOGO}" width="180" height="36" alt="ImmoAdv" style="display:block;border:0;width:180px;height:auto"></a></td></tr>
+<tr><td style="padding:26px 28px 18px;border-bottom:3px solid #0F2C59"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td><a href="${biz ? `${SITE}/b2b-portal` : SITE}" style="text-decoration:none"><img src="${LOGO}" width="180" height="36" alt="ImmoAdv" style="display:block;border:0;width:180px;height:auto"></a></td>${biz ? '<td align="right" style="font-size:12px;font-weight:700;letter-spacing:.06em;color:#0369A1;text-transform:uppercase">Unternehmensportal</td>' : ''}</tr></table></td></tr>
 <tr><td style="padding:28px 28px 8px">
 ${title ? `<h1 style="margin:0 0 18px;font-size:22px;line-height:1.3;color:#0F2C59">${html(title)}</h1>` : ''}
 ${bodyHtml(text)}
@@ -67,12 +71,12 @@ ${note ? `<p style="margin:0 0 16px;font-size:13px;line-height:1.55;color:#64748
 </td></tr>
 <tr><td style="padding:18px 28px 24px;background:#F8FAFC;border-top:1px solid #E2E8F0;font-size:12px;line-height:1.6;color:#64748B">
 <strong style="color:#0F2C59">ImmoAdv</strong> · Feray Korkmaz (Head of Operations) · Georg-August-Zinn-Str. 25 · 64354 Reinheim<br>
-<a href="mailto:support@immoadv.de" style="color:#64748B">support@immoadv.de</a> · <a href="${SITE}/impressum" style="color:#64748B">Impressum</a> · <a href="${SITE}/datenschutz" style="color:#64748B">Datenschutz</a><br>
+<a href="mailto:support@immoadv.de" style="color:#64748B">support@immoadv.de</a> · ${biz ? `<a href="${SITE}/b2b-portal" style="color:#64748B">Unternehmensportal</a> · ` : ''}<a href="${SITE}/impressum" style="color:#64748B">Impressum</a> · <a href="${SITE}/datenschutz" style="color:#64748B">Datenschutz</a><br>
 Technisches Analyse- und Vorbereitungswerkzeug – keine Kreditvermittlung, keine Anlage-, Steuer- oder Rechtsberatung.
 </td></tr></table></td></tr></table></body></html>`;
 }
 
-export type MailOptions = { title?: string; button?: MailButton; note?: string; replyTo?: string; headers?: Record<string, string> };
+export type MailOptions = { title?: string; button?: MailButton; note?: string; replyTo?: string; headers?: Record<string, string>; area?: MailArea };
 
 // Empfängeradresse prüfen (eine Adresse, keine Header-Injektion) und normalisieren.
 export function normalizeRecipient(to: string): string | null {
@@ -82,14 +86,14 @@ export function normalizeRecipient(to: string): string | null {
 
 export async function sendMail(to: string, subject: string, text: string, attachments: Attachment[] = [], opts: MailOptions = {}): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
-  const from = fromAddress();
+  const from = fromAddress(opts.area);
   const rcpt = normalizeRecipient(to);
   if (!key || !from || !rcpt) return false;
   const subj = subject.replace(/[\r\n]+/g, ' ').trim().slice(0, 180);
-  const plain = text + (opts.button ? `\n\n${opts.button.label}: ${opts.button.url}` : '') + '\n\n—\nImmoAdv · Georg-August-Zinn-Str. 25 · 64354 Reinheim · support@immoadv.de · https://immoadv.de/impressum';
+  const plain = text + (opts.button ? `\n\n${opts.button.label}: ${opts.button.url}` : '') + '\n\n—\n' + (opts.area === 'b2b' ? 'ImmoAdv Business · Unternehmensportal: https://immoadv.de/b2b-portal\n' : '') + 'ImmoAdv · Georg-August-Zinn-Str. 25 · 64354 Reinheim · support@immoadv.de · https://immoadv.de/impressum';
   const body = JSON.stringify({
     from, to: [rcpt], subject: subj, text: plain,
-    html: brandedHtml({ title: opts.title, text, button: opts.button, note: opts.note }),
+    html: brandedHtml({ title: opts.title, text, button: opts.button, note: opts.note, area: opts.area }),
     reply_to: opts.replyTo || 'support@immoadv.de',
     ...(opts.headers ? { headers: opts.headers } : {}),
     ...(attachments.length ? { attachments: attachments.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })) } : {}),

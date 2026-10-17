@@ -96,9 +96,9 @@ export async function POST(req: Request) {
   if ((a.action === 'approve' || a.action === 'reject') && mailConfigured()) {
     const c = cur as B2BAccount;
     if (a.action === 'approve') await sendMail(c.email, 'Ihr ImmoAdv-Unternehmenskonto ist freigeschaltet',
-      `Guten Tag ${c.advisor_name},\n\nwir haben Ihre Unterlagen geprüft und Ihr Unternehmenskonto für ${c.company_name} freigeschaltet. Partnerseite, Widget, Anfragen, Kreditmappen und Tarife stehen Ihnen jetzt zur Verfügung:\nhttps://immoadv.de/b2b-portal\n\nImmoAdv · support@immoadv.de`);
+      `Guten Tag ${c.advisor_name},\n\nwir haben Ihre Unterlagen geprüft und Ihr Unternehmenskonto für ${c.company_name} freigeschaltet. Partnerseite, Widget, Anfragen, Kreditmappen und Tarife stehen Ihnen jetzt zur Verfügung:\nhttps://immoadv.de/b2b-portal\n\nImmoAdv · support@immoadv.de`, [], { area: 'b2b' });
     else await sendMail(c.email, 'Ihr ImmoAdv-Unternehmenskonto: Unterlagen bitte ergänzen',
-      `Guten Tag ${c.advisor_name},\n\nwir konnten Ihr Unternehmenskonto für ${c.company_name} noch nicht freischalten.\n\nBegründung: ${a.reason}\n\nBitte laden Sie die fehlenden Unterlagen im Portal unter „Verifizierung“ hoch und reichen Sie erneut ein:\nhttps://immoadv.de/b2b-portal#verifizierung\n\nImmoAdv · support@immoadv.de`);
+      `Guten Tag ${c.advisor_name},\n\nwir konnten Ihr Unternehmenskonto für ${c.company_name} noch nicht freischalten.\n\nBegründung: ${a.reason}\n\nBitte laden Sie die fehlenden Unterlagen im Portal unter „Verifizierung“ hoch und reichen Sie erneut ein:\nhttps://immoadv.de/b2b-portal#verifizierung\n\nImmoAdv · support@immoadv.de`, [], { area: 'b2b' });
   }
   return j({ ok: true });
 }

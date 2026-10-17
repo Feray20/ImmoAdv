@@ -92,7 +92,7 @@ export async function POST(req: Request) {
   if (ins.error) return json({ error: 'Einreichung fehlgeschlagen.' }, 500);
   if (mailConfigured()) {
     await sendMail(target.email, `Neue Einreichung von ${ctx.account.company_name}`,
-      `Guten Tag,\n\n${ctx.account.company_name} hat eine Kreditmappe zur Vorprüfung eingereicht: ${label}.\n${p.data.note ? `Hinweis: ${p.data.note}\n` : ''}\nIm Postkorb ansehen: https://immoadv.de/b2b-portal#einreichungen\n\nDie Kreditmappe ist eine rechnerische Aufbereitung; die Kreditentscheidung trifft Ihr Institut.`);
+      `Guten Tag,\n\n${ctx.account.company_name} hat eine Kreditmappe zur Vorprüfung eingereicht: ${label}.\n${p.data.note ? `Hinweis: ${p.data.note}\n` : ''}\nIm Postkorb ansehen: https://immoadv.de/b2b-portal#einreichungen\n\nDie Kreditmappe ist eine rechnerische Aufbereitung; die Kreditentscheidung trifft Ihr Institut.`, [], { area: 'b2b' });
   }
   return json({ ok: true, id: ins.data.id }, 201);
 }
@@ -113,7 +113,7 @@ export async function PATCH(req: Request) {
   if (mailConfigured() && s.status !== p.data.status) {
     const { data: from } = await db.from('immo_b2b_accounts').select('email').eq('id', s.from_account_id).maybeSingle();
     if (from?.email) await sendMail(from.email, `Einreichung „${s.object_label}“: ${LABEL[p.data.status]}`,
-      `Guten Tag,\n\n${ctx.account.company_name} hat den Status Ihrer Einreichung „${s.object_label}“ auf „${LABEL[p.data.status]}“ gesetzt.${p.data.reply ? `\n\nNachricht: ${p.data.reply}` : ''}\n\nhttps://immoadv.de/b2b-portal#einreichungen`);
+      `Guten Tag,\n\n${ctx.account.company_name} hat den Status Ihrer Einreichung „${s.object_label}“ auf „${LABEL[p.data.status]}“ gesetzt.${p.data.reply ? `\n\nNachricht: ${p.data.reply}` : ''}\n\nhttps://immoadv.de/b2b-portal#einreichungen`, [], { area: 'b2b' });
   }
   return json({ ok: true });
 }

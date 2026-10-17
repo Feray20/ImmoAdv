@@ -83,7 +83,7 @@ export async function POST(req: Request) {
       `Neue Anfrage für ${a.company_name}\n\nName: ${b.name}\nE-Mail: ${b.email}\nTelefon: ${b.phone || '–'}\n` +
       `Objekt: ${p.address || p.ref || '–'}\nKaufpreis: ${eur(p.price)} · Kaltmiete: ${eur(p.rent)} · Eigenkapital: ${eur(p.equity)}\n` +
       (metrics ? `Gesamtkosten: ${eur(metrics.allIn)} · Darlehen: ${eur(metrics.loan)} · DSCR: ${metrics.dscr ?? '–'}\n` : '') +
-      `\nNachricht: ${b.message || '–'}\n\nAlle Angaben im Portal: https://immoadv.de/b2b-portal#anfragen\n\nRechnerische Orientierungswerte, keine Kreditentscheidung.`);
+      `\nNachricht: ${b.message || '–'}\n\nAlle Angaben im Portal: https://immoadv.de/b2b-portal#anfragen\n\nRechnerische Orientierungswerte, keine Kreditentscheidung.`, [], { area: 'b2b' });
     // Eingangsbestätigung an den Interessenten (nicht bei Links im Namen, gegen Missbrauch als Spam-Versand).
     if (!/https?:|www\.|:\/\/|\.[a-z]{2,}\//i.test(b.name)) await sendMail(b.email, `Ihre Anfrage an ${a.company_name}`,
       `Guten Tag ${b.name},\n\nIhre Finanzierungsanfrage ist bei ${a.company_name} (${a.postal_code} ${a.city}) eingegangen. ${a.company_name} meldet sich direkt bei Ihnen.\n\n` +

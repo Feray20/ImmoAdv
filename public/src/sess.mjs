@@ -97,7 +97,7 @@ export function loginForm(root, opts) {
         <div class="auth-message" id="aMsg" role="alert" hidden></div>
         <button class="btn btn-dark btn-lg" type="submit">${mode === 'signup' ? 'Konto anlegen' : 'Anmelden'}</button>
       </form>
-      <p class="form-note area-links">${mode === 'login' ? '<a class="ck-link" href="/auth/forgot">Passwort vergessen?</a> · ' : ''}${opts.noteHtml || esc(opts.note || '')}</p></div>`;
+      <p class="form-note area-links">${mode === 'login' ? `<a class="ck-link" href="/auth/forgot${AREA === 'b2b' ? '?bereich=b2b' : ''}">Passwort vergessen?</a> · ` : ''}${opts.noteHtml || esc(opts.note || '')}</p></div>`;
     const f = root.querySelector('#areaForm'), em = root.querySelector('#aEmail'), pw = root.querySelector('#aPw'), m = root.querySelector('#aMsg');
     const show = (t, kind = 'error') => { m.hidden = false; m.className = 'auth-message ' + kind; m.textContent = t; if (kind === 'error') { f.classList.remove('shake'); void f.offsetWidth; f.classList.add('shake'); [em, pw].forEach((x) => x.classList.add('bad')); } };
     [em, pw].forEach((x) => x.addEventListener('input', () => { x.classList.remove('bad'); m.hidden = true; }));

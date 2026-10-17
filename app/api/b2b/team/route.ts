@@ -55,7 +55,7 @@ export async function POST(req: Request) {
   if (mailConfigured() && p.data.send) {
     mailed = await sendMail(p.data.email, `Ihr Zugang für ${ctx.account.company_name} auf ImmoAdv`,
       `Guten Tag,\n\n${ctx.account.advisor_name} hat für Sie einen Berater-Zugang im ImmoAdv-Unternehmensportal von ${ctx.account.company_name} eingerichtet.\n\nPortal: https://partner.immoadv.de\nBenutzername: ${p.data.email}\nStartpasswort: ${login.password}\n\nBei der ersten Anmeldung legen Sie ein eigenes Passwort fest.`,
-      [], { title: 'Ihr Berater-Zugang', button: { label: 'Zum Unternehmensportal', url: 'https://partner.immoadv.de' }, note: 'Bitte das Startpasswort nicht weitergeben.' });
+      [], { area: 'b2b', title: 'Ihr Berater-Zugang', button: { label: 'Zum Unternehmensportal', url: 'https://partner.immoadv.de' }, note: 'Bitte das Startpasswort nicht weitergeben.' });
   }
   return json({ ok: true, email: p.data.email, password: login.password, mailed }, 201);
 }

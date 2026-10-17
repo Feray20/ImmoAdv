@@ -85,7 +85,7 @@ export async function POST(req: Request) {
   if (b.sendMail && mailConfigured()) {
     mailed = await sendMail(b.email, 'Ihr Zugang zum ImmoAdv-Unternehmensportal',
       `Guten Tag ${b.advisorName},\n\nIhr Unternehmenskonto für ${b.companyName} ist eingerichtet (Kundennummer ${ins.data.customer_number}).\n\nPortal: https://partner.immoadv.de\nBenutzername: ${b.email}\nStartpasswort: ${login.password}\n\nBei der ersten Anmeldung legen Sie ein eigenes Passwort fest und bestätigen die Vertragsunterlagen (Unternehmereigenschaft, Auftragsverarbeitungsvertrag). Das Startpasswort ist danach ungültig.`,
-      [], { title: 'Ihr Zugang ist eingerichtet', button: { label: 'Zum Unternehmensportal', url: 'https://partner.immoadv.de' }, note: 'Bitte geben Sie das Startpasswort nicht weiter. Fragen: support@immoadv.de' });
+      [], { area: 'b2b', title: 'Ihr Zugang ist eingerichtet', button: { label: 'Zum Unternehmensportal', url: 'https://partner.immoadv.de' }, note: 'Bitte geben Sie das Startpasswort nicht weiter. Fragen: support@immoadv.de' });
   }
   return j({ ok: true, email: b.email, password: login.password, customerNumber: ins.data.customer_number, mailed });
 }
