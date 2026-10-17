@@ -641,3 +641,8 @@ body.dk-open{overflow:hidden}
 .btn-pay:hover{transform:translateY(-1px);box-shadow:0 1px 0 rgba(255,255,255,.1) inset,0 10px 22px rgba(0,0,0,.24)!important}
 .btn-pay:not(:has(svg))::before{content:"";flex:none;width:16px;height:16px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 6h15l-1.5 9h-12z'/%3E%3Cpath d='M6 6 5 3H2'/%3E%3Ccircle cx='9' cy='20' r='1.5'/%3E%3Ccircle cx='18' cy='20' r='1.5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 6h15l-1.5 9h-12z'/%3E%3Cpath d='M6 6 5 3H2'/%3E%3Ccircle cx='9' cy='20' r='1.5'/%3E%3Ccircle cx='18' cy='20' r='1.5'/%3E%3C/svg%3E") center/contain no-repeat}
 .btn-pay:disabled::before,.btn-pay[disabled]::before,.tk-plan.btn-pay::before{display:none}
+/* Gruppierte Navigation (Tagesgeschäft · Werkzeuge & Wissen · Konto) */
+.pt-grp{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748B;padding:14px 12px 4px}
+.pt-side .pt-grp:first-child,.pt-sheet nav .pt-grp:first-child{padding-top:2px}
+.pt-side .pt-grp{color:#7C8DA6}
+.pt-sheet nav .pt-grp{padding:12px 4px 2px}

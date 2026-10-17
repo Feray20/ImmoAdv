@@ -10,7 +10,8 @@ const E = (v) => (Number.isFinite(v) ? v : 0).toLocaleString('de-DE', { style: '
 const E2 = (v) => (Number.isFinite(v) ? v : 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 const P = (v, d = 2) => `${(Number.isFinite(v) ? v : 0).toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d })} %`;
 const num = (v) => { let t = String(v ?? '').trim(); if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); const x = Number(t); return Number.isFinite(x) ? x : 0; };
-const KEY = (k) => 'ia-b2b-prog-' + k;
+// v2: ohne Beispielzahlen – alte gespeicherte Beispielwerte werden nicht mehr geladen.
+const KEY = (k) => 'ia-b2b-prog2-' + k;
 // Datenschutz: Tools mit Kundendaten (Namen, Freitexte) speichern nur für diesen Browser-Tab (sessionStorage) und werden
 // beim Abmelden gelöscht. Reine Zahlen-Tools merken sich die letzten Annahmen (localStorage), ohne Personenbezug.
 const PERSONAL = new Set(['protokoll', 'unterlagen', 'angebote']);
@@ -18,7 +19,7 @@ const store = (k) => (PERSONAL.has(k) ? sessionStorage : localStorage);
 const load = (k, d) => { try { return { ...d, ...(JSON.parse(store(k).getItem(KEY(k)) || '{}')) }; } catch { return { ...d }; } };
 const save = (k, v) => { try { store(k).setItem(KEY(k), JSON.stringify(v)); } catch { /* ohne Speicher */ } };
 export function clearAll() {
-  for (const st of [localStorage, sessionStorage]) { try { Object.keys(st).filter((k) => k.startsWith('ia-b2b-prog-') || k === 'ia-fall-last').forEach((k) => st.removeItem(k)); } catch { /* ohne Speicher */ } }
+  for (const st of [localStorage, sessionStorage]) { try { Object.keys(st).filter((k) => k.startsWith('ia-b2b-prog') || k === 'ia-fall-last').forEach((k) => st.removeItem(k)); } catch { /* ohne Speicher */ } }
 }
 // Letzte Fall-Analyse (nur Zahlen, nur dieser Tab) – zum Übernehmen in Haushaltsrechnung und Angebotsvergleich.
 const lastFall = () => { try { return JSON.parse(sessionStorage.getItem('ia-fall-last') || 'null'); } catch { return null; } };
@@ -27,19 +28,21 @@ const lastFall = () => { try { return JSON.parse(sessionStorage.getItem('ia-fall
 export function plausi(tool, st) {
   const w = [];
   const z = (v, lo, hi, txt) => { if (v < lo || v > hi) w.push(txt); };
-  if ('zins' in st) z(st.zins, 0.3, 9, 'Sollzins außerhalb des üblichen Bereichs (0,3–9 %).');
-  if ('tilgung' in st && tool !== 'vfe') z(st.tilgung, 1, 10, 'Tilgung unter 1 % verlängert die Laufzeit stark; viele Banken verlangen mindestens 1–2 %.');
+  if ('zins' in st && st.zins > 0) z(st.zins, 0.3, 9, 'Sollzins außerhalb des üblichen Bereichs (0,3–9 %).');
+  if ('tilgung' in st && st.tilgung > 0 && tool !== 'vfe') z(st.tilgung, 1, 10, 'Tilgung unter 1 % verlängert die Laufzeit stark; viele Banken verlangen mindestens 1–2 %.');
   if (tool === 'haushalt') {
     if (st.pausch1 < 800) w.push('Lebenshaltungs-Pauschale für die erste Person wirkt niedrig – viele Banken setzen 800–1.200 € an.');
     if (st.mieteAnteil > 80) w.push('Mieteinnahmen werden meist nur zu 60–80 % angesetzt.');
     if (st.puffer < 5) w.push('Ohne Sicherheitspuffer reagiert die Rechnung empfindlich auf Kostensteigerungen.');
   }
   if (tool === 'provision' && st.gesamtPct > 7.14) w.push('Gesamtprovision über 7,14 % inkl. USt. ist ungewöhnlich hoch.');
-  if (tool === 'ertrag') { z(st.lz, 1, 7, 'Liegenschaftszins außerhalb von 1–7 % – Wert aus dem Grundstücksmarktbericht prüfen.'); z(st.bwkPct, 10, 40, 'Bewirtschaftungskosten liegen üblicherweise bei 15–30 % der Miete.'); z(st.rnd, 10, 80, 'Restnutzungsdauer meist zwischen 10 und 80 Jahren.'); }
-  if (tool === 'vfe') { if (st.restMonate > 180) w.push('Nach 10 Jahren ab Auszahlung gilt § 489 BGB – die Restbindung ist dann für die Entschädigung oft nicht maßgeblich.'); z(st.wiederanlage, 0, 6, 'Wiederanlagezins außerhalb des üblichen Bereichs.'); }
+  if (tool === 'ertrag' && st.preis > 0) { z(st.lz, 1, 7, 'Liegenschaftszins außerhalb von 1–7 % – Wert aus dem Grundstücksmarktbericht prüfen.'); z(st.bwkPct, 10, 40, 'Bewirtschaftungskosten liegen üblicherweise bei 15–30 % der Miete.'); z(st.rnd, 10, 80, 'Restnutzungsdauer meist zwischen 10 und 80 Jahren.'); }
+  if (tool === 'vfe' && st.rest > 0) { if (st.restMonate > 180) w.push('Nach 10 Jahren ab Auszahlung gilt § 489 BGB – die Restbindung ist dann für die Entschädigung oft nicht maßgeblich.'); z(st.wiederanlage, 0, 6, 'Wiederanlagezins außerhalb des üblichen Bereichs.'); }
   if (tool === 'angebote') (st.o || []).forEach((o) => { if (num(o.rate) > 0 && num(o.eff) > 0 && num(o.eff) < num(o.rate)) w.push(`${o.bank || 'Angebot'}: Effektivzins liegt unter dem Sollzins – bitte prüfen.`); });
   return w;
 }
+// Leere Felder als 0 rechnen (Texte bleiben Texte).
+const numify = (st) => Object.fromEntries(Object.entries(st).map(([k, v]) => [k, typeof v === 'string' && /^[\d.,\s-]*$/.test(v) ? num(v) : v]));
 const warnBox = (w) => (w.length ? `<ul class="pg-warn">${w.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '');
 const today = () => new Date().toLocaleDateString('de-DE');
 
@@ -133,7 +136,7 @@ async function copy(text, toast) { try { await navigator.clipboard.writeText(tex
 
 // ---------- 1. Haushaltsrechnung ----------
 function pHaushalt(box, ctx) {
-  const st = load('haushalt', { netto1: 3200, netto2: 1800, kindergeld: 255, sonstEin: 0, mieteNeu: 0, mieteAnteil: 75, erwachsene: 2, kinder: 1, pausch1: 1000, pauschWeitere: 400, pauschKind: 300, warmmiete: 0, kredite: 0, versicherung: 150, kfz: 250, sonstAus: 0, bewirtschaftung: 250, darlehen: 350000, zins: 3.6, tilgung: 2, puffer: 10 });
+  const st = load('haushalt', { netto1: '', netto2: '', kindergeld: '', sonstEin: '', mieteNeu: '', mieteAnteil: 75, erwachsene: 1, kinder: 0, pausch1: 1000, pauschWeitere: 400, pauschKind: 300, warmmiete: '', kredite: '', versicherung: '', kfz: '', sonstAus: '', bewirtschaftung: '', darlehen: '', zins: '', tilgung: 2, puffer: 10 });
   box.innerHTML = `<p class="form-note">Wie eine Bank rechnet: Einnahmen minus Lebenshaltungs-Pauschalen, bestehende Verpflichtungen und neue Rate. Ergebnis: Überschuss, maximale Rate und maximales Darlehen.</p>
     <div class="pg-grid"><h4>Einnahmen / Monat</h4>${field('netto1', 'Netto Person 1', st.netto1)}${field('netto2', 'Netto Person 2', st.netto2)}${field('kindergeld', 'Kindergeld', st.kindergeld)}${field('sonstEin', 'Sonstige Einnahmen', st.sonstEin)}${field('mieteNeu', 'Mieteinnahme Objekt (kalt)', st.mieteNeu)}${field('mieteAnteil', 'davon angesetzt (%)', st.mieteAnteil)}
     <h4>Haushalt</h4>${field('erwachsene', 'Erwachsene', st.erwachsene)}${field('kinder', 'Kinder', st.kinder)}${field('pausch1', 'Pauschale 1. Person', st.pausch1)}${field('pauschWeitere', 'Pauschale weitere Erwachsene', st.pauschWeitere)}${field('pauschKind', 'Pauschale je Kind', st.pauschKind)}
@@ -144,11 +147,12 @@ function pHaushalt(box, ctx) {
   box.querySelector('#pgFall')?.addEventListener('click', () => { const f = lastFall(); if (!f) return; Object.assign(st, { netto1: f.netto || st.netto1, netto2: 0, mieteNeu: f.miete || 0, erwachsene: Math.min(2, f.personen || 1), kinder: Math.max(0, (f.personen || 1) - 2), darlehen: Math.round(f.darlehen || st.darlehen), zins: f.zins || st.zins, tilgung: f.tilgung || st.tilgung }); save('haushalt', st); pHaushalt(box, ctx); ctx.toast?.('Werte aus der Fall-Analyse übernommen – bitte prüfen.'); });
   let last;
   bind(box, 'haushalt', st, () => {
-    const r = last = haushalt(st);
+    const r = last = haushalt(numify(st));
+    if (!(r.ein > 0)) { out().innerHTML = '<p class="form-note">Bitte die Einnahmen des Haushalts eintragen – oder oben „Aus letzter Fall-Analyse übernehmen“.</p>'; return; }
     out().innerHTML = `<div class="pg-kpis"><div class="${r.ueber >= 0 ? 'ok' : 'bad'}"><small>Überschuss nach Rate</small><strong>${E(r.ueber)}</strong></div><div><small>Neue Rate</small><strong>${E(r.rate)}</strong><span>${P(r.quote, 0)} der Einnahmen</span></div><div><small>Maximale Rate (mit Puffer)</small><strong>${E(r.maxRate)}</strong></div><div><small>Maximales Darlehen</small><strong>${E(r.maxDarlehen)}</strong></div></div>
       <p class="form-note">Einnahmen ${E(r.ein)} · Lebenshaltung ${E(r.leben)} · Ausgaben gesamt ${E(r.aus)} · frei vor Rate ${E(r.frei)}. Pauschalen bitte an die Vorgaben Ihres Hauses anpassen.</p>`;
   });
-  box.querySelector('#pgPrint').onclick = () => printHtml('Haushaltsrechnung', `<table><tr><th>Einnahmen</th><td>${E(last.ein)}</td></tr><tr><th>Lebenshaltung (${st.erwachsene} Erw., ${st.kinder} Kinder)</th><td>${E(last.leben)}</td></tr><tr><th>Ausgaben gesamt</th><td>${E(last.aus)}</td></tr><tr><th>Frei vor Rate</th><td>${E(last.frei)}</td></tr><tr><th>Neue Rate (${E(st.darlehen)}, ${P(st.zins)} / ${P(st.tilgung)})</th><td>${E2(last.rate)}</td></tr><tr><th>Überschuss</th><td><strong>${E(last.ueber)}</strong></td></tr><tr><th>Maximales Darlehen (Puffer ${st.puffer} %)</th><td>${E(last.maxDarlehen)}</td></tr></table>`, ctx.brand);
+  box.querySelector('#pgPrint').onclick = () => !(last?.ein > 0) ? ctx.toast?.('Bitte zuerst die Einnahmen eintragen.', true) : printHtml('Haushaltsrechnung', `<table><tr><th>Einnahmen</th><td>${E(last.ein)}</td></tr><tr><th>Lebenshaltung (${st.erwachsene} Erw., ${st.kinder} Kinder)</th><td>${E(last.leben)}</td></tr><tr><th>Ausgaben gesamt</th><td>${E(last.aus)}</td></tr><tr><th>Frei vor Rate</th><td>${E(last.frei)}</td></tr><tr><th>Neue Rate (${E(st.darlehen)}, ${P(st.zins)} / ${P(st.tilgung)})</th><td>${E2(last.rate)}</td></tr><tr><th>Überschuss</th><td><strong>${E(last.ueber)}</strong></td></tr><tr><th>Maximales Darlehen (Puffer ${st.puffer} %)</th><td>${E(last.maxDarlehen)}</td></tr></table>`, ctx.brand);
 }
 
 // ---------- 2. Unterlagen-Anforderung ----------
@@ -187,13 +191,14 @@ function pUnterlagen(box, ctx) {
 
 // ---------- 3. Provisionsrechner ----------
 function pProvision(box, ctx) {
-  const st = load('provision', { preis: 450000, gesamtPct: 7.14, kaeuferPct: 3.57, verbraucherWohnen: true });
+  const st = load('provision', { preis: '', gesamtPct: 7.14, kaeuferPct: 3.57, verbraucherWohnen: true });
   box.innerHTML = `<p class="form-note">Provision brutto und netto, Aufteilung nach Halbteilungsgrundsatz (§§ 656a–656d BGB) und der passende Satz für Ihr Exposé.</p>
     <div class="pg-grid">${field('preis', 'Kaufpreis (€)', st.preis)}${field('gesamtPct', 'Gesamtprovision inkl. USt. (%)', st.gesamtPct)}${field('kaeuferPct', 'davon Käufer (%)', st.kaeuferPct)}${check('verbraucherWohnen', 'Käufer ist Verbraucher und Objekt ist Wohnung oder Einfamilienhaus', st.verbraucherWohnen)}</div>
     <div id="pgOut"></div><div class="pg-act">${copyBtn('pgCopy')}</div>`;
   let text = '';
   bind(box, 'provision', st, () => {
-    const r = provision(st);
+    if (!(num(st.preis) > 0)) { box.querySelector('#pgOut').innerHTML = '<p class="form-note">Bitte den Kaufpreis eintragen.</p>'; text = ''; return; }
+    const r = provision(numify(st));
     text = st.kaeuferPct > 0 ? `Käuferprovision: ${P(st.kaeuferPct)} des Kaufpreises inkl. gesetzlicher USt. (${E2(r.kaeufer)}), fällig mit notariellem Kaufvertrag. Der Verkäufer zahlt ${P(r.verkaeuferPct)}.` : 'Für den Käufer provisionsfrei.';
     box.querySelector('#pgOut').innerHTML = `<div class="pg-kpis"><div><small>Käufer zahlt</small><strong>${E2(r.kaeufer)}</strong><span>netto ${E2(r.kaeuferNetto)}</span></div><div><small>Verkäufer zahlt</small><strong>${E2(r.verkaeufer)}</strong><span>${P(r.verkaeuferPct)}</span></div><div><small>Provision gesamt</small><strong>${E2(r.gesamt)}</strong><span>netto ${E2(r.gesamt / 1.19)}</span></div></div>
       <p class="pg-verdict ${r.ok ? 'ok' : 'bad'}">${esc(r.hinweis)}</p><p class="form-note"><strong>Exposé-Text:</strong> ${esc(text)} Maklerverträge über Wohnungen und Einfamilienhäuser bedürfen der Textform (§ 656a BGB).</p>`;
@@ -213,13 +218,13 @@ export function gegText(g) {
   return { text: t, fehlt };
 }
 function pInserat(box, ctx) {
-  const st = load('inserat', { art: 'verbrauch', kennwert: 118, warmwasser: true, traeger: 'Erdgas', baujahr: 1994, wohn: true, klasse: 'D' });
+  const st = load('inserat', { art: 'verbrauch', kennwert: '', warmwasser: true, traeger: '', baujahr: '', wohn: true, klasse: '' });
   box.innerHTML = `<p class="form-note">Pflichtangaben in Immobilienanzeigen nach § 87 GEG – vollständig und im richtigen Wortlaut. Fehlende Angaben werden markiert (Bußgeldrisiko).</p>
     <div class="pg-grid">${field('art', 'Art des Ausweises', st.art, { select: [['verbrauch', 'Verbrauchsausweis'], ['bedarf', 'Bedarfsausweis']] })}${field('kennwert', 'Kennwert (kWh/m²a)', st.kennwert)}${field('traeger', 'Wesentlicher Energieträger', st.traeger, { select: [['Erdgas', 'Erdgas'], ['Heizöl', 'Heizöl'], ['Fernwärme', 'Fernwärme'], ['Strom (Wärmepumpe)', 'Strom (Wärmepumpe)'], ['Holz/Pellets', 'Holz/Pellets'], ['Flüssiggas', 'Flüssiggas'], ['Strom', 'Strom']] })}${field('baujahr', 'Baujahr (lt. Ausweis)', st.baujahr)}${field('klasse', 'Effizienzklasse', st.klasse, { select: [['', '–'], ...['A+', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((k) => [k, k])] })}${check('wohn', 'Wohngebäude (Klasse anzugeben)', st.wohn)}${check('warmwasser', 'Warmwasser im Verbrauchswert enthalten', st.warmwasser)}</div>
     <div id="pgOut"></div><div class="pg-act">${copyBtn('pgCopy')}</div>`;
   let text = '';
   bind(box, 'inserat', st, () => {
-    const r = gegText(st); text = r.text;
+    const r = gegText(numify(st)); text = r.text;
     box.querySelector('#pgOut').innerHTML = `<p class="pg-verdict ${r.fehlt.length ? 'bad' : 'ok'}">${r.fehlt.length ? 'Es fehlen: ' + esc(r.fehlt.join(', ')) + '.' : 'Alle Pflichtangaben vorhanden.'}</p><textarea class="pg-text" rows="3" readonly>${esc(text)}</textarea><p class="form-note">Liegt noch kein Energieausweis vor, muss er spätestens bei der Besichtigung vorgelegt werden (§ 80 Abs. 4 GEG).</p>`;
   });
   box.querySelector('#pgCopy').onclick = () => copy(text, ctx.toast);
@@ -227,23 +232,24 @@ function pInserat(box, ctx) {
 
 // ---------- 5. Ertragswert-Schnellcheck ----------
 function pErtrag(box, ctx) {
-  const st = load('ertrag', { preis: 1450000, jahresmiete: 86400, bwkPct: 22, bodenwert: 320000, lz: 3.5, rnd: 45 });
+  const st = load('ertrag', { preis: '', jahresmiete: '', bwkPct: 22, bodenwert: '', lz: '', rnd: '' });
   box.innerHTML = `<p class="form-note">Vereinfachter Ertragswert nach ImmoWertV (Reinertrag, Bodenwertverzinsung, Barwertfaktor) und Abweichung zum Angebotspreis. Für Mehrfamilienhäuser und Anlageobjekte.</p>
     <div class="pg-grid">${field('preis', 'Angebotspreis (€)', st.preis)}${field('jahresmiete', 'Jahresnettokaltmiete (€)', st.jahresmiete)}${field('bwkPct', 'Bewirtschaftungskosten (% der Miete)', st.bwkPct)}${field('bodenwert', 'Bodenwert (€)', st.bodenwert)}${field('lz', 'Liegenschaftszins (%)', st.lz)}${field('rnd', 'Restnutzungsdauer (Jahre)', st.rnd)}</div>
     <div id="pgOut"></div><div class="pg-act"><button type="button" class="btn btn-dark" id="pgPrint">Als PDF / drucken</button></div>`;
   let r;
   bind(box, 'ertrag', st, () => {
-    r = ertragswert(st);
+    if (!(num(st.jahresmiete) > 0) || !(num(st.lz) > 0) || !(num(st.rnd) > 0)) { box.querySelector('#pgOut').innerHTML = '<p class="form-note">Bitte Jahresmiete, Liegenschaftszins und Restnutzungsdauer eintragen (Werte aus dem Grundstücksmarktbericht).</p>'; r = null; return; }
+    r = ertragswert(numify(st));
     box.querySelector('#pgOut').innerHTML = `<div class="pg-kpis"><div><small>Ertragswert</small><strong>${E(r.ew)}</strong></div><div class="${r.abw > 10 ? 'bad' : r.abw < -5 ? 'ok' : ''}"><small>Preis vs. Ertragswert</small><strong>${r.abw >= 0 ? '+' : ''}${P(r.abw, 1)}</strong></div><div><small>Kaufpreisfaktor</small><strong>${r.faktor.toLocaleString('de-DE', { maximumFractionDigits: 1 })}</strong><span>Rendite brutto ${P(st.preis ? st.jahresmiete / st.preis * 100 : 0)}</span></div></div>
       <p class="form-note">Reinertrag ${E(r.re)} − Bodenwertverzinsung ${E(st.bodenwert * st.lz / 100)} = Gebäudereinertrag ${E(r.geb)} × Barwertfaktor ${r.v.toFixed(2).replace('.', ',')} + Bodenwert ${E(st.bodenwert)}. Liegenschaftszins und Bodenwert aus dem Grundstücksmarktbericht bzw. BORIS übernehmen. Keine Verkehrswertermittlung nach § 194 BauGB.</p>`;
   });
-  box.querySelector('#pgPrint').onclick = () => printHtml('Ertragswert-Schnellcheck', `<table><tr><th>Angebotspreis</th><td>${E(st.preis)}</td></tr><tr><th>Jahresnettokaltmiete</th><td>${E(st.jahresmiete)}</td></tr><tr><th>Bewirtschaftungskosten</th><td>${P(st.bwkPct, 0)}</td></tr><tr><th>Reinertrag</th><td>${E(r.re)}</td></tr><tr><th>Bodenwert / Liegenschaftszins</th><td>${E(st.bodenwert)} / ${P(st.lz)}</td></tr><tr><th>Restnutzungsdauer / Barwertfaktor</th><td>${st.rnd} J. / ${r.v.toFixed(2).replace('.', ',')}</td></tr><tr><th>Ertragswert</th><td><strong>${E(r.ew)}</strong></td></tr><tr><th>Abweichung Angebotspreis</th><td>${P(r.abw, 1)}</td></tr><tr><th>Kaufpreisfaktor</th><td>${r.faktor.toFixed(1).replace('.', ',')}</td></tr></table>`, ctx.brand);
+  box.querySelector('#pgPrint').onclick = () => !r ? ctx.toast?.('Bitte zuerst die Werte eintragen.', true) : printHtml('Ertragswert-Schnellcheck', `<table><tr><th>Angebotspreis</th><td>${E(st.preis)}</td></tr><tr><th>Jahresnettokaltmiete</th><td>${E(st.jahresmiete)}</td></tr><tr><th>Bewirtschaftungskosten</th><td>${P(st.bwkPct, 0)}</td></tr><tr><th>Reinertrag</th><td>${E(r.re)}</td></tr><tr><th>Bodenwert / Liegenschaftszins</th><td>${E(st.bodenwert)} / ${P(st.lz)}</td></tr><tr><th>Restnutzungsdauer / Barwertfaktor</th><td>${st.rnd} J. / ${r.v.toFixed(2).replace('.', ',')}</td></tr><tr><th>Ertragswert</th><td><strong>${E(r.ew)}</strong></td></tr><tr><th>Abweichung Angebotspreis</th><td>${P(r.abw, 1)}</td></tr><tr><th>Kaufpreisfaktor</th><td>${r.faktor.toFixed(1).replace('.', ',')}</td></tr></table>`, ctx.brand);
 }
 
 // ---------- 6. Beratungsprotokoll (Immobiliar-Verbraucherdarlehen) ----------
 const RISKS = [['zins', 'Zinsänderungsrisiko nach Ablauf der Sollzinsbindung erläutert (Anschlusszins kann höher sein)'], ['anschluss', 'Restschuld am Ende der Zinsbindung und Notwendigkeit der Anschlussfinanzierung erläutert'], ['sonder', 'Sondertilgungsrechte und Tilgungssatzwechsel besprochen'], ['vfe', 'Vorfälligkeitsentschädigung bei vorzeitiger Rückzahlung erläutert'], ['bereit', 'Bereitstellungszinsen und Auszahlungsvoraussetzungen erläutert'], ['absicherung', 'Absicherung von Tod, Berufsunfähigkeit und Arbeitslosigkeit angesprochen'], ['nk', 'Kaufnebenkosten und Eigenkapitaleinsatz besprochen'], ['esis', 'ESIS-Merkblatt rechtzeitig vor Vertragsschluss ausgehändigt'], ['bedenk', 'Widerrufsrecht bzw. Bedenkzeit erläutert']];
 function pProtokoll(box, ctx) {
-  const st = load('protokoll', { kunde: '', datum: new Date().toISOString().slice(0, 10), ort: '', anlass: 'Kauf einer selbstgenutzten Eigentumswohnung', bedarf: '', einkommen: '', vermoegen: '', wunsch: 'Monatliche Belastung höchstens 1.400 €, lange Zinssicherheit', empfehlung: '', alternativen: '', begruendung: '', abweichung: '', ...Object.fromEntries(RISKS.map(([k]) => [k, false])) });
+  const st = load('protokoll', { kunde: '', datum: new Date().toISOString().slice(0, 10), ort: '', anlass: '', bedarf: '', einkommen: '', vermoegen: '', wunsch: '', empfehlung: '', alternativen: '', begruendung: '', abweichung: '', ...Object.fromEntries(RISKS.map(([k]) => [k, false])) });
   box.innerHTML = `<p class="form-note">Strukturiertes Protokoll für die Beratung zu Immobiliar-Verbraucherdarlehen (§ 511 BGB): Bedarf, Empfehlung, Alternativen, Risikohinweise, Unterschriften. Ersetzt nicht die Vorgaben Ihres Hauses.</p>
     <div class="pg-grid">${field('kunde', 'Kunde(n)', st.kunde, { text: true })}${field('datum', 'Datum', st.datum, { date: true })}${field('ort', 'Ort / Kanal', st.ort, { text: true })}${field('anlass', 'Anlass', st.anlass, { text: true })}
     ${field('bedarf', 'Finanzierungsbedarf und Verwendung', st.bedarf, { area: true, wide: true })}${field('einkommen', 'Einkommens- und Ausgabensituation', st.einkommen, { area: true, wide: true })}${field('vermoegen', 'Vermögen und Eigenkapital', st.vermoegen, { area: true, wide: true })}${field('wunsch', 'Wünsche und Ziele des Kunden', st.wunsch, { area: true, wide: true })}
@@ -266,8 +272,8 @@ function pProtokoll(box, ctx) {
 
 // ---------- 7. Bankangebote vergleichen ----------
 function pAngebote(box, ctx) {
-  const st = load('angebote', { kunde: '', o: [{ bank: 'Bank A', loan: 350000, rate: 3.62, eff: 3.7, repay: 2, years: 15, fees: 0 }, { bank: 'Bank B', loan: 350000, rate: 3.48, eff: 3.6, repay: 2, years: 15, fees: 1500 }, { bank: 'Bank C', loan: 350000, rate: 3.55, eff: 3.62, repay: 2, years: 15, fees: 0 }, { bank: '', loan: 350000, rate: 0, eff: 0, repay: 2, years: 15, fees: 0 }] });
-  const lf = lastFall(); if (lf?.darlehen && st.o.every((o) => !String(o.bank || '').trim() || num(o.loan) === 350000)) st.o.forEach((o) => { o.loan = Math.round(lf.darlehen); });
+  const st = load('angebote', { kunde: '', o: Array.from({ length: 4 }, () => ({ bank: '', loan: '', rate: '', eff: '', repay: 2, years: '', fees: '' })) });
+  const lf = lastFall(); if (lf?.darlehen) st.o.forEach((o) => { if (!num(o.loan)) o.loan = Math.round(lf.darlehen); });
   const F = [['bank', 'Anbieter', 'text'], ['loan', 'Darlehen'], ['rate', 'Soll %'], ['eff', 'Eff. %'], ['repay', 'Tilg. %'], ['years', 'Bindung J.'], ['fees', 'Gebühren €']];
   box.innerHTML = `<p class="form-note">Bis zu vier Angebote nebeneinander: Rate, Zinsen in der Bindung, Restschuld, Gesamtkosten – mit Empfehlung und druckfertigem Vergleich für den Kunden.</p>
     <div class="pg-grid">${field('kunde', 'Kunde', st.kunde, { text: true })}</div>
@@ -285,15 +291,16 @@ function pAngebote(box, ctx) {
 
 // ---------- 8. Vorfälligkeit & Anschluss ----------
 function pVfe(box, ctx) {
-  const st = load('vfe', { rest: 210000, zins: 1.35, tilgung: 2, restMonate: 48, wiederanlage: 2.6, entgelt: 300, heute: 3.6, aufschlag: 0.02, payout: '', neuTilgung: 2 });
+  const st = load('vfe', { rest: '', zins: '', tilgung: 2, restMonate: '', wiederanlage: '', entgelt: 300, heute: '', aufschlag: 0.02, payout: '', neuTilgung: 2 });
   box.innerHTML = `<p class="form-note">Lohnt sich die vorzeitige Ablösung oder ein Forward? Schätzung der Vorfälligkeitsentschädigung (Aktiv-Passiv-Methode), Forward-Zins und Kündigungsrecht nach § 489 BGB.</p>
     <div class="pg-grid"><h4>Bestehendes Darlehen</h4>${field('rest', 'Restschuld heute (€)', st.rest)}${field('zins', 'Vertragszins (%)', st.zins)}${field('tilgung', 'Tilgung (%)', st.tilgung)}${field('restMonate', 'Restlaufzeit der Bindung (Monate)', st.restMonate)}${field('wiederanlage', 'Wiederanlagezins Pfandbriefe (%)', st.wiederanlage)}${field('entgelt', 'Bearbeitungsentgelt (€)', st.entgelt)}${field('payout', 'Vollständig ausgezahlt am', st.payout, { date: true })}
     <h4>Anschluss</h4>${field('heute', 'Heutiger Zins (%)', st.heute)}${field('aufschlag', 'Forward-Aufschlag / Monat (Pkt.)', st.aufschlag)}${field('neuTilgung', 'Tilgung danach (%)', st.neuTilgung)}</div>
     <div id="pgOut"></div>`;
   bind(box, 'vfe', st, () => {
-    const v = vfe(st);
-    const restEnd = balanceAfterMonths(st.rest, st.zins / 100, st.tilgung / 100, st.restMonate);
-    const f = forwardCalc({ rest: restEnd, monthsToEnd: st.restMonate, todayRate: st.heute, surchargePerMonth: st.aufschlag, repay: st.neuTilgung });
+    if (!(num(st.rest) > 0) || !(num(st.zins) > 0)) { box.querySelector('#pgOut').innerHTML = '<p class="form-note">Bitte Restschuld, Vertragszins und Restlaufzeit eintragen.</p>'; return; }
+    const n = numify(st); const v = vfe(n);
+    const restEnd = balanceAfterMonths(n.rest, n.zins / 100, n.tilgung / 100, n.restMonate);
+    const f = forwardCalc({ rest: restEnd, monthsToEnd: n.restMonate, todayRate: n.heute || n.zins, surchargePerMonth: n.aufschlag, repay: n.neuTilgung });
     const k = kuendigungsrecht489(st.payout);
     box.querySelector('#pgOut').innerHTML = `<div class="pg-kpis"><div class="${v.vfe > 0 ? 'bad' : 'ok'}"><small>Vorfälligkeitsentschädigung (Schätzung)</small><strong>${E(v.vfe)}</strong><span>Zinsschaden ${E(v.schaden)} − Ersparnis ${E(v.ersp)}</span></div><div><small>Restschuld am Bindungsende</small><strong>${E(restEnd)}</strong></div><div><small>Forward-Zins</small><strong>${P(f.fwdRate)}</strong><span>Rate ${E2(f.fwdPay)}</span></div></div>
       <p class="pg-verdict">${st.wiederanlage >= st.zins ? 'Der Wiederanlagezins liegt über dem Vertragszins: Der Bank entsteht kein Zinsschaden – eine Ablösung ist meist ohne hohe Entschädigung möglich.' : 'Der Vertragszins liegt über dem Wiederanlagezins: Eine vorzeitige Ablösung kostet eine Entschädigung. Prüfen Sie Sonderkündigungsrechte und § 489 BGB.'}${k ? ` Kündigung nach § 489 BGB ohne Entschädigung möglich ab ${k.from.toLocaleDateString('de-DE')} (6 Monate Frist).` : ''}</p>
@@ -317,7 +324,7 @@ const RANK = { BASIC: 1, PRO: 2, ENTERPRISE: 3 };
 export function renderPrograms(box, { tier, branche, brand, toast }) {
   const has = (p) => (RANK[tier] || 0) >= RANK[p.tier];
   const order = [...PROGRAMS].sort((a, b) => (b.br.includes(branche) ? 1 : 0) - (a.br.includes(branche) ? 1 : 0));
-  box.innerHTML = `<section class="pt-card"><h2>Software-Tools</h2><p class="form-note">Software-Tools, die Ihnen pro Fall Stunden sparen. Alles rechnet in Ihrem Browser; Eingaben bleiben auf diesem Gerät. Ergebnisse als PDF oder Text – ${brand?.logo ? 'mit Ihrem Logo' : 'auf Wunsch mit Ihrem Logo (ab Pro)'}.</p>
+  box.innerHTML = `<section class="pt-card"><h2>Software-Tools</h2><p class="form-note">Rechnet im Browser, Eingaben bleiben auf diesem Gerät. Ergebnisse als PDF oder Text${brand?.logo ? ' mit Ihrem Logo' : ' – mit Ihrem Logo ab Pro'}.</p>
     <div class="pg-list">${order.map((p) => `<button type="button" class="pg-tile${has(p) ? '' : ' locked'}" data-pg="${p.id}"><strong>${esc(p.t)}</strong><span>${esc(p.d)}</span><em>${has(p) ? (p.br.includes(branche) ? 'für Ihre Branche' : 'öffnen') : p.tier === 'PRO' ? 'ab Kanzlei & Baufi Pro' : 'ab Basic'}</em></button>`).join('')}</div></section>
     <section class="pt-card" id="pgBox" hidden></section>`;
   const open = (id) => {

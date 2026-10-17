@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 const s = StyleSheet.create({
   page: { paddingTop: 40, paddingBottom: 50, paddingHorizontal: 50, fontFamily: 'Helvetica', fontSize: 9, color: BRAND.text, lineHeight: 1.45 },
-  h1: { fontSize: 15, fontFamily: 'Helvetica-Bold', color: BRAND.navy, marginTop: 16, marginBottom: 4 },
+  h1: { fontSize: 15, fontFamily: 'Helvetica-Bold', color: BRAND.navy, lineHeight: 1.25, marginTop: 16, marginBottom: 4 },
   h2: { fontSize: 10.5, fontFamily: 'Helvetica-Bold', color: BRAND.navy, marginTop: 10, marginBottom: 3 },
   p: { marginBottom: 3 },
   box: { borderWidth: 0.5, borderColor: BRAND.hair, padding: 8, marginTop: 8, borderRadius: 3 },

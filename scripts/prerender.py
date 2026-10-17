@@ -6,8 +6,10 @@ erhalten und rendern im Browser wie bisher; Suchmaschinen und Nutzer ohne JavaSc
 
 Aufruf (nach Änderungen an routes.js, content.js oder tools.mjs):
     python3 scripts/prerender.py && node scripts/build-seo.mjs
+Nur einzelne Seiten (Pfadanfang):
+    python3 scripts/prerender.py /angebote/ /b2b/
 """
-import functools, http.server, re, socketserver, threading
+import functools, http.server, re, socketserver, sys, threading
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -17,11 +19,15 @@ SKIP_DIRS = {'b2b-portal', 'intern', 'og', 'datenraum', 'pruefen', 'partner', 'a
 
 
 def pages():
+    only = [a for a in sys.argv[1:] if a.startswith('/')]
     for f in sorted(ROOT.rglob('index.html')):
         rel = f.relative_to(ROOT)
         if str(rel) in SKIP or rel.parts[0] in SKIP_DIRS:
             continue
-        yield '/' + '/'.join(rel.parts[:-1]) + '/', f
+        url = '/' + '/'.join(rel.parts[:-1]) + '/'
+        if only and not any(url.startswith(o) for o in only):
+            continue
+        yield url, f
 
 
 def main():

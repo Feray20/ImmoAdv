@@ -13,9 +13,10 @@ const s = StyleSheet.create({
   header: { position: 'absolute', top: 16, left: 42, right: 42, flexDirection: 'row', justifyContent: 'space-between', fontSize: 7.5, color: C.muted, borderBottomWidth: 0.5, borderBottomColor: C.hair, paddingBottom: 4 },
   footer: { position: 'absolute', bottom: 18, left: 42, right: 42, fontSize: 7, color: C.muted, borderTopWidth: 0.5, borderTopColor: C.hair, paddingTop: 4, flexDirection: 'row', justifyContent: 'space-between' },
   footerText: { width: '80%' },
-  h1: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: C.navy, marginBottom: 4 },
-  h2: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: C.navy, marginTop: 14, marginBottom: 6 },
-  kicker: { fontSize: 7.5, letterSpacing: 1.2, color: C.muted, marginBottom: 6 },
+  h1: { fontSize: 17, fontFamily: 'Helvetica-Bold', color: C.navy, lineHeight: 1.28, marginBottom: 5 },
+  sub: { color: C.muted, lineHeight: 1.35 },
+  h2: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: C.navy, lineHeight: 1.25, marginTop: 16, marginBottom: 6 },
+  kicker: { fontSize: 7.5, letterSpacing: 1.2, color: C.muted, lineHeight: 1.3, marginBottom: 6 },
   muted: { color: C.muted },
   table: { borderTopWidth: 0.5, borderTopColor: C.hair },
   row: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: C.hair, paddingVertical: 4, paddingHorizontal: 6 },
@@ -28,7 +29,7 @@ const s = StyleSheet.create({
   box: { borderWidth: 0.5, borderColor: C.hair, borderRadius: 3, padding: 8, marginTop: 6 },
   kpis: { flexDirection: 'row', marginTop: 10 },
   kpi: { flex: 1, borderWidth: 0.5, borderColor: C.hair, padding: 8, marginRight: 6, borderRadius: 3 },
-  kpiValue: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: C.navy, marginTop: 2 },
+  kpiValue: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: C.navy, lineHeight: 1.25, marginTop: 2 },
   small: { fontSize: 7.5, color: C.muted, marginTop: 4 },
 });
 
@@ -82,9 +83,11 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
     <Document title={`Kreditmappe – ${o.name}`} author="ImmoAdv" subject="Kreditmappe zur Vorbereitung des Bankgesprächs" language="de">
       <Page size="A4" style={s.page}>
         <Frame m={m} reportId={rid} watermark={watermark} partner={partner} clean={clean} />
-        <Text style={s.kicker}>KREDITMAPPE · VORBEREITUNG BANKGESPRÄCH</Text>
-        <Text style={s.h1}>{o.name}</Text>
-        <Text style={s.muted}>Erwerbsstatus: {p.employment} · Haushalt: {p.householdSize} {p.householdSize === 1 ? 'Person' : 'Personen'}</Text>
+        <View wrap={false}>
+          <Text style={s.kicker}>KREDITMAPPE · VORBEREITUNG BANKGESPRÄCH</Text>
+          <Text style={s.h1}>{o.name}</Text>
+          <Text style={s.sub}>Erwerbsstatus: {p.employment} · Haushalt: {p.householdSize} {p.householdSize === 1 ? 'Person' : 'Personen'}</Text>
+        </View>
 
         <View style={s.kpis}>
           <View style={s.kpi}><Text style={s.muted}>Gesamtaufwand</Text><Text style={s.kpiValue}>{eur(f.totalCost)}</Text></View>
@@ -105,7 +108,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
           </View>
         )}
 
-        <Text style={s.h2}>1. Zusammenfassung</Text>
+        <Text style={s.h2} minPresenceAhead={90}>1. Zusammenfassung</Text>
         <View style={[s.row, { borderTopWidth: 0.5, borderTopColor: C.hair }]}>
           <Text style={s.label}>Gesamteinstufung (ImmoAdv-Risikopolitik)</Text>
           <View style={[s.value, { alignItems: 'flex-end' }]}><Badge t={vetoTone}>{vetoLabel}</Badge></View>
@@ -123,7 +126,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
           <View style={[s.value, { alignItems: 'flex-end' }]}><Badge t="none">Ungeprüft</Badge></View>
         </View>
 
-        <Text style={s.h2}>2. Vorhaben und Finanzierung</Text>
+        <Text style={s.h2} minPresenceAhead={90}>2. Vorhaben und Finanzierung</Text>
         <Rows head={['Position', 'Betrag']} rows={[
           ['Kaufpreis', eur(o.price)],
           [o.grestPct + o.notaryPct + o.brokerPct > 0 ? `Kaufnebenkosten (GrESt ${fmt(o.grestPct)} %, Notar/Grundbuch ${fmt(o.notaryPct)} %, Makler ${fmt(o.brokerPct)} %)` : `Kaufnebenkosten (${fmt(o.purchaseCostPct)} %)`, eur(f.purchaseCosts)],
@@ -135,11 +138,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
           ['Monatsrate (Zins und Tilgung)', eur(f.monthlyRate)],
           ['Restschuld nach 10 Jahren', eur(f.balanceAfter10y)],
         ]} />
-      </Page>
-
-      <Page size="A4" style={s.page}>
-        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} clean={clean} />
-        <Text style={s.h2}>3. Objekt</Text>
+        <Text style={s.h2} minPresenceAhead={90}>3. Objekt</Text>
         <Rows head={['Merkmal', 'Wert']} rows={[
           ['Bezeichnung', o.name],
           ['Wohnfläche', o.area > 0 ? `${fmt(o.area)} m²` : 'nicht angegeben'],
@@ -162,7 +161,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
           ['Effizienzklasse', o.efficiencyClass || 'nicht angegeben'],
         ]} />
 
-        <Text style={s.h2}>4. Wirtschaftlichkeit</Text>
+        <Text style={s.h2} minPresenceAhead={90}>4. Wirtschaftlichkeit</Text>
         <Rows head={['Kennzahl', 'Wert']} rows={[
           ['Bruttomietrendite', pct(x.grossYield)],
           ['NOI (Nettomietertrag p. a.)', eur(x.noi)],
@@ -180,7 +179,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
         ]} />
         {m.valuation && (
           <>
-            <Text style={[s.h2, { fontSize: 10.5 }]}>Ertragswert (vereinfacht, Systematik ImmoWertV)</Text>
+            <Text style={[s.h2, { fontSize: 10.5 }]} minPresenceAhead={80}>4a. Ertragswert (vereinfacht, Systematik ImmoWertV)</Text>
             <Rows head={['Position', 'Wert']} rows={[
               ['Reinertrag p. a. (Miete − Bewirtschaftung inkl. mind. 2 % Mietausfall)', eur(m.valuation.reinertrag)],
               [`Bodenwert (Kaufpreis × ${fmt(100 - o.buildingSharePct, 0)} %)`, eur(m.valuation.landValue)],
@@ -194,7 +193,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
         )}
         <Text style={s.small}>Kennzahlen und Schwellenwerte sind ImmoAdv-interne Risikopolitik, keine gesetzlichen Vorgaben. Bankindividuelle Kreditrichtlinien können abweichen.</Text>
 
-        <Text style={s.h2}>5. Stresstest (Zins, Leerstand, Kosten)</Text>
+        <Text style={s.h2} minPresenceAhead={90}>5. Stresstest (Zins, Leerstand, Kosten)</Text>
         <View style={s.table}>
           <View style={s.head}>
             <Text style={[s.headText, { flex: 1.2 }]}>Szenario</Text>
@@ -211,10 +210,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
             </View>
           ))}
         </View>
-      </Page>
-      <Page size="A4" style={s.page}>
-        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} clean={clean} />
-        <Text style={s.h2}>Steuerliche Modellrechnung (erstes Jahr)</Text>
+        <Text style={s.h2} minPresenceAhead={90}>6. Steuerliche Modellrechnung (erstes Jahr)</Text>
         {m.tax ? (
           <>
             <Rows head={['Position', 'Betrag']} rows={[
@@ -234,7 +230,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
           <Text style={s.muted}>Nicht berechnet: Gebäudeanteil und Grenzsteuersatz wurden nicht angegeben.</Text>
         )}
 
-        <Text style={s.h2}>Eigentümergemeinschaft (WEG)</Text>
+        <Text style={s.h2} minPresenceAhead={90}>7. Eigentümergemeinschaft (WEG)</Text>
         {m.weg ? (
           <Rows head={['Position', 'Ihr Anteil']} rows={[
             ['Miteigentumsanteil', `${fmt(o.meaShare, 0)} / ${fmt(o.meaTotal, 0)} (${fmt(m.weg.share * 100)} %)`],
@@ -247,7 +243,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
           <Text style={s.muted}>Nicht berechnet: keine Angaben zum Miteigentumsanteil (nur bei Eigentumswohnungen relevant).</Text>
         )}
 
-        <Text style={s.h2}>Score-Treiber (vorläufiger Score {m.score.value} / 100)</Text>
+        <Text style={s.h2} minPresenceAhead={90}>8. Score-Treiber (vorläufiger Score {m.score.value} / 100)</Text>
         <View style={s.table}>
           <View style={s.head}>
             <Text style={[s.headText, { flex: 3 }]}>Komponente</Text>
@@ -263,12 +259,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
           ))}
         </View>
         <Text style={s.small}>Gewichtung nach ImmoAdv-Risikopolitik; kein Bankscore.</Text>
-      </Page>
-
-
-      <Page size="A4" style={s.page}>
-        <Frame m={m} reportId={rid} watermark={watermark} partner={partner} clean={clean} />
-        <Text style={s.h2}>6. Haushaltsrechnung (monatlich)</Text>
+        <Text style={s.h2} minPresenceAhead={90}>9. Haushaltsrechnung (monatlich)</Text>
         <Rows head={['Position', 'Betrag']} rows={[
           ['Nettoeinkommen', eur(h.income)],
           [`Mieteinnahme, angesetzt mit ${fmt(RENT_RECOGNITION * 100, 0)} %`, eur(h.recognizedRent)],
@@ -281,7 +272,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
           Pauschale als ImmoAdv-Annahme: {fmt(LIVING_BASE, 0)} € für die erste Person, {fmt(LIVING_PER_PERSON, 0)} € je weitere Person. Bestehende Kredite, Warmmiete und Versicherungen sind nicht enthalten, sofern nicht im Einkommen berücksichtigt. Banken setzen eigene Pauschalen an.
         </Text>
 
-        <Text style={s.h2}>7. Prüfpunkte vor Bankgespräch und Notartermin</Text>
+        <Text style={s.h2} minPresenceAhead={90}>10. Prüfpunkte vor Bankgespräch und Notartermin</Text>
         {m.vetos.length === 0 && <Text>Keine Abweichungen aus den eingegebenen Werten erkannt.</Text>}
         {m.vetos.map((v) => (
           <View key={v.id} style={s.box} wrap={false}>
@@ -296,7 +287,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
           </View>
         ))}
 
-        <Text style={s.h2}>8. Unterlagenindex</Text>
+        <Text style={s.h2} minPresenceAhead={90}>11. Unterlagenindex</Text>
         <View style={s.table}>
           {m.documents.map((d, i) => (
             <View key={d.name} style={[s.row, i % 2 ? s.zebra : {}]} wrap={false}>
@@ -305,9 +296,9 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
             </View>
           ))}
         </View>
-        <Text style={s.small}>Status bezieht sich auf die inhaltliche Prüfung. Hochgeladene Dateien sind in Abschnitt 9 mit Prüfsumme aufgeführt.</Text>
+        <Text style={s.small}>Status bezieht sich auf die inhaltliche Prüfung. Hochgeladene Dateien sind in Abschnitt 12 mit Prüfsumme aufgeführt.</Text>
 
-        <Text style={s.h2}>9. Hochgeladene Unterlagen</Text>
+        <Text style={s.h2} minPresenceAhead={60}>12. Hochgeladene Unterlagen</Text>
         {m.uploads.length === 0 && <Text style={s.muted}>Keine Unterlagen im Konto hochgeladen.</Text>}
         {m.uploads.length > 0 && (
           <View style={s.table}>

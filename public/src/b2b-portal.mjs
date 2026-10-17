@@ -5,9 +5,13 @@ import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSessio
 
 const root = document.getElementById('portal');
 const $ = (s, el = document) => el.querySelector(s);
+// Bereiche in drei Gruppen: Tagesgeschäft, Werkzeuge & Wissen, Konto.
 const VIEWS = [
-  ['start', 'Übersicht'], ['fall', 'Fall-Analyse'], ['tools', 'Software-Tools'], ['kunden', 'Kunden'], ['anfragen', 'Anfragen'], ['einreichungen', 'Einreichungen'], ['wissen', 'Praxis-Toolkit'], ['werkzeuge', 'Widget & QR'], ['verifizierung', 'Verifizierung'], ['team', 'Team'], ['profil', 'Profil'], ['tarif', 'Tarif & Rechnungen'],
+  ['start', 'Übersicht', 'arbeit'], ['fall', 'Fall-Analyse', 'arbeit'], ['kunden', 'Kunden', 'arbeit'], ['anfragen', 'Anfragen', 'arbeit'], ['einreichungen', 'Einreichungen', 'arbeit'],
+  ['tools', 'Software-Tools', 'werk'], ['wissen', 'Beratungskompass', 'werk'], ['werkzeuge', 'Widget & QR', 'werk'],
+  ['verifizierung', 'Verifizierung', 'konto'], ['team', 'Team', 'konto'], ['profil', 'Profil', 'konto'], ['tarif', 'Tarif & Rechnungen', 'konto'],
 ];
+const GROUPS = [['arbeit', 'Tagesgeschäft'], ['werk', 'Werkzeuge & Wissen'], ['konto', 'Konto']];
 // Handy-Leiste: vier Hauptbereiche plus „Mehr“ (alle übrigen Bereiche als Liste).
 const MAIN = [
   ['start', 'Start', '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'],
@@ -37,20 +41,25 @@ const toast = (t, bad = false) => {
 const busy = async (btn, fn) => { const t = btn.textContent; btn.disabled = true; btn.textContent = '…'; try { await fn(); } catch (e) { toast(e.message || 'Fehler', true); } finally { btn.disabled = false; btn.textContent = t; } };
 
 // ---------- Rahmen ----------
+// Navigation gruppiert; Berater ohne Inhaberrechte sehen Tarif und Profil nicht.
+const navGroups = (keep) => GROUPS.map(([g, gl]) => {
+  const items = VIEWS.filter(([v, , gg]) => gg === g && keep(v) && (me.role === 'owner' || !['tarif', 'profil'].includes(v)));
+  return items.length ? `<span class="pt-grp">${gl}</span>${items.map(([v, l]) => `<a href="#${v}" data-v="${v}">${vLabel(v, l)}${v === 'anfragen' && me.usage.leadsNew ? ` <b class="pt-dot">${me.usage.leadsNew}</b>` : ''}</a>`).join('')}` : '';
+}).join('');
 function shell() {
   const a = me.account;
   root.innerHTML = `<div class="pt">
     <aside class="pt-side"><a class="pt-brand" href="/"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a>
       <small class="pt-tag">Unternehmensportal</small>
-      <nav>${VIEWS.filter(([v]) => me.role === 'owner' || !['tarif', 'profil'].includes(v)).map(([v, l]) => `<a href="#${v}" data-v="${v}">${vLabel(v, l)}${v === 'anfragen' && me.usage.leadsNew ? ` <b class="pt-dot">${me.usage.leadsNew}</b>` : ''}</a>`).join('')}</nav>
-      <div class="pt-foot"><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><a href="/app/dashboard">Zur Anwendung</a><button type="button" class="pt-logout" id="ptLogout">Abmelden</button></div>
+      <nav>${navGroups((v) => true)}</nav>
+      <div class="pt-foot"><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><button type="button" class="pt-logout" id="ptLogout">Abmelden</button></div>
     </aside>
     <section class="pt-main"><header class="pt-top"><h1 id="ptTitle"></h1><button type="button" class="pt-br" id="ptBr" title="Branche wechseln – das Portal passt sich an"><span aria-hidden="true">${B().icon}</span> ${esc(B().short)} <b aria-hidden="true">⇄</b></button><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
       ${a.status === 'locked' ? `<div class="pt-alert bad"><strong>Konto gesperrt.</strong> ${esc(a.lockReason || '')} Rechnungen und AVV bleiben abrufbar. Fragen an support@immoadv.de.</div>` : ''}
       <div id="ptView"></div><p class="pt-liab">ImmoAdv stellt rein technische Analyse- und Erfassungsinstrumente bereit und trifft keine Votierungs-, Bonitäts- oder Kreditentscheidung. Die aufsichtsrechtliche Pflicht zur Prüfung nach MaRisk, KWG oder § 34i GewO verbleibt vollumfänglich beim beratenden bzw. finanzierenden Institut. <a href="/nutzungsbedingungen#hinweise">Rechtliche Hinweise</a> · <a href="/datenschutz">Datenschutz</a></p></section>
     <nav class="pt-tabs" aria-label="Bereiche">${MAIN.map(([v, l, ic]) => `<a href="#${v}" data-v="${v}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${v === 'kunden' ? B().kunden : l}</span>${v === 'anfragen' && me.usage.leadsNew ? `<b class="pt-dot">${me.usage.leadsNew}</b>` : ''}</a>`).join('')}<button type="button" id="ptMore" aria-expanded="false" aria-controls="ptSheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>Mehr</span></button></nav>
     <div class="pt-sheet" id="ptSheet" hidden><div class="pt-sheet-bg" data-close></div><div class="pt-sheet-in" role="dialog" aria-label="Alle Bereiche"><div class="pt-sheet-h"><span class="pt-sheet-t"><strong>Hauptmenü</strong>${(a.companyName || '').trim().length >= 3 ? `<small>${esc(a.companyName)}</small>` : ''}</span><button type="button" class="stage-x" data-close aria-label="Schließen">×</button></div>
-      <nav>${VIEWS.filter(([v]) => !MAIN.some(([m]) => m === v) && (me.role === 'owner' || !['tarif', 'profil'].includes(v))).map(([v, l]) => `<a href="#${v}" data-v="${v}">${l}</a>`).join('')}<a href="/app/dashboard">Zur Anwendung</a><button type="button" class="pt-logout" id="ptLogoutS">Abmelden</button></nav></div></div>
+      <nav>${navGroups((v) => !MAIN.some(([m]) => m === v))}<button type="button" class="pt-logout" id="ptLogoutS">Abmelden</button></nav></div></div>
   </div>`;
   root.querySelectorAll('#ptLogout,#ptLogoutM,#ptLogoutS').forEach((b) => { b.onclick = async () => { try { (await import('./b2b-tools.mjs')).clearAll(); } catch { /* weiter */ } logout(); }; });
   $('#ptBr').onclick = () => chooseBranche();
@@ -98,13 +107,13 @@ async function vKunden(box) {
   const mon = (ym) => { const [y, m] = ym.split('-').map(Number); const n = new Date(); return (y - n.getFullYear()) * 12 + (m - 1 - n.getMonth()); };
   const radarRows = con.flatMap((c) => (Array.isArray(c.radar) ? c.radar : []).map((ym) => ({ c, ym, m: mon(ym) }))).filter((x) => x.m >= -1 && x.m <= 36).sort((a, b) => a.m - b.m);
   const radarAsked = con.filter((c) => c.radar).length;
-  const radar = `<section class="pt-card kd-radar"><div class="kd-head"><h2>Bestandskunden-Radar</h2><span class="form-note">${radarAsked} von ${con.length} Kunden teilen ihr Zinsbindungsende</span></div><p class="form-note">Automatische Erinnerung: Am 1. jedes Monats bekommen Sie eine E-Mail, sobald bei einem Kunden die Zinsbindung in 36, 24, 12, 6 oder 3 Monaten endet.</p>
+  const radar = `<section class="pt-card kd-radar"><div class="kd-head"><h2>Bestandskunden-Radar</h2><span class="form-note">${radarAsked} von ${con.length} Kunden teilen ihr Zinsbindungsende</span></div><p class="form-note">Am 1. jedes Monats erhalten Sie eine E-Mail, wenn bei einem Kunden die Zinsbindung in 36, 24, 12, 6 oder 3 Monaten endet.</p>
     ${!r.data.radarOn ? '<p class="form-note">Der Radar meldet Ihnen, wenn bei Ihren Kunden die Zinsbindung in 36, 24 oder 12 Monaten endet – Ihre Anschlussfinanzierungen von morgen. Enthalten ab <a href="#tarif">Kanzlei & Baufi Pro</a>.</p>'
       : radarRows.length ? `<ul class="kd-rlist">${radarRows.map((x) => `<li class="${x.m <= 12 ? 'hot' : x.m <= 24 ? 'warm' : ''}"><span><strong>${esc(x.c.name || x.c.email || 'Kunde')}</strong><small>Zinsbindung endet ${x.ym.split('-').reverse().join('/')}</small></span><b>${x.m < 0 ? 'abgelaufen' : x.m === 0 ? 'diesen Monat' : `in ${x.m} Monat${x.m === 1 ? '' : 'en'}`}</b>${x.m <= 60 ? '<em>Forward möglich</em>' : ''}</li>`).join('')}</ul>`
       : '<p class="form-note">Aktuell endet bei keinem Ihrer Kunden die Zinsbindung in den nächsten 36 Monaten.</p>'}
-    <p class="form-note">Kunden schalten das Teilen von Monat und Jahr des Zinsbindungsendes in ihrem Konto selbst frei (eigene Einwilligung, jederzeit widerrufbar) – ohne Beträge oder Bankdaten.</p></section>`;
+    <p class="form-note">Kunden geben nur Monat und Jahr frei – mit eigener, widerrufbarer Einwilligung, ohne Beträge.</p></section>`;
   box.innerHTML = radar + `<section class="pt-card"><h2>Kunde einladen</h2>
-      <p class="form-note">Ihr Kunde bereitet Finanzprofil, Objekt und Unterlagen in ImmoAdv vor – kostenlos. Stimmt er zu, sehen Sie hier seinen Fortschritt: Stufe, Bankreife, Anzahl Objekte und Unterlagen. Dokumente und Inhalte sehen Sie nicht; der Kunde kann die Verbindung jederzeit trennen.</p>
+      <p class="form-note">Ihr Kunde bereitet Finanzprofil, Objekt und Unterlagen kostenlos vor. Mit seiner Zustimmung sehen Sie den Fortschritt – nicht die Dokumente. Er kann die Verbindung jederzeit trennen.</p>
       <form class="pt-row kd-form" id="kdF"><input id="kdMail" type="email" required placeholder="E-Mail des Kunden" aria-label="E-Mail des Kunden" autocomplete="off"><input id="kdName" type="text" placeholder="Name (optional)" aria-label="Name (optional)" maxlength="120"><button class="btn btn-dark" type="submit">Einladen</button><label class="chk kd-consent"><input type="checkbox" id="kdOk" required> Ich bestätige, dass mir die Einwilligung des Kunden für die Zusendung dieser Einladung vorliegt (Art. 6 Abs. 1 lit. a/b DSGVO).</label></form>
       <div id="kdLink">${KD_LAST ? kdLinkHtml(KD_LAST) : ''}</div></section>
     <section class="pt-card"><div class="kd-head"><h2>Ihre Kunden</h2><span class="form-note">${con.length} verbunden · ${ready} bankreif · ${inv.length} Einladung${inv.length === 1 ? '' : 'en'} offen</span></div>
@@ -145,13 +154,6 @@ async function startStats(el) {
   el.innerHTML = `<h2>Letzte 30 Tage</h2><dl class="pt-dl"><div><dt>Anfragen gesamt</dt><dd>${l.length}</dd></div><div><dt>Website-Widget</dt><dd>${by('widget')}</dd></div><div><dt>Partnerseite</dt><dd>${by('landing')}</dd></div><div><dt>QR-Code</dt><dd>${by('qr')}</dd></div><div><dt>Abgeschlossen</dt><dd>${done}${l.length ? ` (${Math.round((done / l.length) * 100)} %)` : ''}</dd></div><div><dt>Ohne Zuständigen</dt><dd>${l.filter((x) => !x.assigned_to).length}</dd></div></dl>`;
 }
 
-// Muster-Fall (fiktiv) statt leerer Kacheln: zeigt, wie ein fertig geprüfter Fall aussieht.
-const MUSTER_DOCS = [['Personalausweis', 1], ['Selbstauskunft', 1], ['Gehaltsabrechnungen (3 Monate)', 1], ['Arbeitsvertrag', 1], ['Einkommensteuerbescheid', 1], ['Eigenkapitalnachweis', 1], ['Kontoauszüge (3 Monate)', 1], ['Exposé', 1], ['Grundrisse und Wohnfläche', 1], ['Energieausweis', 1], ['Teilungserklärung', 1], ['Protokolle Eigentümerversammlung', 1], ['Wirtschaftsplan und Hausgeldabrechnung', 1], ['Mietvertrag', 1], ['Grundbuchauszug (nicht älter als 3 Monate)', 0]];
-const MUSTER = `<section class="pt-card pt-muster"><div class="pt-muster-h"><div><span class="st">Beispiel · fiktiver Fall</span><h2>Muster-Fall: Familie Beispiel, vermietete ETW</h2><p class="form-note">So sieht ein Fall aus, wenn Ihr Kunde seine Unterlagen über ImmoAdv vorbereitet hat. Alle Daten sind erfunden.</p></div><a class="btn btn-outline btn-sm" href="#fall">Eigenen Fall prüfen</a></div>
-  <div class="pt-kpis"><div class="pt-kpi"><small>Kapitaldienstdeckung (DSCR)</small><strong>1,24</strong><span class="form-note">Nettomiete 1.551 € ÷ Rate 1.251 €</span></div><div class="pt-kpi"><small>Haushaltsüberschuss</small><strong>1.180 €</strong><span class="form-note">nach Rate und Lebenshaltung</span></div><div class="pt-kpi"><small>Unterlagen</small><strong>14 von 15</strong><span class="form-note">fehlt: Grundbuchauszug</span></div><div class="pt-kpi"><small>Beleihungsauslauf</small><strong>88 %</strong><span class="form-note">Darlehen 268.000 € · BLW 304.000 €</span></div></div>
-  <details class="pt-muster-d"><summary>Unterlagen und Rechenweg ansehen</summary><ul class="pt-check">${MUSTER_DOCS.map(([t, ok]) => `<li class="${ok ? 'done' : ''}"><span>${t}${ok ? '' : ' – <strong>fehlt</strong>'}</span></li>`).join('')}</ul>
-  <p class="form-note">Kaufpreis 320.000 € · Kaltmiete 1.700 € · nicht umlagefähig 149 € · Darlehen 268.000 € zu 3,60 % Soll und 2,00 % Tilgung = Rate 1.250,67 €. DSCR = (1.700 − 149) ÷ 1.250,67 = 1,24. Haushalt: Netto 4.950 € + Miete 1.700 € − Lebenshaltung 2.150 € − Warmmiete eigene Wohnung 1.220 € − nicht umlagefähige Kosten 149 € − Rate 1.251 € − Versicherungen/Sonstiges 700 € = 1.180 €.</p></details></section>`;
-
 function vStart(box) {
   const a = me.account, u = me.usage, lim = me.limits;
   const quota = lim ? (lim.dossiersPerMonth == null ? 'unbegrenzt' : `${u.dossiersThisMonth} von ${lim.dossiersPerMonth + (a.dossierBonus || 0)}`) : '–';
@@ -167,18 +169,18 @@ function vStart(box) {
       <div class="pt-focus-g">${B().focus.map(([t, x, h]) => `<a href="${h}"><strong>${esc(t)}</strong><span>${esc(x)}</span></a>`).join('')}</div></section>
     <div class="pt-kpis">
       <div class="pt-kpi"><small>Neue Anfragen</small><strong>${u.leadsNew}</strong><a href="#anfragen">Ansehen</a></div>
-      <div class="pt-kpi"><small>Kreditmappen diesen Monat</small><strong>${quota}</strong><a href="/app/dashboard#objekte">Erstellen</a></div>
+      <div class="pt-kpi"><small>Kreditmappen diesen Monat</small><strong>${quota}</strong><a href="#fall">Fall anlegen</a></div>
       <div class="pt-kpi"><small>Berater-Zugänge</small><strong>${u.seats} / ${lim ? lim.seats : 1}</strong><a href="#team">Team</a></div>
       <div class="pt-kpi"><small>Status</small><strong>${a.verified ? 'Geprüft' : 'Ungeprüft'}</strong><span class="form-note">${a.verified ? 'Angaben vom Betreiber geprüft' : 'Prüfung durch den Betreiber steht aus'}</span></div>
     </div>
     <div class="pt-grid2">
       <section class="pt-card"><h2>Einrichtung</h2><ul class="pt-check">${steps.map(([ok, t, h]) => `<li class="${ok ? 'done' : ''}"><a href="${h}">${t}</a></li>`).join('')}</ul></section>
       <section class="pt-card"><h2>So arbeiten Sie mit ImmoAdv</h2><ol class="pt-ol">
-        <li><strong>Fall anlegen:</strong> In der <a href="/app/dashboard#objekte">Anwendung</a> Objekt und Finanzierung erfassen, Unterlagen hochladen.</li>
+        <li><strong>Fall anlegen:</strong> In der <a href="#fall">Fall-Analyse</a> Unterlagen hochladen – Kennzahlen, Varianten und Präsentation entstehen automatisch.</li>
         <li><strong>Kreditmappe erstellen:</strong> Kennzahlen nach banküblichen Kriterien (Kapitaldienstfähigkeit, Beleihungsauslauf, Cashflow) mit Echtheits-QR${me.limits?.cobranding ? ' und Ihrem Logo' : ''}.</li>
         <li><strong>Anfragen gewinnen:</strong> Widget auf Ihrer Website, QR-Code im Exposé oder Ihre <a href="#werkzeuge">Partnerseite</a>.</li></ol>
         <p class="form-note">Rechnerische Orientierungswerte nach einem strukturierten Datenmodell. Keine Kreditzusage und keine Bonitätsentscheidung; die Entscheidung trifft das finanzierende Institut.</p></section>
-    </div>${u.leadsNew > 0 ? '' : MUSTER}<section class="pt-card" id="stats30"></section>`;
+    </div><section class="pt-card" id="stats30"></section>`;
   startStats($('#stats30'));
 }
 
@@ -293,7 +295,7 @@ async function vSubs(box) {
         <label class="pt-field">Antwort an den Einreicher<textarea data-rp="${s.id}" rows="2" maxlength="1000">${esc(s.reply || '')}</textarea></label>
         <button class="btn btn-ghost" data-sv="${s.id}" type="button">Status und Antwort senden</button></article>`).join('') : '<div class="pt-empty">Noch keine Einreichungen.</div>'}</section>` : ''}
     <section class="pt-card"><h2>Kreditmappe bei einem Institut einreichen</h2>
-      ${!me.tier ? '<p class="form-note">Einreichungen gibt es ab einem gebuchten Tarif.</p>' : !targets.length ? '<p class="form-note">Derzeit nimmt noch kein Institut über ImmoAdv Einreichungen an.</p>' : !versions.length ? '<p class="form-note">Sie haben noch keine registrierte Kreditmappe. Erstellen Sie eine in der <a href="/app/dashboard#objekte">Anwendung</a>.</p>' : `
+      ${!me.tier ? '<p class="form-note">Einreichungen gibt es ab einem gebuchten Tarif.</p>' : !targets.length ? '<p class="form-note">Derzeit nimmt noch kein Institut über ImmoAdv Einreichungen an.</p>' : !versions.length ? '<p class="form-note">Sie haben noch keine registrierte Kreditmappe. Erstellen Sie zuerst eine Kreditmappe zu einem Fall.</p>' : `
       <form id="subF" class="obj-grid">
         <label>Kreditmappe<select name="versionId" required>${versions.map((x) => `<option value="${x.id}">${esc(x.object_ref)} · Version ${x.version_no} · ${dt(x.created_at)}</option>`).join('')}</select></label>
         <label>Institut<select name="targetId" required>${targets.map((x) => `<option value="${x.id}">${esc(x.name)} · ${esc(x.city)}${x.verified ? ' ✓' : ''}</option>`).join('')}</select></label>
@@ -390,7 +392,7 @@ async function vTeam(box) {
     ${invites.map((i) => `<tr><td>${esc(i.email)}</td><td>Eingeladen</td><td>bis ${dt(i.expires_at)}</td><td><button class="text-btn del" data-i="${i.id}" type="button">Zurückziehen</button></td></tr>`).join('')}
     </tbody></table>
     ${me.role === 'owner' ? `<form id="inv" class="pt-row" style="margin-top:14px"><input type="email" required placeholder="kollegin@kanzlei.de" id="invMail" aria-label="E-Mail"><label class="chk inv-send"><input type="checkbox" id="invSend"> per E-Mail senden</label><button class="btn btn-dark" type="submit">Zugang anlegen</button></form><div id="invOut"></div>` : ''}
-    <p class="form-note">Sie legen den Zugang an und erhalten ein Startpasswort; der Berater legt bei der ersten Anmeldung ein eigenes Passwort fest. Sie sehen die Anfragen und erstellen Kreditmappen im Kontingent des Unternehmens; Tarif, Profil und Rechnungen verwaltet nur der Inhaber.</p></section>`;
+    <p class="form-note">Sie erhalten ein Startpasswort; der Berater vergibt bei der ersten Anmeldung ein eigenes. Berater arbeiten im Kontingent des Unternehmens; Tarif, Profil und Rechnungen verwaltet nur der Inhaber.</p></section>`;
   box.querySelectorAll('[data-m],[data-i]').forEach((b) => b.onclick = async () => {
     if (!confirm('Wirklich?')) return;
     const x = await api('/api/b2b/team?' + (b.dataset.m ? 'member=' + b.dataset.m : 'invite=' + b.dataset.i), { method: 'DELETE' });
@@ -519,6 +521,8 @@ function vProfil(box) {
   };
 }
 
+// Leistungsvergleich der Tarife als Tabelle (Spalte hl hervorgehoben).
+const cmpTable = (v, hl = -1) => (v?.zeilen?.length ? `<details class="cmp" open><summary>Tarife im Vergleich</summary><div class="cmp-wrap"><table class="cmp-table"><thead><tr><th></th>${v.spalten.map((s, i) => `<th${i === hl ? ' class="hl"' : ''}>${esc(s)}</th>`).join('')}</tr></thead><tbody>${v.zeilen.map(([l, ...c]) => `<tr><th scope="row">${esc(l)}</th>${c.map((x, i) => `<td class="${x === '✓' ? 'y' : x === '–' ? 'n' : ''}${i === hl ? ' hl' : ''}">${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>` : '');
 // ---------- Tarif & Rechnungen ----------
 async function vTarif(box) {
   if (!prices) prices = await fetch('/data/preise.json').then((r) => r.json());
@@ -535,10 +539,11 @@ async function vTarif(box) {
     <div class="seg" role="tablist" id="ivl"><button type="button" data-i="month" aria-selected="true">Monatlich</button><button type="button" data-i="year" aria-selected="false">Jährlich (2 Monate gespart)</button></div>
     <div class="offers">${tiers.map((t) => b2b.plans.filter((p) => p.tier === t).map((p) => `<div class="offer${t === 'PRO' ? ' rec' : ''}" data-ivl="${p.interval}"${p.interval === 'year' ? ' hidden' : ''}>${t === 'PRO' ? '<span class="offer-rec">Am häufigsten gewählt</span>' : ''}
         <h4>${esc(p.name.replace(' (Jahr)', ''))}</h4><div class="offer-price">${net(p.netto_cents)} <small>netto ${esc(p.intervall)}</small></div>
-        <ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+        <ul>${p.basis ? `<li class="offer-basis">${esc(p.basis)}</li>` : ''}${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
         ${me.tier === t ? '<span class="st ok">Gebucht</span>' : `<button class="btn btn-pay" data-plan="${p.id}" type="button"${billingOn ? '' : ' disabled'}>${billingOn ? 'Weiter zur Bezahlung' : 'Buchung startet in Kürze'}</button>`}</div>`).join('')).join('')}
-      <div class="offer"><h4>${esc(b2b.enterprise.name)}</h4><div class="offer-price">${esc(b2b.enterprise.preis)}</div><ul>${b2b.enterprise.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-ghost" href="/b2b#kontakt">Angebot anfragen</a></div>
+      <div class="offer"><h4>${esc(b2b.enterprise.name)}</h4><div class="offer-price">${esc(b2b.enterprise.preis)}</div><ul>${b2b.enterprise.basis ? `<li class="offer-basis">${esc(b2b.enterprise.basis)}</li>` : ''}${b2b.enterprise.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-ghost" href="/b2b#kontakt">Angebot anfragen</a></div>
     </div>
+    ${cmpTable(b2b.vergleich, { BASIC: 0, PRO: 1, ENTERPRISE: 2 }[me.tier] ?? -1)}
     <label class="consent"><input type="checkbox" id="terms"> Ich buche als Unternehmer (§ 14 BGB) zu den <a href="/nutzungsbedingungen#b2b" target="_blank">Nutzungsbedingungen für Unternehmen</a>. Preise netto zzgl. 19 % USt. Ein Widerrufsrecht besteht nicht.</label>
     ${billingOn ? '' : '<p class="form-note">Online-Buchung ist noch nicht freigeschaltet. Für einen Testzugang oder Kauf auf Rechnung: support@immoadv.de.</p>'}
     <section class="pt-card"><h2>Rechnungen</h2>${inv.ok && inv.data.invoices.length ? `<table class="bill-table"><thead><tr><th>Nummer</th><th>Datum</th><th>Brutto</th><th>Status</th><th></th></tr></thead><tbody>
@@ -771,7 +776,7 @@ function chooseBranche(first = false) {
   if (!d) { d = document.createElement('dialog'); d.id = 'brDlg'; d.className = 'ad-dlg br-dlg'; document.body.append(d); }
   const cur = br();
   d.innerHTML = `<div class="ad-dlg-in"><div class="ad-dlg-h"><h2>${first ? 'In welcher Branche arbeiten Sie?' : 'Branche wechseln'}</h2>${first ? '' : '<button type="button" class="stage-x" data-x aria-label="Schließen">×</button>'}</div>
-    <p class="form-note">Startseite, Bezeichnungen und das Praxis-Toolkit passen sich an Ihre Branche an. Sie können jederzeit wechseln – oben rechts.</p>
+    <p class="form-note">Startseite, Bezeichnungen und der Beratungskompass passen sich an Ihre Branche an. Sie können jederzeit wechseln – oben rechts.</p>
     <div class="br-tiles">${BRANCHE_KEYS.map((k) => `<button type="button" class="br-tile${k === cur ? ' on' : ''}" data-br="${k}"><span aria-hidden="true">${BRANCHEN[k].icon}</span><strong>${esc(BRANCHEN[k].label)}</strong><small>${esc(BRANCHEN[k].desc)}</small></button>`).join('')}</div>
     <p class="form-note" id="brMsg" role="status"></p></div>`;
   d.querySelector('[data-x]')?.addEventListener('click', () => d.close());

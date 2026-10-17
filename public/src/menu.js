@@ -63,7 +63,15 @@ if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/aut
   const root = document.documentElement;
   const sess = () => { try { return JSON.parse(localStorage.getItem(K) || 'null'); } catch { return null; } };
   const uid = (s) => s?.user?.id || String(s?.refresh_token || '').slice(-10);
-  let state = { user: false, paid: false };
+  let state = { user: false, paid: false, b2b: false };
+  // Unternehmenskunden arbeiten im Unternehmensportal: dort gibt es keine „Anwendung“, der Link führt ins Portal.
+  const portal = () => {
+    document.querySelectorAll('a[href="/app/dashboard"], a[data-app-link]').forEach((a) => {
+      if (!a.dataset.appLink) { a.dataset.appLink = '1'; a.dataset.appOrig = a.textContent; }
+      a.setAttribute('href', state.b2b ? '/b2b-portal' : '/app/dashboard');
+      if (/Zur Anwendung/.test(a.dataset.appOrig)) a.textContent = state.b2b ? 'Zum Portal' : a.dataset.appOrig;
+    });
+  };
   const relabel = () => {
     document.querySelectorAll('.nav-actions a[href="/auth/login"], .mobile-nav a[href="/auth/login"], a.nav-acc').forEach((a) => {
       const acc = state.user && !state.paid;
@@ -78,6 +86,7 @@ if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/aut
     root.classList.toggle('ia-user', !!st.user);
     root.classList.toggle('ia-paid', !!st.paid);
     relabel();
+    portal();
   };
   const save = (st, s) => { try { localStorage.setItem(C, JSON.stringify({ ...st, at: Date.now(), uid: uid(s) })); } catch { /* ignore */ } };
   async function refresh(s) {
@@ -94,7 +103,7 @@ if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/aut
     let s = sess();
     if (!s?.access_token) { apply({ user: false, paid: false }); try { localStorage.removeItem(C); } catch { /* ignore */ } return; }
     let c = null; try { c = JSON.parse(localStorage.getItem(C) || 'null'); } catch { c = null; }
-    if (c && c.uid === uid(s)) apply({ user: !!c.user, paid: !!c.paid });
+    if (c && c.uid === uid(s)) apply({ user: !!c.user, paid: !!c.paid, b2b: !!c.b2b });
     else apply({ user: true, paid: false });
     if (!force && c && c.uid === uid(s) && Date.now() - c.at < TTL) return;
     const ask = (tok) => fetch('/api/me/access', { headers: { Authorization: 'Bearer ' + tok }, cache: 'no-store' });
@@ -104,7 +113,7 @@ if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/aut
       if (r.status === 401) { apply({ user: false, paid: false }); return; }
       if (!r.ok) return; // Netzfehler: bisherigen Stand behalten
       const d = await r.json();
-      const st = { user: !!d.loggedIn, paid: !!d.paid };
+      const st = { user: !!d.loggedIn, paid: !!d.paid, b2b: !!d.b2b };
       apply(st); save(st, s);
     } catch { /* offline: bisherigen Stand behalten */ }
   }

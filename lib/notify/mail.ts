@@ -1,5 +1,8 @@
 // E-Mail-Versand über Resend – jede E-Mail im ImmoAdv-Design (Logo, Absendername „ImmoAdv“, Fußzeile mit Anbieterangaben).
 // Ohne RESEND_API_KEY und NOTIFY_FROM_EMAIL (bzw. CANCEL_FROM_EMAIL) wird nichts versendet.
+// Zustellung: Empfänger wird geprüft und normalisiert; bei 429/5xx genau ein erneuter Versuch mit demselben
+// Idempotency-Key (keine Doppelzustellung). Fehler werden ohne Empfängeradresse protokolliert.
+import { createHash } from 'node:crypto';
 const ENT: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
 const html = (t: string) => t.replace(/[&<>"]/g, (c) => ENT[c] ?? c);
 
@@ -41,13 +44,15 @@ function bodyHtml(text: string): string {
   }).join('');
 }
 
+// Knopf plus kleiner Ersatzlink darunter (für Programme, die Knöpfe ausblenden oder Links umschreiben).
 function buttonHtml(b: MailButton): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 22px"><tr><td style="border-radius:10px;background:#0F2C59"><a href="${html(b.url)}" style="display:inline-block;padding:14px 26px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px">${html(b.label)}</a></td></tr></table>`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 6px"><tr><td style="border-radius:10px;background:#0F2C59"><a href="${html(b.url)}" style="display:inline-block;padding:14px 26px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px">${html(b.label)}</a></td></tr></table>
+<p style="margin:0 0 22px;font-size:12px;line-height:1.5;color:#64748B;word-break:break-all">Falls der Knopf nicht funktioniert: <a href="${html(b.url)}" style="color:#64748B">${html(b.url.replace(/^https:\/\//, ''))}</a></p>`;
 }
 
 // Vollständiges gebrandetes E-Mail-HTML.
 export function brandedHtml({ title, text, button, note }: { title?: string; text: string; button?: MailButton; note?: string }): string {
-  const pre = html((text.split('\n').find((l) => l.trim()) || '').slice(0, 120));
+  const pre = html((text.split('\n').find((l) => l.trim()) || '').slice(0, 120)) + '&#8199;&#65279;&#847;'.repeat(30);
   return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${html(title || 'ImmoAdv')}</title></head>
 <body style="margin:0;padding:0;background:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${pre}</div>
@@ -69,26 +74,45 @@ Technisches Analyse- und Vorbereitungswerkzeug – keine Kreditvermittlung, kein
 
 export type MailOptions = { title?: string; button?: MailButton; note?: string; replyTo?: string; headers?: Record<string, string> };
 
+// Empfängeradresse prüfen (eine Adresse, keine Header-Injektion) und normalisieren.
+export function normalizeRecipient(to: string): string | null {
+  const t = String(to || '').trim().toLowerCase();
+  return /^[^\s@<>,;"]{1,64}@[^\s@<>,;"]{1,190}\.[a-z0-9-]{2,63}$/.test(t) ? t : null;
+}
+
 export async function sendMail(to: string, subject: string, text: string, attachments: Attachment[] = [], opts: MailOptions = {}): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   const from = fromAddress();
-  if (!key || !from) return false;
+  const rcpt = normalizeRecipient(to);
+  if (!key || !from || !rcpt) return false;
+  const subj = subject.replace(/[\r\n]+/g, ' ').trim().slice(0, 180);
   const plain = text + (opts.button ? `\n\n${opts.button.label}: ${opts.button.url}` : '') + '\n\n—\nImmoAdv · Georg-August-Zinn-Str. 25 · 64354 Reinheim · support@immoadv.de · https://immoadv.de/impressum';
-  try {
-    const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from, to: [to], subject, text: plain,
-        html: brandedHtml({ title: opts.title, text, button: opts.button, note: opts.note }),
-        reply_to: opts.replyTo || 'support@immoadv.de',
-        ...(opts.headers ? { headers: opts.headers } : {}),
-        ...(attachments.length ? { attachments: attachments.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })) } : {}),
-      }),
-      signal: AbortSignal.timeout(attachments.length ? 30000 : 8000),
-    });
-    return r.ok;
-  } catch {
-    return false;
+  const body = JSON.stringify({
+    from, to: [rcpt], subject: subj, text: plain,
+    html: brandedHtml({ title: opts.title, text, button: opts.button, note: opts.note }),
+    reply_to: opts.replyTo || 'support@immoadv.de',
+    ...(opts.headers ? { headers: opts.headers } : {}),
+    ...(attachments.length ? { attachments: attachments.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })) } : {}),
+  });
+  // Gleiche Mail an dieselbe Adresse innerhalb von 10 Minuten wird von Resend nur einmal zugestellt.
+  const idem = createHash('sha256').update(`${rcpt}\n${subj}\n${text}\n${Math.floor(Date.now() / 600000)}`).digest('hex').slice(0, 48);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'Idempotency-Key': idem },
+        body,
+        signal: AbortSignal.timeout(attachments.length ? 30000 : 8000),
+      });
+      if (r.ok) return true;
+      if (attempt === 0 && (r.status === 429 || r.status >= 500)) { await new Promise((res) => setTimeout(res, 800)); continue; }
+      console.warn(`[mail] Versand fehlgeschlagen: HTTP ${r.status} (${subj.slice(0, 60)})`);
+      return false;
+    } catch (e) {
+      if (attempt === 0) { await new Promise((res) => setTimeout(res, 800)); continue; }
+      console.warn(`[mail] Versand fehlgeschlagen: ${(e as Error)?.name || 'Fehler'} (${subj.slice(0, 60)})`);
+      return false;
+    }
   }
+  return false;
 }

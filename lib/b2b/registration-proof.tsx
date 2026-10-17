@@ -30,7 +30,7 @@ export const typeLabel = (t: string) => TYPE[t] ?? t;
 const s = StyleSheet.create({
   page: { padding: 40, paddingBottom: 56, fontSize: 9.5, fontFamily: 'Helvetica', color: BRAND.text },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 2, borderBottomColor: BRAND.navy, paddingBottom: 8, marginBottom: 14 },
-  h1: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: BRAND.navy, marginBottom: 4 },
+  h1: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: BRAND.navy, lineHeight: 1.25, marginBottom: 4 },
   lead: { fontSize: 9.5, color: '#475569', marginBottom: 12, lineHeight: 1.4 },
   h2: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: BRAND.navy, marginTop: 12, marginBottom: 6 },
   row: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: '#E2E8F0', paddingVertical: 3.5 },

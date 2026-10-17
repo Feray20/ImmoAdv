@@ -9,7 +9,7 @@ const s = StyleSheet.create({
   page: { paddingTop: 28, paddingBottom: 36, paddingHorizontal: 36, fontFamily: 'Helvetica', fontSize: 8.5, color: C.text, lineHeight: 1.35 },
   bar: { backgroundColor: C.navy, color: '#FFFFFF', padding: 12, marginBottom: 12 },
   barKicker: { fontSize: 7, letterSpacing: 1.2, color: '#CBD5E1' },
-  barTitle: { fontSize: 15, fontFamily: 'Helvetica-Bold', marginTop: 3 },
+  barTitle: { fontSize: 15, fontFamily: 'Helvetica-Bold', lineHeight: 1.25, marginTop: 3 },
   h2: { fontSize: 10.5, fontFamily: 'Helvetica-Bold', color: C.navy, marginTop: 10, marginBottom: 4 },
   p: { marginBottom: 4 },
   cols: { flexDirection: 'row' },
@@ -54,7 +54,7 @@ export function BankOnePager() {
 
         <Text style={s.h2}>Was Sie erhalten</Text>
         <View style={s.cols}>
-          <View style={s.col}><Text style={s.colTitle}>Kreditmappe</Text><Text>Vorhaben, Finanzierung, Objekt, NOI, CFADS, DSCR, ICR, LTV, vierstufiger Stresstest, Haushaltsrechnung, Prüfpunkte, Unterlagenindex.</Text></View>
+          <View style={s.col}><Text style={s.colTitle}>Kreditmappe</Text><Text>Vorhaben, Finanzierung, Objekt, NOI, CFADS, DSCR, ICR, LTV, Stresstest für Zins, Leerstand und Kosten, Haushaltsrechnung, Prüfpunkte, Unterlagenindex.</Text></View>
           <View style={s.col}><Text style={s.colTitle}>Datenraum</Text><Text>Nur freigegebene Kategorien (z. B. Objekt, WEG, Grundbuch), Ablauf nach 48 Stunden, 7 oder 30 Tagen, Abrufzähler, sofortiger Widerruf durch den Kunden.</Text></View>
           <View style={s.colLast}><Text style={s.colTitle}>Nachvollziehbarkeit</Text><Text>Jede Datei mit SHA-256-Prüfsumme; Zugriffe werden protokolliert (IP gekürzt und gehasht). Kennzahlen sind als ImmoAdv-Risikopolitik gekennzeichnet.</Text></View>
         </View>
@@ -87,7 +87,7 @@ export function BankOnePager() {
         <Text style={s.p}>Die Kennzahlen beruhen auf Angaben der Kunden; hochgeladene Unterlagen werden formal (Dateityp, Prüfsumme), aber nicht inhaltlich geprüft.</Text>
 
         <Text style={s.h2}>Kontakt für einen Pilot</Text>
-        <Text>support@immoadv.de · immoadv.de/fuer-banken · Muster-Kreditmappe: immoadv.de/api/mustermappe</Text>
+        <Text>support@immoadv.de · immoadv.de/b2b · Muster-Kreditmappe: immoadv.de/api/mustermappe</Text>
         <Footer />
       </Page>
     </Document>

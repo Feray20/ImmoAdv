@@ -54,3 +54,44 @@ test('Betriebskosten: Umlage nach Fläche und Personen', async () => {
   assert.ok(Math.abs(r.summe - (250 + 200 + 100)) < 1e-9);
   assert.ok(Math.abs(r.saldo - 150) < 1e-9);
 });
+
+test('Profi: Angebote mit unterschiedlicher Bindung auf gemeinsamen Horizont normiert', async () => {
+  const { normalizeOffers } = await import('../public/src/b2c-tools.mjs');
+  const r = normalizeOffers([
+    { bank: 'Kurz', loan: 300000, rate: 3.4, repay: 2, years: 10, fees: 0 },
+    { bank: 'Lang', loan: 300000, rate: 3.7, repay: 2, years: 15, fees: 0 },
+  ], { anschlussRate: 5 });
+  assert.equal(r.horizon, 15);
+  const kurz = r.rows.find((x) => x.bank === 'Kurz')!;
+  assert.ok(kurz.extra > 0 && kurz.restH < kurz.rest);
+  // Bei 5 % Anschlusszins wird die kurze Bindung teurer als ihr Bindungsende-Vergleich vermuten lässt.
+  assert.ok(kurz.costH > kurz.cost);
+});
+
+test('Kaufnebenkosten: Eigenkapital deckt Nebenkosten, Beleihungsauslauf mit Abschlag', async () => {
+  const { nkPlan } = await import('../public/src/b2c-tools.mjs');
+  const r = nkPlan({ price: 300000, land: 'bayern', equity: 40000, blwAbschlagPct: 10 })!;
+  assert.equal(Math.round(r.nk.total), 16500); // 3,5 % + 1,5 % + 0,5 %
+  assert.ok(r.coversNk);
+  assert.equal(Math.round(r.loan), 276500);
+  assert.equal(Math.round(r.bla * 10) / 10, 102.4);
+  assert.equal(nkPlan({ price: 300000, land: '', equity: 0 }), null);
+});
+
+test('Sondertilgung nach Steuern: vermietet senkt den effektiven Zins', async () => {
+  const { sondertilgungVergleich } = await import('../public/src/b2c-tools.mjs');
+  const v = sondertilgungVergleich({ rate: 4, taxPct: 40, vermietet: true, altRendite: 5 });
+  assert.equal(Math.round(v.eff * 100) / 100, 2.4);
+  assert.equal(v.lohnt, false); // 5 % vor Steuern = 3,68 % nach Abgeltungsteuer > 2,4 %
+  const s = sondertilgungVergleich({ rate: 4, vermietet: false, altRendite: 5 });
+  assert.equal(s.lohnt, true);
+});
+
+test('Deutsche Zahleneingaben', async () => {
+  const { num } = await import('../public/src/b2c-tools.mjs');
+  assert.equal(num('300.000'), 300000);
+  assert.equal(num('3,55'), 3.55);
+  assert.equal(num('1.234,56 €'), 1234.56);
+  assert.equal(num('3.55'), 3.55);
+  assert.equal(num(''), 0);
+});

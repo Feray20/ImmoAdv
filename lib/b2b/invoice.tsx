@@ -53,7 +53,7 @@ const s = StyleSheet.create({
   addr: { fontSize: 10, lineHeight: 1.45 },
   meta: { width: 200, fontSize: 8.5 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  h1: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: BRAND.navy, marginTop: 28, marginBottom: 10 },
+  h1: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: BRAND.navy, lineHeight: 1.25, marginTop: 28, marginBottom: 10 },
   head: { flexDirection: 'row', backgroundColor: BRAND.navy, color: '#fff', paddingVertical: 4, paddingHorizontal: 6, fontFamily: 'Helvetica-Bold', fontSize: 8.5 },
   row: { flexDirection: 'row', paddingVertical: 5, paddingHorizontal: 6, borderBottomWidth: 0.5, borderBottomColor: BRAND.hair },
   cPos: { width: 26 }, cDesc: { flex: 1 }, cQty: { width: 42, textAlign: 'right' }, cUnit: { width: 76, textAlign: 'right' }, cSum: { width: 80, textAlign: 'right' },

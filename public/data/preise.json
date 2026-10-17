@@ -4,10 +4,9 @@
  "kostenlos": {
   "name": "Kostenlos",
   "features": [
-   "Alle Standard-Rechner, ohne Anmeldung",
-   "Schnellrechner, Exposé-Scan und Stresstest",
-   "Wissenszentrale in 4 Phasen und Glossar",
-   "2 Objekte im Konto",
+   "Alle öffentlichen Rechner und die Wissenszentrale",
+   "Konto mit 2 Objekten, Exposé-Scan und Stresstest",
+   "Software-Tools: Kaufnebenkosten, Kaufpreis-Check, Sondertilgung",
    "Kreditmappe als Vorschau mit Wasserzeichen"
   ]
  },
@@ -24,11 +23,10 @@
     "intervall": "einmalig je Objekt",
     "mode": "payment",
     "features": [
-     "Vollständige 6-seitige PDF-Kreditmappe für die Bank",
-     "Haushaltsrechnung, Objektanalyse und Zins-Stresstest",
-     "Unterlagen-Checkliste und Echtheits-QR-Code",
-     "Kein Abo, keine Folgekosten",
-     "Zufriedenheitsgarantie: Geld zurück, wenn Ihre finanzierende Bank das Mappenformat ablehnt"
+     "Bankfertige Kreditmappe für ein Objekt als PDF",
+     "Finanzierung, Haushaltsrechnung, Stresstest und Prüfpunkte",
+     "Unterlagenindex und Echtheitsprüfung per QR-Code",
+     "Kein Abo · Geld zurück, wenn Ihre Bank das Format ablehnt"
     ]
    },
    {
@@ -39,14 +37,13 @@
     "intervall": "einmalig für 90 Tage",
     "mode": "payment",
     "features": [
-     "90 Tage unbegrenzt Objekte und Exposé-Analysen",
-     "Vergleichsmatrix: Objekte nebeneinander bewerten",
-     "Angebotsvergleich der Bankangebote und Bankgespräch-Vorbereitung",
-     "Kaufpreis-Verhandlung mit Angebotsschreiben und Sondertilgungs-Planer",
-     "Inklusive 1 BankReady Kreditmappe (Wert 39 €)",
-     "Analyse-PDF für jedes Objekt",
-     "Endet automatisch – kein Abo, keine Kündigung nötig"
-    ]
+     "90 Tage unbegrenzt Objekte, Exposé-Analysen und Vergleich",
+     "Kauf-Tools: Bankangebote vergleichen, Bankgespräch, Angebotsschreiben",
+     "Druck und PDF für alle Kauf-Tools und Analysen",
+     "1 Kreditmappe inklusive (Wert 39 €)",
+     "Endet automatisch – kein Abo, keine Kündigung"
+    ],
+    "basis": "Alles aus Kostenlos, plus:"
    },
    {
     "id": "pro-monthly",
@@ -57,15 +54,80 @@
     "mode": "subscription",
     "features": [
      "Unbegrenzt Objekte und Kreditmappen",
-     "Portfolio-Radar: Zinsbindungsenden, Zinsschock und Cashflow aller Objekte",
-     "Fristenwächter mit Erinnerungen per E-Mail",
-     "CSV-Export für die Anlage V und Monatsbericht",
-     "Anschlussfinanzierungs-Rechner mit Forward-Aufschlag",
-     "Betriebskostenabrechnung für Ihre Mieter erstellen",
-     "Monatlich kündbar"
-    ]
+     "Portfolio-Kennzahlen mit Zinsschock-Test",
+     "Anschluss & Forward, Betriebskostenabrechnung",
+     "Fristenwächter mit E-Mail-Erinnerung",
+     "CSV-Export für die Anlage V · monatlich kündbar"
+    ],
+    "basis": "Alles aus Käufer-Pass, plus:"
    }
-  ]
+  ],
+  "vergleich": {
+   "spalten": [
+    "Kostenlos",
+    "Kreditmappe",
+    "Käufer-Pass",
+    "Investor Pro"
+   ],
+   "zeilen": [
+    [
+     "Objekte im Konto",
+     "2",
+     "2",
+     "unbegrenzt",
+     "unbegrenzt"
+    ],
+    [
+     "Kreditmappe (PDF)",
+     "Vorschau",
+     "1 Objekt",
+     "1 inklusive",
+     "unbegrenzt"
+    ],
+    [
+     "Kaufnebenkosten, Kaufpreis-Check, Sondertilgung",
+     "✓",
+     "✓",
+     "✓",
+     "✓"
+    ],
+    [
+     "Bankangebote, Bankgespräch, Angebotsschreiben",
+     "–",
+     "–",
+     "✓",
+     "✓"
+    ],
+    [
+     "Druck und PDF der Tools",
+     "–",
+     "–",
+     "✓",
+     "✓"
+    ],
+    [
+     "Portfolio, Anschluss & Forward, Betriebskosten",
+     "–",
+     "–",
+     "–",
+     "✓"
+    ],
+    [
+     "Fristenwächter, CSV-Export Anlage V",
+     "–",
+     "–",
+     "–",
+     "✓"
+    ],
+    [
+     "Laufzeit",
+     "dauerhaft",
+     "einmalig",
+     "90 Tage",
+     "monatlich kündbar"
+    ]
+   ]
+  }
  },
  "b2b": {
   "name": "Für Unternehmen",
@@ -82,12 +144,10 @@
     "dossiers": 20,
     "features": [
      "1 Berater-Zugang",
-     "10 Fall-Analysen pro Monat (Unterlagen-Paket hochladen, sofort geprüft)",
-     "3 Kunden-Präsentationen pro Monat",
-     "20 Kreditmappen (Prüfdossiers) pro Monat",
-     "Software-Tools: Haushaltsrechnung, Unterlagen-Anforderung, Provisionsrechner, GEG-Inseratscheck, Ertragswert",
-     "Website-Widget, Exposé-QR-Codes, Anfragen im Portal",
-     "Praxis-Toolkit für Ihre Branche"
+     "10 Fall-Analysen, 20 Kreditmappen und 3 Kunden-Präsentationen pro Monat",
+     "Software-Tools: Haushaltsrechnung, Unterlagen-Anforderung, Provision, GEG-Inserat, Ertragswert",
+     "Kunden einladen, Website-Widget, Exposé-QR-Codes, Anfragen im Portal",
+     "Beratungskompass für Ihre Branche"
     ]
    },
    {
@@ -100,7 +160,7 @@
     "seats": 1,
     "dossiers": 20,
     "features": [
-     "Wie Basic",
+     "Alle Leistungen von Basic",
      "2 Monate geschenkt – entspricht ca. 49 € netto pro Monat"
     ]
    },
@@ -115,13 +175,13 @@
     "dossiers": null,
     "features": [
      "Bis zu 3 Berater-Zugänge",
-     "100 Fall-Analysen pro Monat",
-     "Kunden-Präsentationen unbegrenzt – mit Ihrem Logo, Ihren Farben und Ihrer Schrift",
-     "Alle Software-Tools, zusätzlich Beratungsprotokoll (§ 511 BGB), Bankangebote vergleichen, Vorfälligkeit & Anschluss",
-     "Bestandskunden-Radar: Kunden mit Zinsbindungsende in den nächsten 36 Monaten (mit deren Einwilligung)",
-     "Kreditmappen ohne Monatslimit, Gesamtdossier mit Unterlagen",
+     "100 Fall-Analysen pro Monat, Kreditmappen ohne Limit, Gesamtdossier mit Unterlagen",
+     "Präsentationen unbegrenzt – mit Ihrem Logo, Ihren Farben und Ihrer Schrift",
+     "Zusätzliche Tools: Beratungsprotokoll (§ 511 BGB), Angebotsvergleich, Vorfälligkeit & Anschluss",
+     "Bestandskunden-Radar: Zinsbindungsenden Ihrer Kunden (mit Einwilligung)",
      "Eigene Partnerseite mit Terminlink"
-    ]
+    ],
+    "basis": "Alles aus Basic, plus:"
    },
    {
     "id": "b2b-pro-yearly",
@@ -133,7 +193,7 @@
     "seats": 3,
     "dossiers": null,
     "features": [
-     "Wie Pro",
+     "Alle Leistungen von Pro",
      "2 Monate geschenkt – entspricht ca. 116 € netto pro Monat"
     ]
    }
@@ -144,13 +204,69 @@
    "preis": "ab 349 € netto pro Monat",
    "seats": 10,
    "features": [
-    "Bis zu 10 Berater-Zugänge (erweiterbar)",
+    "Ab 10 Berater-Zugängen, erweiterbar",
     "Fall-Analysen und Präsentationen unbegrenzt",
-    "Alle Software-Tools für jeden Berater",
-    "White-Label: Unterlagen komplett im Erscheinungsbild Ihres Hauses – Logo, Farben, Schrift, Absender, Fußzeile, ohne ImmoAdv",
-    "Teamverwaltung mit Berater-Zuordnung, Bestandskunden-Radar",
-    "Kauf auf Rechnung möglich",
-    "Individuelles Angebot nach Filialgröße"
+    "White-Label: Unterlagen vollständig im Erscheinungsbild Ihres Hauses, ohne ImmoAdv",
+    "Teamverwaltung mit Berater-Zuordnung",
+    "Kauf auf Rechnung, Angebot nach Filialgröße"
+   ],
+   "basis": "Alles aus Pro, plus:"
+  },
+  "vergleich": {
+   "spalten": [
+    "Basic",
+    "Pro",
+    "Enterprise"
+   ],
+   "zeilen": [
+    [
+     "Berater-Zugänge",
+     "1",
+     "bis 3",
+     "ab 10"
+    ],
+    [
+     "Fall-Analysen pro Monat",
+     "10",
+     "100",
+     "unbegrenzt"
+    ],
+    [
+     "Kreditmappen pro Monat",
+     "20",
+     "unbegrenzt",
+     "unbegrenzt"
+    ],
+    [
+     "Kunden-Präsentationen",
+     "3 pro Monat",
+     "unbegrenzt, mit Logo",
+     "unbegrenzt, White-Label"
+    ],
+    [
+     "Haushaltsrechnung, Unterlagen, Provision, GEG, Ertragswert",
+     "✓",
+     "✓",
+     "✓"
+    ],
+    [
+     "Beratungsprotokoll, Angebotsvergleich, Vorfälligkeit",
+     "–",
+     "✓",
+     "✓"
+    ],
+    [
+     "Bestandskunden-Radar, Partnerseite",
+     "–",
+     "✓",
+     "✓"
+    ],
+    [
+     "Teamverwaltung, Kauf auf Rechnung",
+     "–",
+     "–",
+     "✓"
+    ]
    ]
   }
  }

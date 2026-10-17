@@ -395,6 +395,8 @@ if ($('sres') && window.__IA_IDX) {
   if (!q0) $('sq').focus();
 }
 
+// Leistungsvergleich der Tarife als Tabelle (Spalte hl hervorgehoben).
+const cmpTable = (v, hl = -1) => (v?.zeilen?.length ? `<details class="cmp" open><summary>Tarife im Vergleich</summary><div class="cmp-wrap"><table class="cmp-table"><thead><tr><th></th>${v.spalten.map((s, i) => `<th${i === hl ? ' class="hl"' : ''}>${esc(s)}</th>`).join('')}</tr></thead><tbody>${v.zeilen.map(([l, ...c]) => `<tr><th scope="row">${esc(l)}</th>${c.map((x, i) => `<td class="${x === '✓' ? 'y' : x === '–' ? 'n' : ''}${i === hl ? ' hl' : ''}">${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>` : '');
 // Öffentliche Angebotsseite aus der zentralen Preisliste
 if ($('pubOffers')) {
   fetch('/data/preise.json').then((r) => r.json()).then(async (P) => {
@@ -402,8 +404,9 @@ if ($('pubOffers')) {
     const draw = () => {
       const m = P.privat;
       $('pubOffers').innerHTML = `<p class="form-note">${esc(m.zielgruppe)}</p>
-        <div class="offers">${m.plans.map((p, i) => `<div class="offer${p.highlight ? ' rec' : ''}">${p.badge ? `<span class="${p.highlight ? 'offer-rec' : 'offer-badge'}">${esc(p.badge)}</span>` : ''}<div class="offer-top">${PIC(p.id)}<h4>${esc(p.name)}</h4></div><div class="offer-price">${eur(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-pay offer-buy" href="/app/dashboard?buy=${p.id}#angebot" data-offer="${i}">Jetzt buchen</a></div>`).join('')}</div>
+        <div class="offers">${m.plans.map((p, i) => `<div class="offer${p.highlight ? ' rec' : ''}">${p.badge ? `<span class="${p.highlight ? 'offer-rec' : 'offer-badge'}">${esc(p.badge)}</span>` : ''}<div class="offer-top">${PIC(p.id)}<h4>${esc(p.name)}</h4></div><div class="offer-price">${eur(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.basis ? `<li class="offer-basis">${esc(p.basis)}</li>` : ''}${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-pay offer-buy" href="/app/dashboard?buy=${p.id}#angebot" data-offer="${i}">Jetzt buchen</a></div>`).join('')}</div>
         <div class="offer-free"><strong>Immer kostenlos:</strong> ${P.kostenlos.features.map(esc).join(' · ')}</div>
+        ${cmpTable(m.vergleich)}
         <div class="offer-guar"><strong>Zufriedenheitsgarantie für die Kreditmappe:</strong> Lehnt Ihre finanzierende Bank das Format der Mappe ab, erstatten wir den vollen Kaufpreis. Melden Sie sich dazu innerhalb von 60 Tagen nach dem Kauf per E-Mail mit dem Namen der Bank. Die Garantie betrifft das Format der Mappe, nicht die Kreditentscheidung der Bank. Einzelheiten: <a class="ck-link" href="/nutzungsbedingungen#garantie">Nutzungsbedingungen Nr. 4a</a>.</div>
         <p class="form-note">Für Makler, Finanzierungsvermittler und Banken gibt es eigene Tarife (netto, mit Widget, Anfragen und Team): <a class="ck-link" href="/b2b">Angebot für Unternehmen</a>.</p>
         <div class="offer-pay"><p class="form-note">„Jetzt buchen“ führt direkt zur sicheren Bezahlseite – bezahlen Sie bequem mit:</p>${PAY}</div>

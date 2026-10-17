@@ -1,5 +1,5 @@
 // Unternehmensportal: Branchen-Ansicht. Jeder Berater wählt seine Branche (jederzeit wechselbar);
-// danach passen sich Startseite, Bezeichnungen und das Praxis-Toolkit an.
+// danach passen sich Startseite, Bezeichnungen und der Beratungskompass an.
 // Inhalte: Erfahrungswerte und Normen, Stand Oktober 2026. Keine Rechts- oder Steuerberatung; bankindividuelle Vorgaben gehen vor.
 
 export const BRANCHEN = {
@@ -7,7 +7,7 @@ export const BRANCHEN = {
     label: 'Bank & Sparkasse', short: 'Bank', icon: '🏦',
     desc: 'Baufinanzierungsberater in Filiale oder Immobilienzentrum',
     kunden: 'Kunden',
-    focus: [['Fall-Analyse', 'Unterlagen des Kunden hochladen – Analyse, Kundenfassung und Präsentation im Design Ihres Hauses.', '#fall'], ['Vollständige Fälle vor dem Votum', 'Kunden bereiten Selbstauskunft und Unterlagen in ImmoAdv vor – Sie sehen die Bankreife, bevor der Termin beginnt.', '#kunden'], ['Anfragen aus der Region', 'Widget und QR-Code auf Filial-Website oder im Schaufenster liefern vorqualifizierte Anfragen.', '#werkzeuge'], ['Kreditprozess & Pflichten', 'Kreditprozess nach MaRisk, Kreditwürdigkeitsprüfung, Beleihungswert – kompakt im Praxis-Toolkit.', '#wissen']],
+    focus: [['Fall-Analyse', 'Unterlagen des Kunden hochladen – Analyse, Kundenfassung und Präsentation im Design Ihres Hauses.', '#fall'], ['Vollständige Fälle vor dem Votum', 'Kunden bereiten Selbstauskunft und Unterlagen in ImmoAdv vor – Sie sehen die Bankreife, bevor der Termin beginnt.', '#kunden'], ['Anfragen aus der Region', 'Widget und QR-Code auf Filial-Website oder im Schaufenster liefern vorqualifizierte Anfragen.', '#werkzeuge'], ['Kreditprozess & Pflichten', 'Kreditprozess nach MaRisk, Kreditwürdigkeitsprüfung, Beleihungswert – kompakt im Beratungskompass.', '#wissen']],
     chapters: ['charts', 'bankProzess', 'bankBelwert', 'sonder', 'einwandBank', 'ns', 'unterlagen', 'recht'],
     recht: ['KWG / CRR', 'MaRisk BTO 1', '§§ 491 ff., 505a–505e BGB', '§ 511 BGB', 'Art. 28 DSGVO'],
   },
@@ -15,7 +15,7 @@ export const BRANCHEN = {
     label: 'Finanzierungsvermittler', short: 'Vermittler', icon: '🤝',
     desc: 'Immobiliardarlehensvermittler nach § 34i GewO',
     kunden: 'Kunden',
-    focus: [['Fall-Analyse', 'PDF-Paket des Kunden hochladen: Prüfung, Varianten und Präsentation in Minuten.', '#fall'], ['Bankreife Fälle für die Plattform', 'Unterlagen und Kennzahlen liegen strukturiert vor, bevor Sie Angebote einholen.', '#kunden'], ['Leads über Ihre Partnerseite', 'Eigene Partnerseite mit Budgetrechner – Anfragen kommen mit Eckdaten in Ihren Postkorb.', '#werkzeuge'], ['Bankauswahl & § 34i-Pflichten', 'Profilierung nach Kundentyp, Vermittlungsvertrag, Dokumentation – im Praxis-Toolkit.', '#wissen']],
+    focus: [['Fall-Analyse', 'PDF-Paket des Kunden hochladen: Prüfung, Varianten und Präsentation in Minuten.', '#fall'], ['Bankreife Fälle für die Plattform', 'Unterlagen und Kennzahlen liegen strukturiert vor, bevor Sie Angebote einholen.', '#kunden'], ['Leads über Ihre Partnerseite', 'Eigene Partnerseite mit Budgetrechner – Anfragen kommen mit Eckdaten in Ihren Postkorb.', '#werkzeuge'], ['Bankauswahl & § 34i-Pflichten', 'Profilierung nach Kundentyp, Vermittlungsvertrag, Dokumentation – im Beratungskompass.', '#wissen']],
     chapters: ['charts', 'vermBankwahl', 'vermPflichten', 'sonder', 'einwandVerm', 'ns', 'unterlagen', 'recht'],
     recht: ['§ 34i GewO', '§§ 491 ff., 505a–505e BGB', '§ 511 BGB', '§§ 655a–655e BGB', 'Art. 28 DSGVO'],
   },
@@ -23,7 +23,7 @@ export const BRANCHEN = {
     label: 'Immobilienmakler', short: 'Makler', icon: '🏠',
     desc: 'Makler nach § 34c GewO – Verkauf und Vermietung',
     kunden: 'Interessenten',
-    focus: [['Fall-Analyse', 'Unterlagen eines Interessenten oder Objekts hochladen: Vollständigkeit, Lasten, Energieausweis.', '#fall'], ['Kaufinteressenten vorqualifizieren', 'QR-Code am Exposé: Interessenten rechnen ihr Budget durch, bevor sie besichtigen.', '#werkzeuge'], ['Finanzierbarkeit sichtbar machen', 'Sie sehen mit Einwilligung, wie weit ein Interessent mit Finanzierung und Unterlagen ist.', '#kunden'], ['Pflichten in Inserat und Vertrag', 'GEG-Pflichtangaben, Textform, Halbteilung, Geldwäschegesetz – im Praxis-Toolkit.', '#wissen']],
+    focus: [['Fall-Analyse', 'Unterlagen eines Interessenten oder Objekts hochladen: Vollständigkeit, Lasten, Energieausweis.', '#fall'], ['Kaufinteressenten vorqualifizieren', 'QR-Code am Exposé: Interessenten rechnen ihr Budget durch, bevor sie besichtigen.', '#werkzeuge'], ['Finanzierbarkeit sichtbar machen', 'Sie sehen mit Einwilligung, wie weit ein Interessent mit Finanzierung und Unterlagen ist.', '#kunden'], ['Pflichten in Inserat und Vertrag', 'GEG-Pflichtangaben, Textform, Halbteilung, Geldwäschegesetz – im Beratungskompass.', '#wissen']],
     chapters: ['maklerQuali', 'maklerPflichten', 'maklerWert', 'einwandMakler', 'charts', 'unterlagen', 'recht'],
     recht: ['§ 34c GewO', '§§ 656a–656d BGB', '§ 87 GEG', 'GwG', 'Art. 28 DSGVO'],
   },
@@ -31,7 +31,7 @@ export const BRANCHEN = {
     label: 'Finanz- & Vermögensberater', short: 'Finanzberater', icon: '📈',
     desc: 'Berater nach § 34d / § 34f / § 34h GewO mit Immobilien als Anlageklasse',
     kunden: 'Mandanten',
-    focus: [['Fall-Analyse', 'Unterlagen des Mandanten hochladen – Varianten und Präsentation mit Ihrem Logo.', '#fall'], ['Kapitalanlage durchrechnen', 'Cashflow nach Steuern, Rendite und Stresstest für Ihre Mandanten – mit Kreditmappe für die Bank.', '/app/dashboard#suche'], ['Mandanten begleiten', 'Fortschritt und fehlende Unterlagen Ihrer Mandanten sehen (mit Einwilligung).', '#kunden'], ['Kennzahlen & Steuern', 'Renditekennzahlen, AfA, Spekulationsfrist, 15-%-Grenze – im Praxis-Toolkit.', '#wissen']],
+    focus: [['Fall-Analyse', 'Unterlagen des Mandanten hochladen – Varianten und Präsentation mit Ihrem Logo.', '#fall'], ['Kapitalanlage durchrechnen', 'Cashflow nach Steuern, Rendite und Stresstest für Ihre Mandanten – mit Kreditmappe für die Bank.', '/app/dashboard#suche'], ['Mandanten begleiten', 'Fortschritt und fehlende Unterlagen Ihrer Mandanten sehen (mit Einwilligung).', '#kunden'], ['Kennzahlen & Steuern', 'Renditekennzahlen, AfA, Spekulationsfrist, 15-%-Grenze – im Beratungskompass.', '#wissen']],
     chapters: ['fbKennzahlen', 'fbSteuern', 'fbRisiko', 'fbErlaubnis', 'charts', 'einwandFb', 'recht'],
     recht: ['§ 34i GewO', '§ 34f / § 34h GewO', '§ 34d GewO', 'Art. 28 DSGVO'],
   },
@@ -39,7 +39,7 @@ export const BRANCHEN = {
     label: 'Sonstiges Unternehmen', short: 'Allgemein', icon: '💼',
     desc: 'Kanzlei, Hausverwaltung, Bauträger oder anderes',
     kunden: 'Kunden',
-    focus: [['Fall-Analyse', 'Unterlagen hochladen, sofort auswerten, Präsentation erstellen.', '#fall'], ['Kunden einladen', 'Per Link, Widget oder QR-Code – Kunden bereiten ihre Finanzierung selbst vor.', '#kunden'], ['Anfragen bearbeiten', 'Vorbereitete Anfragen mit Eckdaten und Einwilligung im Postkorb.', '#anfragen'], ['Praxis-Toolkit', 'Gesprächsgrafiken, Sonderfälle und Pflichten-Check.', '#wissen']],
+    focus: [['Fall-Analyse', 'Unterlagen hochladen, sofort auswerten, Präsentation erstellen.', '#fall'], ['Kunden einladen', 'Per Link, Widget oder QR-Code – Kunden bereiten ihre Finanzierung selbst vor.', '#kunden'], ['Anfragen bearbeiten', 'Vorbereitete Anfragen mit Eckdaten und Einwilligung im Postkorb.', '#anfragen'], ['Beratungskompass', 'Gesprächsgrafiken, Sonderfälle und Pflichten-Check.', '#wissen']],
     chapters: ['charts', 'sonder', 'einwand', 'ns', 'unterlagen', 'recht'],
     recht: null,
   },

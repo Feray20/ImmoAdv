@@ -14,7 +14,7 @@ export type ReportInput = {
 
 const s = StyleSheet.create({
   page: { paddingTop: 58, paddingBottom: 66, paddingHorizontal: 42, fontFamily: 'Helvetica', fontSize: 8.5, color: BRAND.text, lineHeight: 1.35 },
-  title: { fontSize: 15, fontFamily: 'Helvetica-Bold', color: BRAND.navy },
+  title: { fontSize: 15, fontFamily: 'Helvetica-Bold', color: BRAND.navy, lineHeight: 1.25 },
   sub: { fontSize: 8.5, color: BRAND.muted, marginTop: 2 },
   link: { fontSize: 7.5, color: BRAND.blue, marginTop: 3 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10, marginBottom: 4 },

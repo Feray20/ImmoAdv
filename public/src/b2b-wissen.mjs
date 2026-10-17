@@ -1,4 +1,4 @@
-// Unternehmensportal → Praxis-Toolkit für erfahrene Berater: Gesprächsgrafiken, Sonderfälle, Einwände, Prüfpfade,
+// Unternehmensportal → Beratungskompass für erfahrene Berater: Gesprächsgrafiken, Sonderfälle, Einwände, Prüfpfade,
 // Unterlagen-Checklisten und Pflichten-Check (keine Grundlagen). Alle Beispielzahlen werden hier nachvollziehbar berechnet.
 // Hinweis: Orientierungswissen, keine Rechts- oder Finanzierungsberatung; bankindividuelle Vorgaben gehen vor.
 import { BRANCHEN, KAPITEL } from './b2b-branche.mjs';
@@ -330,7 +330,7 @@ function renderCompact(box, branche) {
   };
   const label = (k) => (k === 'ns' ? 'Anschlussfinanzierung: Zeitfenster' : k === 'charts' ? 'Rechenbeispiel zum Zeigen' : KAPITEL[k]?.t || ({ sonder: 'Sonderfälle & Lösungsansätze', einwand: 'Einwände im Kundengespräch', unterlagen: 'Unterlagen je Kundentyp', recht: 'Pflichten-Check' })[k]);
   box.innerHTML = `<div class="bw bw-compact">
-    <section class="pt-card bw-hero"><span class="bw-kick">Praxis-Toolkit · ${esc(B.label)}</span><h2>Fachwissen für Ihren Alltag</h2>
+    <section class="pt-card bw-hero"><span class="bw-kick">Beratungskompass · ${esc(B.label)}</span><h2>Fachwissen für Ihren Alltag</h2>
       <p>Kurz gefasst für das Handy – ausführlich mit Grafiken und Tabellen in der vollen Ansicht.</p>
       <button type="button" class="btn bw-switch" data-view="voll">Volle Ansicht mit Grafiken</button></section>
     ${B.chapters.map((k, i) => `<details class="pt-card bw-acc"${i === 0 ? ' open' : ''}><summary><b class="bw-no">${i + 1}</b>${label(k)}</summary>${body(k)}</details>`).join('')}
@@ -372,7 +372,7 @@ export function renderWissen(box, branche = 'allgemein') {
   };
   const head = (k) => (KAPITEL[k] ? KAPITEL[k].t : ({ charts: 'Gesprächsgrafiken zum Zeigen', sonder: 'Sonderfälle & Lösungsansätze', einwand: 'Einwände im Kundengespräch', ns: 'Prüfpfade vor der Einreichung', unterlagen: 'Unterlagen je Kundentyp', recht: 'Pflichten-Check' })[k]);
   box.innerHTML = `<div class="bw">
-    <section class="pt-card bw-hero"><span class="bw-kick">Praxis-Toolkit · ${esc(B.label)}</span>
+    <section class="pt-card bw-hero"><span class="bw-kick">Beratungskompass · ${esc(B.label)}</span>
       <h2>Fachwissen für Ihren Alltag</h2>
       <p>Zugeschnitten auf ${esc(B.desc)}: Abläufe, Normen, Kennzahlen, Sonderfälle und Gesprächsmaterial. Branche oben rechts jederzeit wechselbar.</p>
       <nav class="bw-toc" aria-label="Kapitel">${B.chapters.map((k, i) => `<a href="#wissen=${k}" data-ch="${k}"><b>${i + 1}</b>${chTitle(k)}</a>`).join('')}</nav>

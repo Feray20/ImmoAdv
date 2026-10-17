@@ -1,12 +1,15 @@
 // App-Rahmen für das Konto: Handy wie eine App (Tab-Leiste unten), Desktop wie ein Investment-Tool (Seitenleiste).
 // Ansichten über #hash; vorhandene Karten werden den Ansichten zugeordnet. Modus Einsteiger/Profi frei wählbar.
 import { openBuy, PAY_BADGES, planIcon, resumeIntent } from './buy.mjs';
-import { rank, GREST } from './calc.mjs';
+import { rank, GREST, portfolio, upcoming } from './calc.mjs';
 const GREST_KEYS = Object.keys(GREST);
 
 const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const E = (cents) => (cents / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+// Leistungsvergleich der Tarife als Tabelle (Spalte hl hervorgehoben).
+const cmpTable = (v, hl = -1) => (v?.zeilen?.length ? `<details class="cmp" open><summary>Tarife im Vergleich</summary><div class="cmp-wrap"><table class="cmp-table"><thead><tr><th></th>${v.spalten.map((s, i) => `<th${i === hl ? ' class="hl"' : ''}>${esc(s)}</th>`).join('')}</tr></thead><tbody>${v.zeilen.map(([l, ...c]) => `<tr><th scope="row">${esc(l)}</th>${c.map((x, i) => `<td class="${x === '✓' ? 'y' : x === '–' ? 'n' : ''}${i === hl ? ' hl' : ''}">${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>` : '');
+
 
 const ICON = {
   start: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
@@ -21,8 +24,8 @@ const ICON = {
 const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
 const VIEWS = {
-  einsteiger: [['start', 'Übersicht'], ['suche', 'Suche'], ['objekte', 'Objekte'], ['werkzeuge', 'Werkzeuge'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
-  profi: [['start', 'Cockpit'], ['suche', 'Suche & Analyse'], ['objekte', 'Objekte'], ['werkzeuge', 'Werkzeuge'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
+  einsteiger: [['start', 'Übersicht'], ['suche', 'Suche'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
+  profi: [['start', 'Cockpit'], ['suche', 'Suche & Analyse'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer & AfA'], ['lernen', 'Fachwissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
 };
 const TABS = ['start', 'suche', 'objekte', 'werkzeuge', 'lernen', 'konto'];
 
@@ -240,7 +243,7 @@ export function setupApp({ u, d, saveData, reload }) {
   const main = app.querySelector('main');
   main.insertAdjacentHTML('afterbegin', `<div class="app-top"><a class="brand app-top-brand" href="/"><img class="brand-logo" src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><h1 id="appTitle"></h1>
     <button class="mode-chip" id="modeChip" type="button" aria-label="Modus wechseln">${mode === 'profi' ? 'Profi' : 'Einsteiger'} <span aria-hidden="true">⇄</span></button></div>`);
-  app.insertAdjacentHTML('beforeend', `<nav class="app-tabs" aria-label="Schnellnavigation">${TABS.map((k) => `<a class="app-tab" data-go="${k}" href="#${k}">${svg(k)}<span>${views.find((v) => v[0] === k)[1].split(' ')[0]}</span></a>`).join('')}</nav>`);
+  app.insertAdjacentHTML('beforeend', `<nav class="app-tabs" aria-label="Schnellnavigation">${TABS.map((k) => `<a class="app-tab" data-go="${k}" href="#${k}">${svg(k)}<span>${k === 'werkzeuge' ? 'Tools' : views.find((v) => v[0] === k)[1].split(' ')[0]}</span></a>`).join('')}</nav>`);
   $('appLogout').onclick = () => document.getElementById('logout')?.click();
   $('modeChip').onclick = async () => {
     d.profile = { ...(d.profile || {}), mode: mode === 'profi' ? 'einsteiger' : 'profi' };
@@ -309,9 +312,9 @@ export function setupApp({ u, d, saveData, reload }) {
   }
   personalCard(grid);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="suche" id="sucheView"></article>`);
-  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="werkzeuge" id="toolsView"><p class="form-note">Werkzeuge werden geladen …</p></article>`);
+  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="werkzeuge" id="toolsView"><p class="form-note">Software-Tools werden geladen …</p></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);
-  Promise.all([import('/src/b2c-tools.mjs'), getAccess()]).then(([m, ac]) => { m.mountTools($('toolsView'), { d, tier: ac.tier || 'free', b2b: Boolean(ac.b2b), mode: mode || 'einsteiger' }); import('/src/field-help.mjs').then((f) => f.attachHelp?.($('toolsView'))).catch(() => {}); }).catch(() => { const v = $('toolsView'); if (v) v.innerHTML = '<p class="form-note">Werkzeuge konnten nicht geladen werden.</p>'; });
+  Promise.all([import('/src/b2c-tools.mjs'), getAccess()]).then(([m, ac]) => { m.mountTools($('toolsView'), { d, tier: ac.tier || 'free', b2b: Boolean(ac.b2b), mode: mode || 'einsteiger' }); import('/src/field-help.mjs').then((f) => f.attachHelp?.($('toolsView'))).catch(() => {}); }).catch(() => { const v = $('toolsView'); if (v) v.innerHTML = '<p class="form-note">Software-Tools konnten nicht geladen werden.</p>'; });
   grid.insertAdjacentHTML('beforeend', lernCard(mode, d));
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="angebot" id="angebotView"><h3>${mode === 'profi' ? 'Tarif' : 'Angebot'}</h3><div id="offerBody"><p class="form-note">Wird geladen …</p></div></article>`);
   bindStart(mode, d, u, saveData, reload);
@@ -330,7 +333,7 @@ export function setupApp({ u, d, saveData, reload }) {
     $('appTitle').textContent = views.find((x) => x[0] === cur)[1];
     if (cur === 'suche' && !$('sucheView').dataset.ready) {
       $('sucheView').dataset.ready = '1';
-      import('/src/objekt-ui.mjs').then((m) => m.mountObjekt($('sucheView'), { pdf: true })).catch(() => { $('sucheView').innerHTML = '<p class="auth-message error">Suche konnte nicht geladen werden.</p>'; });
+      import('/src/objekt-ui.mjs').then((m) => m.mountObjekt($('sucheView'), { pdf: true, profile: APP?.d?.profile })).catch(() => { $('sucheView').innerHTML = '<p class="auth-message error">Suche konnte nicht geladen werden.</p>'; });
     }
     if (cur === 'steuer' && !$('steuerView').dataset.ready) {
       $('steuerView').dataset.ready = '1';
@@ -371,7 +374,7 @@ const newObjId = () => { const b = new Uint8Array(6); crypto.getRandomValues(b);
 async function objektModule() {
   const v = $('sucheView');
   const m = await import('/src/objekt-ui.mjs');
-  if (v && !v.dataset.ready) { v.dataset.ready = '1'; m.mountObjekt(v, { pdf: true }); }
+  if (v && !v.dataset.ready) { v.dataset.ready = '1'; m.mountObjekt(v, { pdf: true, profile: APP?.d?.profile }); }
   return m;
 }
 const fileName = (r, fallback) => { const m = /filename\*=UTF-8''([^;]+)|filename="([^"]+)"/.exec(r.headers.get('content-disposition') || ''); return m ? decodeURIComponent(m[1] || m[2]) : fallback; };
@@ -718,6 +721,26 @@ function fahrplan(idx, d) {
   ][idx];
 }
 
+// Profi-Cockpit: Bestandskennzahlen aus den eigenen Objekten (keine Beispielwerte). Ohne Objekte: kurzer Hinweis.
+function proKpis(d) {
+  const n = (v) => Number(String(v ?? '').replace(',', '.')) || 0;
+  const objs = (Array.isArray(d.objects) ? d.objects : []).filter((o) => o && n(o.price) > 0)
+    .map((o) => ({ ...o, price: n(o.price), loan: n(o.loan), rent: n(o.rent), vacancyPct: n(o.vacancyPct), nonRecoverable: n(o.nonRecoverable), maintenance: n(o.maintenance), interestPct: n(o.interestPct), repaymentPct: n(o.repaymentPct), fixedYears: n(o.fixedYears) }));
+  if (!objs.length) return '<p class="form-note pro-empty">Noch keine Objekte mit Kaufpreis – <a href="#objekte">Objekt anlegen</a>, dann erscheinen hier Cashflow, DSCR, LTV und Fristen Ihres Bestands.</p>';
+  let pf; try { pf = portfolio(objs, { shockPp: 2 }); } catch { return ''; }
+  let next = null; try { next = upcoming(objs, { limit: 1 }).items[0] || null; } catch { /* ohne Fristen */ }
+  const t = pf.total, eur = (v) => Number(v || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  const dec = (v) => (v == null ? '–' : Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  const tone = (v, lo, hi) => (v == null ? '' : v < lo ? ' bad' : v < hi ? ' warn' : ' ok');
+  return `<div class="pro-kpis">
+    <a href="#werkzeuge" class="pro-kpi${t.cashflow < 0 ? ' bad' : ' ok'}"><small>Cashflow / Monat</small><strong>${eur(t.cashflow)}</strong><span>${objs.length} Objekt${objs.length === 1 ? '' : 'e'} · vor Steuern</span></a>
+    <a href="#werkzeuge" class="pro-kpi${tone(t.dscr, 1, 1.2)}"><small>DSCR</small><strong>${dec(t.dscr)}</strong><span>NOI ÷ Kapitaldienst</span></a>
+    <a href="#werkzeuge" class="pro-kpi${t.ltv == null ? '' : t.ltv > 90 ? ' bad' : t.ltv > 80 ? ' warn' : ' ok'}"><small>LTV</small><strong>${t.ltv == null ? '–' : dec(t.ltv) + ' %'}</strong><span>${eur(t.loan)} Darlehen</span></a>
+    <a href="#werkzeuge" class="pro-kpi${t.afterCashflow == null ? '' : t.afterCashflow < 0 ? ' bad' : ' ok'}"><small>Nach Zinsschock +2 Pkt.</small><strong>${t.afterCashflow == null ? '–' : eur(t.afterCashflow)}</strong><span>Cashflow zum Bindungsende</span></a>
+    ${next ? `<a href="/fristen" class="pro-kpi"><small>Nächste Frist</small><strong>${new Date(next.date).toLocaleDateString('de-DE')}</strong><span>${esc(next.title || next.label || '')} · ${esc(next.object)}</span></a>` : ''}
+  </div>`;
+}
+
 function startCard(mode, d) {
   const done = Object.values(d.progress?.lern || {}).filter(Boolean).length;
   if (!d.profile?.mode && !new URLSearchParams(location.search).get('modus')) {
@@ -727,11 +750,12 @@ function startCard(mode, d) {
   }
   const ph = phaseOf(d);
   if (mode === 'profi') {
-    // Profi: nur Auswahl und Werkzeuge – keine Erklärtexte.
-    const tools = [...PHASES[ph.idx].actions.map(([h, t]) => [t, h]), ['Angebote vergleichen', '/rechner/vergleich'], ...PROFI.filter(([t]) => !/Angebotsvergleich|Glossar/.test(t))];
+    // Profi: Kennzahlen des eigenen Bestands statt Erklärtexte – danach Werkzeuge.
+    const tools = [...PHASES[ph.idx].actions.map(([h, t]) => [t, h]), ['Software-Tools', '#werkzeuge'], ...PROFI.filter(([t]) => !/Glossar/.test(t))];
     return `<article class="dash-card wide start-card start-pro" data-view="start">
       <div class="stage-mini"><span class="stage-k">Stufe</span><strong><b class="stage-n">${ph.idx + 1}</b>${PHASES[ph.idx].name}</strong><button type="button" class="link-btn stage-open">ändern</button><div id="rankSlot" class="rank-slot mini"></div></div>
-      <div class="tool-grid">${tools.map(([t, h]) => `<a class="tool-a" href="${h}">${t}</a>`).join('')}</div></article>`;
+      ${proKpis(d)}
+      <div class="tool-grid">${tools.filter(([, h], i, all) => all.findIndex((x) => x[1] === h) === i).map(([t, h]) => `<a class="tool-a" href="${h}">${t}</a>`).join('')}</div></article>`;
   }
   const tasks = fahrplan(ph.idx, d);
   const nextI = tasks.findIndex((x) => x[3] === false);
@@ -873,13 +897,14 @@ async function renderOffers(mode) {
   const tierName = { free: 'Kostenlos', starter: 'Käufer-Pass', pro: 'Investor Pro' }[tier];
   const left = Math.max(0, (st.creditMaps || 0) - (st.creditMapsUsed || 0));
   const draw = () => {
-    const m = P.privat;
+    const m = { ...P.privat, plans: mode === 'profi' ? [...P.privat.plans].sort((a, b) => (b.id === 'pro-monthly') - (a.id === 'pro-monthly')) : P.privat.plans };
     box.innerHTML = `<div class="offer-head"><div><span class="form-note">Ihr Tarif</span><strong>${tierName}</strong></div>${st.starterUntil ? `<span class="form-note">Käufer-Pass aktiv bis ${new Date(st.starterUntil).toLocaleDateString('de-DE')}</span>` : ''}</div>
       <p class="form-note">${esc(m.zielgruppe)}</p>
       ${tier === 'pro' ? '<p class="auth-message">Investor Pro ist aktiv – alle Funktionen und Kreditmappen sind enthalten.</p>' : left ? `<p class="auth-message">Sie haben ${left} Kreditmappe${left === 1 ? '' : 'n'} frei.</p>` : ''}
-      <div class="offers">${m.plans.map((p) => `<div class="offer${p.id === next ? ' rec' : ''}">${p.id === next ? '<span class="offer-rec">Empfohlener nächster Schritt</span>' : p.badge ? `<span class="offer-badge">${esc(p.badge)}</span>` : ''}<div class="offer-top">${planIcon(p.id)}<h4>${esc(p.name)}</h4></div><div class="offer-price">${E(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+      <div class="offers">${m.plans.map((p) => `<div class="offer${p.id === next ? ' rec' : ''}">${p.id === next ? '<span class="offer-rec">Empfohlener nächster Schritt</span>' : p.badge ? `<span class="offer-badge">${esc(p.badge)}</span>` : ''}<div class="offer-top">${planIcon(p.id)}<h4>${esc(p.name)}</h4></div><div class="offer-price">${E(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.basis ? `<li class="offer-basis">${esc(p.basis)}</li>` : ''}${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
         ${cfg.enabled ? `<button class="btn btn-pay" type="button" data-buy="${p.id}"${tier === 'pro' ? ' disabled' : ''}>${tier === 'pro' ? 'In Investor Pro enthalten' : 'Jetzt buchen'}</button>` : '<button class="btn btn-outline" type="button" disabled>Buchung startet in Kürze</button>'}</div>`).join('')}</div>
       <div class="offer-free"><strong>Immer kostenlos:</strong> ${P.kostenlos.features.map(esc).join(' · ')}</div>
+      ${cmpTable(m.vergleich, { free: 0, starter: 2, pro: 3 }[tier] ?? -1)}
       <div class="offer-pay"><p class="form-note">Bezahlen Sie auf der sicheren Bezahlseite mit:</p>${PAY_BADGES}</div>
       <p class="form-note">${esc(P.hinweis)} Es gelten die <a class="ck-link" href="/nutzungsbedingungen">Nutzungsbedingungen mit Widerrufsbelehrung</a>. Kündigung jederzeit über <a class="ck-link" href="/kuendigen">„Verträge hier kündigen“</a>.</p>`;
     const want = new URLSearchParams(location.search).get('buy');

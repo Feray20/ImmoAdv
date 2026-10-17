@@ -68,7 +68,7 @@ export async function openBuy(offer, opts = {}) {
     <div class="buy-head">${IC[offer.id] ? planIcon(offer.id) : '<img src="/logo-icon.svg" alt="" width="34" height="29">'}<div><span class="buy-kick">ImmoAdv · Bestellung</span><h2>${esc(offer.name)}</h2></div><button class="buy-x" value="x" aria-label="Schließen">×</button></div>
     <div class="buy-price"><strong>${eur(offer.cents)}</strong><span>${esc(offer.intervall || '')}</span></div>
     <p class="buy-tax">inkl. 19&nbsp;% USt.${sub ? ' · monatlich kündbar' : ''}</p>
-    ${offer.features?.length ? `<ul class="buy-feat">${offer.features.slice(0, 5).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
+    ${offer.features?.length ? `<ul class="buy-feat">${offer.basis ? `<li class="offer-basis">${esc(offer.basis)}</li>` : ''}${offer.features.slice(0, 5).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
     ${cfg.enabled ? `
     ${cfg.testMode ? '<p class="buy-test">Testmodus – es wird nichts berechnet. Testkarte 4242 4242 4242 4242, beliebiges Ablaufdatum in der Zukunft, beliebige Prüfziffer.</p>' : ''}
     <label class="consent buy-consent"><input type="checkbox" id="buyOk"> <span>Ich verlange ausdrücklich, dass ImmoAdv vor Ablauf der Widerrufsfrist mit der Leistung beginnt. Mir ist bekannt, dass mein Widerrufsrecht bei digitalen Inhalten damit erlischt und ich bei einem Widerruf eines Abos Wertersatz für bereits erbrachte Leistungen schulde.</span></label>

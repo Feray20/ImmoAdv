@@ -1,6 +1,9 @@
 // /b2b: Tarife aus der zentralen Preisliste und Kontaktformular für Demo/Enterprise/Kooperation.
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const net = (c) => (c / 100).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' €';
+// Leistungsvergleich der Tarife als Tabelle (Spalte hl hervorgehoben).
+const cmpTable = (v, hl = -1) => (v?.zeilen?.length ? `<details class="cmp" open><summary>Tarife im Vergleich</summary><div class="cmp-wrap"><table class="cmp-table"><thead><tr><th></th>${v.spalten.map((s, i) => `<th${i === hl ? ' class="hl"' : ''}>${esc(s)}</th>`).join('')}</tr></thead><tbody>${v.zeilen.map(([l, ...c]) => `<tr><th scope="row">${esc(l)}</th>${c.map((x, i) => `<td class="${x === '✓' ? 'y' : x === '–' ? 'n' : ''}${i === hl ? ' hl' : ''}">${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>` : '');
+
 
 async function offers() {
   const box = document.getElementById('b2bOffers');
@@ -10,11 +13,11 @@ async function offers() {
   const b = d.b2b;
   const card = (p, rec) => `<div class="offer${rec ? ' rec' : ''}" data-ivl="${p.interval}"${p.interval === 'year' ? ' hidden' : ''}>${rec ? '<span class="offer-rec">Am häufigsten gewählt</span>' : ''}
     <h4>${esc(p.name.replace(' (Jahr)', ''))}</h4><div class="offer-price">${net(p.netto_cents)} <small>netto ${esc(p.intervall)}</small></div>
-    <ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-dark" href="#anfrage">Unternehmenskonto anfragen</a></div>`;
+    <ul>${p.basis ? `<li class="offer-basis">${esc(p.basis)}</li>` : ''}${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-dark" href="#anfrage">Unternehmenskonto anfragen</a></div>`;
   box.innerHTML = `<div class="seg" role="tablist"><button type="button" data-i="month" aria-selected="true">Monatlich</button><button type="button" data-i="year" aria-selected="false">Jährlich</button></div>
     <div class="offers">${b.plans.map((p) => card(p, p.tier === 'PRO')).join('')}
-      <div class="offer"><h4>${esc(b.enterprise.name)}</h4><div class="offer-price">${esc(b.enterprise.preis)}</div><ul>${b.enterprise.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-ghost" href="#kontakt">Angebot anfragen</a></div></div>
-    <p class="price-note">${esc(b.hinweis)}</p>`;
+      <div class="offer"><h4>${esc(b.enterprise.name)}</h4><div class="offer-price">${esc(b.enterprise.preis)}</div><ul>${b.enterprise.basis ? `<li class="offer-basis">${esc(b.enterprise.basis)}</li>` : ''}${b.enterprise.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-ghost" href="#kontakt">Angebot anfragen</a></div></div>
+    ${cmpTable(b.vergleich, 1)}<p class="price-note">${esc(b.hinweis)}</p>`;
   box.querySelectorAll('[data-i]').forEach((btn) => btn.onclick = () => {
     box.querySelectorAll('[data-i]').forEach((x) => x.setAttribute('aria-selected', String(x === btn)));
     box.querySelectorAll('.offer[data-ivl]').forEach((o) => { o.hidden = o.dataset.ivl !== btn.dataset.i; });

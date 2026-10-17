@@ -20,7 +20,10 @@ const val = (id) => $(id)?.value || '';
 const table = (rows) => `<table class="bill-table"><tbody>${rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</tbody></table>`;
 const tone = (v, good, warn) => (v == null ? 'na' : v >= good ? 'ok' : v >= warn ? 'warn' : 'bad');
 
-const LAND_OPTS = Object.entries(GREST).map(([k, g]) => `<option value="${k}"${k === 'hessen' ? ' selected' : ''}>${g.name}</option>`).join('');
+// Angemeldet: Startwerte aus dem eigenen Finanzprofil statt Beispielzahlen (gesetzt in mountObjekt).
+let PROF = {};
+const pv = (v) => (Number(v) > 0 ? Number(v) : '');
+const landOpts = () => { const sel = GREST[PROF.land] ? PROF.land : 'hessen'; return Object.entries(GREST).map(([k, g]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${g.name}</option>`).join(''); };
 const F = (id, label, value = '', step = 'any', type = 'number') => `<label>${label}<input id="${id}" type="${type}" ${type === 'number' ? `step="${step}" min="0"` : ''} value="${esc(value)}"></label>`;
 
 function renderSearch() {
@@ -28,15 +31,15 @@ function renderSearch() {
   <div class="is-bar">
     <label class="is-what">Objektart<select id="s_art"><option value="wohnung">Wohnung kaufen</option><option value="haus">Haus kaufen</option><option value="mfh">Mehrfamilienhaus kaufen</option></select></label>
     <label class="is-where">Ort<input id="s_ort" type="text" placeholder="z. B. Darmstadt" autocomplete="off"></label>
-    <label>Bundesland<select id="s_land">${LAND_OPTS}</select></label>
+    <label>Bundesland<select id="s_land">${landOpts()}</select></label>
     <label>Preis ab (€)<input id="s_pmin" type="number" min="0" step="1000" value=""></label>
-    <label>Preis bis (€)<input id="s_price" type="number" min="0" step="1000" value="350000"></label>
-    <label>Fläche ab (m²)<input id="s_area" type="number" min="0" step="1" value="50"></label>
-    <label>Zimmer ab<input id="s_rooms" type="number" min="0" step="0.5" value="2"></label>
+    <label>Preis bis (€)<input id="s_price" type="number" min="0" step="1000" value="${pv(PROF.targetPrice)}"></label>
+    <label>Fläche ab (m²)<input id="s_area" type="number" min="0" step="1" value=""></label>
+    <label>Zimmer ab<input id="s_rooms" type="number" min="0" step="0.5" value=""></label>
   </div>
   <details class="is-more"><summary>Landkreis, Finanzierung und Mindestkapital</summary><div class="obj-grid">
     ${F('s_kreis', 'Landkreis (nur bei kreisangehörigen Gemeinden, z. B. Darmstadt-Dieburg)', '', 'any', 'text')}
-    ${F('s_eq', 'Eigenkapital (€)', 60000)}${F('s_net', 'Haushaltsnetto pro Monat (€, optional)', '')}${F('s_out', 'Lebenshaltung und Raten pro Monat (€, optional)', '')}
+    ${F('s_eq', 'Eigenkapital (€)', pv(PROF.equity))}${F('s_net', 'Haushaltsnetto pro Monat (€, optional)', pv(PROF.netIncome))}${F('s_out', 'Lebenshaltung und Raten pro Monat (€, optional)', '')}
     ${F('s_broker', 'Makler, Käuferanteil (%)', 3.57, '0.01')}${F('s_z', 'Sollzins p. a. (%)', 3.5, '0.01')}${F('s_t', 'Anfängliche Tilgung p. a. (%)', 2, '0.1')}
   </div></details>
   <div class="is-result" id="s_out_box" aria-live="polite"></div>
@@ -91,7 +94,7 @@ function renderAnalyse() {
   <div class="an-grid">
   <article class="dash-card"><h3>Inserat und Lage</h3><div class="obj-grid">
     ${F('a_url', 'Link zum Inserat (wird nur verlinkt)', '', 'any', 'url')}${F('a_addr', 'Adresse oder Lagebezeichnung', '', 'any', 'text')}
-    <label>Bundesland<select id="a_land">${LAND_OPTS}</select></label>
+    <label>Bundesland<select id="a_land">${landOpts()}</select></label>
     <label>Objektart<select id="a_art"><option value="ETW">Eigentumswohnung</option><option value="EFH">Einfamilienhaus</option><option value="MFH">Mehrfamilienhaus</option></select></label>
   </div></article>
   <article class="dash-card"><h3>Kernfakten</h3><div class="obj-grid">
@@ -105,10 +108,10 @@ function renderAnalyse() {
     ${F('a_vac', 'Mietausfall (%)', 2, '0.5')}${F('a_nonrec', 'Nicht umlagefähige Kosten (€/Monat, z. B. Verwaltung)', '', '1')}${F('a_mqm', 'Instandhaltung (€/m² und Monat)', 1, '0.05')}
   </div><p class="form-note" id="a_mslink"></p></article>
   <article class="dash-card"><h3>Finanzierung</h3><div class="obj-grid">
-    ${F('a_eq', 'Eigenkapital (€)', 60000)}${F('a_z', 'Sollzins p. a. (%)', 3.5, '0.01')}${F('a_t', 'Anfängliche Tilgung p. a. (%)', 2, '0.1')}${F('a_fix', 'Zinsbindung (Jahre)', 10, '1')}
+    ${F('a_eq', 'Eigenkapital (€)', pv(PROF.equity))}${F('a_z', 'Sollzins p. a. (%)', 3.5, '0.01')}${F('a_t', 'Anfängliche Tilgung p. a. (%)', 2, '0.1')}${F('a_fix', 'Zinsbindung (Jahre)', 10, '1')}
   </div></article>
   <article class="dash-card"><h3>Steuer und Wert (für Spezialisten)</h3><div class="obj-grid">
-    ${F('a_bs', 'Gebäudeanteil (%)', 75, '1')}<label>AfA-Satz<select id="a_afa"><option value="2">2 % (1925–2022)</option><option value="2.5">2,5 % (vor 1925)</option><option value="3">3 % (ab 2023)</option></select></label>${F('a_tax', 'Grenzsteuersatz (%)', 42, '1')}
+    ${F('a_bs', 'Gebäudeanteil (%)', 75, '1')}<label>AfA-Satz<select id="a_afa"><option value="2">2 % (1925–2022)</option><option value="2.5">2,5 % (vor 1925)</option><option value="3">3 % (ab 2023)</option></select></label>${F('a_tax', 'Grenzsteuersatz (%)', pv(PROF.marginalTaxPct), '1')}
     ${F('a_lv', 'Bodenwert (€, für Ertragswert)', '')}${F('a_lz', 'Liegenschaftszins (%)', '', '0.1')}${F('a_rnd', 'Restnutzungsdauer (Jahre)', '', '1')}
   </div><p class="form-note">Bodenwert: Bodenrichtwert × Grundstücksanteil (BORIS des Landes). Liegenschaftszins und Restnutzungsdauer: Grundstücksmarktbericht des Gutachterausschusses.</p></article>
   </div>
@@ -359,6 +362,7 @@ function renderList() {
 // Baut Suche, Analyse und Merkliste in einen Container. opts.pdf: Analyse-PDF anbieten.
 export function mountObjekt(container, opts = {}) {
   root = container;
+  PROF = opts.profile || {};
   root.insertAdjacentHTML('beforeend', `<h2 class="is-h">Immobiliensuche</h2>${renderSearch()}${renderAnalyse()}<section class="dash-card ml-card"><div class="ml-head"><h2>Trefferliste</h2><span class="form-note" id="m_count"></span></div><div id="m_list"></div></section>`);
   const bm = $('imp_bm');
   if (bm) {
