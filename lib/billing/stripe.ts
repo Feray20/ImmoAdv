@@ -6,7 +6,8 @@ import Stripe from 'stripe';
 import PRICES from '@/public/data/preise.json';
 
 // Angebote kommen aus public/data/preise.json (eine Quelle für Website und Abrechnung).
-export type Plan = 'credit-map' | 'pro-monthly' | 'pro-yearly' | 'starter-monthly' | 'starter-yearly' | 'credit-map-starter';
+// Buchbar: Kreditmappe (Einzelkauf), Käufer-Pass (90 Tage, inkl. 1 Kreditmappe), Investor Pro (monatlich).
+export type Plan = 'credit-map' | 'buyer-pass' | 'pro-monthly';
 
 type PlanDef = {
   lookupKey: string;
@@ -17,11 +18,11 @@ type PlanDef = {
 };
 
 type JsonPlan = { id: string; name: string; cents: number; intervall: string; mode: string; features: string[] };
-const ALL: JsonPlan[] = [...PRICES.modi.einsteiger.plans, ...PRICES.modi.profi.plans];
-const KEYS: Record<Plan, string> = {
-  'credit-map': 'immoadv_credit_map', 'pro-monthly': 'immoadv_pro_monthly', 'pro-yearly': 'immoadv_pro_12m',
-  'starter-monthly': 'immoadv_starter_monthly', 'starter-yearly': 'immoadv_starter_12m', 'credit-map-starter': 'immoadv_credit_map_starter',
-};
+const ALL: JsonPlan[] = PRICES.privat.plans;
+const KEYS: Record<Plan, string> = { 'credit-map': 'immoadv_credit_map', 'buyer-pass': 'immoadv_buyer_pass_90d', 'pro-monthly': 'immoadv_pro_monthly' };
+// Frühere Tarife (nur noch zum Erkennen bestehender Käufe, nicht mehr buchbar).
+const LEGACY_STARTER_SUB = 'immoadv_starter_monthly';
+const PASS_MS = 90 * 24 * 60 * 60 * 1000;
 
 export const PLANS = Object.fromEntries(
   (Object.keys(KEYS) as Plan[]).map((id) => {
@@ -133,15 +134,16 @@ export async function entitlementsFor(userId: string, email: string): Promise<En
   const subs = await s.subscriptions.list({ customer: customer.id, status: 'all', limit: 20 });
   const live = subs.data.filter((x) => ['active', 'trialing', 'past_due'].includes(x.status));
   const subKey = (x: Stripe.Subscription) => x.items.data[0]?.price?.lookup_key || '';
-  const activeSub = live.find((x) => !subKey(x).startsWith(KEYS['starter-monthly']));
-  const starterSub = live.find((x) => subKey(x).startsWith(KEYS['starter-monthly']));
+  const activeSub = live.find((x) => !subKey(x).startsWith(LEGACY_STARTER_SUB));
+  const starterSub = live.find((x) => subKey(x).startsWith(LEGACY_STARTER_SUB));
 
   const sessions = await s.checkout.sessions.list({ customer: customer.id, limit: 100 });
   const paid = sessions.data.filter((x) => x.payment_status === 'paid' && x.metadata?.supabase_user_id === userId);
-  const creditMaps = paid.filter((x) => x.metadata?.plan === 'credit-map' || x.metadata?.plan === 'credit-map-starter').length;
+  // Jede Kreditmappe und jeder Käufer-Pass (enthält 1 Mappe) gibt ein Kreditmappen-Guthaben.
+  const creditMaps = paid.filter((x) => ['credit-map', 'credit-map-starter', 'buyer-pass'].includes(String(x.metadata?.plan))).length;
   const starterPass = paid
-    .filter((x) => x.metadata?.plan === 'starter-yearly')
-    .map((x) => x.created * 1000 + YEAR_MS)
+    .filter((x) => x.metadata?.plan === 'starter-yearly' || x.metadata?.plan === 'buyer-pass')
+    .map((x) => x.created * 1000 + (x.metadata?.plan === 'buyer-pass' ? PASS_MS : YEAR_MS))
     .filter((until) => until > Date.now())
     .sort((a, b) => b - a)[0];
   const starter = Boolean(starterSub || starterPass);

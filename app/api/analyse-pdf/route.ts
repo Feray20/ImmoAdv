@@ -28,14 +28,14 @@ const Body = z.object({
 const isAdmin = (email: string) => (process.env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean).includes(email.toLowerCase());
 
 // Objekt-Analyse als PDF. Rendert ausschließlich die übergebenen, bereits berechneten Werte.
-// Solange die Bezahlung nicht aktiv ist, für alle angemeldeten Nutzer; danach für Einsteiger, Profi und Administratoren.
+// Solange die Bezahlung nicht aktiv ist, für alle angemeldeten Nutzer; danach für Käufer-Pass, Investor Pro und Administratoren.
 export async function POST(req: Request) {
   const user = await userFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Bitte anmelden.' }, { status: 401 });
   if (billingEnabled() && !isAdmin(user.email)) {
     try {
       const ent = await entitlementsFor(user.id, user.email);
-      if (ent.tier === 'free') return NextResponse.json({ error: 'Das Analyse-PDF ist in Einsteiger und Profi enthalten.' }, { status: 402 });
+      if (ent.tier === 'free') return NextResponse.json({ error: 'Das Analyse-PDF ist im Käufer-Pass und in Investor Pro enthalten.' }, { status: 402 });
     } catch {
       return NextResponse.json({ error: 'Freischaltung konnte nicht geprüft werden.' }, { status: 502 });
     }

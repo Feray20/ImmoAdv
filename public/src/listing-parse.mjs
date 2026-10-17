@@ -59,6 +59,11 @@ function fromJsonLd(raw) {
 /**
  * @param {{u?: string, ti?: string, t?: string, j?: string}} d  u = Inserats-URL, ti = Seitentitel, t = sichtbarer Text, j = JSON-LD
  */
+// Personenbezogene Daten Dritter (Makler, Verkäufer) werden nie übernommen: Zeilen mit E-Mail, Telefonnummer
+// oder Kontakt-Stichwort scheiden als Titel aus; übernommen werden nur Objektzahlen (Art. 5 Abs. 1 lit. c DSGVO).
+const PII = /[\w.+-]+@[\w-]+\.[\w.]+|(?:\+49|0049|\b0)\s?[\d][\d\s/()-]{5,}\d|\b(Herr|Frau|Ansprechpartner(in)?|Kontakt(person)?|Tel\.?|Telefon|Mobil|Fax|E-?Mail|Makler(in|büro)?|Anbieter(in)?|Verkäufer(in)?|Immobilien\s?(GmbH|Büro|Service)|GmbH|e\.\s?K\.)\b/i;
+export const hasPII = (t) => PII.test(String(t || ''));
+
 export function parseListing(d) {
   const url = /^https:\/\/[^\s]{8,2000}$/i.test(String(d.u || '').trim()) ? String(d.u).trim() : '';
   const text = String(d.t || '').slice(0, 30000);
@@ -121,8 +126,10 @@ export function parseListing(d) {
   r.art = /mehrfamilienhaus|mehrfamilienh|zinshaus|renditeobjekt/i.test(all) ? 'MFH' : /wohnung|etagenwohnung|eigentumswohnung|apartment|penthouse|maisonette/i.test(all) ? 'ETW' : /\bhaus\b|einfamilienhaus|doppelhaus|reihenhaus|haus-kaufen|haeuser/i.test(all) ? 'EFH' : 'ETW';
 
   const h1 = String(d.ti || '').replace(/\s*[|–-]\s*(ImmoScout24|immowelt|Kleinanzeigen|eBay).*$/i, '').trim();
-  r.title = (h1 || lines[0] || 'Inserat').slice(0, 140);
-  r.name = [r.city, r.area ? `${Math.round(r.area)} m²` : '', r.rooms ? `${String(r.rooms).replace('.', ',')} Zi.` : ''].filter(Boolean).join(' · ') || r.title;
+  const t0 = (h1 || lines[0] || '').slice(0, 140);
+  r.title = t0 && !hasPII(t0) ? t0 : '';
+  r.name = [r.city, r.area ? `${Math.round(r.area)} m²` : '', r.rooms ? `${String(r.rooms).replace('.', ',')} Zi.` : ''].filter(Boolean).join(' · ') || r.title || 'Inserat';
+  if (!r.title) r.title = r.name;
 
   for (const [k, label] of [['price', 'Kaufpreis'], ['area', 'Wohnfläche'], ['rooms', 'Zimmer'], ['rent', 'Miete (Ist)'], ['year', 'Baujahr'], ['hausgeld', 'Hausgeld'], ['brokerPct', 'Provision']]) {
     (r[k] != null ? r.found : r.missing).push(label);

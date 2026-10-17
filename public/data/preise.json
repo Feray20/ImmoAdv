@@ -1,103 +1,69 @@
 {
  "stand": "Oktober 2026",
- "hinweis": "Preisvorschlag. Alle Preise sind Endpreise inkl. 19 % USt. Abos monatlich kündbar zum Ende des Abrechnungsmonats; 12-Monats-Zugänge enden automatisch ohne Verlängerung.",
+ "hinweis": "Alle Preise sind Endpreise inkl. 19 % USt. Kreditmappe und Käufer-Pass sind Einmalkäufe ohne Abo – der Pass endet automatisch nach 90 Tagen. Investor Pro ist monatlich kündbar zum Ende des Abrechnungsmonats.",
  "kostenlos": {
   "name": "Kostenlos",
   "features": [
-   "Immobiliensuche bei ImmoScout24, Immowelt und Kleinanzeigen",
-   "Objekt-Analyse und alle Rechner",
-   "Wissenszentrale, Glossar, Lernpfad",
-   "Konto mit Kreditmappe-Vorschau",
-   "Bis zu 3 Objekte im Konto"
+   "Alle Standard-Rechner, ohne Anmeldung",
+   "Schnellrechner, Exposé-Scan und Stresstest",
+   "Wissenszentrale in 4 Phasen und Glossar",
+   "2 Objekte im Konto",
+   "Kreditmappe als Vorschau mit Wasserzeichen"
   ]
  },
- "modi": {
-  "einsteiger": {
-   "name": "Einsteiger",
-   "zielgruppe": "Für den ersten Kauf: Schritt für Schritt verstehen, vorbereiten, finanzieren.",
-   "plans": [
-    {
-     "id": "starter-monthly",
-     "name": "Einsteiger-Begleitung",
-     "cents": 990,
-     "intervall": "pro Monat",
-     "mode": "subscription",
-     "features": [
-      "Alles aus Kostenlos, dazu:",
-      "Sparplan mit monatlichem Check-in bis zum Eigenkapital-Ziel",
-      "Bis zu 10 Objekte statt 3",
-      "Analyse-PDF für jedes Objekt",
-      "Kreditmappe zum Einsteigerpreis (39 € statt 49 €)"
-     ]
-    },
-    {
-     "id": "starter-yearly",
-     "name": "Einsteiger 12 Monate",
-     "cents": 9900,
-     "intervall": "für 12 Monate",
-     "mode": "payment",
-     "features": [
-      "Wie Einsteiger-Begleitung",
-      "Endet automatisch, keine Verlängerung"
-     ]
-    },
-    {
-     "id": "credit-map-starter",
-     "name": "Einsteiger-Kreditmappe",
-     "cents": 3900,
-     "intervall": "einmalig je Objekt",
-     "mode": "payment",
-     "features": [
-      "Nur mit Einsteiger-Begleitung buchbar",
-      "Kreditmappe für die Bank",
-      "Mit Erklärseite „So liest die Bank Ihre Zahlen“",
-      "Echtheits-QR und Prüfsumme"
-     ]
-    }
-   ]
-  },
-  "profi": {
-   "name": "Profi",
-   "zielgruppe": "Für Kapitalanleger, Bestandshalter und Berater: Portfolio, Stresstests, Datenraum.",
-   "plans": [
-    {
-     "id": "pro-monthly",
-     "name": "Profi",
-     "cents": 3400,
-     "intervall": "pro Monat",
-     "mode": "subscription",
-     "features": [
-      "Unbegrenzt Objekte und Kreditmappen",
-      "Monatsbericht: Cashflow, Restschuld und Fristen aller Objekte",
-      "Anlage-V-Hilfe als CSV für die Steuererklärung",
-      "Portfolio mit Zinsschock, Datenraum mit Vollständigkeits-Ampel",
-      "Analyse-PDF, Stresstest-Matrix, Ertragswert"
-     ]
-    },
-    {
-     "id": "pro-yearly",
-     "name": "Profi 12 Monate",
-     "cents": 34000,
-     "intervall": "für 12 Monate",
-     "mode": "payment",
-     "features": [
-      "Wie Profi",
-      "2 Monate geschenkt – endet automatisch, keine Verlängerung"
-     ]
-    },
-    {
-     "id": "credit-map",
-     "name": "Profi-Kreditmappe",
-     "cents": 4900,
-     "intervall": "einmalig je Objekt",
-     "mode": "payment",
-     "features": [
-      "Kreditmappe mit Stresstest-Matrix und Ertragswert",
-      "Echtheits-QR und Prüfsumme"
-     ]
-    }
-   ]
-  }
+ "privat": {
+  "name": "Privat",
+  "zielgruppe": "Kein Abo nötig: Kaufen Sie genau das, was Sie für Ihren Kauf brauchen. Investor Pro ist für Vermieter mit Bestand.",
+  "plans": [
+   {
+    "id": "credit-map",
+    "name": "BankReady Kreditmappe",
+    "badge": "Einzelkauf · kein Abo",
+    "highlight": true,
+    "cents": 3900,
+    "intervall": "einmalig je Objekt",
+    "mode": "payment",
+    "features": [
+     "Vollständige 6-seitige PDF-Kreditmappe für die Bank",
+     "Haushaltsrechnung, Objektanalyse und Zins-Stresstest",
+     "Unterlagen-Checkliste und Echtheits-QR-Code",
+     "Kein Abo, keine Folgekosten",
+     "Zufriedenheitsgarantie: Geld zurück, wenn Ihre finanzierende Bank das Mappenformat ablehnt"
+    ]
+   },
+   {
+    "id": "buyer-pass",
+    "name": "Käufer-Pass (3 Monate)",
+    "badge": "Für die Suchphase",
+    "cents": 4900,
+    "intervall": "einmalig für 90 Tage",
+    "mode": "payment",
+    "features": [
+     "90 Tage unbegrenzt Objekte und Exposé-Analysen",
+     "Vergleichsmatrix: Objekte nebeneinander bewerten",
+     "Angebotsvergleich der Bankangebote und Bankgespräch-Vorbereitung",
+     "Inklusive 1 BankReady Kreditmappe (Wert 39 €)",
+     "Analyse-PDF für jedes Objekt",
+     "Endet automatisch – kein Abo, keine Kündigung nötig"
+    ]
+   },
+   {
+    "id": "pro-monthly",
+    "name": "Investor Pro",
+    "badge": "Für Vermieter",
+    "cents": 2900,
+    "intervall": "pro Monat",
+    "mode": "subscription",
+    "features": [
+     "Unbegrenzt Objekte und Kreditmappen",
+     "Portfolio-Radar: Zinsbindungsenden, Zinsschock und Cashflow aller Objekte",
+     "Fristenwächter mit Erinnerungen per E-Mail",
+     "CSV-Export für die Anlage V und Monatsbericht",
+     "Anschlussfinanzierungs-Rechner mit Forward-Aufschlag",
+     "Monatlich kündbar"
+    ]
+   }
+  ]
  },
  "b2b": {
   "name": "Für Unternehmen",

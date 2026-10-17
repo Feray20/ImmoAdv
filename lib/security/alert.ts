@@ -6,7 +6,7 @@ import { mailConfigured, sendMail } from '@/lib/notify/mail';
 // Schwere Ereignisse (Admin-Zugriffsversuche, Scanner, gesperrte Quellen) melden sofort; Bots und Drosselungen erst als Welle.
 type Rule = { level: 'hoch' | 'mittel'; title: string; minCount: number; windowMin: number; action: string };
 const RULES: Record<string, Rule> = {
-  admin_denied: { level: 'hoch', title: 'Zugriffsversuch auf den Web-Admin ohne Berechtigung', minCount: 1, windowMin: 15, action: 'Prüfen, ob ein bekanntes Konto betroffen ist. Bei Häufung: Quelle sperren oder ADMIN_IP_ALLOWLIST setzen.' },
+  admin_denied: { level: 'hoch', title: 'Zugriffsversuch auf den Web-Admin ohne Berechtigung', minCount: 1, windowMin: 15, action: 'Prüfen, ob ein bekanntes Konto betroffen ist. Bei Häufung: Quelle im Reiter Sicherheit sperren.' },
   admin_ip_blocked: { level: 'hoch', title: 'Web-Admin-Zugriff von nicht freigegebener IP-Adresse', minCount: 1, windowMin: 15, action: 'Waren Sie das (z. B. unterwegs)? Sonst: Passwort ändern und Sitzungen beenden.' },
   admin_mfa_missing: { level: 'hoch', title: 'Web-Admin-Anmeldung ohne zweiten Faktor', minCount: 3, windowMin: 15, action: 'Wenn Sie es nicht waren: sofort Passwort ändern, alle Sitzungen beenden (Reiter Sicherheit).' },
   probe: { level: 'hoch', title: 'Angriffs-Scanner sucht nach Schwachstellen', minCount: 5, windowMin: 10, action: 'Die Anfragen wurden abgewiesen. Bei anhaltendem Scan die Quelle im Reiter Sicherheit sperren.' },

@@ -68,3 +68,13 @@ test('parseListing: Exposé-Text mit Kaltmiete und Jahresnettokaltmiete', async 
   const c = parseListing({ u: '', t: 'Kaltmiete 800 €\nKaution 2.400 €' });
   assert.equal(c.rent, null);
 });
+
+test('Exposé: Kontaktdaten von Makler/Verkäufer werden nicht als Titel übernommen', async () => {
+  const { parseListing, hasPII } = await import('../public/src/listing-parse.mjs');
+  const t = 'Max Mustermann Immobilien GmbH · Tel. 06151 123456 · max@makler.de\nKaufpreis 249.000 €\nWohnfläche 64 m²\nZimmer 2\n64283 Darmstadt';
+  const r = parseListing({ u: '', t, ti: '' });
+  assert.equal(r.price, 249000);
+  assert.ok(!/Mustermann|06151|@/.test(r.title + r.name), r.title + ' | ' + r.name);
+  assert.ok(hasPII('Ansprechpartner: Frau Beispiel'));
+  assert.ok(!hasPII('Helle 3-Zimmer-Wohnung mit Balkon'));
+});

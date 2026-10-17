@@ -24,20 +24,9 @@ export async function setPanic(active: boolean, by: string, reason = ''): Promis
   cache = { v: value, until: Date.now() + 15_000 };
 }
 
-// IPv4-Freigabeliste für den Admin-Bereich (ADMIN_IP_ALLOWLIST, kommagetrennt, einzelne Adressen oder CIDR, IPv6 nur exakt).
-export function ipAllowed(req: Request): boolean {
-  const list = (process.env.ADMIN_IP_ALLOWLIST || '').split(',').map((s) => s.trim()).filter(Boolean);
-  if (!list.length) return true;
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '';
-  if (!ip) return false;
-  const toNum = (a: string) => a.split('.').reduce((n, o) => (n << 8) + (Number(o) & 255), 0) >>> 0;
-  return list.some((entry) => {
-    if (!entry.includes('/')) return entry === ip;
-    const [base, bits] = entry.split('/');
-    if (ip.includes(':') || base.includes(':')) return false;
-    const b = Number(bits);
-    if (!(b >= 0 && b <= 32)) return false;
-    const mask = b === 0 ? 0 : (~0 << (32 - b)) >>> 0;
-    return (toNum(ip) & mask) === (toNum(base) & mask);
-  });
+// IP-Freigabeliste für den Admin-Bereich: auf Wunsch des Betreibers abgeschaltet (Zugriff unterwegs per Handy
+// mit wechselnder IP). Schutz bleibt: Anmeldung, Admin-Liste (ADMIN_EMAILS), Zwei-Faktor, Zeitlimit, Not-Aus.
+// Eine gesetzte Variable ADMIN_IP_ALLOWLIST wird bewusst ignoriert.
+export function ipAllowed(_req: Request): boolean {
+  return true;
 }

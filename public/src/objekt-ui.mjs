@@ -57,7 +57,7 @@ function renderSearch() {
       <label>Text des Inserats<textarea id="imp_text" rows="5" maxlength="30000" placeholder="Kaufpreis 349.000 € · Wohnfläche 72 m² · Zimmer 3 …"></textarea></label>
       <button class="btn btn-dark" id="imp_go" type="button">Übernehmen</button></details>
     <p class="imp-msg" id="imp_msg" role="status" aria-live="polite"></p>
-    <p class="form-note">Die Übernahme läuft nur in Ihrem Browser: Gelesen wird ausschließlich das Inserat bzw. Exposé, das Sie selbst öffnen oder auswählen, und nur Zahlen und Fakten für Ihre eigene Berechnung – keine Texte, Bilder oder Kontaktdaten. Die Exposé-Datei wird nicht hochgeladen; an ImmoAdv wird dabei nichts übertragen.</p>
+    <p class="form-note">Die Übernahme läuft nur in Ihrem Browser: Gelesen wird ausschließlich das Inserat bzw. Exposé, das Sie selbst öffnen oder auswählen, und nur Zahlen und Fakten für Ihre eigene Berechnung (Kaufpreis, Fläche, Miete, Baujahr, Hausgeld, Energieklasse). Namen, Telefonnummern, E-Mail-Adressen und Fotos von Maklern oder Verkäufern werden sofort verworfen und nirgends gespeichert. Die Exposé-Datei wird nicht hochgeladen; an ImmoAdv wird dabei nichts übertragen.</p>
   </article>
 </section>`;
 }

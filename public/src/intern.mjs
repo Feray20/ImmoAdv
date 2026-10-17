@@ -551,7 +551,7 @@ async function sicherheit(v) {
     <p class="form-note">Die Anmelde-Tokens selbst laufen nach spätestens einer Stunde ab. Für einen vollständigen Schlüsseltausch zusätzlich in Supabase den JWT-Schlüssel rotieren.</p></section>
     <section class="pt-card"><h2>Zugangsschutz Admin</h2><ul class="plain-list">
       <li>Zweiter Faktor: ${r.data?.mfaRequired ? '<span class="st ok">Pflicht</span>' : '<span class="st bad">abgeschaltet (ADMIN_MFA=off)</span>'}</li>
-      <li>IP-Freigabeliste: in Vercel als ADMIN_IP_ALLOWLIST (z. B. 203.0.113.7, 198.51.100.0/24). Ohne Eintrag ist jede IP zugelassen.</li>
+      <li>Keine IP-Sperre für den Admin: Sie können von überall (auch mobil) zugreifen. Schutz durch Anmeldung, Admin-Liste, Zwei-Faktor, Zeitlimit und Not-Aus.</li>
       <li>Anmeldeversuche: Supabase begrenzt fehlgeschlagene Anmeldungen automatisch; zusätzlich sind alle Schnittstellen je Nutzer und IP gedrosselt.</li>
       <li>Alle Admin-Aktionen stehen im Reiter Protokoll.</li></ul></section>
     <section class="pt-card"><h2>Sicherheitsprotokoll</h2><p class="form-note">Gedrosselte Zugriffe (zu viele Anfragen je Nutzer oder IP) und abgewiesene Zugriffe auf den Admin-Bereich. Gespeichert werden nur Bereich und ein gekürzter Hash, keine IP-Adressen; Löschung nach 30 Tagen. Die Zählung erfolgt je Serverinstanz, Spitzen können sich verteilen.</p><div id="secLog"><p class="form-note">Wird geladen …</p></div><button class="btn btn-ghost" id="secRe" type="button">Aktualisieren</button></section>`;

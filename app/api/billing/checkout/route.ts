@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { userFromRequest } from '@/lib/billing/auth';
 import { checkoutParams } from '@/lib/billing/checkout-params';
-import { billingEnabled, ensureCustomer, ensurePrice, ensureTaxRate, entitlementsFor, isPlan, stripe } from '@/lib/billing/stripe';
+import { billingEnabled, ensureCustomer, ensurePrice, ensureTaxRate, isPlan, stripe } from '@/lib/billing/stripe';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,11 +29,6 @@ export async function POST(req: Request) {
   }
 
   const plan = body.plan;
-  // Die günstigere Einsteiger-Kreditmappe gibt es nur zur gebuchten Einsteiger-Begleitung.
-  if (plan === 'credit-map-starter') {
-    const ent = await entitlementsFor(user.id, user.email).catch(() => null);
-    if (!ent?.starter) return NextResponse.json({ error: 'Die Einsteiger-Kreditmappe ist nur mit gebuchter Einsteiger-Begleitung erhältlich.' }, { status: 403 });
-  }
   const origin = new URL(req.url).origin;
 
   try {

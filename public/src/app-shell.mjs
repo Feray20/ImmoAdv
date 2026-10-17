@@ -15,15 +15,16 @@ const ICON = {
   lernen: '<path d="M2 8l10-5 10 5-10 5z"/><path d="M6 10v5c0 2 3 4 6 4s6-2 6-4v-5"/>',
   angebot: '<path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   konto: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+  werkzeuge: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
   steuer: '<line x1="19" y1="5" x2="5" y2="19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>',
 };
 const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
 const VIEWS = {
-  einsteiger: [['start', 'Übersicht'], ['suche', 'Suche'], ['objekte', 'Objekte'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
-  profi: [['start', 'Cockpit'], ['suche', 'Suche & Analyse'], ['objekte', 'Objekte'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
+  einsteiger: [['start', 'Übersicht'], ['suche', 'Suche'], ['objekte', 'Objekte'], ['werkzeuge', 'Werkzeuge'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
+  profi: [['start', 'Cockpit'], ['suche', 'Suche & Analyse'], ['objekte', 'Objekte'], ['werkzeuge', 'Werkzeuge'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
 };
-const TABS = ['start', 'suche', 'objekte', 'steuer', 'lernen', 'konto'];
+const TABS = ['start', 'suche', 'objekte', 'werkzeuge', 'lernen', 'konto'];
 
 // Lernbereich: Themen frei wählbar (keine feste Reihenfolge). Wissen aus /data/faq.json (Kurz- und Detailantwort).
 // [id, Titel, Kurzbeschreibung, FAQ-Indizes, [Werkzeug-Text, Link], Bereich]
@@ -308,7 +309,9 @@ export function setupApp({ u, d, saveData, reload }) {
   }
   personalCard(grid);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="suche" id="sucheView"></article>`);
+  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="werkzeuge" id="toolsView"><p class="form-note">Werkzeuge werden geladen …</p></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);
+  Promise.all([import('/src/b2c-tools.mjs'), getAccess()]).then(([m, ac]) => { m.mountTools($('toolsView'), { d, tier: ac.tier || 'free', b2b: Boolean(ac.b2b) }); import('/src/field-help.mjs').then((f) => f.attachHelp?.($('toolsView'))).catch(() => {}); }).catch(() => { const v = $('toolsView'); if (v) v.innerHTML = '<p class="form-note">Werkzeuge konnten nicht geladen werden.</p>'; });
   grid.insertAdjacentHTML('beforeend', lernCard(mode, d));
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="angebot" id="angebotView"><h3>${mode === 'profi' ? 'Tarif' : 'Angebot'}</h3><div id="offerBody"><p class="form-note">Wird geladen …</p></div></article>`);
   bindStart(mode, d, u, saveData, reload);
@@ -316,7 +319,7 @@ export function setupApp({ u, d, saveData, reload }) {
   renderFin();
   bindLern(d, u, saveData);
   import('/src/field-help.mjs').then((m) => m.watchHelp(grid)).catch(() => {});
-  import('/src/retention.mjs').then(async (m) => { m.mountRetention(grid, { mode, d, u, saveData, paid: (await getAccess()).paid }); if (typeof window.__iaApplyView === 'function') window.__iaApplyView(); }).catch(() => {});
+  import('/src/retention.mjs').then(async (m) => { const ac = await getAccess(); m.mountRetention(grid, { mode, d, u, saveData, paid: ac.tier === 'pro' || ac.b2b }); if (typeof window.__iaApplyView === 'function') window.__iaApplyView(); }).catch(() => {});
 
   const apply = () => {
     const v = (location.hash.slice(1) || 'start').split('?')[0];
@@ -662,7 +665,7 @@ async function renderFin() {
       fetch('/api/billing/invoices', { headers: H, cache: 'no-store' }).then((r) => r.json()).catch(() => ({ invoices: [] })),
     ]);
   }
-  const tierName = acc.paid && (st.tier || 'free') === 'free' ? (acc.b2b ? 'Unternehmenskonto' : 'Voller Zugang') : ({ free: 'Kostenlose Demo', starter: 'Einsteiger', pro: 'Profi' }[st.tier || 'free'] || 'Kostenlose Demo');
+  const tierName = acc.paid && (st.tier || 'free') === 'free' ? (acc.b2b ? 'Unternehmenskonto' : 'Voller Zugang') : ({ free: 'Kostenlose Demo', starter: 'Käufer-Pass', pro: 'Investor Pro' }[st.tier || 'free'] || 'Kostenlose Demo');
   const demoBox = acc.paid ? '' : `<div class="demo-box"><strong>Sie nutzen die kostenlose Demo</strong><p>Probieren Sie alles aus: RenditeRadar-Analysen, BankReady-Vorschau, PDF-Formulare und den Lernbereich. In der Demo tragen alle PDFs ein ImmoAdv-Wasserzeichen. Sobald Sie ein Abo besitzen bzw. einen Tarif gebucht haben, entfallen die Wasserzeichen – Ihre Dokumente sind dann fertig für Bank und Weitergabe.</p><a class="btn btn-dark" href="#angebot">Tarife ansehen</a></div>`;
   const until = st.pro ? st.proUntil : st.starter ? st.starterUntil : null;
   const money = (c, cur = 'eur') => (Number(c || 0) / 100).toLocaleString('de-DE', { style: 'currency', currency: String(cur).toUpperCase() });
@@ -865,23 +868,20 @@ async function renderOffers(mode) {
     st = cfg.enabled ? await fetch('/api/billing/status', { headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' }).then((r) => r.json()) : { tier: 'free' };
   } catch { box.innerHTML = '<p class="auth-message error">Angebote konnten nicht geladen werden.</p>'; return; }
   const tier = st.tier || (st.pro ? 'pro' : 'free');
-  let shown = mode === 'profi' ? 'profi' : 'einsteiger';
-  // Nächster sinnvoller Schritt je Buchung und Modus
-  const next = tier === 'pro' ? null : tier === 'starter' ? (shown === 'profi' ? 'pro-monthly' : 'credit-map-starter') : shown === 'profi' ? 'pro-monthly' : 'starter-monthly';
-  const tierName = { free: 'Kostenlos', starter: 'Einsteiger', pro: 'Profi' }[tier];
+  // Nächster sinnvoller Schritt: Vermieter (Profi-Ansicht) → Investor Pro, Käufer → Käufer-Pass bzw. Kreditmappe.
+  const next = tier === 'pro' ? null : tier === 'starter' ? 'credit-map' : mode === 'profi' ? 'pro-monthly' : 'buyer-pass';
+  const tierName = { free: 'Kostenlos', starter: 'Käufer-Pass', pro: 'Investor Pro' }[tier];
+  const left = Math.max(0, (st.creditMaps || 0) - (st.creditMapsUsed || 0));
   const draw = () => {
-    const m = P.modi[shown];
-    box.innerHTML = `<div class="offer-head"><div><span class="form-note">Ihr Tarif</span><strong>${tierName}</strong></div>
-      <div class="seg" role="tablist"><button type="button" role="tab" data-seg="einsteiger" aria-selected="${shown === 'einsteiger'}">Einsteiger</button><button type="button" role="tab" data-seg="profi" aria-selected="${shown === 'profi'}">Profi</button></div></div>
+    const m = P.privat;
+    box.innerHTML = `<div class="offer-head"><div><span class="form-note">Ihr Tarif</span><strong>${tierName}</strong></div>${st.starterUntil ? `<span class="form-note">Käufer-Pass aktiv bis ${new Date(st.starterUntil).toLocaleDateString('de-DE')}</span>` : ''}</div>
       <p class="form-note">${esc(m.zielgruppe)}</p>
-      ${tier === 'pro' ? '<p class="auth-message">Profi ist aktiv – alle Funktionen und Kreditmappen sind enthalten.</p>' : ''}
-      <div class="offers">${m.plans.map((p) => `<div class="offer${p.id === next ? ' rec' : ''}">${p.id === next ? '<span class="offer-rec">Empfohlener nächster Schritt</span>' : ''}<h4>${esc(p.name)}</h4><div class="offer-price">${E(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
-        ${cfg.enabled ? `<button class="btn btn-pay" type="button" data-buy="${p.id}"${(tier === 'pro' && shown === 'profi' && p.id !== 'credit-map') || (p.id === 'credit-map-starter' && tier !== 'starter') ? ' disabled' : ''}>${p.id === 'credit-map-starter' && tier !== 'starter' ? 'Mit Einsteiger-Begleitung' : 'Jetzt buchen'}</button>` : '<button class="btn btn-outline" type="button" disabled>Buchung startet in Kürze</button>'}</div>`).join('')}</div>
+      ${tier === 'pro' ? '<p class="auth-message">Investor Pro ist aktiv – alle Funktionen und Kreditmappen sind enthalten.</p>' : left ? `<p class="auth-message">Sie haben ${left} Kreditmappe${left === 1 ? '' : 'n'} frei.</p>` : ''}
+      <div class="offers">${m.plans.map((p) => `<div class="offer${p.id === next ? ' rec' : ''}">${p.id === next ? '<span class="offer-rec">Empfohlener nächster Schritt</span>' : p.badge ? `<span class="offer-badge">${esc(p.badge)}</span>` : ''}<h4>${esc(p.name)}</h4><div class="offer-price">${E(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+        ${cfg.enabled ? `<button class="btn btn-pay" type="button" data-buy="${p.id}"${tier === 'pro' ? ' disabled' : ''}>${tier === 'pro' ? 'In Investor Pro enthalten' : 'Jetzt buchen'}</button>` : '<button class="btn btn-outline" type="button" disabled>Buchung startet in Kürze</button>'}</div>`).join('')}</div>
       <div class="offer-free"><strong>Immer kostenlos:</strong> ${P.kostenlos.features.map(esc).join(' · ')}</div>
       <div class="offer-pay"><p class="form-note">Bezahlen Sie auf der sicheren Bezahlseite mit:</p>${PAY_BADGES}</div>
       <p class="form-note">${esc(P.hinweis)} Es gelten die <a class="ck-link" href="/nutzungsbedingungen">Nutzungsbedingungen mit Widerrufsbelehrung</a>. Kündigung jederzeit über <a class="ck-link" href="/kuendigen">„Verträge hier kündigen“</a>.</p>`;
-    box.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => { shown = b.dataset.seg; draw(); });
-    // Aus der öffentlichen Angebotsseite vorgewählter Tarif: zur Karte springen und hervorheben.
     const want = new URLSearchParams(location.search).get('buy');
     if (want) { const card = box.querySelector(`[data-buy="${CSS.escape(want)}"]`)?.closest('.offer'); if (card) { card.classList.add('offer-want'); card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
     box.querySelectorAll('[data-buy]').forEach((b) => b.onclick = () => {
