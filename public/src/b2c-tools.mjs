@@ -71,7 +71,15 @@ export function betriebskosten({ rows, flaecheGesamt, flaecheMieter, personenGes
 
 // ---------- Oberfläche ----------
 // Dezenter Hinweis statt Werbeblock: Rechnen ist immer frei, nur Drucken/Kopieren gehört zum Tarif.
-const lock = (need) => `<p class="tl-hint"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3Z"/></svg> Drucken und Vorlagen mit ${need === 'pro' ? 'Investor Pro' : 'Käufer-Pass'} · <a href="#angebot">mehr</a></p>`;
+// Kontext für Hinweise: Ansicht (Einsteiger/Profi), Tarif und aktuelle Preise aus preise.json.
+let CTX = { mode: 'einsteiger', tier: 'free', prices: { pass: '49 € einmalig', pro: '29 €/Monat' } };
+const LOCK_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3Z"/></svg>';
+// Welcher Tarif passt? Einsteiger kaufen meist einmalig (Käufer-Pass), Profis/Vermieter nutzen Investor Pro.
+// Wer schon den Käufer-Pass hat, bekommt für Pro-Werkzeuge nur den Hinweis auf Investor Pro.
+const lock = (need) => {
+  const usePro = need === 'pro' || CTX.mode === 'profi' || CTX.tier === 'starter';
+  return `<p class="tl-hint">${LOCK_SVG} Drucken und Vorlagen mit ${usePro ? `Investor Pro (${esc(CTX.prices.pro)})` : `Käufer-Pass (${esc(CTX.prices.pass)})`} · <a href="#angebot">ansehen</a></p>`;
+};
 
 function offersTool(box, ok) {
   const saved = store('offers') || [{ bank: 'Bank A', loan: 280000, rate: 3.65, eff: 3.72, repay: 2, years: 10, fees: 0, special: 5 }, { bank: 'Bank B', loan: 280000, rate: 3.55, eff: 3.68, repay: 2, years: 10, fees: 900, special: 0 }, { bank: '', loan: 280000, rate: 0, eff: 0, repay: 2, years: 10, fees: 0, special: 0 }];
@@ -259,19 +267,46 @@ function printBox(box, title) {
 }
 
 // tier: 'free' | 'starter' (Käufer-Pass) | 'pro' (Investor Pro); b2b: Unternehmenskonto (alles frei)
-export function mountTools(view, { d, tier = 'free', b2b = false }) {
-  const pass = b2b || tier === 'starter' || tier === 'pro';
-  const pro = b2b || tier === 'pro';
-  view.innerHTML = `<h2 class="tl-h">Werkzeuge</h2><p class="form-note">Vom Kaufpreis bis zur Anschlussfinanzierung – einfach ausprobieren, alles rechnet sofort.</p>
-    <nav class="tl-nav" aria-label="Werkzeuge"><a href="#t-price">Kaufpreis verhandeln</a><a href="#t-offers">Bankangebote vergleichen</a><a href="#t-bank">Bankgespräch vorbereiten</a><a href="#t-special">Sondertilgung</a><a href="#t-fwd">Anschluss &amp; Forward</a><a href="#t-bk">Betriebskosten</a><a href="#steuer">Steuer-Werkzeuge</a><a href="/rechner">Alle Rechner</a></nav>
-    <p class="form-note">Ihre Eingaben bleiben nur in diesem Browser. <button type="button" class="text-btn" id="tlClear">Alle Eingaben in den Werkzeugen löschen</button></p>
-    <section class="tl-card" id="t-price"></section><section class="tl-card" id="t-offers"></section><section class="tl-card" id="t-bank"></section><section class="tl-card" id="t-special"></section><section class="tl-card" id="t-fwd"></section><section class="tl-card" id="t-bk"></section>`;
-  priceTool($('t-price'), pass);
-  specialTool($('t-special'), pass);
-  bkTool($('t-bk'), pro);
-  offersTool($('t-offers'), pass);
-  bankTool($('t-bank'), pass, d);
-  forwardTool($('t-fwd'), pro, d);
-  $('tlClear')?.addEventListener('click', () => { if (!confirm('Alle Eingaben in den Werkzeugen auf diesem Gerät löschen?')) return; try { Object.keys(localStorage).filter((k) => k.startsWith('ia-tool-')).forEach((k) => localStorage.removeItem(k)); } catch { /* ohne Speicher */ } mountTools(view, { d, tier, b2b }); });
+// Werkzeuge je Ansicht: Einsteiger = Kauf vorbereiten, Profi = Bestand verwalten. Die übrigen liegen eingeklappt darunter.
+const TOOLS = {
+  price: ['Kaufpreis verhandeln', 'pass', 'Bis zu welchem Preis rechnet sich das Objekt?', (b, ok) => priceTool(b, ok)],
+  offers: ['Bankangebote vergleichen', 'pass', 'Welches Angebot ist bis zum Ende der Zinsbindung am günstigsten?', (b, ok) => offersTool(b, ok)],
+  bank: ['Bankgespräch vorbereiten', 'pass', 'Ihre Zahlen, die richtigen Fragen, Platz für Antworten.', (b, ok, d) => bankTool(b, ok, d)],
+  special: ['Sondertilgung planen', 'pass', 'Was bringt eine jährliche Sondertilgung?', (b, ok) => specialTool(b, ok)],
+  fwd: ['Anschluss & Forward', 'pro', 'Restschuld, Forward-Zins und Kündigungsrecht nach § 489 BGB.', (b, ok, d) => forwardTool(b, ok, d)],
+  bk: ['Betriebskostenabrechnung', 'pro', 'Kosten auf Ihre Mieter verteilen und abrechnen.', (b, ok) => bkTool(b, ok)],
+};
+const ORDER = {
+  einsteiger: { main: ['price', 'offers', 'bank', 'special'], more: ['fwd', 'bk'] },
+  profi: { main: ['fwd', 'bk', 'offers', 'special'], more: ['price', 'bank'] },
+};
+const PLAN_LINE = {
+  free: (m) => m === 'profi' ? 'Kostenlos: alle Werkzeuge rechnen frei. Drucken, Vorlagen und Betriebskosten-Abrechnung mit Investor Pro.' : 'Kostenlos: alle Werkzeuge rechnen frei. Drucken und Vorlagen mit dem Käufer-Pass.',
+  starter: () => 'Käufer-Pass aktiv: Kauf-Werkzeuge vollständig nutzbar. Anschluss und Betriebskosten mit Investor Pro.',
+  pro: () => 'Investor Pro aktiv: alle Werkzeuge vollständig nutzbar.',
+};
+
+export async function mountTools(view, { d, tier = 'free', b2b = false, mode = 'einsteiger' }) {
+  const m = mode === 'profi' ? 'profi' : 'einsteiger';
+  const t = b2b ? 'pro' : ['starter', 'pro'].includes(tier) ? tier : 'free';
+  try {
+    const P = await fetch('/data/preise.json').then((r) => r.json());
+    const pl = Object.fromEntries((P.privat?.plans || []).map((x) => [x.id, x]));
+    const eur = (c) => (c / 100).toLocaleString('de-DE', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 }) + ' €';
+    CTX = { mode: m, tier: t, prices: { pass: pl['buyer-pass'] ? `${eur(pl['buyer-pass'].cents)} einmalig` : CTX.prices.pass, pro: pl['pro-monthly'] ? `${eur(pl['pro-monthly'].cents)}/Monat` : CTX.prices.pro } };
+  } catch { CTX = { ...CTX, mode: m, tier: t }; }
+  const ok = (need) => (need === 'pro' ? t === 'pro' : t !== 'free');
+  const o = ORDER[m];
+  const sec = (id) => `<section class="tl-card" id="t-${id}"></section>`;
+  view.innerHTML = `<div class="tl-top"><div><h2 class="tl-h">Werkzeuge</h2><p class="form-note">${m === 'profi' ? 'Für Ihren Bestand: Anschlussfinanzierung, Abrechnung, Konditionen.' : 'Für Ihren Kauf: Preis, Bankangebote, Bankgespräch – einfach ausprobieren.'}</p></div><span class="tl-plan tl-plan-${t}">${t === 'pro' ? 'Investor Pro' : t === 'starter' ? 'Käufer-Pass' : 'Kostenlos'}</span></div>
+    <p class="tl-planline">${esc(PLAN_LINE[t](m))}</p>
+    <nav class="tl-nav" aria-label="Werkzeuge">${o.main.map((id) => `<a href="#t-${id}">${esc(TOOLS[id][0])}</a>`).join('')}<a href="#steuer">Steuer</a><a href="/rechner">Alle Rechner</a></nav>
+    ${o.main.map(sec).join('')}
+    <details class="tl-more"><summary>Weitere Werkzeuge <span>${o.more.map((id) => esc(TOOLS[id][0])).join(' · ')}</span></summary>${o.more.map(sec).join('')}</details>
+    <p class="form-note tl-foot">Ihre Eingaben bleiben nur in diesem Browser. <button type="button" class="text-btn" id="tlClear">Alle Eingaben löschen</button></p>`;
+  o.main.forEach((id) => TOOLS[id][3]($('t-' + id), ok(TOOLS[id][1]), d));
+  let moreDone = false;
+  view.querySelector('.tl-more')?.addEventListener('toggle', (e) => { if (e.target.open && !moreDone) { moreDone = true; o.more.forEach((id) => TOOLS[id][3]($('t-' + id), ok(TOOLS[id][1]), d)); } });
+  $('tlClear')?.addEventListener('click', () => { if (!confirm('Alle Eingaben in den Werkzeugen auf diesem Gerät löschen?')) return; try { Object.keys(localStorage).filter((k) => k.startsWith('ia-tool-')).forEach((k) => localStorage.removeItem(k)); } catch { /* ohne Speicher */ } mountTools(view, { d, tier, b2b, mode }); });
   view.querySelectorAll('.tl-nav a[href^="#t-"]').forEach((a) => a.onclick = (e) => { e.preventDefault(); $(a.getAttribute('href').slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 }

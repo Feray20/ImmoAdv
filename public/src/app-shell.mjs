@@ -311,7 +311,7 @@ export function setupApp({ u, d, saveData, reload }) {
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="suche" id="sucheView"></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="werkzeuge" id="toolsView"><p class="form-note">Werkzeuge werden geladen …</p></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);
-  Promise.all([import('/src/b2c-tools.mjs'), getAccess()]).then(([m, ac]) => { m.mountTools($('toolsView'), { d, tier: ac.tier || 'free', b2b: Boolean(ac.b2b) }); import('/src/field-help.mjs').then((f) => f.attachHelp?.($('toolsView'))).catch(() => {}); }).catch(() => { const v = $('toolsView'); if (v) v.innerHTML = '<p class="form-note">Werkzeuge konnten nicht geladen werden.</p>'; });
+  Promise.all([import('/src/b2c-tools.mjs'), getAccess()]).then(([m, ac]) => { m.mountTools($('toolsView'), { d, tier: ac.tier || 'free', b2b: Boolean(ac.b2b), mode: mode || 'einsteiger' }); import('/src/field-help.mjs').then((f) => f.attachHelp?.($('toolsView'))).catch(() => {}); }).catch(() => { const v = $('toolsView'); if (v) v.innerHTML = '<p class="form-note">Werkzeuge konnten nicht geladen werden.</p>'; });
   grid.insertAdjacentHTML('beforeend', lernCard(mode, d));
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="angebot" id="angebotView"><h3>${mode === 'profi' ? 'Tarif' : 'Angebot'}</h3><div id="offerBody"><p class="form-note">Wird geladen …</p></div></article>`);
   bindStart(mode, d, u, saveData, reload);
