@@ -11,8 +11,36 @@ const E2 = (v) => (Number.isFinite(v) ? v : 0).toLocaleString('de-DE', { style: 
 const P = (v, d = 2) => `${(Number.isFinite(v) ? v : 0).toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d })} %`;
 const num = (v) => { let t = String(v ?? '').trim(); if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); const x = Number(t); return Number.isFinite(x) ? x : 0; };
 const KEY = (k) => 'ia-b2b-prog-' + k;
-const load = (k, d) => { try { return { ...d, ...(JSON.parse(localStorage.getItem(KEY(k)) || '{}')) }; } catch { return { ...d }; } };
-const save = (k, v) => { try { localStorage.setItem(KEY(k), JSON.stringify(v)); } catch { /* ohne Speicher */ } };
+// Datenschutz: Tools mit Kundendaten (Namen, Freitexte) speichern nur für diesen Browser-Tab (sessionStorage) und werden
+// beim Abmelden gelöscht. Reine Zahlen-Tools merken sich die letzten Annahmen (localStorage), ohne Personenbezug.
+const PERSONAL = new Set(['protokoll', 'unterlagen', 'angebote']);
+const store = (k) => (PERSONAL.has(k) ? sessionStorage : localStorage);
+const load = (k, d) => { try { return { ...d, ...(JSON.parse(store(k).getItem(KEY(k)) || '{}')) }; } catch { return { ...d }; } };
+const save = (k, v) => { try { store(k).setItem(KEY(k), JSON.stringify(v)); } catch { /* ohne Speicher */ } };
+export function clearAll() {
+  for (const st of [localStorage, sessionStorage]) { try { Object.keys(st).filter((k) => k.startsWith('ia-b2b-prog-') || k === 'ia-fall-last').forEach((k) => st.removeItem(k)); } catch { /* ohne Speicher */ } }
+}
+// Letzte Fall-Analyse (nur Zahlen, nur dieser Tab) – zum Übernehmen in Haushaltsrechnung und Angebotsvergleich.
+const lastFall = () => { try { return JSON.parse(sessionStorage.getItem('ia-fall-last') || 'null'); } catch { return null; } };
+
+// Plausibilitätsprüfung: Hinweise auf untypische Eingaben, bevor ein Ergebnis weitergegeben wird.
+export function plausi(tool, st) {
+  const w = [];
+  const z = (v, lo, hi, txt) => { if (v < lo || v > hi) w.push(txt); };
+  if ('zins' in st) z(st.zins, 0.3, 9, 'Sollzins außerhalb des üblichen Bereichs (0,3–9 %).');
+  if ('tilgung' in st && tool !== 'vfe') z(st.tilgung, 1, 10, 'Tilgung unter 1 % verlängert die Laufzeit stark; viele Banken verlangen mindestens 1–2 %.');
+  if (tool === 'haushalt') {
+    if (st.pausch1 < 800) w.push('Lebenshaltungs-Pauschale für die erste Person wirkt niedrig – viele Banken setzen 800–1.200 € an.');
+    if (st.mieteAnteil > 80) w.push('Mieteinnahmen werden meist nur zu 60–80 % angesetzt.');
+    if (st.puffer < 5) w.push('Ohne Sicherheitspuffer reagiert die Rechnung empfindlich auf Kostensteigerungen.');
+  }
+  if (tool === 'provision' && st.gesamtPct > 7.14) w.push('Gesamtprovision über 7,14 % inkl. USt. ist ungewöhnlich hoch.');
+  if (tool === 'ertrag') { z(st.lz, 1, 7, 'Liegenschaftszins außerhalb von 1–7 % – Wert aus dem Grundstücksmarktbericht prüfen.'); z(st.bwkPct, 10, 40, 'Bewirtschaftungskosten liegen üblicherweise bei 15–30 % der Miete.'); z(st.rnd, 10, 80, 'Restnutzungsdauer meist zwischen 10 und 80 Jahren.'); }
+  if (tool === 'vfe') { if (st.restMonate > 180) w.push('Nach 10 Jahren ab Auszahlung gilt § 489 BGB – die Restbindung ist dann für die Entschädigung oft nicht maßgeblich.'); z(st.wiederanlage, 0, 6, 'Wiederanlagezins außerhalb des üblichen Bereichs.'); }
+  if (tool === 'angebote') (st.o || []).forEach((o) => { if (num(o.rate) > 0 && num(o.eff) > 0 && num(o.eff) < num(o.rate)) w.push(`${o.bank || 'Angebot'}: Effektivzins liegt unter dem Sollzins – bitte prüfen.`); });
+  return w;
+}
+const warnBox = (w) => (w.length ? `<ul class="pg-warn">${w.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '');
 const today = () => new Date().toLocaleDateString('de-DE');
 
 // ---------- Rechenkerne (exportiert für Tests) ----------
@@ -75,7 +103,8 @@ export function vfe({ rest, zins, tilgung, restMonate, wiederanlage, risikoPct =
 const field = (id, label, value, opts = {}) => `<label class="pg-f${opts.wide ? ' wide' : ''}"><span>${label}</span>${opts.select ? `<select data-k="${id}">${opts.select.map(([v, l]) => `<option value="${esc(v)}"${String(value) === String(v) ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>` : opts.area ? `<textarea data-k="${id}" rows="${opts.rows || 3}" maxlength="3000">${esc(value)}</textarea>` : `<input data-k="${id}" ${opts.text ? 'type="text" maxlength="160"' : opts.date ? 'type="date"' : 'type="number" step="any" inputmode="decimal"'} value="${esc(value)}">`}</label>`;
 const check = (id, label, on) => `<label class="pg-c"><input type="checkbox" data-k="${id}"${on ? ' checked' : ''}> <span>${label}</span></label>`;
 
-function bind(box, key, state, run) {
+function bind(box, key, state, run0) {
+  const run = () => { run0(); const o = box.querySelector('#pgOut'); if (o) { o.querySelector('.pg-warn')?.remove(); o.insertAdjacentHTML('afterbegin', warnBox(plausi(key, state))); } };
   box.addEventListener('input', (e) => {
     const k = e.target.dataset.k; if (!k) return;
     state[k] = e.target.type === 'checkbox' ? e.target.checked : (e.target.type === 'number' ? num(e.target.value) : e.target.value);
@@ -110,8 +139,9 @@ function pHaushalt(box, ctx) {
     <h4>Haushalt</h4>${field('erwachsene', 'Erwachsene', st.erwachsene)}${field('kinder', 'Kinder', st.kinder)}${field('pausch1', 'Pauschale 1. Person', st.pausch1)}${field('pauschWeitere', 'Pauschale weitere Erwachsene', st.pauschWeitere)}${field('pauschKind', 'Pauschale je Kind', st.pauschKind)}
     <h4>Ausgaben / Monat</h4>${field('warmmiete', 'Warmmiete (bleibt bestehen)', st.warmmiete)}${field('kredite', 'Raten bestehender Kredite', st.kredite)}${field('versicherung', 'Versicherungen, Vorsorge', st.versicherung)}${field('kfz', 'Kfz', st.kfz)}${field('sonstAus', 'Sonstiges', st.sonstAus)}${field('bewirtschaftung', 'Bewirtschaftung neue Immobilie', st.bewirtschaftung)}
     <h4>Finanzierung</h4>${field('darlehen', 'Darlehen (€)', st.darlehen)}${field('zins', 'Sollzins (%)', st.zins)}${field('tilgung', 'Tilgung (%)', st.tilgung)}${field('puffer', 'Sicherheitspuffer (%)', st.puffer)}</div>
-    <div id="pgOut"></div><div class="pg-act"><button type="button" class="btn btn-dark" id="pgPrint">Als PDF / drucken</button></div>`;
+    <div id="pgOut"></div><div class="pg-act">${lastFall() ? '<button type="button" class="btn btn-outline" id="pgFall">Aus letzter Fall-Analyse übernehmen</button>' : ''}<button type="button" class="btn btn-dark" id="pgPrint">Als PDF / drucken</button></div>`;
   const out = () => box.querySelector('#pgOut');
+  box.querySelector('#pgFall')?.addEventListener('click', () => { const f = lastFall(); if (!f) return; Object.assign(st, { netto1: f.netto || st.netto1, netto2: 0, mieteNeu: f.miete || 0, erwachsene: Math.min(2, f.personen || 1), kinder: Math.max(0, (f.personen || 1) - 2), darlehen: Math.round(f.darlehen || st.darlehen), zins: f.zins || st.zins, tilgung: f.tilgung || st.tilgung }); save('haushalt', st); pHaushalt(box, ctx); ctx.toast?.('Werte aus der Fall-Analyse übernommen – bitte prüfen.'); });
   let last;
   bind(box, 'haushalt', st, () => {
     const r = last = haushalt(st);
@@ -237,6 +267,7 @@ function pProtokoll(box, ctx) {
 // ---------- 7. Bankangebote vergleichen ----------
 function pAngebote(box, ctx) {
   const st = load('angebote', { kunde: '', o: [{ bank: 'Bank A', loan: 350000, rate: 3.62, eff: 3.7, repay: 2, years: 15, fees: 0 }, { bank: 'Bank B', loan: 350000, rate: 3.48, eff: 3.6, repay: 2, years: 15, fees: 1500 }, { bank: 'Bank C', loan: 350000, rate: 3.55, eff: 3.62, repay: 2, years: 15, fees: 0 }, { bank: '', loan: 350000, rate: 0, eff: 0, repay: 2, years: 15, fees: 0 }] });
+  const lf = lastFall(); if (lf?.darlehen && st.o.every((o) => !String(o.bank || '').trim() || num(o.loan) === 350000)) st.o.forEach((o) => { o.loan = Math.round(lf.darlehen); });
   const F = [['bank', 'Anbieter', 'text'], ['loan', 'Darlehen'], ['rate', 'Soll %'], ['eff', 'Eff. %'], ['repay', 'Tilg. %'], ['years', 'Bindung J.'], ['fees', 'Gebühren €']];
   box.innerHTML = `<p class="form-note">Bis zu vier Angebote nebeneinander: Rate, Zinsen in der Bindung, Restschuld, Gesamtkosten – mit Empfehlung und druckfertigem Vergleich für den Kunden.</p>
     <div class="pg-grid">${field('kunde', 'Kunde', st.kunde, { text: true })}</div>
@@ -245,7 +276,7 @@ function pAngebote(box, ctx) {
   let r;
   const run = () => {
     r = compareOffers(st.o.map((o) => ({ ...o, loan: num(o.loan), rate: num(o.rate), eff: num(o.eff), repay: num(o.repay), years: num(o.years), fees: num(o.fees) })));
-    box.querySelector('#pgOut').innerHTML = r.rows.length ? `<div class="pg-tablewrap"><table class="pg-res"><thead><tr><th>Anbieter</th><th>Rate</th><th>Zinsen Bindung</th><th>Gebühren</th><th>Restschuld</th></tr></thead><tbody>${r.rows.map((x) => `<tr class="${x === r.best ? 'best' : ''}"><td><strong>${esc(x.bank || '–')}</strong><small>${P(x.rate)} / eff. ${P(x.eff)} · ${x.years} J.</small></td><td>${E2(x.pay)}</td><td>${E(x.interest)}</td><td>${E(x.fees)}</td><td>${E(x.rest)}</td></tr>`).join('')}</tbody></table></div><p class="pg-verdict ok">Günstigstes Angebot (Zinsen + Gebühren + Restschuld): <strong>${esc(r.best.bank || '–')}</strong>${r.sameYears ? '' : ' – Achtung: unterschiedliche Zinsbindungen.'}</p>` : '<p class="form-note">Bitte Angebote eintragen.</p>';
+    box.querySelector('#pgOut').innerHTML = warnBox(plausi('angebote', st)) + (r.rows.length ? `<div class="pg-tablewrap"><table class="pg-res"><thead><tr><th>Anbieter</th><th>Rate</th><th>Zinsen Bindung</th><th>Gebühren</th><th>Restschuld</th></tr></thead><tbody>${r.rows.map((x) => `<tr class="${x === r.best ? 'best' : ''}"><td><strong>${esc(x.bank || '–')}</strong><small>${P(x.rate)} / eff. ${P(x.eff)} · ${x.years} J.</small></td><td>${E2(x.pay)}</td><td>${E(x.interest)}</td><td>${E(x.fees)}</td><td>${E(x.rest)}</td></tr>`).join('')}</tbody></table></div><p class="pg-verdict ok">Günstigstes Angebot (Zinsen + Gebühren + Restschuld): <strong>${esc(r.best.bank || '–')}</strong>${r.sameYears ? '' : ' – Achtung: unterschiedliche Zinsbindungen.'}</p>` : '<p class="form-note">Bitte Angebote eintragen.</p>');
   };
   box.addEventListener('input', (e) => { const t = e.target; if (t.dataset.o != null) { st.o[+t.dataset.o][t.dataset.ok] = t.value; } else if (t.dataset.k) st[t.dataset.k] = t.value; save('angebote', st); run(); });
   run();
@@ -294,7 +325,9 @@ export function renderPrograms(box, { tier, branche, brand, toast }) {
     const b = box.querySelector('#pgBox'); b.hidden = false;
     box.querySelectorAll('.pg-tile').forEach((t) => t.classList.toggle('on', t.dataset.pg === id));
     if (!has(p)) { b.innerHTML = `<h3>${esc(p.t)}</h3><div class="pt-alert warn"><strong>${p.tier === 'PRO' ? 'Dieses Tool ist im Tarif Kanzlei & Baufi Pro enthalten.' : 'Software-Tools gibt es ab dem Tarif Basic.'}</strong> <a class="btn btn-dark" href="#tarif">Tarif ansehen</a></div>`; return; }
-    b.innerHTML = `<div class="pg-head"><h3>${esc(p.t)}</h3><button type="button" class="text-btn" id="pgClose">Schließen</button></div><div id="pgBody"></div>`;
+    b.innerHTML = `<div class="pg-head"><h3>${esc(p.t)}</h3><span><button type="button" class="text-btn" id="pgReset">Eingaben löschen</button> <button type="button" class="text-btn" id="pgClose">Schließen</button></span></div><div id="pgBody"></div>
+      <p class="pg-legal">${PERSONAL.has(p.id) ? 'Kundendaten in diesem Tool bleiben nur in diesem Browser-Tab und werden beim Abmelden gelöscht – sie werden nicht an ImmoAdv übertragen. ' : 'Eingaben bleiben auf diesem Gerät und werden nicht an ImmoAdv übertragen. '}Rechnerische Orientierung, keine Kreditentscheidung und keine Rechts- oder Steuerberatung; die berufsrechtliche Verantwortung (§§ 34c, 34i GewO, § 511 BGB) bleibt beim Berater.</p>`;
+    b.querySelector('#pgReset').onclick = () => { try { store(p.id).removeItem(KEY(p.id)); } catch { /* ohne Speicher */ } open(id); toast?.('Eingaben gelöscht.'); };
     b.querySelector('#pgClose').onclick = () => { b.hidden = true; box.querySelectorAll('.pg-tile').forEach((t) => t.classList.remove('on')); };
     const body = b.querySelector('#pgBody');
     p.fn(body, { brand, toast });

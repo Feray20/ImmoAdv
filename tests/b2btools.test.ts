@@ -40,3 +40,10 @@ test('GEG-Pflichtangaben und Unterlagenliste', async () => {
   const l = unterlagenListe({ status: 'selbst', objekt: 'etw', vermietet: true });
   assert.ok(l.includes('Teilungserklärung mit Aufteilungsplan') && l.some((x) => x.startsWith('Bilanzen')) && l.includes('Mietvertrag bzw. Mieterliste'));
 });
+
+test('Plausibilität: Warnungen bei untypischen Eingaben', async () => {
+  const { plausi } = await import('../public/src/b2b-tools.mjs');
+  assert.ok(plausi('haushalt', { zins: 3.6, tilgung: 2, pausch1: 500, mieteAnteil: 100, puffer: 0 }).length === 3);
+  assert.equal(plausi('provision', { gesamtPct: 7.14 }).length, 0);
+  assert.ok(plausi('angebote', { o: [{ bank: 'X', rate: 3.5, eff: 3.4 }] })[0].includes('Effektivzins'));
+});

@@ -141,6 +141,8 @@ function valStr(k, v) {
 function paint(box, ctx) {
   const out = box.querySelector('#faOut');
   const c = calc(S.inputs), f = S.facts, sv = sev(S.docs);
+  // Nur Zahlen für die Übernahme in die Software-Tools (Haushaltsrechnung, Angebotsvergleich); nur in diesem Tab.
+  try { const v = c.variants[0] || {}; sessionStorage.setItem('ia-fall-last', JSON.stringify({ netto: S.inputs.netto, miete: S.inputs.miete, personen: S.inputs.personen, darlehen: c.D, zins: v.zins ? +(v.zins * 100).toFixed(3) : null, tilgung: v.tilgung ? +(v.tilgung * 100).toFixed(2) : null, kaufpreis: S.inputs.kaufpreis })); } catch { /* ohne Speicher */ }
   const miss = missingDocs(S.docs.map((d) => d.type), f);
   out.innerHTML = `<div class="seg fa-tabs" role="tablist">${[['berater', 'Analyse für Sie'], ['kunde', 'Fassung für den Kunden'], ['praes', 'Präsentation']].map(([k, l]) => `<button type="button" role="tab" data-ft="${k}" aria-selected="${S.tab === k}">${l}</button>`).join('')}</div>
     <div id="faTab"></div>`;

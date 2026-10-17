@@ -52,7 +52,7 @@ function shell() {
     <div class="pt-sheet" id="ptSheet" hidden><div class="pt-sheet-bg" data-close></div><div class="pt-sheet-in" role="dialog" aria-label="Alle Bereiche"><div class="pt-sheet-h"><span class="pt-sheet-t"><strong>Hauptmenü</strong>${(a.companyName || '').trim().length >= 3 ? `<small>${esc(a.companyName)}</small>` : ''}</span><button type="button" class="stage-x" data-close aria-label="Schließen">×</button></div>
       <nav>${VIEWS.filter(([v]) => !MAIN.some(([m]) => m === v) && (me.role === 'owner' || !['tarif', 'profil'].includes(v))).map(([v, l]) => `<a href="#${v}" data-v="${v}">${l}</a>`).join('')}<a href="/app/dashboard">Zur Anwendung</a><button type="button" class="pt-logout" id="ptLogoutS">Abmelden</button></nav></div></div>
   </div>`;
-  root.querySelectorAll('#ptLogout,#ptLogoutM,#ptLogoutS').forEach((b) => { b.onclick = logout; });
+  root.querySelectorAll('#ptLogout,#ptLogoutM,#ptLogoutS').forEach((b) => { b.onclick = async () => { try { (await import('./b2b-tools.mjs')).clearAll(); } catch { /* weiter */ } logout(); }; });
   $('#ptBr').onclick = () => chooseBranche();
   const sheet = $('#ptSheet'), more = $('#ptMore');
   const openSheet = (on) => { sheet.hidden = !on; more.setAttribute('aria-expanded', String(on)); document.body.classList.toggle('pt-sheet-open', on); };

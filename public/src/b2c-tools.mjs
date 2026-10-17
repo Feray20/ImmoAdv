@@ -263,6 +263,7 @@ export function mountTools(view, { d, tier = 'free', b2b = false }) {
   const pro = b2b || tier === 'pro';
   view.innerHTML = `<h2 class="tl-h">Werkzeuge</h2><p class="form-note">Werkzeuge, die Ihnen Stunden sparen – vom Bankangebot bis zur Anschlussfinanzierung. Alles rechnet in Ihrem Browser.</p>
     <nav class="tl-nav" aria-label="Werkzeuge"><a href="#t-price">Kaufpreis verhandeln</a><a href="#t-offers">Bankangebote vergleichen</a><a href="#t-bank">Bankgespräch vorbereiten</a><a href="#t-special">Sondertilgung</a><a href="#t-fwd">Anschluss &amp; Forward</a><a href="#t-bk">Betriebskosten</a><a href="#steuer">Steuer-Werkzeuge</a><a href="/rechner">Alle Rechner</a></nav>
+    <p class="form-note">Ihre Eingaben bleiben nur in diesem Browser. <button type="button" class="text-btn" id="tlClear">Alle Eingaben in den Werkzeugen löschen</button></p>
     <section class="tl-card" id="t-price"></section><section class="tl-card" id="t-offers"></section><section class="tl-card" id="t-bank"></section><section class="tl-card" id="t-special"></section><section class="tl-card" id="t-fwd"></section><section class="tl-card" id="t-bk"></section>`;
   priceTool($('t-price'), pass);
   specialTool($('t-special'), pass);
@@ -270,5 +271,6 @@ export function mountTools(view, { d, tier = 'free', b2b = false }) {
   offersTool($('t-offers'), pass);
   bankTool($('t-bank'), pass, d);
   forwardTool($('t-fwd'), pro, d);
+  $('tlClear')?.addEventListener('click', () => { if (!confirm('Alle Eingaben in den Werkzeugen auf diesem Gerät löschen?')) return; try { Object.keys(localStorage).filter((k) => k.startsWith('ia-tool-')).forEach((k) => localStorage.removeItem(k)); } catch { /* ohne Speicher */ } mountTools(view, { d, tier, b2b }); });
   view.querySelectorAll('.tl-nav a[href^="#t-"]').forEach((a) => a.onclick = (e) => { e.preventDefault(); $(a.getAttribute('href').slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 }
