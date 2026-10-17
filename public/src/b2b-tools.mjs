@@ -1,4 +1,4 @@
-// Programme im Unternehmensportal: Arbeitswerkzeuge, die Berater Stunden sparen. Alles rechnet im Browser des Beraters;
+// Software-Tools im Unternehmensportal, die Berater Stunden sparen. Alles rechnet im Browser des Beraters;
 // Eingaben bleiben in diesem Browser (localStorage) und werden nicht an ImmoAdv übertragen. Ausgabe: Druck / PDF, Text kopieren.
 // Basic: Haushaltsrechnung, Unterlagen-Anforderung, Provisionsrechner, Inserats-Pflichtangaben, Ertragswert.
 // Pro/Enterprise: zusätzlich Beratungsprotokoll, Bankangebote vergleichen, Vorfälligkeit & Anschluss.
@@ -286,14 +286,14 @@ const RANK = { BASIC: 1, PRO: 2, ENTERPRISE: 3 };
 export function renderPrograms(box, { tier, branche, brand, toast }) {
   const has = (p) => (RANK[tier] || 0) >= RANK[p.tier];
   const order = [...PROGRAMS].sort((a, b) => (b.br.includes(branche) ? 1 : 0) - (a.br.includes(branche) ? 1 : 0));
-  box.innerHTML = `<section class="pt-card"><h2>Programme</h2><p class="form-note">Arbeitsprogramme, die Ihnen pro Fall Zeit sparen. Alles rechnet in Ihrem Browser; Eingaben bleiben auf diesem Gerät. Ergebnisse als PDF oder Text – ${brand?.logo ? 'mit Ihrem Logo' : 'auf Wunsch mit Ihrem Logo (ab Pro)'}.</p>
+  box.innerHTML = `<section class="pt-card"><h2>Software-Tools</h2><p class="form-note">Software-Tools, die Ihnen pro Fall Stunden sparen. Alles rechnet in Ihrem Browser; Eingaben bleiben auf diesem Gerät. Ergebnisse als PDF oder Text – ${brand?.logo ? 'mit Ihrem Logo' : 'auf Wunsch mit Ihrem Logo (ab Pro)'}.</p>
     <div class="pg-list">${order.map((p) => `<button type="button" class="pg-tile${has(p) ? '' : ' locked'}" data-pg="${p.id}"><strong>${esc(p.t)}</strong><span>${esc(p.d)}</span><em>${has(p) ? (p.br.includes(branche) ? 'für Ihre Branche' : 'öffnen') : p.tier === 'PRO' ? 'ab Kanzlei & Baufi Pro' : 'ab Basic'}</em></button>`).join('')}</div></section>
     <section class="pt-card" id="pgBox" hidden></section>`;
   const open = (id) => {
     const p = PROGRAMS.find((x) => x.id === id); if (!p) return;
     const b = box.querySelector('#pgBox'); b.hidden = false;
     box.querySelectorAll('.pg-tile').forEach((t) => t.classList.toggle('on', t.dataset.pg === id));
-    if (!has(p)) { b.innerHTML = `<h3>${esc(p.t)}</h3><div class="pt-alert warn"><strong>${p.tier === 'PRO' ? 'Dieses Programm ist im Tarif Kanzlei & Baufi Pro enthalten.' : 'Programme gibt es ab dem Tarif Basic.'}</strong> <a class="btn btn-dark" href="#tarif">Tarif ansehen</a></div>`; return; }
+    if (!has(p)) { b.innerHTML = `<h3>${esc(p.t)}</h3><div class="pt-alert warn"><strong>${p.tier === 'PRO' ? 'Dieses Tool ist im Tarif Kanzlei & Baufi Pro enthalten.' : 'Software-Tools gibt es ab dem Tarif Basic.'}</strong> <a class="btn btn-dark" href="#tarif">Tarif ansehen</a></div>`; return; }
     b.innerHTML = `<div class="pg-head"><h3>${esc(p.t)}</h3><button type="button" class="text-btn" id="pgClose">Schließen</button></div><div id="pgBody"></div>`;
     b.querySelector('#pgClose').onclick = () => { b.hidden = true; box.querySelectorAll('.pg-tile').forEach((t) => t.classList.remove('on')); };
     const body = b.querySelector('#pgBody');
