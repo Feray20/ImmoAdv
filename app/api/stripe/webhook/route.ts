@@ -1,3 +1,4 @@
+import { track } from '@/lib/analytics/track';
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { stripe } from '@/lib/billing/stripe';
@@ -36,6 +37,7 @@ export async function POST(req: Request) {
     case 'checkout.session.async_payment_succeeded': {
       const s = event.data.object as Stripe.Checkout.Session;
       console.info('billing_paid', { session: s.id, plan: s.metadata?.plan, status: s.payment_status });
+      if (s.payment_status === 'paid' && s.metadata?.immoadv_test !== '1') await track({ seg: s.metadata?.b2b_account_id ? 'b2b' : 'b2c', ev: 'purchase', plan: s.metadata?.plan || (s.metadata?.b2b_account_id ? 'b2b' : null) });
       break;
     }
     case 'checkout.session.async_payment_failed':

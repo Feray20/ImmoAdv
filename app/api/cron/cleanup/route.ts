@@ -70,6 +70,7 @@ async function leadRetention(): Promise<Record<string, number>> {
     deleted += r.data?.length ?? 0;
   }
   await db.from('immo_security_log').delete().lt('created_at', new Date(Date.now() - 30 * 864e5).toISOString());
+  await db.from('immo_analytics').delete().lt('ts', new Date(Date.now() - 425 * 864e5).toISOString());
   await db.from('immo_webhook_log').delete().lt('created_at', new Date(Date.now() - 90 * 864e5).toISOString());
   // Verifizierungsnachweise 90 Tage nach der Entscheidung (freigeschaltet oder abgelehnt) löschen.
   let verifDocs = 0;

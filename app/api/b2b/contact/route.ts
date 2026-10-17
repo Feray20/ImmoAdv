@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { track } from '@/lib/analytics/track';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase/admin';
 import { json } from '@/lib/b2b/http';
@@ -81,6 +82,7 @@ export async function POST(req: Request) {
   const ins = await db.from('immo_b2b_contact').insert({ id, kind: b.kind, name: b.name, company: b.company, email: b.email, phone: b.phone || null, institution_type: b.institutionType || null, city: b.city || null,
     legal_form: b.legalForm || null, register_number: b.registerNumber || null, tax_id: b.taxId || null, ...(proof || {}), message: (b.message || '') + flag || null, ip_hash: ip });
   if (ins.error) { if (proof) await db.storage.from('b2b-verify').remove([proof.proof_path]); return json({ error: 'Anfrage konnte nicht gespeichert werden.' }, 500); }
+  await track({ seg: 'b2b', ev: b.kind === 'konto' ? 'b2b_request' : 'b2b_contact', path: '/b2b' }, req);
   if (mailConfigured()) {
     for (const to of adminList()) await sendMail(to, `B2B-Anfrage (${b.kind}): ${b.company}`, `${b.name}, ${b.company}\n${b.email} · ${b.phone || '–'}${proof ? '\nNachweis: ' + proof.proof_name + ' (im Web-Admin unter Anfragen)' : ''}\n\n${b.message || '–'}`);
   }

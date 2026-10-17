@@ -38,6 +38,7 @@ export async function goCheckout(plan) {
   const t = token();
   if (!t) return 'login';
   const o = overlay('Sichere Bezahlseite wird geöffnet …');
+  try { window.iaTrack?.('checkout_start', { plan }); } catch { /* ignore */ }
   try {
     const r = await fetch('/api/billing/checkout', { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'content-type': 'application/json' }, body: JSON.stringify({ plan, consent: true }) });
     const j = await r.json().catch(() => ({}));
@@ -51,6 +52,7 @@ export async function goCheckout(plan) {
 // Kauf-Dialog. offer = { id, name, cents, intervall, features }
 export async function openBuy(offer, opts = {}) {
   const cfg = await config();
+  try { window.iaTrack?.('checkout_open', { plan: offer.id }); } catch { /* ignore */ }
   let d = document.getElementById('buyDlg');
   if (!d) { d = document.createElement('dialog'); d.id = 'buyDlg'; d.className = 'buy-dlg'; document.body.append(d); }
   const loggedIn = Boolean(token());

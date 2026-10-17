@@ -499,6 +499,7 @@ async function vTarif(box) {
   });
   box.querySelectorAll('[data-plan]').forEach((b) => b.onclick = () => busy(b, async () => {
     if (!$('#terms').checked) throw Error('Bitte die Unternehmer-Bestätigung ankreuzen.');
+    try { window.iaTrack?.('checkout_start', { seg: 'b2b', plan: b.dataset.plan }); } catch { /* ignore */ }
     const r = await api('/api/b2b/checkout', { method: 'POST', body: JSON.stringify({ plan: b.dataset.plan, terms: true }) });
     if (!r.ok) throw Error(r.data?.error);
     location.href = r.data.url;

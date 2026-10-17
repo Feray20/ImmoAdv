@@ -65,6 +65,17 @@ export async function GET(req: Request) {
     return j(data);
   }
 
+  // Analyse (cookielose Reichweitenmessung): Besucher, Seiten, Herkunft, Geräte, Weg zum Kauf.
+  const aseg = q.get('analytics');
+  if (aseg) {
+    if (aseg !== 'b2c' && aseg !== 'b2b') return j({ error: 'Ungültiger Bereich.' }, 400);
+    if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
+    const days = [1, 7, 30, 90, 365].includes(Number(q.get('days'))) ? Number(q.get('days')) : 30;
+    const { data, error } = await supabaseAdmin().rpc('admin_analytics', { seg_in: aseg, days, admins: adminList() });
+    if (error) return j({ error: 'Analyse nicht verfügbar.' }, 502);
+    return j(data);
+  }
+
   // Funnel je Bereich: wie viele Nutzer welchen Schritt erreichen (nur Zahlen).
   const fseg = q.get('funnel');
   if (fseg) {

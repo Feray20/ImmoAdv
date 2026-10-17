@@ -126,6 +126,7 @@ export function loginForm(root, opts) {
         const r = await supa('/auth/v1/token?grant_type=password', { method: 'POST', body: JSON.stringify({ email, password }) });
         const d = await r.json().catch(() => ({}));
         if (!r.ok) throw Error(authError(d));
+        if (AREA === 'b2b') try { window.iaTrack?.('b2b_login'); } catch { /* ignore */ }
         if (opts.check) { const why = await opts.check(d); if (why) { show(why); return; } }
         try { localStorage.setItem(REM, root.querySelector('#aRem')?.checked ? '1' : '0'); } catch { /* ignore */ }
         if ((d.user?.factors || []).some((x) => x.status === 'verified')) {

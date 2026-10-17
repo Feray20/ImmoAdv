@@ -72,7 +72,7 @@ async function mfa() {
 const SEGS = { b2c: 'Privatkunden (B2C)', b2b: 'Unternehmen (B2B)' };
 const getSeg = () => { try { return localStorage.getItem('ia-admin-seg') === 'b2b' ? 'b2b' : 'b2c'; } catch { return 'b2c'; } };
 const setSeg = (x) => { try { localStorage.setItem('ia-admin-seg', x); } catch { /* nur Komfort */ } };
-const TABS = [['uebersicht', 'Übersicht'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
+const TABS = [['uebersicht', 'Übersicht'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Steuer-Export'], ['anfragen', 'Anfragen & Codes'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
 
 function paintSeg() {
   const chip = $('#adSeg'); if (!chip) return;
@@ -105,7 +105,7 @@ function show() {
   const v = $('#adView');
   v.innerHTML = '<p class="form-note">Wird geladen …</p>';
   msg('');
-  ({ uebersicht, testkauf, cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen })[t](v);
+  ({ uebersicht, analyse, testkauf, cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen })[t](v);
 }
 
 // ---------- Nutzer: Konten im Überblick, sperren/entsperren, Passwort-Reset ----------
@@ -785,3 +785,62 @@ async function kennzahlen(v) {
   show();
   window.addEventListener('hashchange', show);
 })();
+
+// ---------- Analyse: Besucher, Herkunft, Geräte, Weg zum Kauf (cookielos, nur Zahlen) ----------
+let AN_DAYS = 30;
+async function analyse(v) {
+  const seg = getSeg(), nf = (x) => Number(x || 0).toLocaleString('de-DE');
+  v.innerHTML = `<section class="ad-over an"><div class="ad-over-h"><h2>Analyse · ${seg === 'b2b' ? 'B2B (Unternehmen)' : 'B2C (Privatkunden)'}</h2>
+    <p class="form-note">Reichweitenmessung ohne Cookies und ohne gespeicherte IP-Adressen. Bereich oben rechts umschalten (B2C ⇄ B2B).</p></div>
+    <div class="ad-period"><div class="seg" role="group" aria-label="Zeitraum">${[[1, 'Heute'], [7, '7 Tage'], [30, '30 Tage'], [90, '90 Tage'], [365, '12 Monate']].map(([k, l]) => `<button type="button" data-ad="${k}" aria-pressed="${k === AN_DAYS}">${l}</button>`).join('')}</div></div>
+    <div id="anBody"><p class="form-note">Wird geladen …</p></div></section>`;
+  v.querySelectorAll('[data-ad]').forEach((b) => b.onclick = () => { AN_DAYS = Number(b.dataset.ad); v.querySelectorAll('[data-ad]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); load(); });
+  const load = async () => {
+    const box = $('#anBody'); box.style.opacity = '.55';
+    const r = await api(`/api/admin/system?analytics=${seg}&days=${AN_DAYS}`);
+    box.style.opacity = '';
+    if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+    const d = r.data, ev = d.events || {}, evv = d.eventVisitors || {};
+    const delta = (a, b) => { if (!b) return a ? '<small class="an-d up">neu</small>' : ''; const p = Math.round(((a - b) / b) * 100); return `<small class="an-d ${p >= 0 ? 'up' : 'down'}">${p >= 0 ? '▲' : '▼'} ${Math.abs(p)} % zum Vorzeitraum</small>`; };
+    const tile = (l, val, sub = '') => `<div class="ad-tile"><span class="ad-tile-l">${l}</span><strong>${val}</strong>${sub}</div>`;
+    const ppv = d.visitors ? (d.pageviews / d.visitors).toLocaleString('de-DE', { maximumFractionDigits: 1 }) : '–';
+    const tiles = seg === 'b2b' ? [
+      tile('Besucher', nf(d.visitors), delta(d.visitors, d.prevVisitors)), tile('Seitenaufrufe', nf(d.pageviews), delta(d.pageviews, d.prevPageviews)), tile('Seiten je Besuch', ppv),
+      tile('Kontoanfragen', nf(ev.b2b_request), '<small>über Formular / Portal</small>'), tile('Demo & Kontakt', nf(ev.b2b_contact)), tile('Portal-Anmeldungen', nf(ev.b2b_login)),
+      tile('Tarif-Bezahlseite geöffnet', nf(ev.checkout_start)), tile('Tarife gebucht', nf(d.purchases)),
+    ] : [
+      tile('Besucher', nf(d.visitors), delta(d.visitors, d.prevVisitors)), tile('Seitenaufrufe', nf(d.pageviews), delta(d.pageviews, d.prevPageviews)), tile('Seiten je Besuch', ppv),
+      tile('Registrierungen', nf(d.registrations), '<small>neue Konten (aus der Datenbank)</small>'), tile('Anmeldungen', nf(ev.login)),
+      tile('Kauf-Dialog geöffnet', nf(ev.checkout_open)), tile('Zur Bezahlseite', nf(ev.checkout_start)), tile('Käufe', nf(d.purchases), '<small>bestätigt durch Stripe</small>'),
+    ];
+    const steps = seg === 'b2b'
+      ? [['Besucher', d.visitors], ['Seite „Für Unternehmen“ gesehen', d.offerVisitors], ['Konto angefragt', ev.b2b_request], ['Im Portal angemeldet', evv.b2b_login], ['Tarif gebucht', d.purchases]]
+      : [['Besucher', d.visitors], ['Preise angesehen', d.offerVisitors], ['Registriert', d.registrations], ['Kauf-Dialog geöffnet', evv.checkout_open], ['Zur Bezahlseite', evv.checkout_start], ['Gekauft', d.purchases]];
+    const first = Number(steps[0][1] || 0);
+    const funnel = steps.map(([l, n], i) => { n = Number(n || 0); const prev = i ? Number(steps[i - 1][1] || 0) : n, pct = first ? Math.round((n / first) * 100) : 0; return `<div class="fn-row"><span class="fn-l">${esc(l)}</span><span class="fn-bar"><i style="width:${first ? Math.max(n ? 2 : 0, Math.min(100, pct)) : 0}%"></i></span><strong class="fn-n">${nf(n)}</strong><small class="fn-c">${i ? (prev ? `${Math.round((n / prev) * 100)} % vom Schritt davor` : '–') : 'Start'}</small></div>`; }).join('');
+    const list = (title, rows, lab = (x) => x, unit = 'Besucher') => { const max = Math.max(1, ...rows.map((r) => Number(r[1]))); return `<section class="pt-card an-list"><h3>${title}</h3>${rows.length ? `<ol>${rows.map((r) => `<li><span class="an-bar" style="--w:${Math.round((Number(r[1]) / max) * 100)}%"></span><span class="an-k">${esc(lab(r[0]))}</span><b>${nf(r[1])}</b></li>`).join('')}</ol><p class="form-note">${unit}</p>` : '<p class="form-note">Noch keine Daten.</p>'}</section>`; };
+    const DEV = { mobile: 'Smartphone', tablet: 'Tablet', desktop: 'Computer', '?': 'Unbekannt' };
+    let cn; try { cn = new Intl.DisplayNames(['de'], { type: 'region' }); } catch { cn = null; }
+    box.innerHTML = `<div class="ad-tiles">${tiles.join('')}</div>
+      <section class="pt-card"><h3>Besucher und Seitenaufrufe je Tag</h3>${chart(d.series || [])}</section>
+      <section class="pt-card"><h3>Weg zum ${seg === 'b2b' ? 'Unternehmenskonto' : 'Kauf'}</h3><div class="fn">${funnel}</div><p class="form-note">Besucherzahlen je Schritt im gewählten Zeitraum. Registrierungen und Käufe kommen aus Datenbank bzw. Stripe und sind deshalb auch bei aktivem „Do Not Track“ vollständig.</p></section>
+      <div class="an-grid">${list('Beliebteste Seiten', (d.pages || []).map((p) => [p[0], p[1]]), (x) => x, 'Seitenaufrufe')}${list('Herkunft', d.refs || [])}${list('Kampagnen (utm)', d.campaigns || [])}${list('Geräte', d.devices || [], (x) => DEV[x] || x)}${list('Browser', d.browsers || [])}${list('Betriebssystem', d.os || [])}${list('Länder', d.countries || [], (x) => (x === '??' ? 'Unbekannt' : (cn ? cn.of(x) : x)))}</div>
+      <p class="form-note">Besucher = eindeutige Besucher je Tag, über den Zeitraum summiert (ohne Cookies ist ein Wiedererkennen über Tage bewusst nicht möglich). Nicht gezählt: Administratoren-Bereich, Bots, Besucher mit „Do Not Track“ bzw. Global Privacy Control. Erfassung seit Oktober 2026.</p>`;
+  };
+  load();
+}
+
+// Kleines Liniendiagramm (SVG) für die Tageswerte.
+function chart(series) {
+  if (!series.length) return '<p class="form-note">Noch keine Daten.</p>';
+  const sm = innerWidth < 600, W = sm ? 360 : 720, H = sm ? 200 : 220, P = { l: 40, r: 12, t: 12, b: 28 }, iw = W - P.l - P.r, ih = H - P.t - P.b;
+  const maxV = Math.max(4, ...series.map((x) => Math.max(x[1], x[2])));
+  const step = Math.pow(10, Math.floor(Math.log10(maxV))) * (maxV / Math.pow(10, Math.floor(Math.log10(maxV))) > 5 ? 2 : 1), top = Math.ceil(maxV / step) * step;
+  const X = (i) => P.l + (series.length === 1 ? iw / 2 : (i / (series.length - 1)) * iw), Y = (v) => P.t + ih - (v / top) * ih;
+  const line = (k) => series.map((x, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(x[k]).toFixed(1)}`).join('');
+  const grid = []; for (let v = 0; v <= top; v += step) grid.push(`<line x1="${P.l}" x2="${W - P.r}" y1="${Y(v)}" y2="${Y(v)}" class="an-g"/><text x="${P.l - 6}" y="${Y(v) + 4}" text-anchor="end" class="an-t">${v.toLocaleString('de-DE')}</text>`);
+  const every = Math.max(1, Math.ceil(series.length / (sm ? 4 : 8)));
+  const lab = series.map((x, i) => ((i % every === 0 && series.length - 1 - i >= every / 2) || i === series.length - 1) ? `<text x="${X(i)}" y="${H - 8}" text-anchor="middle" class="an-t">${new Date(x[0]).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}</text>` : '').join('');
+  const dots = series.length <= 31 ? series.map((x, i) => `<circle cx="${X(i)}" cy="${Y(x[1])}" r="3" class="an-dv"><title>${new Date(x[0]).toLocaleDateString('de-DE')}: ${x[1]} Besucher, ${x[2]} Aufrufe</title></circle>`).join('') : '';
+  return `<div class="an-legend"><span class="an-lv">Besucher</span><span class="an-lp">Seitenaufrufe</span></div><svg class="an-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Besucher und Seitenaufrufe je Tag">${grid.join('')}<path d="${line(2)}" class="an-p"/><path d="${line(1)}" class="an-v"/>${dots}${lab}</svg>`;
+}
