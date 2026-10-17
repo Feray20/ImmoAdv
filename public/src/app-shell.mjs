@@ -274,7 +274,13 @@ export function setupApp({ u, d, saveData, reload }) {
         $('reqGo').onclick = () => { seen(); };
         if (typeof window.__iaApplyView === 'function') window.__iaApplyView();
       }
-      body.innerHTML = `<p class="form-note">Diese Unternehmen sehen Ihren Fortschritt (Stufe, Bankreife, Anzahl Unterlagen, fehlende Unterlagen-Arten) – keine Dokumente und keine Inhalte.</p><ul class="ber-list">${list.map((c) => `<li><span><strong>${esc(c.company)}</strong><small>${c.city ? esc(c.city) + ' · ' : ''}verbunden seit ${c.since ? new Date(c.since).toLocaleDateString('de-DE') : '–'}</small></span><button type="button" class="btn btn-outline" data-ber-end="${esc(c.id)}">Trennen</button></li>`).join('')}</ul>`;
+      body.innerHTML = `<p class="form-note">Diese Unternehmen sehen Ihren Fortschritt (Stufe, Bankreife, Anzahl Unterlagen, fehlende Unterlagen-Arten) – keine Dokumente und keine Inhalte.</p><ul class="ber-list">${list.map((c) => `<li><span><strong>${esc(c.company)}</strong><small>${c.city ? esc(c.city) + ' · ' : ''}verbunden seit ${c.since ? new Date(c.since).toLocaleDateString('de-DE') : '–'}</small><label class="chk ber-radar"><input type="checkbox" data-ber-radar="${esc(c.id)}"${c.radar ? ' checked' : ''}> Rechtzeitig vor Ende meiner Zinsbindung ansprechen lassen</label></span><button type="button" class="btn btn-outline" data-ber-end="${esc(c.id)}">Trennen</button></li>`).join('')}</ul><p class="form-note ber-radar-t">${esc(jj.radarText || '')}</p>`;
+      body.querySelectorAll('[data-ber-radar]').forEach((cb) => cb.onchange = async () => {
+        cb.disabled = true;
+        const rr = await fetch('/api/me/berater', { method: 'POST', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify({ id: cb.dataset.berRadar, radar: cb.checked }) }).catch(() => null);
+        cb.disabled = false;
+        if (!rr || !rr.ok) cb.checked = !cb.checked;
+      });
       body.querySelectorAll('[data-ber-end]').forEach((b) => b.onclick = async () => {
         if (!confirm('Verbindung trennen? Das Unternehmen sieht Ihren Fortschritt danach nicht mehr.')) return;
         b.disabled = true;

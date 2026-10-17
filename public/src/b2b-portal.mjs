@@ -94,7 +94,16 @@ async function vKunden(box) {
       ${c.lastRequestAt ? `<small class="kd-last">Zuletzt erinnert: ${dtt(c.lastRequestAt)}</small>` : ''}
       <div class="kd-act"><small>verbunden seit ${c.since ? dt(c.since) : '–'}</small><button type="button" class="btn btn-ghost" data-kd-end="${esc(c.id)}">Trennen</button></div></article>`;
   };
-  box.innerHTML = `<section class="pt-card"><h2>Kunde einladen</h2>
+  // Bestandskunden-Radar: Kunden, deren Zinsbindung in den nächsten 36 Monaten endet (nur mit Radar-Einwilligung, ab Pro).
+  const mon = (ym) => { const [y, m] = ym.split('-').map(Number); const n = new Date(); return (y - n.getFullYear()) * 12 + (m - 1 - n.getMonth()); };
+  const radarRows = con.flatMap((c) => (Array.isArray(c.radar) ? c.radar : []).map((ym) => ({ c, ym, m: mon(ym) }))).filter((x) => x.m >= -1 && x.m <= 36).sort((a, b) => a.m - b.m);
+  const radarAsked = con.filter((c) => c.radar).length;
+  const radar = `<section class="pt-card kd-radar"><div class="kd-head"><h2>Bestandskunden-Radar</h2><span class="form-note">${radarAsked} von ${con.length} Kunden teilen ihr Zinsbindungsende</span></div>
+    ${!r.data.radarOn ? '<p class="form-note">Der Radar meldet Ihnen, wenn bei Ihren Kunden die Zinsbindung in 36, 24 oder 12 Monaten endet – Ihre Anschlussfinanzierungen von morgen. Enthalten ab <a href="#tarif">Kanzlei & Baufi Pro</a>.</p>'
+      : radarRows.length ? `<ul class="kd-rlist">${radarRows.map((x) => `<li class="${x.m <= 12 ? 'hot' : x.m <= 24 ? 'warm' : ''}"><span><strong>${esc(x.c.name || x.c.email || 'Kunde')}</strong><small>Zinsbindung endet ${x.ym.split('-').reverse().join('/')}</small></span><b>${x.m < 0 ? 'abgelaufen' : x.m === 0 ? 'diesen Monat' : `in ${x.m} Monat${x.m === 1 ? '' : 'en'}`}</b>${x.m <= 60 ? '<em>Forward möglich</em>' : ''}</li>`).join('')}</ul>`
+      : '<p class="form-note">Aktuell endet bei keinem Ihrer Kunden die Zinsbindung in den nächsten 36 Monaten.</p>'}
+    <p class="form-note">Kunden schalten das Teilen von Monat und Jahr des Zinsbindungsendes in ihrem Konto selbst frei (eigene Einwilligung, jederzeit widerrufbar) – ohne Beträge oder Bankdaten.</p></section>`;
+  box.innerHTML = radar + `<section class="pt-card"><h2>Kunde einladen</h2>
       <p class="form-note">Ihr Kunde bereitet Finanzprofil, Objekt und Unterlagen in ImmoAdv vor – kostenlos. Stimmt er zu, sehen Sie hier seinen Fortschritt: Stufe, Bankreife, Anzahl Objekte und Unterlagen. Dokumente und Inhalte sehen Sie nicht; der Kunde kann die Verbindung jederzeit trennen.</p>
       <form class="pt-row kd-form" id="kdF"><input id="kdMail" type="email" required placeholder="E-Mail des Kunden" aria-label="E-Mail des Kunden" autocomplete="off"><input id="kdName" type="text" placeholder="Name (optional)" aria-label="Name (optional)" maxlength="120"><button class="btn btn-dark" type="submit">Einladen</button></form>
       <div id="kdLink">${KD_LAST ? kdLinkHtml(KD_LAST) : ''}</div></section>

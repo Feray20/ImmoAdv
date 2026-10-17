@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic';
 // Kunde (Website-Konto): Einladung eines Beraters ansehen, zustimmen, Verbindungen anzeigen und trennen.
 const j = (b: unknown, s = 200) => NextResponse.json(b, { status: s, headers: { 'Cache-Control': 'no-store' } });
 const CONSENT = 'Ich willige ein, dass das genannte Unternehmen meinen Fortschritt in ImmoAdv sieht: Stufe, Bankreife in Prozent, Anzahl meiner Objekte und Unterlagen, welche Arten von Unterlagen noch fehlen (z. B. „Grundbuch und Flurkarte“) und den Zeitpunkt meiner letzten Aktivität. Dokumente und Inhalte werden nicht geteilt. Das Unternehmen kann mich per E-Mail an fehlende Unterlagen erinnern. Ich kann die Einwilligung jederzeit in meinem Konto widerrufen.';
+const RADAR = 'Ich willige ein, dass das genannte Unternehmen zusätzlich Monat und Jahr des Endes der Zinsbindung meiner erfassten Objekte sieht (ohne Beträge, Banken oder Dokumente), um mich rechtzeitig zur Anschlussfinanzierung anzusprechen. Ich kann diese Einwilligung jederzeit in meinem Konto widerrufen.';
 const Tok = z.string().regex(/^[A-Za-z0-9_-]{20,100}$/);
 
 async function ctx(req: Request) {
@@ -39,15 +40,15 @@ export async function GET(req: Request) {
     return j({ invite: { company: inv.company.company_name, city: inv.company.city, verified: Boolean(inv.company.verified_at) }, consent: CONSENT });
   }
   const db = supabaseAdmin();
-  const { data } = await db.from('immo_b2b_clients').select('id, account_id, consent_at, last_request_at, request_note, request_seen_at').eq('client_user_id', c.user!.id).eq('status', 'verbunden');
+  const { data } = await db.from('immo_b2b_clients').select('id, account_id, consent_at, last_request_at, request_note, request_seen_at, radar_consent_at').eq('client_user_id', c.user!.id).eq('status', 'verbunden');
   const accIds = [...new Set((data ?? []).map((x) => x.account_id))];
   const { data: accs } = accIds.length ? await db.from('immo_b2b_accounts').select('id, company_name, city').in('id', accIds) : { data: [] };
   const byId = new Map((accs ?? []).map((a) => [a.id, a]));
   return j({ connections: (data ?? []).map((x) => ({
-    id: x.id, company: byId.get(x.account_id)?.company_name || 'Unternehmen', city: byId.get(x.account_id)?.city || null, since: x.consent_at,
+    id: x.id, company: byId.get(x.account_id)?.company_name || 'Unternehmen', city: byId.get(x.account_id)?.city || null, since: x.consent_at, radar: Boolean(x.radar_consent_at),
     // Offene Bitte des Beraters um fehlende Unterlagen (bis der Kunde sie gesehen hat).
     request: x.last_request_at && (!x.request_seen_at || new Date(x.request_seen_at) < new Date(x.last_request_at)) ? { at: x.last_request_at, note: x.request_note || null } : null,
-  })) });
+  })), radarText: RADAR });
 }
 
 export async function POST(req: Request) {
@@ -57,6 +58,13 @@ export async function POST(req: Request) {
   if (seen.success) {
     await supabaseAdmin().from('immo_b2b_clients').update({ request_seen_at: new Date().toISOString() }).eq('id', seen.data.seen).eq('client_user_id', c.user!.id);
     return j({ ok: true });
+  }
+  // Zinsbindungs-Radar je Verbindung ein- oder ausschalten (eigene Einwilligung).
+  const rad = z.object({ radar: z.boolean(), id: z.string().uuid() }).safeParse(body);
+  if (rad.success) {
+    const now = new Date().toISOString();
+    const { error } = await supabaseAdmin().from('immo_b2b_clients').update(rad.data.radar ? { radar_consent_at: now, radar_consent_text: RADAR } : { radar_consent_at: null }).eq('id', rad.data.id).eq('client_user_id', c.user!.id).eq('status', 'verbunden');
+    return error ? j({ error: 'Speichern fehlgeschlagen.' }, 500) : j({ ok: true });
   }
   const p = z.object({ token: Tok, consent: z.literal(true) }).safeParse(body);
   if (!p.success) return j({ error: 'Bitte der Freigabe ausdrücklich zustimmen.' }, 400);

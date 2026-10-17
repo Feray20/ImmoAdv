@@ -562,3 +562,9 @@ body.dk-open{overflow:hidden}
   .dk-kpis,.dk-vars,.dk-docs{grid-template-columns:1fr 1fr}.dk-vars{grid-template-columns:1fr}
   .dk-bar{grid-template-columns:7em 1fr 5.5em}.dk-title h1{font-size:2.2em}
 }
+.kd-radar{border-left:4px solid #0284C7}
+.kd-rlist{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px}
+.kd-rlist li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid #E2E8F0;border-radius:10px;background:#F8FAFC}
+.kd-rlist li span{display:grid}.kd-rlist small{color:#64748B}.kd-rlist b{color:#0F2C59}.kd-rlist em{font-style:normal;font-size:12px;font-weight:700;color:#0369A1;background:#E0F2FE;border-radius:999px;padding:3px 8px}
+.kd-rlist li.hot{border-color:#FCA5A5;background:#FEF2F2}.kd-rlist li.hot b{color:#B91C1C}.kd-rlist li.warm{border-color:#FCD34D;background:#FFFBEB}
+@media (max-width:560px){.kd-rlist li{grid-template-columns:1fr auto}.kd-rlist em{grid-column:1/-1;justify-self:start}}
