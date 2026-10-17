@@ -26,7 +26,7 @@ const APP = {
 
 // Seitenliste: Pfad, Datei, Titel, Beschreibung, Brotkrumen, Indexierung, Zusatz-JSON-LD.
 const PAGES = [
-  { path: '/', file: 'index.html', title: 'Geld verstehen, klug in Immobilien investieren | ImmoAdv', desc: 'Warum Investieren sinnvoll ist, wie Geld und Inflation wirken – und Schritt für Schritt zum Immobilien-Spezialisten. Kostenlos starten.', crumbs: [], extra: ['website', 'app', 'howto'] },
+  { path: '/', file: 'index.html', title: 'In 5 Minuten wissen, ob sich Ihre Immobilie rechnet | ImmoAdv', desc: 'Kostenloser Schnellrechner für Kapitalanlage und Eigenheim: Rendite, Cashflow, Rate, Stresstest – plus bankfertige Kreditmappe. Unabhängig, ohne Provision.', crumbs: [], extra: ['website', 'app', 'howto'] },
   { path: '/wissen', title: 'Immobilien und Geld verständlich erklärt – 44 Antworten | ImmoAdv', desc: 'Geld, Inflation, Vermögensaufbau, Eigenkapital, Nebenkosten, Beleihungswert, AfA, Anschlusszins: Antworten in zwei Ebenen mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
   { path: '/cockpit', file: null, skip: true, title: '', desc: '' },
   { path: '/suche', file: 'suche/index.html', template: 'wissen/index.html', title: 'Suche | ImmoAdv', desc: 'Rechner, Antworten und Fachbegriffe rund um Immobilienkauf und Finanzierung durchsuchen.', crumbs: ['Suche'] },
@@ -49,7 +49,7 @@ const PAGES = [
   { path: '/mustermappe', title: 'Beispiele: Muster-Kreditmappe und Objekt-Analyse | ImmoAdv', desc: 'Fiktive Beispiele als PDF: Kreditmappe mit Finanzierung, Haushaltsrechnung und Stresstest sowie Objekt-Analyse mit Rendite und Cashflow.', crumbs: ['Beispiele'] },
   { path: '/pro-begleiter', title: '12-Monats-Programm für Kapitalanleger | ImmoAdv', desc: 'Vom Kassensturz bis zum verwalteten Bestand: ein Thema pro Monat mit Aufgaben, Werkzeug und Gesetzestext zum Nachlesen.', crumbs: ['Pro-Begleiter'] },
   { path: '/profiler', title: 'Investor-Profiler: Welche Strategie passt zu Ihnen? | ImmoAdv', desc: 'Sechs Fragen zu Eigenkapital, Cashflow, Steuer und Horizont – mit den Kennzahlen, auf die Sie besonders achten sollten.', crumbs: ['Investor-Profiler'] },
-  { path: '/angebote', title: 'Preise und Angebote | ImmoAdv', desc: 'Suche, Analyse und Rechner kostenlos. Einsteiger 9,90 €/Monat, Profi 29,00 €/Monat, Kreditmappe ab 39,00 € – Endpreise inkl. USt, monatlich kündbar.', crumbs: ['Angebote'] },
+  { path: '/angebote', title: 'Preise und Angebote | ImmoAdv', desc: 'Alle Rechner kostenlos. BankReady Kreditmappe 39 € einmalig, Käufer-Pass 49 € für 90 Tage (kein Abo), Investor Pro 29 €/Monat – Endpreise inkl. USt.', crumbs: ['Angebote'] },
   { path: '/fuer-banken', title: 'Für Banken und Finanzierungsberater | ImmoAdv', desc: 'Vorbereitete Finanzierungsanfragen mit Kreditmappe, Prüf-QR und Datenraum. Keine Vermittlung, keine Provision – Pilotpartner gesucht.', crumbs: ['Für Banken'] },
   { path: '/sicherheit', title: 'Sicherheit und Datenschutz | ImmoAdv', desc: 'Speicherung in Frankfurt, Prüfsummen, befristete Freigabelinks und Zugriffsprotokoll – und was noch geplant ist.', crumbs: ['Sicherheit'] },
   { path: '/impressum', title: 'Impressum | ImmoAdv', desc: 'Anbieterkennzeichnung nach § 5 DDG.', crumbs: ['Impressum'] },
