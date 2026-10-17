@@ -1,8 +1,9 @@
+import { logSecurity } from '@/lib/security/seclog';
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { userFromRequest } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
-import { adminConfigured, DOCUMENT_BUCKET, supabaseAdmin } from '@/lib/supabase/admin';
+import { adminConfigured, anonymizedIpHash, DOCUMENT_BUCKET, supabaseAdmin } from '@/lib/supabase/admin';
 import { cleanupIncoming } from '@/lib/documents/cleanup';
 import { MAX_DIRECT_BYTES, MAX_DOCUMENTS_PER_USER, checkFile, isCategory, safeFilename } from '@/lib/documents/files';
 
@@ -62,6 +63,7 @@ export async function PUT(req: Request) {
   const checked = checkFile(bytes, dl.data.type, MAX_DIRECT_BYTES);
   if (!checked.ok) {
     await db.storage.from(DOCUMENT_BUCKET).remove([src]);
+    logSecurity('upload_rejected', `docs:${anonymizedIpHash(req) ?? 'x'}`, { detail: 'Dokument-Upload: ' + String(checked.reason).slice(0, 80) });
     return json({ error: checked.reason }, 415);
   }
   const f = checked.file;

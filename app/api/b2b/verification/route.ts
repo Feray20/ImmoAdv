@@ -1,3 +1,4 @@
+import { logSecurity } from '@/lib/security/seclog';
 import { createHash, randomUUID } from 'node:crypto';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { json, requireMember } from '@/lib/b2b/http';
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
   if (!buf.length) return json({ error: 'Die Datei ist leer.' }, 400);
   if (buf.length > MAX) return json({ error: 'Die Datei ist größer als 10 MB.' }, 413);
   const type = sniff(buf);
-  if (!type) return json({ error: 'Bitte als PDF, JPG oder PNG hochladen.' }, 415);
+  if (!type) { logSecurity('upload_rejected', `b2b-verify:${ctx.user.id}`, { detail: 'Verifizierungs-Upload (kein PDF/Bild)' }); return json({ error: 'Bitte als PDF, JPG oder PNG hochladen.' }, 415); }
   const db = supabaseAdmin();
   const existing = await docsOf(a.id);
   if (existing.length >= 8) return json({ error: 'Maximal 8 Nachweise. Bitte nicht benötigte Dateien entfernen.' }, 409);

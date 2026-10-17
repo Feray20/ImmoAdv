@@ -542,7 +542,7 @@ async function sicherheit(v) {
     </div>
     <h3>Letzte Konto-Ereignisse</h3>${(x.events || []).length ? `<table class="bill-table"><thead><tr><th>Zeit</th><th>Ereignis</th><th>Konto</th><th>IP</th></tr></thead><tbody>${x.events.map((e) => `<tr><td>${dtt(e.at)}</td><td>${esc(ACT[e.action] || e.action)}</td><td>${esc(e.who)}</td><td>${esc(e.ip || '–')}</td></tr>`).join('')}</tbody></table>` : '<p class="form-note">Noch keine Ereignisse protokolliert.</p>'}
     <p class="form-note">E-Mail-Adressen und IP-Adressen werden gekürzt angezeigt. Empfehlung: Zwei-Faktor-Schutz für alle Administratoren und Unternehmenskonten.</p>`;
-    v.prepend(box);
+    const inc = v.querySelector('#secInc'); if (inc) inc.after(box); else v.prepend(box);
   }).catch(() => {});
   const p = r.data?.panic || { active: false };
   v.innerHTML = `<section class="pt-card"><h2>Not-Aus</h2>
@@ -555,6 +555,24 @@ async function sicherheit(v) {
       <li>Anmeldeversuche: Supabase begrenzt fehlgeschlagene Anmeldungen automatisch; zusätzlich sind alle Schnittstellen je Nutzer und IP gedrosselt.</li>
       <li>Alle Admin-Aktionen stehen im Reiter Protokoll.</li></ul></section>
     <section class="pt-card"><h2>Sicherheitsprotokoll</h2><p class="form-note">Gedrosselte Zugriffe (zu viele Anfragen je Nutzer oder IP) und abgewiesene Zugriffe auf den Admin-Bereich. Gespeichert werden nur Bereich und ein gekürzter Hash, keine IP-Adressen; Löschung nach 30 Tagen. Die Zählung erfolgt je Serverinstanz, Spitzen können sich verteilen.</p><div id="secLog"><p class="form-note">Wird geladen …</p></div><button class="btn btn-ghost" id="secRe" type="button">Aktualisieren</button></section>`;
+  // Vorfälle: Angriffe und Bot-Wellen der letzten 7 Tage mit Sperren / Erledigt.
+  v.insertAdjacentHTML('afterbegin', '<section class="pt-card sec-inc" id="secInc"><p class="form-note">Vorfälle werden geladen …</p></section>');
+  const loadInc = async () => {
+    const box = $('#secInc'); const x = await api('/api/admin/sec');
+    if (!x.ok) { box.innerHTML = `<p class="form-note">${esc(x.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+    const d = x.data, act = d.blocks.filter((b) => b.active);
+    const ago = (t) => { const m = Math.round((Date.now() - new Date(t)) / 60000); return m < 60 ? `vor ${m} Min.` : m < 1440 ? `vor ${Math.round(m / 60)} Std.` : dt(t); };
+    box.innerHTML = `<div class="sec-inc-h"><h2>Vorfälle (7 Tage)</h2>${d.open ? `<span class="st bad">${d.open} offen</span>` : '<span class="st ok">alles erledigt</span>'}</div>
+      <p class="form-note"><button class="text-btn" id="secTest" type="button">Testalarm an mich senden</button> · Bei Angriffen und Bot-Wellen bekommen Sie automatisch eine E-Mail (höchstens alle 15 Minuten je Art). Hier können Sie Quellen sperren – gesperrte Quellen erhalten keinen Zugriff mehr auf die Schnittstellen. Gespeichert wird nur eine gekürzte Kennung, keine IP-Adresse.</p>
+      ${d.groups.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Art</th><th>Quelle</th><th>Anzahl</th><th>Zuletzt</th><th>Details</th><th></th></tr></thead><tbody>${d.groups.map((g) => `<tr class="${g.open ? 'sec-open' : ''}"><td><strong>${esc(g.label)}</strong>${g.open ? `<br><small>${g.open} offen</small>` : ''}</td><td>${g.ip ? `<code>${esc(g.ip.slice(0, 8))}</code>${g.blocked ? ' <span class="st">gesperrt</span>' : ''}` : '–'}</td><td>${g.n}</td><td>${esc(ago(g.last))}</td><td><small>${g.details.map(esc).join('<br>')}</small></td><td class="sec-act">${g.ip && !g.blocked ? `<button class="btn btn-dark btn-sm" data-blk="${g.ip}" data-days="1">24 h sperren</button><button class="text-btn" data-blk="${g.ip}" data-days="30">30 Tage</button><button class="text-btn" data-blk="${g.ip}" data-days="0">dauerhaft</button>` : ''}${g.open ? `<button class="text-btn" data-ack="${esc(g.kind)}" data-ip="${g.ip || ''}">erledigt</button>` : ''}</td></tr>`).join('')}</tbody></table></div>${d.open ? '<p><button class="btn btn-outline" id="ackAll" type="button">Alle als erledigt markieren</button></p>' : ''}` : '<p class="pt-alert ok">Keine Vorfälle in den letzten 7 Tagen.</p>'}
+      ${act.length ? `<h3 class="ad-sub">Gesperrte Quellen (${act.length})</h3><ul class="sec-blocks">${act.map((b) => `<li><code>${esc(b.ip_hash.slice(0, 8))}</code><span>${b.until ? 'bis ' + dtt(b.until) : 'dauerhaft'}${b.reason ? ' · ' + esc(b.reason) : ''}</span><button class="text-btn" data-unblk="${b.ip_hash}">entsperren</button></li>`).join('')}</ul>` : ''}`;
+    box.querySelectorAll('[data-blk]').forEach((b) => b.onclick = async () => { const days = Number(b.dataset.days) || null; const reason = prompt('Grund (optional, für das Protokoll):', 'Angriffsversuch') ?? null; if (reason === null) return; const y = await api('/api/admin/sec', { method: 'POST', body: JSON.stringify({ action: 'block', ip: b.dataset.blk, days, reason }) }); if (y.ok) { msg('Quelle gesperrt.'); loadInc(); } else msg(y.data?.error || 'Fehler', true); });
+    box.querySelectorAll('[data-unblk]').forEach((b) => b.onclick = async () => { if (!confirm('Sperre aufheben?')) return; await api('/api/admin/sec', { method: 'POST', body: JSON.stringify({ action: 'unblock', ip: b.dataset.unblk }) }); loadInc(); });
+    box.querySelectorAll('[data-ack]').forEach((b) => b.onclick = async () => { await api('/api/admin/sec', { method: 'POST', body: JSON.stringify({ action: 'ack', kind: b.dataset.ack, ip: b.dataset.ip || null }) }); loadInc(); });
+    $('#secTest')?.addEventListener('click', async () => { const y = await api('/api/admin/sec', { method: 'POST', body: JSON.stringify({ action: 'testalert' }) }); msg(y.ok ? 'Testalarm gesendet – bitte Postfach prüfen.' : (y.data?.error || 'Fehler'), !y.ok); });
+    $('#ackAll')?.addEventListener('click', async () => { await api('/api/admin/sec', { method: 'POST', body: JSON.stringify({ action: 'ack' }) }); loadInc(); });
+  };
+  loadInc();
   const KIND = { rate_limit: 'Gedrosselt', admin_denied: 'Admin verweigert', admin_ip_blocked: 'IP nicht freigegeben', admin_mfa_missing: 'Zweiter Faktor fehlt', panic: 'Not-Aus', honeypot: 'Bot (Honigtopf)', too_fast: 'Bot (zu schnell)', disposable_email: 'Wegwerf-Adresse', email_no_mx: 'Domain ohne Mailempfang', content_flagged: 'Spam-Verdacht' };
   const loadLog = async () => {
     const l = await api('/api/admin/support?log=1');

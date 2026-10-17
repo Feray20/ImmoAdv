@@ -1,3 +1,4 @@
+import { logSecurity } from '@/lib/security/seclog';
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { track } from '@/lib/analytics/track';
@@ -80,7 +81,7 @@ export async function POST(req: Request) {
     if (file.size > MAX) return json({ error: 'Der Nachweis ist größer als 4 MB.', field: 'proof' }, 413);
     const buf = Buffer.from(await file.arrayBuffer());
     const type = sniff(buf);
-    if (!type) return json({ error: 'Bitte den Nachweis als PDF, JPG oder PNG hochladen.', field: 'proof' }, 415);
+    if (!type) { logSecurity('upload_rejected', `b2b-contact:${ip}`, { detail: 'Nachweis-Upload (kein PDF/Bild)' }); return json({ error: 'Bitte den Nachweis als PDF, JPG oder PNG hochladen.', field: 'proof' }, 415); }
     const path = `requests/${id}.${type === 'application/pdf' ? 'pdf' : type === 'image/png' ? 'png' : 'jpg'}`;
     const up = await db.storage.from('b2b-verify').upload(path, buf, { contentType: type, upsert: false });
     if (up.error) return json({ error: 'Der Nachweis konnte nicht gespeichert werden. Bitte erneut versuchen.' }, 502);

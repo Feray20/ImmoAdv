@@ -1,8 +1,9 @@
+import { logSecurity } from '@/lib/security/seclog';
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { userFromRequest } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
-import { adminConfigured, DOCUMENT_BUCKET, supabaseAdmin } from '@/lib/supabase/admin';
+import { adminConfigured, anonymizedIpHash, DOCUMENT_BUCKET, supabaseAdmin } from '@/lib/supabase/admin';
 import { CATEGORIES, MAX_DOCUMENTS_PER_USER, checkFile, isCategory, safeFilename } from '@/lib/documents/files';
 
 export const runtime = 'nodejs';
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
   if ((count ?? 0) >= MAX_DOCUMENTS_PER_USER) return json({ error: `Maximal ${MAX_DOCUMENTS_PER_USER} Dokumente je Konto.` }, 409);
 
   const checked = checkFile(Buffer.from(await file.arrayBuffer()), file.type);
-  if (!checked.ok) return json({ error: checked.reason }, 415);
+  if (!checked.ok) { logSecurity('upload_rejected', `docs:${anonymizedIpHash(req) ?? 'x'}`, { detail: 'Dokument-Upload: ' + String(checked.reason).slice(0, 80) }); return json({ error: checked.reason }, 415); }
   const f = checked.file;
 
   const id = randomUUID();

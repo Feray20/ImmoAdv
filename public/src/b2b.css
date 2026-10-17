@@ -592,3 +592,6 @@ body.dk-open{overflow:hidden}
 .su-steps{margin:6px 0 4px;padding-left:20px;display:grid;gap:5px;font-size:14px;line-height:1.5;color:#334155}.su-steps code{background:#F1F5F9;border-radius:4px;padding:1px 5px;font-size:12.5px}
 .su-done{display:inline-flex!important;gap:8px;align-items:center;margin-top:6px;font-weight:700;color:#166534}
 .su-done-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}.su-done-list li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #F1F5F9;font-size:14px}.su-done-list small{color:#64748B}
+.sec-inc{border-left:4px solid #DC2626}.sec-inc-h{display:flex;align-items:center;gap:10px}.sec-inc-h h2{margin:0}
+.sec-open td{background:#FEF2F2}.sec-act{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sec-blocks{list-style:none;margin:0;padding:0;display:grid;gap:6px}.sec-blocks li{display:flex;gap:10px;align-items:center;padding:6px 10px;border:1px solid #E2E8F0;border-radius:8px}.sec-blocks span{flex:1;color:#475569;font-size:13.5px}
