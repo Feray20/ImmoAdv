@@ -70,7 +70,8 @@ export function betriebskosten({ rows, flaecheGesamt, flaecheMieter, personenGes
 }
 
 // ---------- Oberfläche ----------
-const lock = (need) => `<div class="tl-lock"><strong>${need === 'pro' ? 'In Investor Pro enthalten' : 'Im Käufer-Pass und in Investor Pro enthalten'}</strong><p>Sie können alles ausprobieren; Ergebnisse speichern, drucken und als Vorlage nutzen ist ${need === 'pro' ? 'mit Investor Pro' : 'mit Käufer-Pass oder Investor Pro'} möglich.</p><a class="btn btn-pay" href="#angebot">Tarife ansehen</a></div>`;
+// Dezenter Hinweis statt Werbeblock: Rechnen ist immer frei, nur Drucken/Kopieren gehört zum Tarif.
+const lock = (need) => `<p class="tl-hint"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3Z"/></svg> Drucken und Vorlagen mit ${need === 'pro' ? 'Investor Pro' : 'Käufer-Pass'} · <a href="#angebot">mehr</a></p>`;
 
 function offersTool(box, ok) {
   const saved = store('offers') || [{ bank: 'Bank A', loan: 280000, rate: 3.65, eff: 3.72, repay: 2, years: 10, fees: 0, special: 5 }, { bank: 'Bank B', loan: 280000, rate: 3.55, eff: 3.68, repay: 2, years: 10, fees: 900, special: 0 }, { bank: '', loan: 280000, rate: 0, eff: 0, repay: 2, years: 10, fees: 0, special: 0 }];
@@ -197,7 +198,7 @@ function specialTool(box, ok) {
   const st = store('special') || { loan: 300000, rate: 3.6, repay: 2, special: 5000, years: 10 };
   box.innerHTML = `<h3>Sondertilgung planen</h3><p class="form-note">Was bringt eine jährliche Sondertilgung? Kürzere Laufzeit, weniger Zinsen und niedrigere Restschuld am Ende der Zinsbindung.</p>
     <div class="tl-grid"><label>Darlehen (€)<input data-s="loan" type="number" step="any" value="${st.loan}"></label><label>Sollzins (%)<input data-s="rate" type="number" step="0.05" value="${st.rate}"></label><label>Tilgung (%)<input data-s="repay" type="number" step="0.1" value="${st.repay}"></label><label>Sondertilgung pro Jahr (€)<input data-s="special" type="number" step="500" value="${st.special}"></label><label>Zinsbindung (Jahre)<input data-s="years" type="number" step="1" value="${st.years}"></label></div>
-    <div id="spOut" aria-live="polite"></div>${ok ? '' : lock('pass')}`;
+    <div id="spOut" aria-live="polite"></div>`;
   const run = () => {
     box.querySelectorAll('[data-s]').forEach((el) => { st[el.dataset.s] = num(el.value); });
     store('special', st);
@@ -261,7 +262,7 @@ function printBox(box, title) {
 export function mountTools(view, { d, tier = 'free', b2b = false }) {
   const pass = b2b || tier === 'starter' || tier === 'pro';
   const pro = b2b || tier === 'pro';
-  view.innerHTML = `<h2 class="tl-h">Werkzeuge</h2><p class="form-note">Werkzeuge, die Ihnen Stunden sparen – vom Bankangebot bis zur Anschlussfinanzierung. Alles rechnet in Ihrem Browser.</p>
+  view.innerHTML = `<h2 class="tl-h">Werkzeuge</h2><p class="form-note">Vom Kaufpreis bis zur Anschlussfinanzierung – einfach ausprobieren, alles rechnet sofort.</p>
     <nav class="tl-nav" aria-label="Werkzeuge"><a href="#t-price">Kaufpreis verhandeln</a><a href="#t-offers">Bankangebote vergleichen</a><a href="#t-bank">Bankgespräch vorbereiten</a><a href="#t-special">Sondertilgung</a><a href="#t-fwd">Anschluss &amp; Forward</a><a href="#t-bk">Betriebskosten</a><a href="#steuer">Steuer-Werkzeuge</a><a href="/rechner">Alle Rechner</a></nav>
     <p class="form-note">Ihre Eingaben bleiben nur in diesem Browser. <button type="button" class="text-btn" id="tlClear">Alle Eingaben in den Werkzeugen löschen</button></p>
     <section class="tl-card" id="t-price"></section><section class="tl-card" id="t-offers"></section><section class="tl-card" id="t-bank"></section><section class="tl-card" id="t-special"></section><section class="tl-card" id="t-fwd"></section><section class="tl-card" id="t-bk"></section>`;

@@ -8,6 +8,13 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const eur = (c) => (c / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 
 // Zahlarten-Leiste (Akzeptanzhinweise als Schriftzüge – welche angezeigt werden, steuert das Stripe-Konto).
+// Farbige Symbole je Angebot (Kreditmappe, Käufer-Pass, Investor Pro) für Angebotskarten und Kaufdialog.
+const IC = {
+  'credit-map': ['#0369A1', '#E0F2FE', '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h4"/>'],
+  'buyer-pass': ['#047857', '#D1FAE5', '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><circle cx="12" cy="14" r="2"/><path d="M12 16v2"/>'],
+  'pro-monthly': ['#6D28D9', '#EDE9FE', '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'],
+};
+export const planIcon = (id) => { const i = IC[id] || ['#0F2C59', '#E2E8F0', '<circle cx="12" cy="12" r="8"/>']; return `<span class="offer-ic" style="--ic:${i[0]};--icbg:${i[1]}" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${i[2]}</svg></span>`; };
 export const PAY_BADGES = `<div class="pay-badges" aria-label="Zahlarten"><span class="pb pb-card">Kredit-/Debitkarte</span><span class="pb pb-paypal"><b>Pay</b><i>Pal</i></span><span class="pb pb-apple">Apple&nbsp;Pay</span><span class="pb pb-google">Google&nbsp;Pay</span><span class="pb pb-klarna">Klarna</span><span class="pb pb-sepa">SEPA-Lastschrift</span></div>`;
 
 const token = () => { try { return JSON.parse(localStorage.getItem(SESSION) || 'null')?.access_token || ''; } catch { return ''; } };
@@ -58,7 +65,7 @@ export async function openBuy(offer, opts = {}) {
   const loggedIn = Boolean(token());
   const sub = /monat/i.test(offer.intervall || '');
   d.innerHTML = `<form method="dialog" class="buy-in">
-    <div class="buy-head"><img src="/logo-icon.svg" alt="" width="34" height="29"><div><span class="buy-kick">ImmoAdv · Bestellung</span><h2>${esc(offer.name)}</h2></div><button class="buy-x" value="x" aria-label="Schließen">×</button></div>
+    <div class="buy-head">${IC[offer.id] ? planIcon(offer.id) : '<img src="/logo-icon.svg" alt="" width="34" height="29">'}<div><span class="buy-kick">ImmoAdv · Bestellung</span><h2>${esc(offer.name)}</h2></div><button class="buy-x" value="x" aria-label="Schließen">×</button></div>
     <div class="buy-price"><strong>${eur(offer.cents)}</strong><span>${esc(offer.intervall || '')}</span></div>
     <p class="buy-tax">inkl. 19&nbsp;% USt.${sub ? ' · monatlich kündbar' : ''}</p>
     ${offer.features?.length ? `<ul class="buy-feat">${offer.features.slice(0, 5).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}

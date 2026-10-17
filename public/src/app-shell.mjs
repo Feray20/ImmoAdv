@@ -1,6 +1,6 @@
 // App-Rahmen für das Konto: Handy wie eine App (Tab-Leiste unten), Desktop wie ein Investment-Tool (Seitenleiste).
 // Ansichten über #hash; vorhandene Karten werden den Ansichten zugeordnet. Modus Einsteiger/Profi frei wählbar.
-import { openBuy, PAY_BADGES, resumeIntent } from './buy.mjs';
+import { openBuy, PAY_BADGES, planIcon, resumeIntent } from './buy.mjs';
 import { rank, GREST } from './calc.mjs';
 const GREST_KEYS = Object.keys(GREST);
 
@@ -877,7 +877,7 @@ async function renderOffers(mode) {
     box.innerHTML = `<div class="offer-head"><div><span class="form-note">Ihr Tarif</span><strong>${tierName}</strong></div>${st.starterUntil ? `<span class="form-note">Käufer-Pass aktiv bis ${new Date(st.starterUntil).toLocaleDateString('de-DE')}</span>` : ''}</div>
       <p class="form-note">${esc(m.zielgruppe)}</p>
       ${tier === 'pro' ? '<p class="auth-message">Investor Pro ist aktiv – alle Funktionen und Kreditmappen sind enthalten.</p>' : left ? `<p class="auth-message">Sie haben ${left} Kreditmappe${left === 1 ? '' : 'n'} frei.</p>` : ''}
-      <div class="offers">${m.plans.map((p) => `<div class="offer${p.id === next ? ' rec' : ''}">${p.id === next ? '<span class="offer-rec">Empfohlener nächster Schritt</span>' : p.badge ? `<span class="offer-badge">${esc(p.badge)}</span>` : ''}<h4>${esc(p.name)}</h4><div class="offer-price">${E(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+      <div class="offers">${m.plans.map((p) => `<div class="offer${p.id === next ? ' rec' : ''}">${p.id === next ? '<span class="offer-rec">Empfohlener nächster Schritt</span>' : p.badge ? `<span class="offer-badge">${esc(p.badge)}</span>` : ''}<div class="offer-top">${planIcon(p.id)}<h4>${esc(p.name)}</h4></div><div class="offer-price">${E(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
         ${cfg.enabled ? `<button class="btn btn-pay" type="button" data-buy="${p.id}"${tier === 'pro' ? ' disabled' : ''}>${tier === 'pro' ? 'In Investor Pro enthalten' : 'Jetzt buchen'}</button>` : '<button class="btn btn-outline" type="button" disabled>Buchung startet in Kürze</button>'}</div>`).join('')}</div>
       <div class="offer-free"><strong>Immer kostenlos:</strong> ${P.kostenlos.features.map(esc).join(' · ')}</div>
       <div class="offer-pay"><p class="form-note">Bezahlen Sie auf der sicheren Bezahlseite mit:</p>${PAY_BADGES}</div>
