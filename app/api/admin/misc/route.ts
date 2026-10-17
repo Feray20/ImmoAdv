@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAdmin } from '@/lib/security/admin';
+import { adminList, requireAdmin } from '@/lib/security/admin';
+import { revealMap } from '@/lib/security/pseudo';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { adminAudit } from '@/lib/b2b/core';
 
@@ -16,7 +17,8 @@ export async function GET(req: Request) {
   if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
   const db = supabaseAdmin();
   // Nachweis einer Kontoanfrage ansehen: kurzlebiger signierter Link (5 Minuten), Abruf wird protokolliert.
-  const proofId = new URL(req.url).searchParams.get('proof');
+  const u = new URL(req.url);
+  const proofId = u.searchParams.get('proof');
   if (proofId) {
     if (!/^[0-9a-f-]{36}$/.test(proofId)) return j({ error: 'Ungültig.' }, 400);
     const { data: c } = await db.from('immo_b2b_contact').select('proof_path, proof_name').eq('id', proofId).maybeSingle();
@@ -31,7 +33,15 @@ export async function GET(req: Request) {
     db.from('immo_b2b_partner_codes').select('*').order('created_at', { ascending: false }).limit(300),
     db.from('immo_admin_audit').select('actor_email, action, target, meta, created_at').order('created_at', { ascending: false }).limit(200),
   ]);
-  return j({ contacts: contacts ?? [], codes: codes ?? [], audit: audit ?? [] });
+  // Klartext nur auf ausdrücklichen Wunsch (?reveal=1) und nur für bekannte Adressen (Admins, Unternehmenskonten).
+  let rows = audit ?? [];
+  if (u.searchParams.get('reveal') === '1') {
+    const { data: accs } = await db.from('immo_b2b_accounts').select('email').limit(5000);
+    const map = await revealMap([...adminList(), ...(accs ?? []).map((x) => x.email as string)]);
+    rows = rows.map((r) => ({ ...r, actor_email: map.get(r.actor_email) ? `${map.get(r.actor_email)}` : r.actor_email, target: r.target && map.get(r.target) ? map.get(r.target) : r.target }));
+    await adminAudit(auth.user.email, 'audit_reveal', null, { rows: rows.length });
+  }
+  return j({ contacts: contacts ?? [], codes: codes ?? [], audit: rows, pseudonymized: u.searchParams.get('reveal') !== '1' });
 }
 
 const Act = z.discriminatedUnion('action', [

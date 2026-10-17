@@ -9,7 +9,9 @@ export type SecKind =
   // Formular-Abwehr (Bots/Fakes):
   | 'honeypot' | 'too_fast' | 'disposable_email' | 'email_no_mx' | 'content_flagged'
   // Angriffe:
-  | 'probe' | 'blocked' | 'login_flood' | 'upload_rejected';
+  | 'probe' | 'blocked' | 'login_flood' | 'upload_rejected'
+  // Buchhaltung (GoBD):
+  | 'invoice_tampered';
 
 export function logSecurity(kind: SecKind, key: string, extra: { ipHash?: string | null; detail?: string | null } = {}): void {
   if (!adminConfigured()) return;

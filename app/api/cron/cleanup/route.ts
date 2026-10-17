@@ -92,6 +92,9 @@ async function leadRetention(): Promise<Record<string, number>> {
   await db.from('immo_crm_contacts').delete().lt('updated_at', new Date(Date.now() - 3 * 365 * 864e5).toISOString()).not('status', 'in', '(kunde,widerspruch)');
   await db.from('immo_analytics').delete().lt('ts', new Date(Date.now() - 425 * 864e5).toISOString());
   await db.from('immo_webhook_log').delete().lt('created_at', new Date(Date.now() - 90 * 864e5).toISOString());
+  // Admin-Protokoll nach 90 Tagen löschen; Rechnungs- und Vertragsvorgänge bleiben (handels-/steuerrechtliche Aufbewahrung).
+  await db.from('immo_admin_audit').delete().lt('created_at', new Date(Date.now() - 90 * 864e5).toISOString())
+    .not('action', 'like', 'invoice%').not('action', 'in', '(b2b_register,b2b_onboarding,datev_export,b2b_create)');
   // Verifizierungsnachweise 90 Tage nach der Entscheidung (freigeschaltet oder abgelehnt) löschen.
   let verifDocs = 0;
   const cutoff90 = new Date(Date.now() - 90 * 864e5).toISOString();

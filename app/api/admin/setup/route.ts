@@ -89,7 +89,7 @@ async function items(manual: Record<string, string>): Promise<Item[]> {
         'Feld <strong>„Site URL“</strong>: <code>https://immoadv.de</code> → „Save“.',
         'Bei <strong>„Redirect URLs“</strong> auf „Add URL“ und nacheinander eintragen: <code>https://immoadv.de/auth/login</code>, <code>https://immoadv.de/auth/reset</code>, <code>https://immoadv.de/auth/callback</code>, <code>https://immoadv.de/auth/confirm</code>, <code>https://immoadv.de/b2b-portal</code>, <code>https://partner.immoadv.de</code>. Jeweils speichern.'],
       check: 'Link aus einer Passwort-Mail anklicken – er muss auf immoadv.de landen, nicht auf localhost.' },
-    { id: 'b2bnotify', group: 'E-Mail-Versand', title: 'Geschäftsadresse für B2B-Meldungen', auto: true, ok: has('B2B_NOTIFY_EMAIL'), optional: true, time: '2 Minuten',
+    { id: 'b2bnotify', group: 'E-Mail-Versand', title: 'Geschäftsadresse für B2B-Meldungen', auto: true, ok: has('B2B_NOTIFY_EMAIL'), time: '2 Minuten',
       why: 'Kontoanfragen und Registrierungsnachweise gehen sonst an die Admin-Adresse.',
       steps: [
         `${a(VERCEL, 'Vercel → Settings → Environment Variables')} → „Add New“.`,
@@ -120,6 +120,7 @@ async function items(manual: Record<string, string>): Promise<Item[]> {
         'Oben den Schalter <strong>Testmodus ausschalten</strong> und Zahlungsmethoden + Branding im Live-Modus genauso einstellen.'],
       check: 'Web-Admin → Testkauf → Bezahlseite öffnen: Logo sichtbar, Knopf schwarz, PayPal/Klarna/Karte wählbar.' },
     { id: 'invoice', group: 'Zahlungen', title: 'Bankverbindung für B2B-Rechnungen (Kauf auf Rechnung)', auto: true, ok: has('INVOICE_IBAN') && has('INVOICE_BIC'), time: '3 Minuten',
+      info: has('INVOICE_BICC') && !has('INVOICE_BIC') ? 'Tippfehler gefunden: Die Variable heißt „INVOICE_BICC“ – richtig ist „INVOICE_BIC“. In Vercel umbenennen.' : undefined,
       why: 'Erscheint auf Rechnungen an Unternehmen, die per Überweisung zahlen.',
       steps: [
         `${a(VERCEL, 'Vercel → Environment Variables')} → „Add New“ dreimal, jeweils nur Production:`,
@@ -127,6 +128,7 @@ async function items(manual: Record<string, string>): Promise<Item[]> {
         'Deployments → oberster Eintrag → „⋯“ → „Redeploy“.'],
       check: 'Web-Admin → Rechnungen → eine Rechnung als PDF öffnen: Bankverbindung steht unten.' },
     { id: 'webhook', group: 'Zahlungen', title: 'Stripe-Webhook (Zahlungsbestätigungen)', auto: true, ok: has('STRIPE_WEBHOOK_SECRET'), time: '5 Minuten',
+      info: has('STRIPE_WEBHOOK_SECRETT') && !has('STRIPE_WEBHOOK_SECRET') ? 'Tippfehler gefunden: Die Variable heißt „STRIPE_WEBHOOK_SECRETT“ – richtig ist „STRIPE_WEBHOOK_SECRET“. In Vercel umbenennen.' : undefined,
       why: 'Ohne Webhook werden Tarife nach der Zahlung nicht automatisch aktiviert und Käufe nicht gezählt.',
       steps: [
         `${a('https://dashboard.stripe.com/test/webhooks', 'Stripe → Entwickler → Webhooks')} öffnen (Testmodus an).`,

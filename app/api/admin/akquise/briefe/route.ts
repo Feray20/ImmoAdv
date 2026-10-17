@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import { requireAdmin } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
+import { isSuppressed } from '@/lib/marketing/suppression';
 import { adminAudit } from '@/lib/b2b/core';
 
 export const runtime = 'nodejs';
@@ -48,7 +49,9 @@ export async function POST(req: Request) {
   if (!p.success) return NextResponse.json({ error: 'Bitte Betreff, Text (mind. 20 Zeichen) und Kampagne prüfen.' }, { status: 400 });
   const b = p.data, db = supabaseAdmin();
   const { data: rows } = await db.from('immo_crm_contacts').select('*').in('id', b.ids);
-  const list = (rows ?? []).filter((c) => c.status !== 'widerspruch' && !c.objection_at && c.street && c.postal_code && c.city);
+  const list0 = (rows ?? []).filter((c) => c.status !== 'widerspruch' && !c.objection_at && c.street && c.postal_code && c.city);
+  const sup = await isSuppressed(list0);
+  const list = list0.filter((_, i) => !sup[i]);
   const skipped = (rows ?? []).length - list.length;
   if (!list.length) return NextResponse.json({ error: 'Keine Kontakte mit vollständiger Anschrift (oder alle mit Werbewiderspruch).' }, { status: 400 });
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { logSecurity } from '@/lib/security/seclog';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
@@ -76,6 +77,19 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const db = supabaseAdmin();
   try {
+    // GoBD: alle gespeicherten Rechnungs-PDFs gegen die festgeschriebene SHA-256-Prüfsumme abgleichen.
+    if (body?.action === 'verify') {
+      const { data: rows } = await db.from('immo_invoices').select('*').order('created_at', { ascending: false }).limit(2000);
+      const bad: string[] = []; const missing: string[] = []; let ok = 0;
+      for (const r of (rows ?? []) as InvoiceRow[]) {
+        const f = await loadInvoicePdf(r).catch(() => null);
+        if (!f) { if (r.pdf_path) missing.push(r.invoice_number); continue; }
+        if (f.intact) ok++; else bad.push(r.invoice_number);
+      }
+      if (bad.length) logSecurity('invoice_tampered', 'invoices', { detail: bad.slice(0, 20).join(', ') });
+      await adminAudit(auth.user.email, 'invoice_verify', 'all', { ok, bad: bad.length, missing: missing.length });
+      return j({ ok, bad, missing });
+    }
     if (body?.action === 'create') {
       const p = Create.safeParse(body);
       if (!p.success) return j({ error: 'Bitte Positionen und Zahlungsart prüfen.' }, 400);

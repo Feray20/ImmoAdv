@@ -731,9 +731,16 @@ async function rechnungen(v, q = '') {
   const r = await api('/api/admin/invoices' + (q ? '?q=' + encodeURIComponent(q) : ''));
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
   v.innerHTML = `<p class="form-note">GoBD-Archiv: Rechnungen sind in der Datenbank gegen Ändern und Löschen gesperrt; jede PDF-Datei wird beim Abruf gegen ihre SHA-256-Prüfsumme geprüft. Korrekturen nur per Storno.${r.data.bankConfigured ? '' : ' <strong>Bankverbindung fehlt:</strong> INVOICE_IBAN, INVOICE_BIC, INVOICE_BANK_NAME in Vercel setzen, sonst sind Überweisungsrechnungen gesperrt.'}</p>
-    <div class="pt-row" style="margin-bottom:10px"><input id="iq" aria-label="Rechnungsnummer suchen" value="${esc(q)}" placeholder="Rechnungsnummer" style="border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-ghost" id="is" type="button">Suchen</button></div>${invTable(r.data.invoices)}
+    <div class="pt-row" style="margin-bottom:10px"><input id="iq" aria-label="Rechnungsnummer suchen" value="${esc(q)}" placeholder="Rechnungsnummer" style="border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-ghost" id="is" type="button">Suchen</button><button class="btn btn-outline" id="iv" type="button">Alle Prüfsummen prüfen</button></div><p class="form-note" id="ivMsg" role="status"></p>${invTable(r.data.invoices)}
     <p class="form-note">Neue Rechnung: unter „Partner“ beim Unternehmen auf „Rechnung“ klicken.</p>`;
   $('#is').onclick = () => rechnungen(v, $('#iq').value.trim());
+  $('#iv').onclick = async (e) => {
+    e.target.disabled = true; $('#ivMsg').textContent = 'Prüfe alle Rechnungs-PDFs …';
+    const x = await api('/api/admin/invoices', { method: 'POST', body: JSON.stringify({ action: 'verify' }) });
+    e.target.disabled = false;
+    if (!x.ok) { $('#ivMsg').textContent = x.data?.error || 'Prüfung fehlgeschlagen.'; return; }
+    $('#ivMsg').innerHTML = x.data.bad.length ? `<strong style="color:#B91C1C">${x.data.bad.length} Rechnung(en) weichen von der Prüfsumme ab und gelten als ungültig: ${x.data.bad.map(esc).join(', ')}.</strong> Ein Sicherheitsalarm wurde ausgelöst.` : `✓ ${x.data.ok} Rechnung(en) unverändert.${x.data.missing.length ? ` ${x.data.missing.length} Datei(en) nicht gefunden: ${x.data.missing.map(esc).join(', ')}.` : ''}`;
+  };
   bindInv(v, () => rechnungen(v, q));
 }
 
@@ -786,10 +793,12 @@ async function anfragen(v) {
   };
 }
 
-async function protokoll(v) {
-  const r = await api('/api/admin/misc');
+async function protokoll(v, reveal = false) {
+  const r = await api('/api/admin/misc' + (reveal ? '?reveal=1' : ''));
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
-  v.innerHTML = r.data.audit.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Zeit</th><th>Wer</th><th>Aktion</th><th>Ziel</th><th>Details</th></tr></thead><tbody>${r.data.audit.map((a) => `<tr><td>${dtt(a.created_at)}</td><td>${esc(a.actor_email)}</td><td>${esc(a.action)}</td><td><small>${esc(a.target || '')}</small></td><td><small>${esc(JSON.stringify(a.meta))}</small></td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine Einträge.</p>';
+  const head = `<p class="form-note">Personen-Kennungen sind pseudonymisiert (SHA-256 mit geheimem Salz). Einträge werden nach 90 Tagen automatisch gelöscht – ausgenommen Rechnungs- und Vertragsvorgänge (Aufbewahrungspflicht). ${r.data.pseudonymized ? '<button type="button" class="btn btn-outline btn-sm" id="pvReveal">Klartext anzeigen (wird protokolliert)</button>' : '<strong>Klartext angezeigt – dieser Abruf wurde protokolliert.</strong>'}</p>`;
+  v.innerHTML = head + (r.data.audit.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Zeit</th><th>Wer</th><th>Aktion</th><th>Ziel</th><th>Details</th></tr></thead><tbody>${r.data.audit.map((a) => `<tr><td>${dtt(a.created_at)}</td><td>${esc(a.actor_email)}</td><td>${esc(a.action)}</td><td><small>${esc(a.target || '')}</small></td><td><small>${esc(JSON.stringify(a.meta))}</small></td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine Einträge.</p>');
+  $('#pvReveal')?.addEventListener('click', () => protokoll(v, true));
 }
 
 async function kennzahlen(v) {

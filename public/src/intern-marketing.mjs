@@ -138,7 +138,7 @@ function importCsv(done) {
   d.querySelector('#mkGo').onclick = async () => {
     const rr = await api('/api/admin/akquise', { method: 'POST', body: JSON.stringify({ action: 'import', contacts: items.slice(0, 1000).map((o) => ({ ...o, nextAt: null })) }) });
     if (!rr.ok) { toast(rr.data?.error || 'Import fehlgeschlagen.', true); return; }
-    d.close(); toast(`${rr.data.n} Kontakte importiert.`); done?.();
+    d.close(); toast(`${rr.data.n} Kontakte importiert.${rr.data.blocked ? ` ${rr.data.blocked} übersprungen (Werbewiderspruch – Sperrliste).` : ""}`); done?.();
   };
   d.showModal();
 }

@@ -1,3 +1,4 @@
+import { suppressionKeys } from '@/lib/marketing/suppression';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { allowRequest } from '@/lib/security/rate-limit';
@@ -60,7 +61,9 @@ export async function GET(req: Request) {
   }
   const t = q.get('confirm') || '';
   if (!/^[A-Za-z0-9_-]{20,100}$/.test(t) || !adminConfigured()) return NextResponse.redirect(`${origin}/b2b?newsletter=ungueltig`, 303);
-  const { data } = await db.from('immo_newsletter').select('id, segment').eq('token_hash', hashToken(t)).maybeSingle();
+  const { data } = await db.from('immo_newsletter').select('id, segment, email').eq('token_hash', hashToken(t)).maybeSingle();
+  // Neue, ausdrückliche Einwilligung per Double-Opt-in hebt eine frühere Abmeldung für diese Adresse auf.
+  if (data?.email) { const ks = await suppressionKeys({ email: data.email }).catch(() => []); if (ks.length) await db.from('immo_suppression').delete().in('key_hash', ks.map((k) => k.key)).eq('reason', 'abmeldung'); }
   const back = data?.segment === 'b2c' ? '/' : '/b2b';
   if (!data) return NextResponse.redirect(`${origin}${back}?newsletter=ungueltig`, 303);
   await db.from('immo_newsletter').update({ confirmed_at: new Date().toISOString(), unsubscribed_at: null }).eq('id', data.id);

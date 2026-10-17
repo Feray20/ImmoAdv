@@ -183,6 +183,9 @@ export function publicPartner(a: B2BAccount) {
   };
 }
 
+// Protokoll: Personen-Kennungen (E-Mail) werden vor dem Speichern pseudonymisiert (siehe lib/security/pseudo.ts).
 export async function adminAudit(actor: string, action: string, target: string | null, meta: Record<string, unknown> = {}) {
-  await supabaseAdmin().from('immo_admin_audit').insert({ actor_email: actor, action, target, meta });
+  const { pseudo, scrubMeta } = await import('@/lib/security/pseudo');
+  const [a, t, m] = await Promise.all([pseudo(actor).catch(() => 'ps:unbekannt'), target && target.includes('@') ? pseudo(target).catch(() => 'ps:unbekannt') : Promise.resolve(target), scrubMeta(meta).catch(() => ({}))]);
+  await supabaseAdmin().from('immo_admin_audit').insert({ actor_email: a, action, target: t, meta: m });
 }

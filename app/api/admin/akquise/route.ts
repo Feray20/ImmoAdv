@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { adminAudit } from '@/lib/b2b/core';
+import { isSuppressed, suppress } from '@/lib/marketing/suppression';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
   if (!p.success) { const i = p.error.issues[0]; return j({ error: i?.message && !/^(Invalid|Expected|Required)/.test(i.message) ? i.message : `Bitte „${String(i?.path.at(-1) ?? '')}“ prüfen.` }, 400); }
   const a = p.data, db = supabaseAdmin(), now = new Date().toISOString(), actor = auth.user.email;
   if (a.action === 'create') {
+    if ((await isSuppressed([a.contact]))[0]) return j({ error: 'Dieser Kontakt hat der Werbung widersprochen und steht auf der Sperrliste. Er darf nicht erneut angesprochen werden.' }, 409);
     const r = await db.from('immo_crm_contacts').insert(toRow(a.contact)).select('id').single();
     if (r.error) return j({ error: 'Speichern fehlgeschlagen.' }, 500);
     await adminAudit(actor, 'crm_create', r.data.id);
@@ -70,15 +72,24 @@ export async function POST(req: Request) {
     return r.error ? j({ error: 'Speichern fehlgeschlagen.' }, 500) : j({ ok: true });
   }
   if (a.action === 'import') {
-    const r = await db.from('immo_crm_contacts').insert(a.contacts.map(toRow));
-    if (r.error) return j({ error: 'Import fehlgeschlagen: ' + r.error.message.slice(0, 120) }, 400);
-    await adminAudit(actor, 'crm_import', null, { n: a.contacts.length });
-    return j({ ok: true, n: a.contacts.length });
+    const sup = await isSuppressed(a.contacts);
+    const keep = a.contacts.filter((_, i) => !sup[i]);
+    const blocked = a.contacts.length - keep.length;
+    if (keep.length) {
+      const r = await db.from('immo_crm_contacts').insert(keep.map(toRow));
+      if (r.error) return j({ error: 'Import fehlgeschlagen: ' + r.error.message.slice(0, 120) }, 400);
+    }
+    await adminAudit(actor, 'crm_import', null, { n: keep.length, blocked });
+    return j({ ok: true, n: keep.length, blocked });
   }
   if (a.action === 'status') {
     const up: Record<string, unknown> = { status: a.status, updated_at: now };
     if (a.nextAt !== undefined) up.next_at = a.nextAt;
-    if (a.status === 'widerspruch') { up.objection_at = now; up.next_at = null; }
+    if (a.status === 'widerspruch') {
+      up.objection_at = now; up.next_at = null;
+      const { data: cs } = await db.from('immo_crm_contacts').select('email, company, postal_code').in('id', a.ids);
+      for (const c of cs ?? []) await suppress(c);
+    }
     const r = await db.from('immo_crm_contacts').update(up).in('id', a.ids);
     if (r.error) return j({ error: 'Speichern fehlgeschlagen.' }, 500);
     await db.from('immo_crm_activities').insert(a.ids.map((id) => ({ contact_id: id, type: 'status', note: `Status: ${a.status}`, actor })));
