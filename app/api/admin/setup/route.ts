@@ -1,3 +1,4 @@
+import '@/lib/env-alias';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/security/admin';

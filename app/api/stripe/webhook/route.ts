@@ -1,3 +1,4 @@
+import '@/lib/env-alias';
 import { track } from '@/lib/analytics/track';
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';

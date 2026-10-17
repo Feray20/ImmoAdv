@@ -1,3 +1,4 @@
+import '@/lib/env-alias';
 import { createHash } from 'node:crypto';
 import QRCode from 'qrcode';
 import { createElement } from 'react';
