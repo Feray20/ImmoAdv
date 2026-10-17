@@ -49,6 +49,11 @@ export type B2BAccount = {
   referral: string | null;
   logo_path: string | null;
   brand_color: string | null;
+  brand_color2?: string | null;
+  brand_font?: string | null;
+  doc_title?: string | null;
+  doc_sender?: string | null;
+  doc_footer?: string | null;
   booking_url: string | null;
   slug: string | null;
   widget_key: string | null;
@@ -66,11 +71,15 @@ export type B2BAccount = {
   created_at: string;
 };
 
-export const TIER_LIMITS: Record<Tier, { seats: number; dossiersPerMonth: number | null; cobranding: boolean; merger: boolean; landing: boolean }> = {
-  BASIC: { seats: 1, dossiersPerMonth: 20, cobranding: false, merger: false, landing: false },
-  PRO: { seats: 3, dossiersPerMonth: null, cobranding: true, merger: true, landing: true },
-  ENTERPRISE: { seats: 10, dossiersPerMonth: null, cobranding: true, merger: true, landing: true },
+// fall = Fall-Analysen (Unterlagen-Paket eines Kunden), praes = Kunden-Präsentationen je Kalendermonat (null = unbegrenzt).
+// whitelabel = Unterlagen komplett im eigenen Erscheinungsbild (ohne ImmoAdv); radar = Bestandskunden-Radar.
+export const TIER_LIMITS: Record<Tier, { seats: number; dossiersPerMonth: number | null; cobranding: boolean; merger: boolean; landing: boolean; fall: number | null; praes: number | null; whitelabel: boolean; radar: boolean }> = {
+  BASIC: { seats: 1, dossiersPerMonth: 20, cobranding: false, merger: false, landing: false, fall: 10, praes: 3, whitelabel: false, radar: false },
+  PRO: { seats: 3, dossiersPerMonth: null, cobranding: true, merger: true, landing: true, fall: 100, praes: null, whitelabel: false, radar: true },
+  ENTERPRISE: { seats: 10, dossiersPerMonth: null, cobranding: true, merger: true, landing: true, fall: null, praes: null, whitelabel: true, radar: true },
 };
+// Ohne gebuchten Tarif (nach Freischaltung): zum Ausprobieren je Monat.
+export const TRIAL_LIMITS = { fall: 2, praes: 1 };
 
 export const AVV_VERSION = '2026-10';
 

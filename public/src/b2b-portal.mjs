@@ -423,6 +423,17 @@ function vProfil(box) {
       ${a.hasLogo ? '<button class="text-btn del" id="logoDel" type="button">Entfernen</button>' : ''}</div>
       <label class="pt-field">Markenfarbe<input type="color" id="color" value="${esc(a.brandColor || '#0F2C59')}"></label>` : '<p class="form-note">Co-Branding (eigenes Logo und Farbe) ist ab Tarif Kanzlei & Baufi Pro enthalten.</p>'}
     </section>
+    <section class="pt-card"><h2>Erscheinungsbild Ihrer Unterlagen</h2>
+      <p class="form-note">Für Fall-Analysen und Kunden-Präsentationen. <strong>Ab Pro:</strong> eigenes Logo, Farben und Schrift, ImmoAdv nur als kleiner Hinweis. <strong>Enterprise / White-Label:</strong> komplett im Erscheinungsbild Ihres Hauses – mit Ihrem Absender und Ihrer Fußzeile, ohne ImmoAdv.</p>
+      <form id="brandF" class="pt-form"><div class="pt-grid2">
+        <label>Zweitfarbe (Akzent)<input type="color" name="brandColor2" value="${esc(a.brandColor2 || '#0284C7')}"></label>
+        <label>Schrift<select name="brandFont">${[['sans', 'Modern (serifenlos)'], ['serif', 'Seriös (mit Serifen)'], ['klassisch', 'Klassisch (Arial/Helvetica)']].map(([k, l]) => `<option value="${k}"${a.brandFont === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+        <label>Dokumenttitel<input name="docTitle" maxlength="80" value="${esc(a.docTitle || '')}" placeholder="z. B. Ihre Finanzierungsübersicht"></label>
+        <label>Absender / Abteilung<input name="docSender" maxlength="160" value="${esc(a.docSender || '')}" placeholder="z. B. Immobilienfinanzierung · Filiale Darmstadt"></label>
+        <label class="full">Fußzeile (Pflichtangaben Ihres Hauses)<textarea name="docFooter" maxlength="400" rows="2" placeholder="z. B. Firmenname · Rechtsform · Sitz · Registergericht · Vorstand">${esc(a.docFooter || '')}</textarea></label>
+      </div><button class="btn btn-dark" type="submit">Erscheinungsbild speichern</button></form>
+      <p class="form-note">Verwenden Sie nur Namen, Logos und Gestaltungsmerkmale, zu deren Nutzung Ihr Haus berechtigt ist.</p>
+    </section>
     <section class="pt-card"><h2>Rechtliches</h2>
       <p>Unternehmer nach § 14 BGB bestätigt am ${dtt(a.unternehmerConfirmedAt)}.</p>
       <p>Auftragsverarbeitungsvertrag (Version ${esc(a.avvVersion || '')}) geschlossen am ${dtt(a.avvAcceptedAt)}.</p>
@@ -728,6 +739,14 @@ async function start() {
 
 window.addEventListener('hashchange', () => { if (me) route(); });
 root.addEventListener('click', (e) => { if (e.target.closest('[data-brsw]')) chooseBranche(); });
+root.addEventListener('submit', async (e) => {
+  if (e.target.id !== 'brandF') return;
+  e.preventDefault();
+  const d = Object.fromEntries(new FormData(e.target));
+  d.brandColor2 = String(d.brandColor2 || '').toUpperCase();
+  const r = await api('/api/b2b/account', { method: 'PATCH', body: JSON.stringify(d) });
+  if (r.ok) { Object.assign(me.account, d); toast('Erscheinungsbild gespeichert.'); } else toast(r.data?.error || 'Speichern fehlgeschlagen.', true);
+});
 
 // Branche wählen: Kacheln; die Wahl wird in den eigenen Kontodaten gespeichert und gilt auf allen Geräten.
 function chooseBranche(first = false) {

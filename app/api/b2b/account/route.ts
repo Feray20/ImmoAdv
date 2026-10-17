@@ -58,6 +58,11 @@ const PatchSchema = z.object({
   webhookUrl: z.union([z.literal(''), z.string().url().max(300)]).optional(),
   regenerateWebhookSecret: z.literal(true).optional(),
   customDisclaimer: z.string().trim().max(600).optional(),
+  brandColor2: z.union([z.literal(''), z.string().regex(/^#[0-9A-Fa-f]{6}$/)]).optional(),
+  brandFont: z.enum(['sans', 'serif', 'klassisch']).optional(),
+  docTitle: z.string().transform(clean).pipe(z.string().max(80)).optional(),
+  docSender: z.string().transform(clean).pipe(z.string().max(160)).optional(),
+  docFooter: z.string().trim().max(400).optional(),
 });
 
 function view(a: B2BAccount, role: string) {
@@ -73,7 +78,7 @@ function view(a: B2BAccount, role: string) {
       planTier: a.plan_tier, planSource: a.plan_source, planUntil: a.plan_until, billingInterval: a.billing_interval,
       dossierBonus: a.dossier_bonus, hasWhitelabel: a.has_whitelabel, allowInvoicePayment: a.allow_invoice_payment,
       avvAcceptedAt: a.avv_accepted_at, avvVersion: a.avv_version, unternehmerConfirmedAt: a.unternehmer_confirmed_at,
-      hasLogo: Boolean(a.logo_path), brandColor: a.brand_color, bookingUrl: a.booking_url, slug: a.slug,
+      hasLogo: Boolean(a.logo_path), brandColor: a.brand_color, brandColor2: a.brand_color2 ?? null, brandFont: a.brand_font ?? 'sans', docTitle: a.doc_title ?? '', docSender: a.doc_sender ?? '', docFooter: a.doc_footer ?? '', bookingUrl: a.booking_url, slug: a.slug,
       widgetKey: role === 'owner' ? a.widget_key : null, widgetActive: a.widget_active, allowedDomains: a.allowed_domains, leadGate: a.lead_gate,
       createdAt: a.created_at, supportAccessUntil: a.support_access_until ?? null, acceptSubmissions: Boolean(a.accept_submissions), leadRetentionMonths: a.lead_retention_months ?? 24, webhookUrl: role === 'owner' ? a.webhook_url ?? null : null, webhookSecret: role === 'owner' ? a.webhook_secret ?? null : null, customDisclaimer: a.custom_disclaimer ?? null,
     },
@@ -225,6 +230,11 @@ export async function PATCH(req: Request) {
   if (p.city !== undefined) up.city = p.city;
   if (p.bookingUrl !== undefined) up.booking_url = p.bookingUrl || null;
   if (p.brandColor !== undefined) up.brand_color = p.brandColor || null;
+  if (p.brandColor2 !== undefined) up.brand_color2 = p.brandColor2 || null;
+  if (p.brandFont !== undefined) up.brand_font = p.brandFont;
+  if (p.docTitle !== undefined) up.doc_title = p.docTitle || null;
+  if (p.docSender !== undefined) up.doc_sender = p.docSender || null;
+  if (p.docFooter !== undefined) up.doc_footer = p.docFooter.replace(/[<>]/g, '') || null;
   if (p.allowedDomains !== undefined) up.allowed_domains = [...new Set(p.allowedDomains.map((d) => d.toLowerCase()))];
   if (p.leadGate !== undefined) up.lead_gate = p.leadGate;
   if (p.widgetActive !== undefined) up.widget_active = p.widgetActive;

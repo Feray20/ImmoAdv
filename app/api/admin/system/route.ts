@@ -71,9 +71,9 @@ export async function GET(req: Request) {
     if (aseg !== 'b2c' && aseg !== 'b2b') return j({ error: 'Ungültiger Bereich.' }, 400);
     if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
     const days = [1, 7, 30, 90, 365].includes(Number(q.get('days'))) ? Number(q.get('days')) : 30;
-    const { data, error } = await supabaseAdmin().rpc('admin_analytics', { seg_in: aseg, days, admins: adminList() });
+    const [{ data, error }, geo] = await Promise.all([supabaseAdmin().rpc('admin_analytics', { seg_in: aseg, days, admins: adminList() }), supabaseAdmin().rpc('admin_analytics_geo', { seg_in: aseg, days })]);
     if (error) return j({ error: 'Analyse nicht verfügbar.' }, 502);
-    return j(data);
+    return j({ ...(data as Record<string, unknown>), ...((geo.data as Record<string, unknown>) || {}) });
   }
 
   // Funnel je Bereich: wie viele Nutzer welchen Schritt erreichen (nur Zahlen).

@@ -4,6 +4,7 @@ import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 // Reichweitenmessung ohne Cookies und ohne Speicherung von IP-Adressen (ähnlich Plausible/Matomo „cookieless“):
 // Besucher-Kennung = Hash aus täglich wechselndem Geheimwert + gekürzter IP + Browserkennung. Sie ist nur innerhalb
 // eines Tages gleich und lässt sich nicht auf eine Person zurückführen; der Tageswert wird nirgends gespeichert.
+// Ort: Land, Bundesland und Stadt, wie sie der Hoster aus der IP-Adresse ableitet (ungefähr); die IP selbst wird nicht gespeichert.
 export type Seg = 'b2c' | 'b2b';
 export type Ev = { seg: Seg; ev: string; path?: string | null; ref?: string | null; src?: string | null; med?: string | null; camp?: string | null; plan?: string | null };
 
@@ -40,11 +41,14 @@ export async function track(e: Ev, req?: Request): Promise<void> {
   try {
     const ua = req?.headers.get('user-agent') || '';
     const country = req?.headers.get('x-vercel-ip-country') || null;
+    const region = (req?.headers.get('x-vercel-ip-country-region') || '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 10) || null;
+    let city: string | null = null;
+    try { city = decodeURIComponent(req?.headers.get('x-vercel-ip-city') || '').replace(/[<>"]/g, '').slice(0, 80) || null; } catch { city = null; }
     const di = req ? deviceInfo(ua) : { device: null, browser: null, os: null };
     await supabaseAdmin().from('immo_analytics').insert({
       seg: e.seg, ev: e.ev, visitor: req ? visitorOf(req) : null,
       path: e.path?.slice(0, 160) || null, ref: e.ref?.slice(0, 80) || null, src: e.src?.slice(0, 60) || null, med: e.med?.slice(0, 40) || null, camp: e.camp?.slice(0, 60) || null,
-      device: di.device, browser: di.browser, os: di.os, country: country && /^[A-Z]{2}$/.test(country) ? country : null, plan: e.plan?.slice(0, 40) || null,
+      device: di.device, browser: di.browser, os: di.os, country: country && /^[A-Z]{2}$/.test(country) ? country : null, region, city, plan: e.plan?.slice(0, 40) || null,
     });
   } catch { /* Messung darf nie stören */ }
 }

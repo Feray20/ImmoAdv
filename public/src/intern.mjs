@@ -825,10 +825,13 @@ async function analyse(v) {
       <section class="pt-card"><h3>Besucher und Seitenaufrufe je Tag</h3>${chart(d.series || [])}</section>
       <section class="pt-card"><h3>Weg zum ${seg === 'b2b' ? 'Unternehmenskonto' : 'Kauf'}</h3><div class="fn">${funnel}</div><p class="form-note">Besucherzahlen je Schritt im gewählten Zeitraum. Registrierungen und Käufe kommen aus Datenbank bzw. Stripe und sind deshalb auch bei aktivem „Do Not Track“ vollständig.</p></section>
       <div class="an-grid">${list('Beliebteste Seiten', (d.pages || []).map((p) => [p[0], p[1]]), (x) => x, 'Seitenaufrufe')}${list('Herkunft', d.refs || [])}${list('Kampagnen (utm)', d.campaigns || [])}${list('Geräte', d.devices || [], (x) => DEV[x] || x)}${list('Browser', d.browsers || [])}${list('Betriebssystem', d.os || [])}${list('Länder', d.countries || [], (x) => (x === '??' ? 'Unbekannt' : (cn ? cn.of(x) : x)))}</div>
-      <p class="form-note">Besucher = eindeutige Besucher je Tag, über den Zeitraum summiert (ohne Cookies ist ein Wiedererkennen über Tage bewusst nicht möglich). Nicht gezählt: Administratoren-Bereich, Bots, Besucher mit „Do Not Track“ bzw. Global Privacy Control. Erfassung seit Oktober 2026.</p>`;
+      <div class="an-grid an-geo">${list('Städte', (d.cities || []).map(([c, r, k, n]) => [`${c}${r ? ' · ' + (k === 'DE' && BL[r] ? BL[r] : r) : ''}${k && k !== 'DE' ? ' (' + k + ')' : ''}`, n]))}${list('Bundesländer / Regionen', (d.regions || []).map(([r, k, n]) => [k === 'DE' && BL[r] ? BL[r] : `${r} (${k})`, n]))}</div>
+      <p class="form-note">Besucher = eindeutige Besucher je Tag, über den Zeitraum summiert (ohne Cookies ist ein Wiedererkennen über Tage bewusst nicht möglich). Nicht gezählt: Administratoren-Bereich, Bots, Besucher mit „Do Not Track“ bzw. Global Privacy Control. Ort: ungefähr, aus der IP-Adresse abgeleitet (IP wird nicht gespeichert); Städte erst ab dem 17.10.2026. Erfassung seit Oktober 2026.</p>`;
   };
   load();
 }
+
+const BL = { BW: 'Baden-Württemberg', BY: 'Bayern', BE: 'Berlin', BB: 'Brandenburg', HB: 'Bremen', HH: 'Hamburg', HE: 'Hessen', MV: 'Mecklenburg-Vorpommern', NI: 'Niedersachsen', NW: 'Nordrhein-Westfalen', RP: 'Rheinland-Pfalz', SL: 'Saarland', SN: 'Sachsen', ST: 'Sachsen-Anhalt', SH: 'Schleswig-Holstein', TH: 'Thüringen' };
 
 // Kleines Liniendiagramm (SVG) für die Tageswerte.
 function chart(series) {
