@@ -204,6 +204,7 @@ function classify(el) {
 
 export function setupApp({ u, d, saveData, reload }) {
   STAGE_D = d;
+  if (u.user_metadata?.must_change_password && u.user_metadata?.area === 'app') firstPassword(u);
   // Bestätigung nach dem Umstellen der Stufe.
   try {
     const m = sessionStorage.getItem('ia-stage-msg');
@@ -976,4 +977,33 @@ async function personalCard(grid) {
     };
   };
   show(p);
+}
+
+// Vom Web-Admin angelegtes Privatkonto: Startpasswort muss bei der ersten Anmeldung ersetzt werden.
+function firstPassword(u) {
+  const d = document.createElement('dialog'); d.className = 'buy-dlg fp-dlg'; document.body.append(d);
+  d.innerHTML = `<form class="buy-in pw-form" id="fpF"><input type="email" autocomplete="username" value="${esc(u.email)}" hidden readonly>
+    <div class="buy-head"><img src="/logo-icon.svg" alt="" width="34" height="29"><div><span class="buy-kick">Willkommen bei ImmoAdv</span><h2>Eigenes Passwort festlegen</h2></div></div>
+    <p class="form-note">Ihr Konto wurde für Sie eingerichtet. Bitte ersetzen Sie das Startpasswort durch ein eigenes – danach ist es ungültig.</p>
+    <label>Neues Passwort<input id="fp1" type="password" autocomplete="new-password" minlength="10" required></label>
+    <label>Neues Passwort wiederholen<input id="fp2" type="password" autocomplete="new-password" minlength="10" required></label>
+    <p class="form-note">Mindestens 10 Zeichen mit Groß- und Kleinbuchstaben und einer Zahl.</p>
+    <p class="form-note" id="fpMsg" role="status"></p>
+    <button class="btn btn-dark buy-go" type="submit">Passwort speichern</button></form>`;
+  d.addEventListener('cancel', (e) => e.preventDefault());
+  d.querySelector('#fpF').onsubmit = async (e) => {
+    e.preventDefault();
+    const m = d.querySelector('#fpMsg'), a = d.querySelector('#fp1').value, b = d.querySelector('#fp2').value, sb = e.target.querySelector('button');
+    const say = (t, ok) => { m.textContent = t; m.className = 'form-note ' + (ok ? 'ok' : 'err'); };
+    if (a !== b) return say('Die beiden Passwörter stimmen nicht überein.');
+    if (a.length < 10 || !/[A-Z]/.test(a) || !/[a-z]/.test(a) || !/[0-9]/.test(a)) return say('Bitte mindestens 10 Zeichen mit Groß- und Kleinbuchstaben und einer Zahl.');
+    sb.disabled = true;
+    try {
+      const { supa, token } = await import('/src/sess.mjs');
+      const r = await supa('/auth/v1/user', { method: 'PUT', headers: { Authorization: 'Bearer ' + token() }, body: JSON.stringify({ password: a, data: { must_change_password: false, onboarded_at: new Date().toISOString() } }) });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw Error(/same|different/i.test(String(j.msg || j.message || '')) ? 'Bitte ein anderes Passwort als das Startpasswort wählen.' : 'Passwort konnte nicht gespeichert werden.'); }
+      d.close(); d.remove();
+    } catch (er) { say(er.message); sb.disabled = false; }
+  };
+  d.showModal ? d.showModal() : d.setAttribute('open', '');
 }

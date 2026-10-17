@@ -82,5 +82,12 @@ async function leadRetention(): Promise<Record<string, number>> {
     await db.from('immo_b2b_verification_docs').delete().in('id', docs.map((d) => d.id));
     verifDocs += docs.length;
   }
+  // Nachweise aus Kontoanfragen, aus denen kein Konto wurde: nach 180 Tagen löschen.
+  const { data: oldReq } = await db.from('immo_b2b_contact').select('id, proof_path').not('proof_path', 'is', null).lt('created_at', new Date(Date.now() - 180 * 864e5).toISOString()).limit(500);
+  if (oldReq?.length) {
+    await db.storage.from('b2b-verify').remove(oldReq.map((r) => r.proof_path as string));
+    await db.from('immo_b2b_contact').update({ proof_path: null }).in('id', oldReq.map((r) => r.id));
+    verifDocs += oldReq.length;
+  }
   return { deleted, verifDocs };
 }

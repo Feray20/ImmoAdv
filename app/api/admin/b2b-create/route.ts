@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
     return j({ error: `Bitte „${label[f] || f}“ prüfen.` }, 400);
   }
   const b = p.data;
+  if (!b.registerNumber && !b.taxId) return j({ error: 'Bitte Handelsregisternummer oder USt-IdNr./Steuernummer angeben (eines von beiden ist Pflicht).' }, 400);
   const login = await createB2BLogin(b.email, b.advisorName);
   if (!login.ok) return j({ error: login.error }, login.status);
   const db = supabaseAdmin();
@@ -63,7 +65,21 @@ export async function POST(req: Request) {
     await db.auth.admin.deleteUser(login.userId).catch(() => null);
     return j({ error: 'Unternehmenskonto konnte nicht angelegt werden.' }, 500);
   }
-  if (b.requestId) await db.from('immo_b2b_contact').update({ status: 'erledigt', account_id: ins.data.id }).eq('id', b.requestId);
+  if (b.requestId) {
+    await db.from('immo_b2b_contact').update({ status: 'erledigt', account_id: ins.data.id }).eq('id', b.requestId);
+    // Nachweis aus der Anfrage in die Verifizierungsunterlagen des neuen Kontos übernehmen.
+    const { data: rq } = await db.from('immo_b2b_contact').select('proof_kind, proof_path, proof_name, proof_size, proof_sha256').eq('id', b.requestId).maybeSingle();
+    if (rq?.proof_path) {
+      const docId = randomUUID();
+      const to = `${ins.data.id}/${docId}.${rq.proof_path.split('.').pop()}`;
+      const mv = await db.storage.from('b2b-verify').move(rq.proof_path, to);
+      if (!mv.error) {
+        await db.from('immo_b2b_verification_docs').insert({ id: docId, account_id: ins.data.id, kind: rq.proof_kind || 'gewerbe', file_name: rq.proof_name || 'nachweis', storage_path: to, byte_size: rq.proof_size || 0, sha256: rq.proof_sha256 || '', uploaded_by: login.userId });
+        await db.from('immo_b2b_contact').update({ proof_path: null }).eq('id', b.requestId);
+        if (!b.verified) await db.from('immo_b2b_accounts').update({ verification_status: 'eingereicht', verification_submitted_at: now }).eq('id', ins.data.id);
+      }
+    }
+  }
   await adminAudit(auth.user.email, 'b2b_account_create', ins.data.id, { verified: b.verified, mailed: b.sendMail, fromRequest: Boolean(b.requestId) });
   let mailed = false;
   if (b.sendMail && mailConfigured()) {

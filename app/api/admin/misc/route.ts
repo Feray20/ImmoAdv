@@ -15,8 +15,19 @@ export async function GET(req: Request) {
   if (auth instanceof NextResponse) return auth;
   if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
   const db = supabaseAdmin();
+  // Nachweis einer Kontoanfrage ansehen: kurzlebiger signierter Link (5 Minuten), Abruf wird protokolliert.
+  const proofId = new URL(req.url).searchParams.get('proof');
+  if (proofId) {
+    if (!/^[0-9a-f-]{36}$/.test(proofId)) return j({ error: 'Ungültig.' }, 400);
+    const { data: c } = await db.from('immo_b2b_contact').select('proof_path, proof_name').eq('id', proofId).maybeSingle();
+    if (!c?.proof_path) return j({ error: 'Kein Nachweis vorhanden.' }, 404);
+    const sig = await db.storage.from('b2b-verify').createSignedUrl(c.proof_path, 300, { download: c.proof_name || 'nachweis' });
+    if (!sig.data?.signedUrl) return j({ error: 'Nachweis nicht gefunden.' }, 404);
+    await adminAudit(auth.user.email, 'b2b_request_proof_view', proofId);
+    return j({ url: sig.data.signedUrl });
+  }
   const [{ data: contacts }, { data: codes }, { data: audit }] = await Promise.all([
-    db.from('immo_b2b_contact').select('id, kind, name, company, email, phone, message, status, created_at, institution_type, city, account_id').order('created_at', { ascending: false }).limit(300),
+    db.from('immo_b2b_contact').select('id, kind, name, company, email, phone, message, status, created_at, institution_type, city, account_id, legal_form, register_number, tax_id, proof_kind, proof_name, proof_size').order('created_at', { ascending: false }).limit(300),
     db.from('immo_b2b_partner_codes').select('*').order('created_at', { ascending: false }).limit(300),
     db.from('immo_admin_audit').select('actor_email, action, target, meta, created_at').order('created_at', { ascending: false }).limit(200),
   ]);

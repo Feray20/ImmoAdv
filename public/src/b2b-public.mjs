@@ -27,13 +27,25 @@ function contact() {
   const ts = Date.now();
   const kind = new URLSearchParams(location.search).get('anliegen');
   if (kind && f.kind.querySelector(`option[value="${kind}"]`)) f.kind.value = kind;
+  // Nachweis-Felder nur bei der Kontoanfrage (dort Pflicht).
+  const sync = () => { const on = f.kind.value === 'konto'; f.querySelectorAll('[data-konto]').forEach((x) => { x.hidden = !on; x.disabled = !on; }); };
+  f.kind.addEventListener('change', sync); sync();
   f.onsubmit = async (e) => {
     e.preventDefault();
     const msg = document.getElementById('b2bMsg');
     if (!f.checkValidity()) { f.reportValidity(); return; }
-    const d = Object.fromEntries(new FormData(f));
-    const btn = f.querySelector('button'); btn.disabled = true;
-    const r = await fetch('/api/b2b/contact', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...d, privacy: d.privacy === 'on', ts }) });
+    const fd = new FormData(f), d = Object.fromEntries(fd);
+    const btn = f.querySelector('button[type=submit]');
+    let r;
+    if (d.kind === 'konto') {
+      const pf = fd.get('proof');
+      if (pf && pf.size > 4 * 1024 * 1024) { msg.textContent = 'Der Nachweis ist größer als 4 MB. Bitte verkleinern oder als PDF speichern.'; return; }
+      fd.set('ts', String(ts)); btn.disabled = true;
+      r = await fetch('/api/b2b/contact', { method: 'POST', body: fd });
+    } else {
+      delete d.proof; btn.disabled = true;
+      r = await fetch('/api/b2b/contact', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...d, privacy: d.privacy === 'on', ts }) });
+    }
     const j = await r.json().catch(() => ({}));
     btn.disabled = false;
     if (r.ok) { f.innerHTML = '<div class="pt-alert full"><strong>Danke!</strong> Ihre Anfrage ist eingegangen. Wir melden uns innerhalb von zwei Werktagen.</div>'; }

@@ -589,6 +589,7 @@ function portalGate() {
       <label>Geschäftliche E-Mail*<input name="email" type="email" required autocomplete="email"></label>
       <label>Telefon<input name="phone" autocomplete="tel"></label>
       <label>Ort<input name="city" autocomplete="address-level2" maxlength="80"></label>
+      <fieldset class="b2b-proof full" data-konto><legend>Nachweis Ihres Unternehmens</legend><p class="form-note">Zugänge erhalten ausschließlich Unternehmen. Bitte laden Sie einen Nachweis hoch – er wird nur zur Prüfung verwendet und nach der Entscheidung gelöscht (spätestens nach 180 Tagen).</p><label>Rechtsform<input name="legalForm" maxlength="60" placeholder="z. B. GmbH, e. K., Einzelunternehmen"></label><label>Handelsregister- oder Vermittlerregister-Nr.<input name="registerNumber" maxlength="60" placeholder="HRB … / D-…"></label><label>USt-IdNr. oder Steuernummer<input name="taxId" maxlength="40"></label><p class="form-note full">Register-Nr. oder USt-IdNr./Steuernummer – eines von beiden genügt.</p><label>Art des Nachweises*<select name="proofKind"><option value="gewerbe">Gewerbeanmeldung</option><option value="handelsregister">Handelsregisterauszug</option><option value="erlaubnis">Erlaubnis § 34c / § 34i GewO</option><option value="sonstiges">Sonstiger Nachweis</option></select></label><label>Datei (PDF, JPG oder PNG, max. 4 MB)*<input name="proof" type="file" accept="application/pdf,image/jpeg,image/png" required></label></fieldset>
       <label class="full">Nachricht (optional)<textarea name="message" rows="3" maxlength="2000" placeholder="z. B. Anzahl Berater, gewünschter Starttermin"></textarea></label>
       <div class="pp-hp" aria-hidden="true"><input name="website" tabindex="-1" autocomplete="off"></div>
       <label class="consent full"><input type="checkbox" name="privacy" required> Ich habe die <a class="ck-link" href="/datenschutz" target="_blank" rel="noopener">Datenschutzhinweise</a> gelesen. Die Angaben werden nur zur Bearbeitung der Anfrage gespeichert.</label>
@@ -596,9 +597,12 @@ function portalGate() {
       <p class="form-note full" id="reqMsg" role="status"></p></form></div>`;
   $('#reqF').onsubmit = (e) => {
     e.preventDefault();
-    const d = Object.fromEntries(new FormData(e.target));
+    const fd = new FormData(e.target), d = Object.fromEntries(fd);
+    const pf = fd.get('proof');
+    if (pf && pf.size > 4 * 1024 * 1024) { $('#reqMsg').textContent = 'Der Nachweis ist größer als 4 MB. Bitte verkleinern oder als PDF speichern.'; return; }
+    fd.set('kind', 'konto'); fd.set('ts', String(ts));
     busy(e.target.querySelector('button[type=submit]'), async () => {
-      const r = await fetch('/api/b2b/contact', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...d, kind: 'konto', privacy: d.privacy === 'on', ts }) });
+      const r = await fetch('/api/b2b/contact', { method: 'POST', body: fd });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw Error(j.error || 'Anfrage konnte nicht gesendet werden.');
       box.innerHTML = `<div class="pt-card pt-req"><h1>Danke – Ihre Anfrage ist eingegangen</h1><p>Wir prüfen Ihre Angaben und senden die Zugangsdaten an <strong>${esc(d.email)}</strong>, in der Regel innerhalb von zwei Werktagen.</p><p><button class="btn btn-outline" type="button" id="backLogin">Zur Anmeldung</button></p></div>`;

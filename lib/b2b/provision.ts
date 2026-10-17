@@ -16,14 +16,14 @@ export type LoginResult = { ok: true; userId: string; password: string } | { ok:
 
 // Neues Login anlegen (E-Mail gilt als bestätigt, da ImmoAdv die Adresse aus der Anfrage übernimmt).
 // Existiert die Adresse bereits als Konto, wird nichts verändert – bitte andere Adresse verwenden.
-export async function createB2BLogin(email: string, name: string): Promise<LoginResult> {
+export async function createB2BLogin(email: string, name: string, area: 'b2b' | 'app' = 'b2b'): Promise<LoginResult> {
   const password = genPassword();
   const { data, error } = await supabaseAdmin().auth.admin.createUser({
     email, password, email_confirm: true,
-    user_metadata: { must_change_password: true, area: 'b2b', name: name.slice(0, 120) },
+    user_metadata: { must_change_password: true, area, name: name.slice(0, 120), created_by_admin: true },
   });
   if (error || !data.user) {
-    if (/already|exists|registered/i.test(error?.message || '')) return { ok: false, status: 409, error: 'Für diese E-Mail-Adresse gibt es bereits ein ImmoAdv-Konto. Bitte eine andere (geschäftliche) Adresse verwenden.' };
+    if (/already|exists|registered/i.test(error?.message || '')) return { ok: false, status: 409, error: 'Für diese E-Mail-Adresse gibt es bereits ein ImmoAdv-Konto. Bitte eine andere Adresse verwenden.' };
     return { ok: false, status: 502, error: 'Zugang konnte nicht angelegt werden.' };
   }
   return { ok: true, userId: data.user.id, password };
