@@ -24,6 +24,7 @@
      "mode": "subscription",
      "features": [
       "Alles aus Kostenlos, dazu:",
+      "Sparplan mit monatlichem Check-in bis zum Eigenkapital-Ziel",
       "Bis zu 10 Objekte statt 3",
       "Analyse-PDF für jedes Objekt",
       "Kreditmappe zum Einsteigerpreis (39 € statt 49 €)"
@@ -62,25 +63,26 @@
     {
      "id": "pro-monthly",
      "name": "Profi",
-     "cents": 2900,
+     "cents": 3400,
      "intervall": "pro Monat",
      "mode": "subscription",
      "features": [
       "Unbegrenzt Objekte und Kreditmappen",
-      "Portfolio mit Zinsschock und CSV",
-      "Datenraum mit Vollständigkeits-Ampel",
+      "Monatsbericht: Cashflow, Restschuld und Fristen aller Objekte",
+      "Anlage-V-Hilfe als CSV für die Steuererklärung",
+      "Portfolio mit Zinsschock, Datenraum mit Vollständigkeits-Ampel",
       "Analyse-PDF, Stresstest-Matrix, Ertragswert"
      ]
     },
     {
      "id": "pro-yearly",
      "name": "Profi 12 Monate",
-     "cents": 29000,
+     "cents": 34000,
      "intervall": "für 12 Monate",
      "mode": "payment",
      "features": [
       "Wie Profi",
-      "Endet automatisch, keine Verlängerung"
+      "2 Monate geschenkt – endet automatisch, keine Verlängerung"
      ]
     },
     {

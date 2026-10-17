@@ -987,3 +987,17 @@ main table td{min-width:max-content}
 @media (max-width:620px){.b2b-proof-up{grid-template-columns:1fr}}
 .ber-radar{display:flex!important;gap:8px;align-items:center;font-size:13.5px;margin-top:6px;font-weight:600}.ber-radar input{width:18px;height:18px}
 .ber-radar-t{font-size:12px!important}
+.ret-card{border-top:3px solid #0284C7}
+.ret-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}.ret-h h3{margin:0}
+.ret-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.ret-kpis div{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:10px 12px}.ret-kpis small{display:block;color:#64748B;font-size:12.5px}.ret-kpis strong{font-size:19px;color:#0F2C59}.ret-kpis .neg{color:#B91C1C}.ret-kpis .pos{color:#15803D}
+.ret-sub{margin:8px 0 6px;font-size:15px;color:#0F2C59}
+.ret-dl{list-style:none;margin:0;padding:0;display:grid;gap:6px}.ret-dl li{display:grid;gap:2px;padding:9px 12px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0}.ret-dl li.hot{background:#FFFBEB;border-color:#FCD34D}.ret-dl small{color:#475569}
+.ret-act{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 4px}
+.ret-bar{height:12px;border-radius:99px;background:#E2E8F0;overflow:hidden;margin-top:10px}.ret-bar i{display:block;height:100%;background:linear-gradient(90deg,#0284C7,#16A34A)}
+.ret-hist{display:flex;align-items:flex-end;gap:6px;height:90px;margin:6px 0 10px}.ret-hist span{flex:1;display:grid;grid-template-rows:1fr auto;height:100%;text-align:center}.ret-hist i{align-self:end;display:block;background:#7DD3FC;border-radius:4px 4px 0 0}.ret-hist small{font-size:11px;color:#64748B}
+.ret-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:10px;align-items:end}.ret-form label{display:grid;gap:4px;font-size:13px;font-weight:600;color:#475569}
+@media (max-width:700px){.ret-kpis{grid-template-columns:1fr 1fr}.ret-form{grid-template-columns:1fr 1fr}.ret-form .btn{grid-column:1/-1}}
+.ret-card small{text-transform:none!important;letter-spacing:0!important;font-weight:500}
+.ret-form input{width:100%;min-width:0;box-sizing:border-box}.ret-form label{min-width:0}
+@media (max-width:700px){.ret-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ret-kpis{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
