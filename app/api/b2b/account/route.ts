@@ -6,6 +6,7 @@ import { userFromRequest } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase/admin';
 import { RegistrationProofDocument, proofText, typeLabel, type RegistrationProof } from '@/lib/b2b/registration-proof';
+import { avvEvidence } from '@/lib/b2b/avv-evidence';
 import { AVV_VERSION, TIER_LIMITS, adminAudit, dossiersThisMonth, effectiveTier, membershipFor, newWidgetKey, slugify, type B2BAccount } from '@/lib/b2b/core';
 import { json, requireMember } from '@/lib/b2b/http';
 import { adminList } from '@/lib/security/admin';
@@ -165,7 +166,7 @@ export async function POST(req: Request) {
     owner_id: user.id, company_name: b.companyName, legal_form: b.legalForm, institution_type: b.institutionType,
     register_number: reg || null, tax_id: b.taxId || null, advisor_name: b.advisorName, email: user.email, phone: b.phone || null,
     street: b.street, postal_code: b.postalCode, city: b.city, status: 'active', unternehmer_confirmed_at: now,
-    avv_accepted_at: now, avv_version: AVV_VERSION, referral, slug, widget_key: newWidgetKey(),
+    avv_accepted_at: now, avv_version: AVV_VERSION, avv_evidence: avvEvidence(req, { userId: user.id, email: user.email, name: b.advisorName }), referral, slug, widget_key: newWidgetKey(),
   }).select('*').single();
   if (ins.error || !ins.data) {
     console.error('b2b_register_error', ins.error?.message);

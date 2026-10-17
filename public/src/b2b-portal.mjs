@@ -47,9 +47,9 @@ function shell() {
     </aside>
     <section class="pt-main"><header class="pt-top"><h1 id="ptTitle"></h1><button type="button" class="pt-br" id="ptBr" title="Branche wechseln – das Portal passt sich an"><span aria-hidden="true">${B().icon}</span> ${esc(B().short)} <b aria-hidden="true">⇄</b></button><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
       ${a.status === 'locked' ? `<div class="pt-alert bad"><strong>Konto gesperrt.</strong> ${esc(a.lockReason || '')} Rechnungen und AVV bleiben abrufbar. Fragen an support@immoadv.de.</div>` : ''}
-      <div id="ptView"></div></section>
+      <div id="ptView"></div><p class="pt-liab">ImmoAdv stellt rein technische Analyse- und Erfassungsinstrumente bereit und trifft keine Votierungs-, Bonitäts- oder Kreditentscheidung. Die aufsichtsrechtliche Pflicht zur Prüfung nach MaRisk, KWG oder § 34i GewO verbleibt vollumfänglich beim beratenden bzw. finanzierenden Institut. <a href="/nutzungsbedingungen#hinweise">Rechtliche Hinweise</a> · <a href="/datenschutz">Datenschutz</a></p></section>
     <nav class="pt-tabs" aria-label="Bereiche">${MAIN.map(([v, l, ic]) => `<a href="#${v}" data-v="${v}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${v === 'kunden' ? B().kunden : l}</span>${v === 'anfragen' && me.usage.leadsNew ? `<b class="pt-dot">${me.usage.leadsNew}</b>` : ''}</a>`).join('')}<button type="button" id="ptMore" aria-expanded="false" aria-controls="ptSheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>Mehr</span></button></nav>
-    <div class="pt-sheet" id="ptSheet" hidden><div class="pt-sheet-bg" data-close></div><div class="pt-sheet-in" role="dialog" aria-label="Alle Bereiche"><div class="pt-sheet-h"><strong>${esc(a.companyName)}</strong><button type="button" class="stage-x" data-close aria-label="Schließen">×</button></div>
+    <div class="pt-sheet" id="ptSheet" hidden><div class="pt-sheet-bg" data-close></div><div class="pt-sheet-in" role="dialog" aria-label="Alle Bereiche"><div class="pt-sheet-h"><span class="pt-sheet-t"><strong>Hauptmenü</strong>${(a.companyName || '').trim().length >= 3 ? `<small>${esc(a.companyName)}</small>` : ''}</span><button type="button" class="stage-x" data-close aria-label="Schließen">×</button></div>
       <nav>${VIEWS.filter(([v]) => !MAIN.some(([m]) => m === v) && (me.role === 'owner' || !['tarif', 'profil'].includes(v))).map(([v, l]) => `<a href="#${v}" data-v="${v}">${l}</a>`).join('')}<a href="/app/dashboard">Zur Anwendung</a><button type="button" class="pt-logout" id="ptLogoutS">Abmelden</button></nav></div></div>
   </div>`;
   root.querySelectorAll('#ptLogout,#ptLogoutM,#ptLogoutS').forEach((b) => { b.onclick = logout; });
@@ -98,20 +98,20 @@ async function vKunden(box) {
   const mon = (ym) => { const [y, m] = ym.split('-').map(Number); const n = new Date(); return (y - n.getFullYear()) * 12 + (m - 1 - n.getMonth()); };
   const radarRows = con.flatMap((c) => (Array.isArray(c.radar) ? c.radar : []).map((ym) => ({ c, ym, m: mon(ym) }))).filter((x) => x.m >= -1 && x.m <= 36).sort((a, b) => a.m - b.m);
   const radarAsked = con.filter((c) => c.radar).length;
-  const radar = `<section class="pt-card kd-radar"><div class="kd-head"><h2>Bestandskunden-Radar</h2><span class="form-note">${radarAsked} von ${con.length} Kunden teilen ihr Zinsbindungsende</span></div>
+  const radar = `<section class="pt-card kd-radar"><div class="kd-head"><h2>Bestandskunden-Radar</h2><span class="form-note">${radarAsked} von ${con.length} Kunden teilen ihr Zinsbindungsende</span></div><p class="form-note">Automatische Erinnerung: Am 1. jedes Monats bekommen Sie eine E-Mail, sobald bei einem Kunden die Zinsbindung in 36, 24, 12, 6 oder 3 Monaten endet.</p>
     ${!r.data.radarOn ? '<p class="form-note">Der Radar meldet Ihnen, wenn bei Ihren Kunden die Zinsbindung in 36, 24 oder 12 Monaten endet – Ihre Anschlussfinanzierungen von morgen. Enthalten ab <a href="#tarif">Kanzlei & Baufi Pro</a>.</p>'
       : radarRows.length ? `<ul class="kd-rlist">${radarRows.map((x) => `<li class="${x.m <= 12 ? 'hot' : x.m <= 24 ? 'warm' : ''}"><span><strong>${esc(x.c.name || x.c.email || 'Kunde')}</strong><small>Zinsbindung endet ${x.ym.split('-').reverse().join('/')}</small></span><b>${x.m < 0 ? 'abgelaufen' : x.m === 0 ? 'diesen Monat' : `in ${x.m} Monat${x.m === 1 ? '' : 'en'}`}</b>${x.m <= 60 ? '<em>Forward möglich</em>' : ''}</li>`).join('')}</ul>`
       : '<p class="form-note">Aktuell endet bei keinem Ihrer Kunden die Zinsbindung in den nächsten 36 Monaten.</p>'}
     <p class="form-note">Kunden schalten das Teilen von Monat und Jahr des Zinsbindungsendes in ihrem Konto selbst frei (eigene Einwilligung, jederzeit widerrufbar) – ohne Beträge oder Bankdaten.</p></section>`;
   box.innerHTML = radar + `<section class="pt-card"><h2>Kunde einladen</h2>
       <p class="form-note">Ihr Kunde bereitet Finanzprofil, Objekt und Unterlagen in ImmoAdv vor – kostenlos. Stimmt er zu, sehen Sie hier seinen Fortschritt: Stufe, Bankreife, Anzahl Objekte und Unterlagen. Dokumente und Inhalte sehen Sie nicht; der Kunde kann die Verbindung jederzeit trennen.</p>
-      <form class="pt-row kd-form" id="kdF"><input id="kdMail" type="email" required placeholder="E-Mail des Kunden" aria-label="E-Mail des Kunden" autocomplete="off"><input id="kdName" type="text" placeholder="Name (optional)" aria-label="Name (optional)" maxlength="120"><button class="btn btn-dark" type="submit">Einladen</button></form>
+      <form class="pt-row kd-form" id="kdF"><input id="kdMail" type="email" required placeholder="E-Mail des Kunden" aria-label="E-Mail des Kunden" autocomplete="off"><input id="kdName" type="text" placeholder="Name (optional)" aria-label="Name (optional)" maxlength="120"><button class="btn btn-dark" type="submit">Einladen</button><label class="chk kd-consent"><input type="checkbox" id="kdOk" required> Ich bestätige, dass mir die Einwilligung des Kunden für die Zusendung dieser Einladung vorliegt (Art. 6 Abs. 1 lit. a/b DSGVO).</label></form>
       <div id="kdLink">${KD_LAST ? kdLinkHtml(KD_LAST) : ''}</div></section>
     <section class="pt-card"><div class="kd-head"><h2>Ihre Kunden</h2><span class="form-note">${con.length} verbunden · ${ready} bankreif · ${inv.length} Einladung${inv.length === 1 ? '' : 'en'} offen</span></div>
       ${con.length ? `<p class="form-note">Sortiert nach Bankreife – die abschlussreifen Fälle stehen oben.</p><div class="kd-list">${con.map(card).join('')}</div>` : '<p class="form-note">Noch keine verbundenen Kunden. Laden Sie Ihren ersten Kunden oben ein.</p>'}
       ${inv.length ? `<h3 class="kd-sub">Offene Einladungen</h3><ul class="kd-inv">${inv.map((c) => `<li><span><strong>${esc(c.name || c.email)}</strong><small>${c.name ? esc(c.email) + ' · ' : ''}gültig bis ${dt(c.expiresAt)}</small></span><button type="button" class="btn btn-ghost" data-kd-end="${esc(c.id)}">Zurückziehen</button></li>`).join('')}</ul>` : ''}</section>`;
   $('#kdF').onsubmit = (e) => { e.preventDefault(); const b = e.target.querySelector('button'); busy(b, async () => {
-    const x = await api('/api/b2b/clients', { method: 'POST', body: JSON.stringify({ email: $('#kdMail').value.trim(), name: $('#kdName').value.trim() || undefined }) });
+    const x = await api('/api/b2b/clients', { method: 'POST', body: JSON.stringify({ email: $('#kdMail').value.trim(), name: $('#kdName').value.trim() || undefined, consent: $('#kdOk').checked }) });
     if (!x.ok) throw Error(x.data?.error || 'Einladung fehlgeschlagen.');
     KD_LAST = x.data;
     await vKunden(box);
@@ -145,6 +145,13 @@ async function startStats(el) {
   el.innerHTML = `<h2>Letzte 30 Tage</h2><dl class="pt-dl"><div><dt>Anfragen gesamt</dt><dd>${l.length}</dd></div><div><dt>Website-Widget</dt><dd>${by('widget')}</dd></div><div><dt>Partnerseite</dt><dd>${by('landing')}</dd></div><div><dt>QR-Code</dt><dd>${by('qr')}</dd></div><div><dt>Abgeschlossen</dt><dd>${done}${l.length ? ` (${Math.round((done / l.length) * 100)} %)` : ''}</dd></div><div><dt>Ohne Zuständigen</dt><dd>${l.filter((x) => !x.assigned_to).length}</dd></div></dl>`;
 }
 
+// Muster-Fall (fiktiv) statt leerer Kacheln: zeigt, wie ein fertig geprüfter Fall aussieht.
+const MUSTER_DOCS = [['Personalausweis', 1], ['Selbstauskunft', 1], ['Gehaltsabrechnungen (3 Monate)', 1], ['Arbeitsvertrag', 1], ['Einkommensteuerbescheid', 1], ['Eigenkapitalnachweis', 1], ['Kontoauszüge (3 Monate)', 1], ['Exposé', 1], ['Grundrisse und Wohnfläche', 1], ['Energieausweis', 1], ['Teilungserklärung', 1], ['Protokolle Eigentümerversammlung', 1], ['Wirtschaftsplan und Hausgeldabrechnung', 1], ['Mietvertrag', 1], ['Grundbuchauszug (nicht älter als 3 Monate)', 0]];
+const MUSTER = `<section class="pt-card pt-muster"><div class="pt-muster-h"><div><span class="st">Beispiel · fiktiver Fall</span><h2>Muster-Fall: Familie Beispiel, vermietete ETW</h2><p class="form-note">So sieht ein Fall aus, wenn Ihr Kunde seine Unterlagen über ImmoAdv vorbereitet hat. Alle Daten sind erfunden.</p></div><a class="btn btn-outline btn-sm" href="#fall">Eigenen Fall prüfen</a></div>
+  <div class="pt-kpis"><div class="pt-kpi"><small>Kapitaldienstdeckung (DSCR)</small><strong>1,24</strong><span class="form-note">Nettomiete 1.551 € ÷ Rate 1.251 €</span></div><div class="pt-kpi"><small>Haushaltsüberschuss</small><strong>1.180 €</strong><span class="form-note">nach Rate und Lebenshaltung</span></div><div class="pt-kpi"><small>Unterlagen</small><strong>14 von 15</strong><span class="form-note">fehlt: Grundbuchauszug</span></div><div class="pt-kpi"><small>Beleihungsauslauf</small><strong>88 %</strong><span class="form-note">Darlehen 268.000 € · BLW 304.000 €</span></div></div>
+  <details class="pt-muster-d"><summary>Unterlagen und Rechenweg ansehen</summary><ul class="pt-check">${MUSTER_DOCS.map(([t, ok]) => `<li class="${ok ? 'done' : ''}"><span>${t}${ok ? '' : ' – <strong>fehlt</strong>'}</span></li>`).join('')}</ul>
+  <p class="form-note">Kaufpreis 320.000 € · Kaltmiete 1.700 € · nicht umlagefähig 149 € · Darlehen 268.000 € zu 3,60 % Soll und 2,00 % Tilgung = Rate 1.250,67 €. DSCR = (1.700 − 149) ÷ 1.250,67 = 1,24. Haushalt: Netto 4.950 € + Miete 1.700 € − Lebenshaltung 2.150 € − Warmmiete eigene Wohnung 1.220 € − nicht umlagefähige Kosten 149 € − Rate 1.251 € − Versicherungen/Sonstiges 700 € = 1.180 €.</p></details></section>`;
+
 function vStart(box) {
   const a = me.account, u = me.usage, lim = me.limits;
   const quota = lim ? (lim.dossiersPerMonth == null ? 'unbegrenzt' : `${u.dossiersThisMonth} von ${lim.dossiersPerMonth + (a.dossierBonus || 0)}`) : '–';
@@ -171,7 +178,7 @@ function vStart(box) {
         <li><strong>Kreditmappe erstellen:</strong> Kennzahlen nach banküblichen Kriterien (Kapitaldienstfähigkeit, Beleihungsauslauf, Cashflow) mit Echtheits-QR${me.limits?.cobranding ? ' und Ihrem Logo' : ''}.</li>
         <li><strong>Anfragen gewinnen:</strong> Widget auf Ihrer Website, QR-Code im Exposé oder Ihre <a href="#werkzeuge">Partnerseite</a>.</li></ol>
         <p class="form-note">Rechnerische Orientierungswerte nach einem strukturierten Datenmodell. Keine Kreditzusage und keine Bonitätsentscheidung; die Entscheidung trifft das finanzierende Institut.</p></section>
-    </div><section class="pt-card" id="stats30"></section>`;
+    </div>${u.leadsNew > 0 ? '' : MUSTER}<section class="pt-card" id="stats30"></section>`;
   startStats($('#stats30'));
 }
 
@@ -320,7 +327,7 @@ function vTools(box) {
     return;
   }
   const snippet = `<script src="${location.origin}/widget.js" data-immoadv="${esc(a.slug)}" async></script>`;
-  box.innerHTML = `
+  box.innerHTML = `<section class="pt-card" id="ecBox"></section>
     <section class="pt-card"><h2>Ihre Partnerseite</h2>
       <p><a class="ck-link" href="${page}" target="_blank" rel="noopener">${esc(page)}</a></p>
       <p class="form-note">Finanzierungsrechner mit Anfrageformular. Anfragen gehen ausschließlich an Sie.${me.limits.landing ? '' : ' Beraterprofil und Terminlink erscheinen ab Tarif Pro.'}</p></section>
@@ -362,6 +369,7 @@ function vTools(box) {
   let t; box.querySelectorAll('.obj-grid input, .obj-grid select').forEach((i) => i.addEventListener('input', () => { clearTimeout(t); t = setTimeout(preview, 400); }));
   preview();
   box.querySelectorAll('[data-q]').forEach((b) => b.onclick = () => busy(b, () => download(`/api/b2b/qr?format=${b.dataset.q}&` + qs(), {}, 'QR')));
+  import('./expose-check.mjs').then((m) => m.mountExposeCheck($('#ecBox'), { account: { ...a, brandColor: me.limits?.cobranding ? a.brandColor : '' }, logoUrl: me.limits?.cobranding && a.hasLogo && a.slug ? `/api/b2b/logo?slug=${encodeURIComponent(a.slug)}` : '' })).catch(() => { $('#ecBox').innerHTML = '<p class="form-note">Exposé-AutoPilot konnte nicht geladen werden.</p>'; });
 }
 
 // Zugangsdaten einmalig anzeigen (Startpasswort muss bei der ersten Anmeldung geändert werden).
@@ -452,7 +460,7 @@ function vProfil(box) {
     ${me.tier === 'ENTERPRISE' || a.hasWhitelabel ? `<section class="pt-card"><h2>Eigener Hinweistext</h2><p class="form-note">Erscheint auf Ihrer Partnerseite, im Widget und in der Finanzierungsübersicht für Interessenten (z. B. Compliance-Hinweis Ihres Instituts). Max. 600 Zeichen.</p>
       <textarea id="discl" rows="3" maxlength="600" style="width:100%;border:1px solid #CBD5E1;border-radius:6px;padding:8px">${esc(a.customDisclaimer || '')}</textarea><button class="btn btn-ghost" id="disclSave" type="button">Speichern</button></section>` : ''}
     <section class="pt-card"><h2>Aufbewahrung der Anfragen</h2><p class="form-note">Anfragen werden nach dieser Frist automatisch gelöscht (Speicherbegrenzung, Art. 5 DSGVO). Legen Sie die Frist passend zu Ihren eigenen Pflichten fest.</p>
-      <label class="pt-field">Löschen nach<select id="ret">${[6, 12, 24, 36, 60, 120].map((m) => `<option value="${m}"${(a.leadRetentionMonths || 24) === m ? ' selected' : ''}>${m} Monaten</option>`).join('')}</select></label></section>
+      <label class="pt-field">Löschen nach<select id="ret">${[1, 6, 12, 24, 36, 60, 120].map((m) => `<option value="${m}"${(a.leadRetentionMonths || 24) === m ? ' selected' : ''}>${m === 1 ? '30 Tagen' : m + ' Monaten'}</option>`).join('')}</select></label></section>
     ${me.limits?.cobranding ? `<section class="pt-card"><h2>Webhook für Ihr CRM</h2><p class="form-note">Bei jeder neuen Anfrage senden wir sie als JSON per POST an Ihre Adresse (https). Prüfen Sie die Signatur: Header <code>X-ImmoAdv-Signature</code> = <code>sha256=</code> HMAC-SHA256 mit dem Geheimnis über <code>Zeitstempel.Body</code> (Header <code>X-ImmoAdv-Timestamp</code>).</p>
       <label class="pt-field">Adresse<input id="whUrl" value="${esc(a.webhookUrl || '')}" placeholder="https://crm.example.de/hooks/immoadv"></label>
       ${a.webhookSecret ? `<p class="form-note">Geheimnis: <code>${esc(a.webhookSecret)}</code> <button class="text-btn" id="whRot" type="button">Neu erzeugen</button></p>` : ''}

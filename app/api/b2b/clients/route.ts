@@ -38,18 +38,18 @@ export async function GET(req: Request) {
   return json({ clients, radarOn });
 }
 
-const Invite = z.object({ email: z.string().trim().toLowerCase().email().max(200), name: z.string().trim().max(120).optional() });
+const Invite = z.object({ email: z.string().trim().toLowerCase().email().max(200), name: z.string().trim().max(120).optional(), consent: z.literal(true) });
 
 export async function POST(req: Request) {
   const ctx = await requireMember(req, { bucket: 'b2b-client-invite', limit: 20 });
   if (ctx instanceof Response) return ctx;
   if (!ctx.account.verified_at) return json({ error: 'Kunden einladen ist nach der Verifizierung Ihres Unternehmenskontos möglich.' }, 403);
   const p = Invite.safeParse(await req.json().catch(() => null));
-  if (!p.success) return json({ error: 'Bitte eine gültige E-Mail-Adresse angeben.' }, 400);
+  if (!p.success) return json({ error: p.error.issues.some((i) => i.path[0] === 'consent') ? 'Bitte bestätigen Sie, dass die Einwilligung des Kunden für die Einladung vorliegt.' : 'Bitte eine gültige E-Mail-Adresse angeben.' }, 400);
   const db = supabaseAdmin();
   const token = newToken();
   const ins = await db.from('immo_b2b_clients').insert({
-    account_id: ctx.account.id, invited_by: ctx.user.id, client_email: p.data.email, client_name: p.data.name || null,
+    account_id: ctx.account.id, invited_by: ctx.user.id, client_email: p.data.email, client_name: p.data.name || null, inviter_consent_at: new Date().toISOString(),
     token_hash: hashToken(token), expires_at: new Date(Date.now() + INVITE_DAYS * 864e5).toISOString(),
   });
   if (ins.error) return json({ error: 'Einladung fehlgeschlagen.' }, 500);

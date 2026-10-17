@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { AVV_VERSION, adminAudit } from '@/lib/b2b/core';
+import { avvEvidence } from '@/lib/b2b/avv-evidence';
 import { json, requireMember } from '@/lib/b2b/http';
 
 export const runtime = 'nodejs';
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
   const a = ctx.account;
   if (ctx.role === 'owner' && (!a.unternehmer_confirmed_at || !a.avv_accepted_at)) {
     if (!p.data.unternehmer || !p.data.avv || !p.data.agb) return json({ error: 'Bitte alle drei Erklärungen bestätigen.' }, 400);
-    await db.from('immo_b2b_accounts').update({ unternehmer_confirmed_at: a.unternehmer_confirmed_at || now, avv_accepted_at: a.avv_accepted_at || now, avv_version: a.avv_accepted_at ? a.avv_version : AVV_VERSION }).eq('id', a.id);
+    await db.from('immo_b2b_accounts').update({ unternehmer_confirmed_at: a.unternehmer_confirmed_at || now, avv_accepted_at: a.avv_accepted_at || now, avv_version: a.avv_accepted_at ? a.avv_version : AVV_VERSION, ...(a.avv_accepted_at ? {} : { avv_evidence: avvEvidence(req, { userId: ctx.user.id, email: ctx.user.email, name: a.advisor_name, role: ctx.role }) }) }).eq('id', a.id);
   }
   const { data: u } = await db.auth.admin.getUserById(ctx.user.id);
   await db.auth.admin.updateUserById(ctx.user.id, { user_metadata: { ...(u?.user?.user_metadata || {}), must_change_password: false, onboarded_at: now } });

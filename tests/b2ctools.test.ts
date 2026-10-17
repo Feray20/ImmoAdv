@@ -30,3 +30,12 @@ test('§ 489 BGB: 10 Jahre nach Auszahlung plus 6 Monate Frist', async () => {
   assert.equal(k.end.getMonth(), 8);
   assert.equal(kuendigungsrecht489(''), null);
 });
+
+test('Exposé-AutoPilot: Szenarien mit Nebenkosten und Rate', async () => {
+  const { financeScenarios } = await import('../public/src/expose-check.mjs');
+  const r = financeScenarios({ price: 300000, land: 'hessen', brokerPct: 0, ratePa: 3.6, repayPa: 2 });
+  assert.ok(r && r.rows.length === 3);
+  assert.equal(Math.round(r.rows[0].loan), 300000);
+  assert.ok(Math.abs(r.rows[0].rate - 1400) < 0.01);
+  assert.ok(r.rows[2].loan < r.rows[1].loan);
+});

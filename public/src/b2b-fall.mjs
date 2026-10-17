@@ -45,6 +45,35 @@ export function calc(i) {
   return { nk, bedarf, D, beleihung, auslauf: beleihung ? D / beleihung : null, ekQuote: bedarf ? i.eigenkapital / bedarf : null, lebens, variants, nkGedeckt: i.eigenkapital >= nk };
 }
 
+// ---------- Strukturierter Export (zum Übertragen in Ihr CRM oder Ihre Finanzierungsplattform) ----------
+// Eigenes, offen dokumentiertes Format (schema immoadv.fall/1); keine Zertifizierung für eine bestimmte Plattform.
+export function exportCase(st) {
+  const i = st.inputs, c = calc(i);
+  return {
+    schema: 'immoadv.fall/1', erstellt: new Date().toISOString(),
+    kunde: i.kunde || null,
+    vorhaben: { kaufpreis: i.kaufpreis, nebenkosten: Math.round(c.nk), modernisierung: i.modern, gesamtbedarf: Math.round(c.bedarf), eigenkapital: i.eigenkapital, darlehen: Math.round(c.D) },
+    objekt: { beleihungswertAnnahme: Math.round(c.beleihung), beleihungsauslauf: c.auslauf != null ? +(c.auslauf * 100).toFixed(1) : null, kaltmiete: i.miete, hausgeld: i.hausgeld },
+    haushalt: { nettoMonat: i.netto, personen: i.personen, lebenshaltung: Math.round(c.lebens), sonstigeVerpflichtungen: i.sonst },
+    varianten: c.variants.map((v) => ({ name: v.name, sollzins: +(v.zins * 100).toFixed(3), tilgung: +(v.tilgung * 100).toFixed(2), zinsbindungJahre: v.bindung, rateMonat: +v.rate.toFixed(2), restschuldEnde: Math.round(v.rest), haushaltsueberschuss: Math.round(v.ueber) })),
+    unterlagen: (st.docs || []).map((d) => ({ art: d.label, gruppe: d.group, befunde: (d.findings || []).map((f) => f[1]) })),
+  };
+}
+export function exportCsv(x) {
+  const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = [['Bereich', 'Feld', 'Wert']];
+  for (const [k, o] of Object.entries({ vorhaben: x.vorhaben, objekt: x.objekt, haushalt: x.haushalt })) for (const [f, v] of Object.entries(o)) rows.push([k, f, v]);
+  x.varianten.forEach((v) => Object.entries(v).forEach(([f, w]) => rows.push(['variante ' + v.name, f, w])));
+  x.unterlagen.forEach((u) => rows.push(['unterlagen', u.art, u.befunde.join(' | ')]));
+  return '\ufeff' + rows.map((r) => r.map(q).join(';')).join('\r\n');
+}
+function dl(text, type, ext) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = `${new Date().toISOString().slice(0, 10)}_ImmoAdv_Fall.${ext}`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
 // ---------- Zustand ----------
 let S = null; // { docs, facts, inputs, br, quota }
 const DEF_VAR = [{ name: 'Variante A', zins: 0.036, tilgung: 0.02, bindung: 10 }, { name: 'Variante B', zins: 0.038, tilgung: 0.025, bindung: 15 }, { name: 'Variante C', zins: 0.041, tilgung: 0.03, bindung: 20 }];
@@ -57,7 +86,7 @@ export async function renderFall(box, { api, toast, me }) {
   box.innerHTML = `<div class="fa">
     <section class="pt-card fa-hero"><div><span class="bw-kick">Fall-Analyse</span><h2>Unterlagen hochladen – Analyse in Sekunden</h2>
       <p>Ziehen Sie die PDFs Ihres Kunden hierher (Gehaltsabrechnungen, Kontoauszug, Grundbuch, Energieausweis, Teilungserklärung, Protokolle, Kaufvertragsentwurf …). Sie erhalten eine Analyse für sich, eine verständliche Fassung für den Kunden und auf Wunsch eine Präsentation.</p>
-      <p class="fa-priv"><b>Datenschutz:</b> Die Dateien werden ausschließlich in Ihrem Browser gelesen und nicht an ImmoAdv übertragen oder gespeichert.</p></div>
+      <p class="fa-priv"><b>Datenschutz:</b> Die Fall-Analyse ist eine clientseitige Vorprüfung für maximale Diskretion bei sensiblen Gehaltsnachweisen: Die Dateien werden nur in Ihrem Browser gelesen und dabei nicht an ImmoAdv übertragen oder gespeichert. Unterlagen, die Ihr Kunde selbst im Kundenbereich hochlädt und für Sie freigibt, liegen dagegen verschlüsselt (AES-256) in einem ISO-27001-zertifizierten Rechenzentrum in Frankfurt am Main (AWS eu-central-1) – zur gemeinsamen Bearbeitung nach dem Auftragsverarbeitungsvertrag (Art. 28 DSGVO).</p></div>
       <div class="fa-quota"><div><small>Fall-Analysen diesen Monat</small><strong>${info.usage.fall} / ${lim(info.limits.fall)}</strong></div><div><small>Präsentationen</small><strong>${info.usage.praes} / ${lim(info.limits.praes)}</strong></div><div><small>Erscheinungsbild</small><strong>${({ immoadv: 'ImmoAdv', eigen: 'Ihr Logo', whitelabel: 'White-Label' })[info.branding.mode]}</strong></div></div></section>
     ${info.verified ? '' : '<div class="pt-alert warn">Die Fall-Analyse steht nach der Freischaltung Ihres Unternehmenskontos zur Verfügung.</div>'}
     <label class="fa-drop" id="faDrop"><input type="file" id="faFiles" accept="application/pdf" multiple hidden ${info.verified ? '' : 'disabled'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg><strong>PDFs auswählen oder hierher ziehen</strong><span>Bis zu 15 Dateien, je max. 25 MB. Gescannte Bilder ohne Text werden erkannt und markiert.</span></label>
@@ -177,7 +206,7 @@ function kunde(c, f, miss) {
     ${good.length ? `<h3 class="bw-h3">Das spricht für Sie</h3><ul class="fa-good">${good.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
     <h3 class="bw-h3">Nächste Schritte</h3><ul class="fa-todo">${todo.map((x) => `<li>${esc(x)}</li>`).join('') || '<li>Keine offenen Punkte.</li>'}</ul>
     <p class="form-note">Unverbindliche Berechnung auf Basis Ihrer Unterlagen; keine Finanzierungszusage.</p>
-    <div class="pt-row"><button class="btn btn-dark" type="button" id="faCopy">Text kopieren (für E-Mail)</button><button class="btn btn-outline" type="button" data-ft2="praes">Als Präsentation zeigen</button></div>
+    <div class="pt-row"><button class="btn btn-dark" type="button" id="faCopy">Text kopieren (für E-Mail)</button><button class="btn btn-outline" type="button" id="faJson">Export JSON</button><button class="btn btn-outline" type="button" id="faCsv">Export CSV</button><button class="btn btn-outline" type="button" data-ft2="praes">Als Präsentation zeigen</button></div>
     <textarea id="faTxt" hidden>${esc(txt)}</textarea></section>`;
 }
 
@@ -201,6 +230,8 @@ function bindInputs(tab, box, ctx) {
     paint(box, ctx);
   });
   tab.querySelectorAll('[data-dt]').forEach((el) => el.onchange = () => { if (!el.value) return; const d = S.docs[+el.dataset.dt]; const T = TYPES.find((t) => t.id === el.value); d.type = T.id; d.label = T.label; d.group = T.group; d.findings = [['ok', 'Dokumentart manuell zugeordnet – Werte bitte im Original prüfen.']]; S.facts = { ...caseFacts(S.docs) }; paint(box, ctx); });
+  tab.querySelector('#faJson')?.addEventListener('click', () => dl(JSON.stringify(exportCase(S), null, 2), 'application/json', 'json'));
+  tab.querySelector('#faCsv')?.addEventListener('click', () => dl(exportCsv(exportCase(S)), 'text/csv;charset=utf-8', 'csv'));
   tab.querySelector('#faCopy')?.addEventListener('click', async (e) => { try { await navigator.clipboard.writeText(tab.querySelector('#faTxt').value); e.target.textContent = 'Kopiert ✓'; } catch { ctx.toast('Kopieren nicht möglich.', true); } });
   tab.querySelector('[data-ft2]')?.addEventListener('click', () => { S.tab = 'praes'; paint(box, ctx); });
   tab.querySelectorAll('[data-sl]').forEach((el) => el.onchange = () => { S.slides = SLIDES.map(([k]) => k).filter((k) => tab.querySelector(`[data-sl="${k}"]`).checked); });
