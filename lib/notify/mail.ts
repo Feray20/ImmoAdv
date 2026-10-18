@@ -59,7 +59,7 @@ export function brandedHtml({ title, text, button, note, area = 'b2c', accent }:
   const biz = area === 'b2b';
   const ac = accent && /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : '#0F2C59';
   const pre = html((text.split('\n').find((l) => l.trim()) || '').slice(0, 120)) + '&#8199;&#65279;&#847;'.repeat(30);
-  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${html(title || 'ImmoAdv')}</title></head>
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><style>@media (max-width:520px){.ia-col{max-width:100%!important;display:block!important}}</style><title>${html(title || 'ImmoAdv')}</title></head>
 <body style="margin:0;padding:0;background:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${pre}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F5F9;padding:24px 12px"><tr><td align="center">
@@ -71,9 +71,23 @@ ${bodyHtml(text)}
 ${button ? buttonHtml(button, ac) : ''}
 ${note ? `<p style="margin:0 0 16px;font-size:13px;line-height:1.55;color:#64748B">${html(note)}</p>` : ''}
 </td></tr>
-<tr><td style="padding:18px 28px 24px;background:#F8FAFC;border-top:1px solid #E2E8F0;font-size:12px;line-height:1.6;color:#64748B">
-<strong style="color:#0F2C59">ImmoAdv</strong> · Feray Korkmaz (Head of Operations) · Georg-August-Zinn-Str. 25 · 64354 Reinheim<br>
-<a href="mailto:support@immoadv.de" style="color:#64748B">support@immoadv.de</a> · ${biz ? `<a href="${SITE}/b2b-portal" style="color:#64748B">Unternehmensportal</a> · ` : ''}<a href="${SITE}/impressum" style="color:#64748B">Impressum</a> · <a href="${SITE}/datenschutz" style="color:#64748B">Datenschutz</a><br>
+<tr><td style="padding:0 28px"><div style="height:1px;line-height:1px;font-size:0;background:#E2E8F0">&nbsp;</div></td></tr>
+<tr><td class="ia-foot" style="padding:20px 18px 6px;font-size:0;text-align:left">
+<!--[if mso]><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" valign="top"><![endif]-->
+<div class="ia-col" style="display:inline-block;width:100%;max-width:270px;vertical-align:top;padding:0 10px 14px;box-sizing:border-box;font-size:13px;line-height:1.6;color:#475569">
+<strong style="display:block;font-size:14px;color:#0F2C59">Feray Korkmaz</strong>
+<span style="display:block;color:#64748B">Head of Operations · ImmoAdv</span>
+<span style="display:block;margin-top:6px">Georg-August-Zinn-Str. 25<br>64354 Reinheim</span>
+</div>
+<!--[if mso]></td><td width="50%" valign="top"><![endif]-->
+<div class="ia-col" style="display:inline-block;width:100%;max-width:270px;vertical-align:top;padding:0 10px 14px;box-sizing:border-box;font-size:13px;line-height:1.6;color:#475569">
+<span style="display:block;color:#64748B">Support</span>
+<a href="mailto:support@immoadv.de" style="display:block;color:#0369A1;font-weight:600;text-decoration:none">support@immoadv.de</a>
+<span style="display:block;margin-top:6px">${biz ? `<a href="${SITE}/b2b-portal" style="color:#475569;text-decoration:underline">Unternehmensportal</a> · ` : ''}<a href="${SITE}/impressum" style="color:#475569;text-decoration:underline">Impressum</a> · <a href="${SITE}/datenschutz" style="color:#475569;text-decoration:underline">Datenschutz</a></span>
+</div>
+<!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+<tr><td style="padding:4px 28px 24px;font-size:11.5px;line-height:1.55;color:#64748B">
 Technisches Analyse- und Vorbereitungswerkzeug – keine Kreditvermittlung, keine Anlage-, Steuer- oder Rechtsberatung.
 </td></tr></table></td></tr></table></body></html>`;
 }
