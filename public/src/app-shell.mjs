@@ -805,7 +805,7 @@ function paths(mode, done) {
     ? [['#objekte', 'Objekte & Analysen', 'RenditeRadar, DSCR, Cashflow nach Steuern'], ['#objekte', 'Kreditmappe (Studio)', 'BankReady für jedes Objekt'], ['/szenarien', 'Anschlusszins & Verkauf', 'Kipp-Zins, Forward, § 23 EStG'], ['/rechner/vergleich', 'Bankangebote vergleichen', 'Effektivzins, Restschuld, Gesamtkosten'], ['/cockpit', 'Stresstest-Cockpit', 'Zinsschock und Mietausfall']]
     : [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#suche', 'Exposé importieren', 'PDF oder Link – Kennzahlen sofort'], ['#objekte', 'Objekt prüfen', 'Exposé oder Link – Rendite und Risiko'], ['#objekte', 'Kreditmappe erstellen', 'Bankfertig für Ihr Gespräch']];
   const B = mode === 'profi'
-    ? [['#werkzeuge', 'Software-Tools', 'Portfolio, Betriebskosten, Fristen'], ['#steuer', 'Steuer & AfA', 'Anlage V, 15-%-Grenze, § 7b'], ['/rechner/afa', 'AfA-Plan', 'linear, degressiv, Sonder-AfA'], ['/rechner/mieterhoehung', 'Mieterhöhung', 'Kappungsgrenze, Briefentwurf'], ['/rechner', 'Rechner-Bibliothek', 'Mietrecht und Steuern'], ['#lernen', 'Fachwissen', `${done} von ${LERN.length} Themen`]]
+    ? [['#werkzeuge', 'Software-Tools', 'Portfolio, Betriebskosten, Fristen'], ['#steuer', 'Steuer & AfA', 'Anlage V, 15-%-Grenze, AfA § 7 Abs. 4 / Sonder-AfA § 7b'], ['/rechner/afa', 'AfA-Plan', 'linear, degressiv, Sonder-AfA'], ['/rechner/mieterhoehung', 'Mieterhöhung', 'Kappungsgrenze, Briefentwurf'], ['/rechner', 'Rechner-Bibliothek', 'Mietrecht und Steuern'], ['#lernen', 'Fachwissen', `${done} von ${LERN.length} Themen`]]
     : [['/rechner', 'Rechner-Bibliothek', 'Nebenkosten, Tilgung, Kaufen oder mieten'], ['/wissen/glossar', 'Lexikon', 'Fachbegriffe in einfachen Worten'], ['#steuer', 'Steuer-Grundlagen', 'Was Sie absetzen können'], ['#lernen', 'Lernplan', `${done} von ${LERN.length} Themen verstanden`]];
   const list = (xs, num) => `<ul class="path-list">${xs.map(([h, t, sub], i) => `<li><a href="${h}"><i>${num ? i + 1 : '›'}</i><span><b>${t}</b><small>${sub}</small></span><em aria-hidden="true">→</em></a></li>`).join('')}</ul>`;
   return `<div class="paths">
@@ -826,12 +826,14 @@ function startCard(mode, d) {
     return `<article class="dash-card wide start-card start-pro" data-view="start">
       <div class="stage-mini"><span class="stage-k">Stufe</span><strong><b class="stage-n">${ph.idx + 1}</b>${PH()[ph.idx].name}</strong><button type="button" class="link-btn stage-open">ändern</button><div id="rankSlot" class="rank-slot mini"></div></div>
       ${proKpis(d)}
+      <div id="cmMode"></div>
       ${paths('profi', done)}</article>`;
   }
   const tasks = fahrplan(ph.idx, d);
   const nextI = tasks.findIndex((x) => x[3] === false);
   return `<article class="dash-card wide start-card" data-view="start">${phasePicker(ph.idx, ph.chosen)}
     <div id="rankSlot" class="rank-slot"></div>
+    <div id="cmMode"></div>
     <h4 class="sc-h">Ihr Fahrplan für Stufe ${ph.idx + 1}</h4>
     <ol class="fp">${tasks.map(([t, sub, h, st], i) => `<li class="fp-i${st === true ? ' done' : ''}${i === nextI ? ' next' : ''}"><span class="fp-dot" aria-hidden="true">${st === true ? '✓' : i + 1}</span><span class="fp-t"><strong>${t}</strong><small>${sub}</small></span>${st === true ? '<span class="fp-st">erledigt</span>' : `<a class="btn ${i === nextI ? 'btn-dark' : 'btn-outline'} fp-go" href="${h}">${i === nextI ? 'Jetzt erledigen' : 'Öffnen'}</a>`}</li>`).join('')}</ol>
     <h4 class="sc-h">Ihre zwei Wege</h4>
@@ -839,6 +841,9 @@ function startCard(mode, d) {
 }
 
 function bindStart(mode, d, u, saveData, reload) {
+  // Modusabhängiges Cockpit (Einsteiger: Budget-Tacho · Profi: RenditeRadar, Vermögenskurve, Szenarien).
+  const cm = document.getElementById('cmMode');
+  if (cm) import('/src/cockpit-mode.mjs').then((m) => (mode === 'profi' ? m.mountProfi(cm, { d }) : m.mountEinsteiger(cm, { d, save: (x) => { d.profile = { ...(d.profile || {}), ...x }; saveData(u, d).catch(() => {}); } }))).catch(() => {});
   document.querySelectorAll('[data-phase]').forEach((b) => b.onclick = async () => {
     d.profile = { ...(d.profile || {}), phase: Number(b.dataset.phase) };
     b.closest('.ph-pick')?.querySelectorAll('.ph-btn').forEach((x) => x.classList.toggle('on', x === b));
