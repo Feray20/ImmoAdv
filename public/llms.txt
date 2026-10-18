@@ -1,0 +1,47 @@
+# ImmoAdv
+
+> ImmoAdv (immoadv.de) ist eine unabhängige deutsche Online-Plattform für Immobilien- und Finanzierungsanalysen. Private Käufer, Kapitalanleger, Vermittler und Banken rechnen dort Kaufkraft, Kaufnebenkosten, Rendite, Cashflow und Stresstest durch und erstellen eine bankfertige Kreditmappe als PDF. ImmoAdv nimmt keine Provisionen, vermittelt keine Kredite oder Immobilien und bietet keine Anlage-, Steuer- oder Rechtsberatung.
+
+Wichtige Fakten:
+
+- Betreiberin: Feray Korkmaz, Einzelunternehmen, Reinheim (Hessen), Deutschland. Kontakt: support@immoadv.de
+- Tätigkeitsgebiet: ganz Deutschland, rein digital.
+- Sprache: Deutsch. Preise in Euro, Stand Oktober 2026.
+- Privat: Kostenlos (Rechner, 2 Objekte); BankReady Kreditmappe 39 € einmalig je Objekt; Käufer-Pass 49 € für 90 Tage; Investor Pro 29 € pro Monat, monatlich kündbar. Endpreise inkl. 19 % USt.
+- Unternehmen (nur § 14 BGB): Basic 59 €, Pro 139 €, Enterprise ab 349 € netto pro Monat.
+- Rechtliche Einordnung: technisches Analyse- und Vorbereitungswerkzeug. Keine Kreditvermittlung (§ 34i GewO), keine Steuerberatung (StBerG), keine Rechtsdienstleistung (RDG). Ergebnisse sind Orientierungswerte auf Basis der Nutzerangaben, keine Finanzierungszusage.
+
+## Produkt
+
+- [Startseite und Schnellrechner](https://immoadv.de/): Rendite, Cashflow, Rate und Stresstest für ein Objekt
+- [Angebote und Preise](https://immoadv.de/angebote): alle Tarife für Privatkunden mit Leistungsvergleich
+- [Für Unternehmen](https://immoadv.de/b2b): Portal für Makler, Finanzierungsvermittler, Kanzleien und Banken
+- [Mustermappe](https://immoadv.de/mustermappe): Beispiel einer Kreditmappe
+- [Meine erste Immobilie](https://immoadv.de/start): Einstieg für Erstkäufer
+- [Sicherheit](https://immoadv.de/sicherheit): Hosting in der EU, Verschlüsselung, Zugriffskontrolle
+
+## Rechner
+
+- [Alle Rechner](https://immoadv.de/rechner)
+- [Kaufnebenkosten je Bundesland](https://immoadv.de/rechner/kaufnebenkosten): Grunderwerbsteuer, Notar, Grundbuch, Makler
+- [Budget und Kaufkraft](https://immoadv.de/rechner/budget)
+- [Cashflow nach Steuern](https://immoadv.de/rechner/cashflow)
+- [Tilgungsplan](https://immoadv.de/rechner/tilgungsplan)
+- [Kaufen oder mieten](https://immoadv.de/rechner/kaufen-mieten)
+- [AfA-Plan](https://immoadv.de/rechner/afa)
+- [Angebotsvergleich](https://immoadv.de/rechner/vergleich)
+
+## Wissen
+
+- [Wissenszentrale](https://immoadv.de/wissen): Artikel zu Finanzierung, Eigenkapital, Rendite, Steuern und Vermietung
+- [Glossar](https://immoadv.de/wissen/glossar)
+- [Wie viel Immobilie kann ich mir leisten?](https://immoadv.de/wissen/wie-viel-immobilie-kann-ich-mir-leisten)
+- [Was gehört in eine Kreditmappe?](https://immoadv.de/wissen/was-gehoert-in-eine-kreditmappe)
+- [Vermittelt ImmoAdv Kredite?](https://immoadv.de/wissen/vermittelt-immoadv-kredite)
+- [Was kostet ImmoAdv?](https://immoadv.de/wissen/was-kostet-immoadv)
+
+## Rechtliches
+
+- [Impressum](https://immoadv.de/impressum)
+- [Datenschutz](https://immoadv.de/datenschutz)
+- [Nutzungsbedingungen](https://immoadv.de/nutzungsbedingungen)

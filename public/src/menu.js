@@ -158,3 +158,6 @@ addEventListener('error',function(e){if(e&&e.message)rep(e.message,e.filename,e.
 
 // Reichweitenmessung (cookielos) laden.
 (function(){if(window.iaTrack||document.querySelector('script[src="/src/track.js"]'))return;var t=document.createElement('script');t.src='/src/track.js';t.defer=true;document.head.appendChild(t)})();
+
+// Kontakt-Widget (unten rechts) auf öffentlichen Seiten; lädt als eigenes Modul.
+(function(){if(window.__iaCw)return;window.__iaCw=1;if(/^\/(app|b2b-portal|intern|auth|partner|datenraum|p|verify|pruefen|kuendigen)(\/|$)/.test(location.pathname))return;var s=document.createElement('script');s.type='module';s.src='/src/contact-widget.mjs';document.head.appendChild(s)})();
