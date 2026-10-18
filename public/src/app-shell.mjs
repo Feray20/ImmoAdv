@@ -259,6 +259,7 @@ export function setupApp({ u, d, saveData, reload }) {
   const main = app.querySelector('main');
   main.insertAdjacentHTML('afterbegin', `<div class="app-top"><a class="brand app-top-brand" href="/"><img class="brand-logo" src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="app-top-t"><small class="app-top-k">Privatbereich · ${mode === 'profi' ? 'Profi' : 'Einsteiger'}</small><h1 id="appTitle"></h1></div>
     <button class="mode-chip" id="modeChip" type="button" aria-label="Modus wechseln">${mode === 'profi' ? 'Profi' : 'Einsteiger'} <span aria-hidden="true">⇄</span></button></div>`);
+  import('./legal-foot.mjs').then((m) => { if (!main.querySelector('.ia-legal')) main.insertAdjacentHTML('beforeend', m.legalFoot('b2c')); }).catch(() => {});
   app.insertAdjacentHTML('beforeend', `<nav class="app-tabs" aria-label="Schnellnavigation">${TABS.map((k) => `<a class="app-tab" data-go="${k}" href="#${k}">${svg(k)}<span>${k === 'werkzeuge' ? 'Tools' : views.find((v) => v[0] === k)[1].split(' ')[0]}</span></a>`).join('')}</nav>`);
   $('appLogout').onclick = () => document.getElementById('logout')?.click();
   $('modeChip').onclick = async () => {
@@ -270,7 +271,7 @@ export function setupApp({ u, d, saveData, reload }) {
 
   // Eigene Karten: Start, Suche, Lernpfad, Angebot
   grid.insertAdjacentHTML('afterbegin', kmCard());
-  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide fin-card" data-view="konto" id="finCard"><h3>Tarif &amp; Rechnungen</h3><div id="finBody"><p class="form-note">Wird geladen …</p></div></article>`);
+  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide fin-card" data-view="konto" id="finCard"><h3>Tarif &amp; Rechnungen</h3><div id="finBody"><p class="ia-ld" role="status">Wird geladen …</p></div></article>`);
   // Berater-Freigaben: nur sichtbar, wenn der Kunde mit einem Unternehmen verbunden ist; jederzeit trennbar.
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide ber-card" data-view="konto" id="berCard" hidden><h3>Berater-Freigaben</h3><div id="berBody"></div></article>`);
   (async () => {
@@ -347,11 +348,11 @@ export function setupApp({ u, d, saveData, reload }) {
     window.__iaApplyView?.();
   }).catch(() => {});
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="suche" id="sucheView"></article>`);
-  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="werkzeuge" id="toolsView"><p class="form-note">Software-Tools werden geladen …</p></article>`);
+  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="werkzeuge" id="toolsView"><p class="ia-ld" role="status">Software-Tools werden geladen …</p></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);
   Promise.all([import('/src/b2c-tools.mjs'), getAccess()]).then(([m, ac]) => { m.mountTools($('toolsView'), { d, tier: ac.tier || 'free', b2b: Boolean(ac.b2b), mode: mode || 'einsteiger' }); import('/src/field-help.mjs').then((f) => f.attachHelp?.($('toolsView'))).catch(() => {}); }).catch(() => { const v = $('toolsView'); if (v) v.innerHTML = '<p class="form-note">Software-Tools konnten nicht geladen werden.</p>'; });
   grid.insertAdjacentHTML('beforeend', lernCard(mode, d));
-  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="angebot" id="angebotView"><h3>${mode === 'profi' ? 'Tarif' : 'Angebot'}</h3><div id="offerBody"><p class="form-note">Wird geladen …</p></div></article>`);
+  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="angebot" id="angebotView"><h3>${mode === 'profi' ? 'Tarif' : 'Angebot'}</h3><div id="offerBody"><p class="ia-ld" role="status">Wird geladen …</p></div></article>`);
   bindStart(mode, d, u, saveData, reload);
   bindKm(d, u, saveData, reload);
   renderFin();
@@ -895,7 +896,7 @@ function lernTopics(st, rec = [], recName = '', plan = '') {
   const one = ([id, t, sub], k = -1, next = false) => `
     <details class="lt${st[id] ? ' done' : ''}${next ? ' next' : ''}" data-topic="${id}" data-q="${escQ(t + ' ' + sub + ' ' + (LERN.find((x) => x[0] === id)?.[5] || ''))}">
       <summary>${k >= 0 ? `<span class="lt-num" aria-hidden="true">${st[id] ? '✓' : k + 1}</span>` : ''}<span class="lt-title">${next ? '<em class="lt-next-tag">Als Nächstes</em>' : ''}<strong>${t}</strong><span>${sub}</span></span><span class="lt-state">${st[id] ? '✓ verstanden' : ''}</span></summary>
-      <div class="lt-body" data-body="${id}"><p class="form-note">Wird geladen …</p></div>
+      <div class="lt-body" data-body="${id}"><p class="ia-ld" role="status">Wird geladen …</p></div>
     </details>`;
   const recT = rec.map((id) => LERN.find((x) => x[0] === id)).filter(Boolean);
   const nextId = recT.find(([id]) => !st[id])?.[0];
@@ -1067,7 +1068,7 @@ function bindPw(u) {
 // Konto → Persönliche Daten (nach einer Buchung): Name und Rechnungsanschrift. Änderungen gelten ab der nächsten Rechnung.
 const COUNTRIES = [['DE', 'Deutschland'], ['AT', 'Österreich'], ['CH', 'Schweiz'], ['LU', 'Luxemburg'], ['NL', 'Niederlande'], ['BE', 'Belgien'], ['FR', 'Frankreich'], ['IT', 'Italien'], ['ES', 'Spanien'], ['PL', 'Polen'], ['DK', 'Dänemark']];
 async function personalCard(grid) {
-  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide pers-card" data-view="konto" id="persCard"><h3>Persönliche Daten</h3><div id="persBody"><p class="form-note">Wird geladen …</p></div></article>`);
+  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide pers-card" data-view="konto" id="persCard"><h3>Persönliche Daten</h3><div id="persBody"><p class="ia-ld" role="status">Wird geladen …</p></div></article>`);
   const body = $('persBody'), H = { Authorization: 'Bearer ' + sessToken() };
   const [acc, r] = await Promise.all([getAccess(), fetch('/api/me/personal', { headers: H, cache: 'no-store' }).then((x) => (x.ok ? x.json() : null)).catch(() => null)]);
   const p = r?.personal || null;
