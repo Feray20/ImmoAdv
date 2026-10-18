@@ -87,3 +87,12 @@ test('Preisverzeichnis: 19 Kapitel, keine erfundenen Preise, Prüfsumme stabil',
   assert.equal(pricingHash(v), pricingHash(PRICING_VERSIONS[PRICING_VERSIONS.length - 1]));
   assert.match(pricingHash(v), /^[0-9a-f]{64}$/);
 });
+
+test('Stripe Issuing: Testbetrieb nur mit Testschlüssel und Webhook-Geheimnis, live nur mit Freigabe', () => {
+  const base = { CARD_PROVIDER: 'stripe', STRIPE_ISSUING_WEBHOOK_SECRET: 'whsec_x' };
+  assert.equal(programStatus({ ...base, CARD_PROGRAM_STATUS: 'SANDBOX', STRIPE_SECRET_KEY: 'sk_live_1' }), 'COMING_SOON');
+  assert.equal(programStatus({ ...base, CARD_PROGRAM_STATUS: 'SANDBOX', STRIPE_TEST_SECRET_KEY: 'sk_test_1' }), 'SANDBOX');
+  assert.equal(programStatus({ ...base, CARD_PROGRAM_STATUS: 'LIVE', STRIPE_SECRET_KEY: 'sk_live_1' }), 'COMING_SOON');
+  assert.equal(programStatus({ ...base, CARD_PROGRAM_STATUS: 'LIVE', STRIPE_SECRET_KEY: 'sk_live_1', CARD_COMPLIANCE_APPROVED: 'true' }), 'LIVE');
+  assert.equal(programStatus({ CARD_PROVIDER: 'stripe', CARD_PROGRAM_STATUS: 'SANDBOX', STRIPE_TEST_SECRET_KEY: 'sk_test_1' }), 'COMING_SOON');
+});

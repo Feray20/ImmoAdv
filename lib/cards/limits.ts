@@ -45,7 +45,7 @@ export const refund = (l: LimitState, amount: Cents): LimitState => ({ ...l, ref
 
 // Erlaubte Monatslimits: Charge höchstens bis zur Sicherheitskaution, Debit ohne Kaution (Guthaben entscheidet).
 export const LIMIT_STEPS: Cents[] = [50_000, 75_000, 100_000];
-export function limitAllowed(type: 'debit' | 'charge', newLimit: Cents, deposit: Cents): { ok: true } | { ok: false; reason: string } {
+export function limitAllowed(type: 'debit' | 'charge' | 'business', newLimit: Cents, deposit: Cents): { ok: true } | { ok: false; reason: string } {
   if (!Number.isInteger(newLimit) || newLimit < 0) return { ok: false, reason: 'Bitte einen gültigen Betrag angeben.' };
   if (newLimit > 5_000_000) return { ok: false, reason: 'Das Limit liegt über dem zulässigen Höchstwert.' };
   if (type === 'charge' && newLimit > deposit) return { ok: false, reason: 'Das Monatslimit darf die hinterlegte Sicherheitskaution nicht übersteigen.' };
