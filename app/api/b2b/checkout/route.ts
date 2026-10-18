@@ -3,6 +3,7 @@ import { billingEnabled, stripe } from '@/lib/billing/stripe';
 import { B2B_PLANS, VERIFY_MSG } from '@/lib/b2b/core';
 import { json, requireMember } from '@/lib/b2b/http';
 import { ensureB2BCustomer, ensureB2BPrice, ensureTaxRateExclusive } from '@/lib/b2b/stripe-b2b';
+import { NO_MANAGED_PAYMENTS } from '@/lib/billing/checkout-params';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
       allow_promotion_codes: true,
       // Button-Lösung (§ 312j Abs. 3 BGB): Hinweis direkt am Bestellknopf der Bezahlseite.
       custom_text: { submit: { message: 'Mit Klick auf den Button schließen Sie einen zahlungspflichtigen Vertrag mit ImmoAdv ab.' } },
+      ...NO_MANAGED_PAYMENTS,
       metadata,
       subscription_data: { metadata, description: `${plan.name} – ${plan.intervall}` },
       success_url: `${origin}/b2b-portal?checkout=success#tarif`,

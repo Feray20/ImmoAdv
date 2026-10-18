@@ -4,6 +4,9 @@ import { PLANS, type Plan } from '@/lib/billing/stripe';
 // Gemeinsame Einstellungen der Bezahlseite (echter Kauf und Testkauf im Web-Admin).
 // Zahlarten werden bewusst NICHT festgelegt: Stripe zeigt automatisch alle im Stripe-Konto aktivierten Zahlarten
 // (Karte, PayPal, Apple Pay, Google Pay, Klarna, SEPA …). Logo und Farben kommen aus Stripe → Einstellungen → Branding.
+// Stripe-Feld ist evtl. noch nicht in den SDK-Typen, daher als Spread.
+export const NO_MANAGED_PAYMENTS = { managed_payments: { enabled: false } } as unknown as Partial<Stripe.Checkout.SessionCreateParams>;
+
 export function checkoutParams(o: {
   plan: Plan; customer: string; clientRef: string; price: string; taxRate: string;
   metadata: Record<string, string>; successUrl: string; cancelUrl: string;
@@ -23,6 +26,9 @@ export function checkoutParams(o: {
       submit: { message: 'Mit Klick auf den Button schließen Sie einen zahlungspflichtigen Vertrag mit ImmoAdv ab.' },
       after_submit: { message: 'Danke! Sie werden gleich zu ImmoAdv zurückgeleitet. Rechnung und Beleg erhalten Sie per E-Mail.' },
     },
+    // Managed Payments (Stripe als Händler) ist im Stripe-Konto standardmäßig an und verträgt sich nicht mit
+    // custom_text, eigenen Steuersätzen und eigener Rechnung. ImmoAdv verkauft selbst → pro Anfrage ausschalten.
+    ...NO_MANAGED_PAYMENTS,
     metadata: o.metadata,
     success_url: o.successUrl,
     cancel_url: o.cancelUrl,
