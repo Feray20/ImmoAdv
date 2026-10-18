@@ -7,17 +7,19 @@ const stars = (n, name = '') => `<span class="fb-stars"${name ? ` role="radiogro
 
 export async function vorschlaege(v, seg) {
   const r = await api('/api/admin/feedback');
-  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  if (!r.ok) { v.innerHTML = `<div class="ad-state err" role="alert"><strong>Die Vorschläge konnten nicht geladen werden.</strong><span>${esc(r.data?.error || '')}</span><button type="button" class="btn btn-outline" data-retry>Erneut versuchen</button></div>`; v.querySelector('[data-retry]').onclick = () => vorschlaege(v, seg); return; }
   const items = r.data.items || [];
-  let filter = 'offen';
+  let filter = 'offen', sort = 'neu';
+  const SORTS = { neu: (a, b) => String(b.created_at).localeCompare(String(a.created_at)), wichtig: (a, b) => (b.importance || 0) - (a.importance || 0), bewertung: (a, b) => (b.admin_rating || 0) - (a.admin_rating || 0), aktualisiert: (a, b) => String(b.updated_at).localeCompare(String(a.updated_at)) };
   const paint = () => {
-    const list = items.filter((x) => filter === 'alle' ? true : filter === 'offen' ? ['neu', 'in_pruefung'].includes(x.status) : x.status === filter);
+    const list = items.filter((x) => filter === 'alle' ? true : filter === 'offen' ? ['neu', 'in_pruefung'].includes(x.status) : x.status === filter).sort(SORTS[sort]);
     const cnt = (f) => items.filter((x) => f === 'alle' ? true : f === 'offen' ? ['neu', 'in_pruefung'].includes(x.status) : x.status === f).length;
     v.innerHTML = `<section class="pt-card"><h2>Verbesserungsvorschläge · ${seg === 'b2b' ? 'Unternehmen' : 'Privatkunden'}</h2>
       <p class="form-note">Vorschläge aus dem ${seg === 'b2b' ? 'Unternehmensportal' : 'Privatbereich'}. Die Wichtigkeit gibt der Kunde an; Ihre Bewertung und Notiz sind nur hier sichtbar. Eine Antwort sieht der Kunde bei seinen Vorschlägen.</p>
       <div class="pc-chips" role="group" aria-label="Filter">${[['offen', 'Offen'], ['geplant', 'Geplant'], ['umgesetzt', 'Umgesetzt'], ['abgelehnt', 'Nicht geplant'], ['alle', 'Alle']].map(([k, l]) => `<button type="button" data-fbf="${k}" aria-pressed="${k === filter}">${l} <b>${cnt(k)}</b></button>`).join('')}</div>
+      <label class="us-sort fb-sort">Sortieren<select data-fbsort>${[['neu', 'Neueste zuerst'], ['wichtig', 'Wichtigkeit für den Kunden'], ['bewertung', 'Ihre Bewertung'], ['aktualisiert', 'Zuletzt bearbeitet']].map(([k, l]) => `<option value="${k}"${k === sort ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
       ${list.length ? `<div class="fb-list">${list.map((x) => `<article class="fb-card" data-id="${x.id}">
-        <header><div><strong>${esc(TOPICS[x.topic] || x.topic)}</strong><small>${dtt(x.created_at)} · ${esc(x.company ? `${x.company} · ` : '')}${esc(x.email || 'Konto')}${x.page ? ` · ${esc(x.page)}` : ''}</small></div><span class="st ${x.status === 'umgesetzt' ? 'ok' : x.status === 'abgelehnt' ? 'bad' : x.status === 'neu' ? 'warn' : ''}">${STATUS[x.status]}</span></header>
+        <header><div><strong>${esc(TOPICS[x.topic] || x.topic)}</strong><small>Eingegangen ${dtt(x.created_at)}${x.updated_at && x.updated_at !== x.created_at ? ` · bearbeitet ${dtt(x.updated_at)}` : ''} · ${esc(x.company ? `${x.company} · ` : '')}${esc(x.email || 'Konto')}${x.page ? ` · ${esc(x.page)}` : ''}</small></div><span class="st ${x.status === 'umgesetzt' ? 'ok' : x.status === 'abgelehnt' ? 'bad' : x.status === 'neu' ? 'warn' : ''}">${STATUS[x.status]}</span></header>
         <p class="fb-text">${esc(x.text)}</p>
         <div class="fb-meta"><span>Wichtigkeit für den Kunden ${stars(x.importance)}</span></div>
         <div class="fb-admin"><label>Ihre Bewertung ${stars(x.admin_rating, 'Ihre Bewertung')}</label>
@@ -27,6 +29,7 @@ export async function vorschlaege(v, seg) {
           <button class="btn btn-dark" type="button" data-fbsave>Speichern</button><span class="form-note" data-fbmsg role="status"></span></div>
       </article>`).join('')}</div>` : '<div class="pt-empty"><strong>Keine Vorschläge in dieser Auswahl.</strong></div>'}</section>`;
     v.querySelectorAll('[data-fbf]').forEach((b) => b.onclick = () => { filter = b.dataset.fbf; paint(); });
+    v.querySelector('[data-fbsort]')?.addEventListener('change', (e) => { sort = e.target.value; paint(); });
     v.querySelectorAll('.fb-card').forEach((card) => {
       const it = items.find((x) => x.id === card.dataset.id);
       card.querySelectorAll('[data-star]').forEach((b) => b.onclick = () => {
