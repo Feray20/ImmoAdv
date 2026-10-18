@@ -1,9 +1,11 @@
 // Gemeinsame Sitzungs-Helfer für Portal und internen Bereich (Supabase-Sitzung aus localStorage).
-// Getrennte Bereiche: Website-Konto, Web-Admin und B2B-Portal haben je eine eigene Sitzung und eigene Anmeldung.
+// Privatbereich und Unternehmensportal teilen sich eine Anmeldung (einmal anmelden, beide Bereiche nutzen).
+// Nur der Web-Admin hat aus Sicherheitsgründen eine eigene Sitzung.
 export const AREA = location.pathname.startsWith('/intern') ? 'admin' : location.pathname.startsWith('/b2b-portal') ? 'b2b' : 'app';
-const SESSION = AREA === 'app' ? 'immoadv-auth-session-v1' : `immoadv-${AREA}-session-v1`;
-const ACT = AREA === 'app' ? 'ia-last-active' : `ia-last-active-${AREA}`;
-const REM = AREA === 'app' ? 'ia-remember' : `ia-remember-${AREA}`;
+const SFX = AREA === 'admin' ? '-admin' : '';
+const SESSION = AREA === 'admin' ? 'immoadv-admin-session-v1' : 'immoadv-auth-session-v1';
+const ACT = 'ia-last-active' + SFX;
+const REM = 'ia-remember' + SFX;
 let cfg = null;
 
 export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

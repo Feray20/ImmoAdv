@@ -258,10 +258,11 @@ export function setupApp({ u, d, saveData, reload }) {
     <div class="app-side-foot"><span class="app-user">${esc(u.email)}</span><button class="text-btn" id="appLogout" type="button">Abmelden</button></div></nav>`);
   const main = app.querySelector('main');
   main.insertAdjacentHTML('afterbegin', `<div class="app-top"><a class="brand app-top-brand" href="/"><img class="brand-logo" src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="app-top-t"><small class="app-top-k">Privatbereich · ${mode === 'profi' ? 'Profi' : 'Einsteiger'}</small><h1 id="appTitle"></h1></div>
-    <button class="mode-chip" id="modeChip" type="button" aria-label="Modus wechseln">${mode === 'profi' ? 'Profi' : 'Einsteiger'} <span aria-hidden="true">⇄</span></button></div>`);
+    <button class="mode-chip" id="modeChip" type="button" aria-label="Modus wechseln (aktuell ${mode === 'profi' ? 'Profi' : 'Einsteiger'})"><b>${mode === 'profi' ? 'Profi' : 'Einsteiger'}</b> <span aria-hidden="true">⇄</span></button><button class="app-logout-m" id="appLogoutM" type="button">Abmelden</button></div>`);
   import('./legal-foot.mjs').then((m) => { if (!main.querySelector('.ia-legal')) main.insertAdjacentHTML('beforeend', m.legalFoot('b2c')); }).catch(() => {});
   app.insertAdjacentHTML('beforeend', `<nav class="app-tabs" aria-label="Schnellnavigation">${TABS.map((k) => `<a class="app-tab" data-go="${k}" href="#${k}">${svg(k)}<span>${k === 'werkzeuge' ? 'Tools' : views.find((v) => v[0] === k)[1].split(' ')[0]}</span></a>`).join('')}</nav>`);
   $('appLogout').onclick = () => document.getElementById('logout')?.click();
+  $('appLogoutM').onclick = () => document.getElementById('logout')?.click();
   $('modeChip').onclick = async () => {
     d.profile = { ...(d.profile || {}), mode: mode === 'profi' ? 'einsteiger' : 'profi' };
     saveData(u, d).catch(() => { /* wird beim nächsten Speichern nachgeholt */ });

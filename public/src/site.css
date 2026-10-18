@@ -1402,3 +1402,29 @@ body.pt-present .ia-legal{display:none}
 .ia-ld.sm::before,.ia-ld.sm::after{left:0;top:50%;width:28px;height:28px;margin:-14px 0 0}
 .ia-ld.sm::after{background-size:15px auto}
 @media (prefers-reduced-motion:reduce){.ia-ld::before{animation-duration:2.4s}.ia-ld::after{animation:none}}
+.app-top .mode-chip{margin-left:auto;display:inline-flex;align-items:center;gap:6px;border:1px solid #CBD5E1;background:#fff;color:#0F2C59;border-radius:999px;padding:7px 12px;font-family:inherit;font-size:13.5px;font-weight:700;white-space:nowrap;flex:none}
+.app-top .mode-chip b{color:#0284C7;font-weight:700}
+body[data-mode="profi"] .app-top .mode-chip{background:#fff;color:#0F2C59;border-color:#CBD5E1}
+.app-top .mode-chip:hover{background:#F0F9FF}
+.app-logout-m{display:none}
+.app-top-brand{align-items:center;gap:6px;font-weight:800;font-size:17px;color:#0F2C59;text-decoration:none;min-height:44px;flex:none}
+@media (max-width:900px){
+.app-top{flex-wrap:nowrap;gap:10px}
+.app-top .mode-chip{padding:6px 10px;font-size:12.5px;min-height:44px}
+.app-logout-m{display:inline-flex;align-items:center;flex:none;min-height:44px;padding:6px 12px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;color:#0F2C59;font:inherit;font-size:13px;cursor:pointer}
+.app-logout-m:hover{background:#F8FAFC}
+}
+@media (max-width:420px){.app-top .mode-chip b{display:none}.app-top .mode-chip{min-width:44px;justify-content:center;font-size:18px;padding:6px 10px}}
+@font-face{font-family:"IA Inter";src:url("/fonts/Inter-Regular.woff") format("woff");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"IA Inter";src:url("/fonts/Inter-SemiBold.woff") format("woff");font-weight:500 600;font-style:normal;font-display:swap}
+@font-face{font-family:"IA Inter";src:url("/fonts/Inter-Bold.woff") format("woff");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"IA Inter Display";src:url("/fonts/InterDisplay-ExtraBold.woff") format("woff");font-weight:800;font-style:normal;font-display:swap}
+@media (max-width:760px){
+body:not(.is-app):not(.is-portal){font-family:"IA Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body:not(.is-app):not(.is-portal) :is(input,select,textarea,button){font-family:inherit}
+body:not(.is-app):not(.is-portal) :is(h1,h2){font-family:"IA Inter Display","IA Inter",-apple-system,BlinkMacSystemFont,sans-serif;font-weight:800}
+.hero3 h1{font-size:clamp(30px,8.4vw,35px);line-height:1.14;letter-spacing:-.012em;max-width:none;margin-bottom:14px}
+.hero3 .home-lead{font-size:16.5px;line-height:1.6;color:#E0F2FE;font-weight:400;letter-spacing:0}
+.hero3-kick{font-size:12px;letter-spacing:.03em}
+.hero3 .home-cta .hs-go{font-size:16px;font-weight:700}
+}
