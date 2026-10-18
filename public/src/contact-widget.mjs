@@ -17,7 +17,7 @@ function mount() {
     if (!panel) panel = build(b2bPage, close);
     const open = panel.hidden;
     panel.hidden = !open; fab.setAttribute('aria-expanded', String(open));
-    if (open) panel.querySelector('input[name=name]')?.focus({ preventScroll: true });
+    if (open && matchMedia('(pointer:fine)').matches) panel.querySelector('input[name=name]')?.focus({ preventScroll: true });
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && panel && !panel.hidden) close(); });
 }

@@ -1340,7 +1340,7 @@ h1,h2,h3,.route-hero h1,.hero h1{hyphens:none;-webkit-hyphens:none;word-break:no
 body.menu-open .cw-fab,body.menu-open .cw-panel,body.is-app .cw-fab,body.is-app .cw-panel{display:none!important}
 @media (max-width:760px){
 .cw-fab{right:14px;bottom:calc(78px + env(safe-area-inset-bottom));min-height:44px;padding:0 14px;font-size:14px}
-.cw-panel{right:12px;left:12px;width:auto;bottom:calc(132px + env(safe-area-inset-bottom));max-height:calc(100vh - 170px)}
+.cw-panel{right:12px;left:12px;width:auto;bottom:calc(132px + env(safe-area-inset-bottom));max-height:calc(100vh - 220px);max-height:calc(100dvh - 220px)}
 }
 @media print{.cw-fab,.cw-panel{display:none!important}}
 .km-mock{perspective:1100px;--rx:0deg;--ry:0deg}
@@ -1348,7 +1348,7 @@ body.menu-open .cw-fab,body.menu-open .cw-panel,body.is-app .cw-fab,body.is-app 
 .km-mock.is-tilting .km-stage{transition:transform .08s linear}
 .km-tablet{transform:rotate(-4deg) translateZ(40px)}
 .km-folder{transform:rotate(6deg) translateZ(-10px) translate(var(--px,0px),var(--py,0px))}
-.km-seal{position:absolute;z-index:3;left:6%;top:10%;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:#DCFCE7;border:1px solid #86EFAC;color:#14532D;font-size:12px;font-weight:800;box-shadow:0 10px 24px rgba(22,101,52,.22);transform:translateZ(80px)}
+.km-seal{position:absolute;z-index:3;left:4%;bottom:16%;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:#DCFCE7;border:1px solid #86EFAC;color:#14532D;font-size:12px;font-weight:800;box-shadow:0 10px 24px rgba(22,101,52,.22);transform:translateZ(80px)}
 .km-seal::before{content:"✓";display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#16A34A;color:#fff;font-size:11px}
 @media (prefers-reduced-motion:no-preference){
 .km-stage{animation:km-float 7s ease-in-out infinite}
@@ -1357,7 +1357,7 @@ body.menu-open .cw-fab,body.menu-open .cw-panel,body.is-app .cw-fab,body.is-app 
 }
 @keyframes km-float{0%,100%{translate:0 0}50%{translate:0 -8px}}
 @keyframes km-pulse{0%,100%{box-shadow:0 10px 24px rgba(22,101,52,.22),0 0 0 0 rgba(22,163,74,.35)}50%{box-shadow:0 10px 24px rgba(22,101,52,.22),0 0 0 8px rgba(22,163,74,0)}}
-@media(max-width:900px){.km-seal{left:4%;top:4%}}
+@media(max-width:900px){.km-seal{left:2%;bottom:8%}}
 .sso-box{display:grid;gap:10px;margin-top:16px}
 .sso-box .sso-or{margin:0 0 4px}
 .sso-box .sso-btn{background:#fff;color:#1F1F1F;border:1px solid #747775}
