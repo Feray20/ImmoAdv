@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { effectiveTier, hashToken, newToken, TIER_LIMITS } from '@/lib/b2b/core';
+import { canCobrand, effectiveTier, hashToken, newToken, TIER_LIMITS, type B2BAccount } from '@/lib/b2b/core';
 import { json, requireMember } from '@/lib/b2b/http';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
 
@@ -58,7 +58,9 @@ export async function POST(req: Request) {
   if (mailConfigured()) {
     mailed = await sendMail(p.data.email, `${ctx.account.company_name} lädt Sie zu ImmoAdv ein`,
       `Guten Tag${p.data.name ? ' ' + p.data.name : ''},\n\n${ctx.account.company_name} begleitet Sie bei Ihrer Immobilienfinanzierung und lädt Sie zu ImmoAdv ein. Dort bereiten Sie Finanzprofil, Objekt und Unterlagen vor – Schritt für Schritt bis zur bankfertigen Kreditmappe.\n\nWenn Sie zustimmen, sieht Ihr Berater nur Ihren Fortschritt (Stufe, Bankreife in Prozent, Anzahl der Unterlagen) – keine Dokumente und keine Inhalte. Sie können die Verbindung jederzeit trennen.\n\nDer Link ist ${INVITE_DAYS} Tage gültig.`,
-      [], { title: 'Einladung Ihres Beraters', button: { label: 'Einladung ansehen', url: link }, note: 'Kostenlos für Sie. Ohne Ihre Zustimmung wird nichts geteilt.' });
+      [], { title: `Einladung von ${ctx.account.company_name}`, button: { label: 'Einladung ansehen', url: link }, note: 'Kostenlos für Sie. Ohne Ihre Zustimmung wird nichts geteilt.',
+        // Kanzlei als Absendername und Antwortadresse; Hausfarbe ab Co-Branding-Tarif.
+        sender: ctx.account.company_name, replyTo: ctx.account.email, accent: canCobrand(ctx.account as B2BAccount) ? ctx.account.brand_color || undefined : undefined });
   }
   return json({ ok: true, link, mailed }, 201);
 }

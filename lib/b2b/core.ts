@@ -71,11 +71,12 @@ export type B2BAccount = {
   created_at: string;
 };
 
-// fall = Fall-Analysen (Unterlagen-Paket eines Kunden), praes = Kunden-Präsentationen je Kalendermonat (null = unbegrenzt).
+// fall = Fall-Analysen (Schnell-Check eines Unterlagen-Pakets), praes = Kunden-Präsentationen je Kalendermonat (null = unbegrenzt).
+// Fair Use: Schnell-Checks und Anfragen sind in jedem Tarif unbegrenzt; begrenzt sind nur fertige PDF-Exporte (Kreditmappen, Präsentationen).
 // whitelabel = Unterlagen komplett im eigenen Erscheinungsbild (ohne ImmoAdv); radar = Bestandskunden-Radar.
 export const TIER_LIMITS: Record<Tier, { seats: number; dossiersPerMonth: number | null; cobranding: boolean; merger: boolean; landing: boolean; fall: number | null; praes: number | null; whitelabel: boolean; radar: boolean }> = {
-  BASIC: { seats: 1, dossiersPerMonth: 20, cobranding: false, merger: false, landing: false, fall: 10, praes: 3, whitelabel: false, radar: false },
-  PRO: { seats: 3, dossiersPerMonth: null, cobranding: true, merger: true, landing: true, fall: 100, praes: null, whitelabel: false, radar: true },
+  BASIC: { seats: 1, dossiersPerMonth: 20, cobranding: false, merger: false, landing: false, fall: null, praes: 3, whitelabel: false, radar: false },
+  PRO: { seats: 3, dossiersPerMonth: null, cobranding: true, merger: true, landing: true, fall: null, praes: null, whitelabel: false, radar: true },
   ENTERPRISE: { seats: 10, dossiersPerMonth: null, cobranding: true, merger: true, landing: true, fall: null, praes: null, whitelabel: true, radar: true },
 };
 // Ohne gebuchten Tarif (nach Freischaltung): zum Ausprobieren je Monat.

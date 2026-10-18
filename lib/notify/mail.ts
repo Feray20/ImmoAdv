@@ -48,25 +48,27 @@ function bodyHtml(text: string): string {
 }
 
 // Knopf plus kleiner Ersatzlink darunter (für Programme, die Knöpfe ausblenden oder Links umschreiben).
-function buttonHtml(b: MailButton): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 6px"><tr><td style="border-radius:10px;background:#0F2C59"><a href="${html(b.url)}" style="display:inline-block;padding:14px 26px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px">${html(b.label)}</a></td></tr></table>
+function buttonHtml(b: MailButton, accent = '#0F2C59'): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 6px"><tr><td style="border-radius:10px;background:${accent}"><a href="${html(b.url)}" style="display:inline-block;padding:14px 26px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px">${html(b.label)}</a></td></tr></table>
 <p style="margin:0 0 22px;font-size:12px;line-height:1.5;color:#64748B;word-break:break-all">Falls der Knopf nicht funktioniert: <a href="${html(b.url)}" style="color:#64748B">${html(b.url.replace(/^https:\/\//, ''))}</a></p>`;
 }
 
 // Vollständiges gebrandetes E-Mail-HTML.
-export function brandedHtml({ title, text, button, note, area = 'b2c' }: { title?: string; text: string; button?: MailButton; note?: string; area?: MailArea }): string {
+// accent: Hausfarbe eines Unternehmenskunden (Co-Branding der Kundeneinladung), nur gültige Hex-Farben.
+export function brandedHtml({ title, text, button, note, area = 'b2c', accent }: { title?: string; text: string; button?: MailButton; note?: string; area?: MailArea; accent?: string }): string {
   const biz = area === 'b2b';
+  const ac = accent && /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : '#0F2C59';
   const pre = html((text.split('\n').find((l) => l.trim()) || '').slice(0, 120)) + '&#8199;&#65279;&#847;'.repeat(30);
   return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${html(title || 'ImmoAdv')}</title></head>
 <body style="margin:0;padding:0;background:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${pre}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F5F9;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E2E8F0">
-<tr><td style="padding:26px 28px 18px;border-bottom:3px solid #0F2C59"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td><a href="${biz ? `${SITE}/b2b-portal` : SITE}" style="text-decoration:none"><img src="${LOGO}" width="180" height="36" alt="ImmoAdv" style="display:block;border:0;width:180px;height:auto"></a></td>${biz ? '<td align="right" style="font-size:12px;font-weight:700;letter-spacing:.06em;color:#0369A1;text-transform:uppercase">Unternehmensportal</td>' : ''}</tr></table></td></tr>
+<tr><td style="padding:26px 28px 18px;border-bottom:3px solid ${ac}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td><a href="${biz ? `${SITE}/b2b-portal` : SITE}" style="text-decoration:none"><img src="${LOGO}" width="180" height="36" alt="ImmoAdv" style="display:block;border:0;width:180px;height:auto"></a></td>${biz ? '<td align="right" style="font-size:12px;font-weight:700;letter-spacing:.06em;color:#0369A1;text-transform:uppercase">Unternehmensportal</td>' : ''}</tr></table></td></tr>
 <tr><td style="padding:28px 28px 8px">
 ${title ? `<h1 style="margin:0 0 18px;font-size:22px;line-height:1.3;color:#0F2C59">${html(title)}</h1>` : ''}
 ${bodyHtml(text)}
-${button ? buttonHtml(button) : ''}
+${button ? buttonHtml(button, ac) : ''}
 ${note ? `<p style="margin:0 0 16px;font-size:13px;line-height:1.55;color:#64748B">${html(note)}</p>` : ''}
 </td></tr>
 <tr><td style="padding:18px 28px 24px;background:#F8FAFC;border-top:1px solid #E2E8F0;font-size:12px;line-height:1.6;color:#64748B">
@@ -76,7 +78,8 @@ Technisches Analyse- und Vorbereitungswerkzeug – keine Kreditvermittlung, kein
 </td></tr></table></td></tr></table></body></html>`;
 }
 
-export type MailOptions = { title?: string; button?: MailButton; note?: string; replyTo?: string; headers?: Record<string, string>; area?: MailArea };
+// sender: Anzeigename „<Firma> über ImmoAdv“ (Adresse bleibt die von ImmoAdv); accent: Hausfarbe im HTML.
+export type MailOptions = { title?: string; button?: MailButton; note?: string; replyTo?: string; headers?: Record<string, string>; area?: MailArea; sender?: string; accent?: string };
 
 // Empfängeradresse prüfen (eine Adresse, keine Header-Injektion) und normalisieren.
 export function normalizeRecipient(to: string): string | null {
@@ -86,14 +89,16 @@ export function normalizeRecipient(to: string): string | null {
 
 export async function sendMail(to: string, subject: string, text: string, attachments: Attachment[] = [], opts: MailOptions = {}): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
-  const from = fromAddress(opts.area);
+  const base = fromAddress(opts.area);
+  const sn = (opts.sender || '').replace(/["<>\r\n,;\\]/g, '').trim().slice(0, 60);
+  const from = sn && base ? base.replace(/^[^<]*</, `"${sn} über ImmoAdv" <`) : base;
   const rcpt = normalizeRecipient(to);
   if (!key || !from || !rcpt) return false;
   const subj = subject.replace(/[\r\n]+/g, ' ').trim().slice(0, 180);
   const plain = text + (opts.button ? `\n\n${opts.button.label}: ${opts.button.url}` : '') + '\n\n—\n' + (opts.area === 'b2b' ? 'ImmoAdv Business · Unternehmensportal: https://immoadv.de/b2b-portal\n' : '') + 'ImmoAdv · Georg-August-Zinn-Str. 25 · 64354 Reinheim · support@immoadv.de · https://immoadv.de/impressum';
   const body = JSON.stringify({
     from, to: [rcpt], subject: subj, text: plain,
-    html: brandedHtml({ title: opts.title, text, button: opts.button, note: opts.note, area: opts.area }),
+    html: brandedHtml({ title: opts.title, text, button: opts.button, note: opts.note, area: opts.area, accent: opts.accent }),
     reply_to: opts.replyTo || 'support@immoadv.de',
     ...(opts.headers ? { headers: opts.headers } : {}),
     ...(attachments.length ? { attachments: attachments.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })) } : {}),

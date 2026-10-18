@@ -148,10 +148,11 @@
     "dossiers": 20,
     "features": [
      "1 Berater-Zugang",
-     "10 Fall-Analysen, 20 Kreditmappen und 3 Kunden-Präsentationen pro Monat",
+     "Unbegrenzt: Schnell-Checks (Fall-Analysen), Kunden-Einladungen und Anfragen",
+     "20 Kreditmappen und 3 Kunden-Präsentationen (PDF) pro Monat",
      "Software-Tools: Haushaltsrechnung, Unterlagen-Anforderung, Provision, GEG-Inserat, Ertragswert",
-     "Kunden einladen, Website-Widget, Exposé-QR-Codes, Anfragen im Portal",
-     "Beratungskompass für Ihre Branche"
+     "Pipeline mit CSV-Export, Website-Widget, Exposé-QR-Codes",
+     "Beratungskompass mit Präsentationsmodus"
     ]
    },
    {
@@ -179,7 +180,7 @@
     "dossiers": null,
     "features": [
      "Bis zu 3 Berater-Zugänge",
-     "100 Fall-Analysen pro Monat, Kreditmappen ohne Limit, Gesamtdossier mit Unterlagen",
+     "Kreditmappen ohne Limit, Gesamtdossier mit Unterlagen",
      "Präsentationen unbegrenzt – mit Ihrem Logo, Ihren Farben und Ihrer Schrift",
      "Zusätzliche Tools: Beratungsprotokoll (§ 511 BGB), Angebotsvergleich, Vorfälligkeit & Anschluss",
      "Bestandskunden-Radar: Zinsbindungsenden Ihrer Kunden (mit Einwilligung)",
@@ -209,7 +210,7 @@
    "seats": 10,
    "features": [
     "Ab 10 Berater-Zugängen, erweiterbar",
-    "Fall-Analysen und Präsentationen unbegrenzt",
+    "Kreditmappen und Präsentationen unbegrenzt",
     "White-Label: Unterlagen vollständig im Erscheinungsbild Ihres Hauses, ohne ImmoAdv",
     "Teamverwaltung mit Berater-Zuordnung",
     "Kauf auf Rechnung, Angebot nach Filialgröße"
@@ -230,19 +231,19 @@
      "ab 10"
     ],
     [
-     "Fall-Analysen pro Monat",
-     "10",
-     "100",
+     "Schnell-Checks, Einladungen, Anfragen",
+     "unbegrenzt",
+     "unbegrenzt",
      "unbegrenzt"
     ],
     [
-     "Kreditmappen pro Monat",
+     "Kreditmappen (PDF) pro Monat",
      "20",
      "unbegrenzt",
      "unbegrenzt"
     ],
     [
-     "Kunden-Präsentationen",
+     "Kunden-Präsentationen (PDF)",
      "3 pro Monat",
      "unbegrenzt, mit Logo",
      "unbegrenzt, White-Label"

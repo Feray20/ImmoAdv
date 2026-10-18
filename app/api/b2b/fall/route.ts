@@ -65,6 +65,6 @@ export async function POST(req: Request) {
   const lim = p.data.kind === 'fall' ? L.fall : L.praes;
   const { data, error } = await supabaseAdmin().rpc('b2b_usage_take', { acc: a.id, mon: monthKey(), k: p.data.kind, lim });
   if (error) return json({ error: 'Kontingent konnte nicht geprüft werden.' }, 502);
-  if (data === -1) return json({ error: p.data.kind === 'fall' ? `Ihr Kontingent von ${lim} Fall-Analysen in diesem Monat ist aufgebraucht. Mit „Kanzlei & Baufi Pro“ sind es 100 pro Monat.` : `Ihr Kontingent von ${lim} Präsentationen in diesem Monat ist aufgebraucht. Ab „Kanzlei & Baufi Pro“ unbegrenzt.`, code: 'quota' }, 402);
+  if (data === -1) return json({ error: p.data.kind === 'fall' ? `Ihr Testkontingent von ${lim} Fall-Analysen in diesem Monat ist aufgebraucht. Mit jedem gebuchten Tarif sind Fall-Analysen unbegrenzt.` : `Ihr Kontingent von ${lim} Präsentationen in diesem Monat ist aufgebraucht. Ab „Kanzlei & Baufi Pro“ unbegrenzt.`, code: 'quota' }, 402);
   return json({ ok: true, used: data, limit: lim });
 }

@@ -71,10 +71,10 @@ function init(tries = 0) {
     if (ref) document.querySelectorAll('a[href="/b2b-portal"]').forEach((a) => { a.href = '/b2b-portal?ref=' + encodeURIComponent(ref); });
   });
   contact();
+  landing();
 }
 // Rückmeldung nach Bestätigen/Abmelden der Neuigkeiten.
 { const nl = new URLSearchParams(location.search).get('newsletter'); const t = { bestaetigt: 'Danke – Ihre Anmeldung für die Neuigkeiten ist bestätigt.', abgemeldet: 'Sie sind abgemeldet und erhalten keine Neuigkeiten mehr.', ungueltig: 'Dieser Link ist ungültig oder abgelaufen.' }[nl]; if (t) { const show = () => { const m = document.createElement('div'); m.className = 'nl-banner'; m.setAttribute('role', 'status'); m.textContent = t; document.body.prepend(m); setTimeout(() => m.remove(), 8000); }; if (document.readyState === 'loading') addEventListener('DOMContentLoaded', show); else show(); } }
-init();
 
 // Kontoanfrage: eingetragene Gesellschaften → Registernummer genügt; sonst Steuernummer und Nachweis (Datei) Pflicht.
 function syncLegal(f) {
@@ -86,3 +86,69 @@ function syncLegal(f) {
   const req = (n, v) => { const i = f.querySelector(`[name=${n}]`); if (i) i.required = on && v; };
   req('registerNumber', chosen && hr); req('taxId', chosen && !hr); req('proof', chosen && !hr);
 }
+
+// ---------- Landingpage: Branchenwahl, Zeitgewinn-Rechner, Demo-Fall, White-Label-Vorschau ----------
+const RB = {
+  vermittler: { h: 'Vorqualifizierte Fälle statt Unterlagen-Jagd – Ihr Zeitgewinn, offen gerechnet.', p: 'Ihre Kunden laden Unterlagen hoch und füllen die Selbstauskunft aus. ImmoAdv prüft Beleihungsauslauf, Haushaltsüberschuss, DSCR und Zins-Stresstest automatisch. Sie übernehmen den Fall, wenn er entscheidungsreif ist.', n: 15, m: 120, type: 'BROKER' },
+  makler: { h: 'Kaufinteressenten vorqualifiziert – bevor Sie die Besichtigung planen.', p: 'Per QR-Code am Exposé rechnen Interessenten ihre Finanzierung durch und reichen Unterlagen ein. Sie sehen, wer realistisch kaufen kann, und geben bankfertige Fälle an Ihren Finanzierungspartner weiter.', n: 25, m: 60, type: 'REALTOR' },
+  bank: { h: 'Vollständige Fälle vor dem Votum – weniger Nacharbeit in der Erstprüfung.', p: 'Kreditmappen kommen in festem Aufbau an: Selbstauskunft, Haushaltsrechnung, Objektkennzahlen und nummerierte Anlagen, jeweils mit SHA-256-Prüfsumme. Ihre Berater prüfen statt zu sammeln.', n: 40, m: 90, type: 'BANK' },
+  finanzberater: { h: 'Immobilie als Anlageklasse – durchgerechnet und präsentationsfertig.', p: 'Cashflow nach Steuern, Rendite und Zins-Stresstest für Ihre Mandanten, als Präsentation mit Ihrem Logo. Unterlagen und Kennzahlen liegen strukturiert vor, wenn es zur Finanzierung geht.', n: 8, m: 120, type: 'OTHER' },
+};
+const x$ = (id) => document.getElementById(id);
+function landing() {
+  if (!x$('roi_out')) return;
+  const nf = (v) => Math.round(v).toLocaleString('de-DE');
+  const roi = () => {
+    const n = +x$('roi_n').value, m = +x$('roi_m').value, sh = +x$('roi_s').value / 100, h = +x$('roi_h').value;
+    x$('roi_n_o').textContent = n; x$('roi_m_o').textContent = m + ' Min.'; x$('roi_s_o').textContent = Math.round(sh * 100) + ' %'; x$('roi_h_o').textContent = h + ' €';
+    document.querySelectorAll('.roi input[type=range]').forEach((r) => r.style.setProperty('--pct', ((r.value - r.min) / (r.max - r.min)) * 100 + '%'));
+    const perCase = m * sh, hours = (n * perCase) / 60, value = hours * h;
+    const pro = 139, mult = value / pro;
+    x$('roi_out').innerHTML = `<div><strong>${nf(perCase)} Min.</strong><span>weniger je Fall</span></div><div><strong>${hours.toLocaleString('de-DE', { maximumFractionDigits: 1 })} Std.</strong><span>pro Monat</span></div><div class="roi-v"><strong>${nf(value)} €</strong><span>Arbeitszeit pro Monat${mult >= 1 ? ` · ${mult.toLocaleString('de-DE', { maximumFractionDigits: 1 })}-fach der Pro-Gebühr (139 € netto)` : ''}</span></div>`;
+  };
+  document.querySelectorAll('.roi input').forEach((i) => i.addEventListener('input', roi));
+  const setRb = (k, save = true) => {
+    const c = RB[k] || RB.vermittler;
+    document.querySelectorAll('[data-rb]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.rb === k)));
+    x$('rbH').textContent = c.h; x$('rbP').textContent = c.p;
+    x$('roi_n').value = c.n; x$('roi_m').value = c.m; roi();
+    const f = document.getElementById('b2bContact');
+    if (f?.institutionType) f.institutionType.value = c.type;
+    if (save) try { localStorage.setItem('ia-b2b-branche', k); } catch { /* ohne Speicher */ }
+  };
+  document.querySelectorAll('[data-rb]').forEach((b) => b.onclick = () => setRb(b.dataset.rb));
+  let start = 'vermittler';
+  try { const s = localStorage.getItem('ia-b2b-branche'); if (RB[s]) start = s; } catch { /* ohne Speicher */ }
+  setRb(start, false);
+
+  // Demo-Fall in drei Schritten (Musterdaten, nichts wird gesendet).
+  const sim = (k) => {
+    document.querySelectorAll('[data-sim]').forEach((b) => b.setAttribute('aria-selected', String(+b.dataset.sim === k)));
+    document.querySelectorAll('[data-simp]').forEach((p) => { p.hidden = +p.dataset.simp !== k; });
+    if (k === 3 && crypto?.subtle) {
+      const txt = 'ImmoAdv Kreditmappe · Familie Muster · Eigentumswohnung · Kaufpreis 380000 · Eigenkapital 70000 · BLA 78,4 % · DSCR 1,24 · ' + new Date().toISOString().slice(0, 10);
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)).then((b) => { x$('simHash').textContent = 'SHA-256 ' + [...new Uint8Array(b)].map((v) => v.toString(16).padStart(2, '0')).join(''); });
+    }
+  };
+  document.querySelectorAll('[data-sim]').forEach((b) => b.onclick = () => sim(+b.dataset.sim));
+  document.querySelectorAll('[data-sim-go]').forEach((b) => b.onclick = () => sim(+b.dataset.simGo));
+  x$('simUp')?.addEventListener('click', (e) => {
+    const btn = e.currentTarget; btn.disabled = true;
+    const li = [...document.querySelectorAll('#simDocs li')];
+    li.forEach((l) => l.classList.remove('done', 'miss'));
+    li.forEach((l, i) => setTimeout(() => {
+      l.classList.add(i === li.length - 1 ? 'miss' : 'done');
+      x$('simBar').style.width = Math.round(((i + 1) / li.length) * 93) + '%';
+      if (i === li.length - 1) { x$('simNote').textContent = '6 von 7 Unterlagen da – der Energieausweis fehlt noch. ImmoAdv erinnert den Mandanten automatisch.'; btn.textContent = 'Weiter: Prüfung ansehen'; btn.disabled = false; btn.onclick = () => sim(2); }
+    }, 260 * (i + 1)));
+  });
+
+  // White-Label-Vorschau der Kundeneinladung.
+  const wl = () => {
+    const name = x$('wlName').value.trim() || 'Ihr Unternehmen', col = x$('wlCol').value;
+    x$('wlFrom').textContent = name; x$('wlCo').textContent = name;
+    x$('wlPrev').style.setProperty('--wl', col);
+  };
+  ['wlName', 'wlCol'].forEach((id) => x$(id)?.addEventListener('input', wl)); wl();
+}
+init();
