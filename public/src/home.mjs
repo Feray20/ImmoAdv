@@ -21,58 +21,109 @@ if (form && box) {
   });
 }
 
-// Schnellrechner im Kopfbereich: Kapitalanlage (Rendite, Cashflow, Rate) oder Eigenheim (Rate, Nebenkosten, Leistbarkeit).
-// Rechnet ausschließlich im Browser; nichts wird gesendet oder gespeichert (außer den Eingaben lokal in diesem Browser).
-const qc = $('qc');
-if (qc) {
+// Finanzierungs-Ampel im Kopfbereich: 3 Schritte (Budget, Objekt, Nutzung) mit Schiebereglern und Schnellwahl,
+// Ergebnis als Tacho und Ampeln statt Fachbegriffen. Rechnet ausschließlich im Browser; gespeichert wird nur lokal.
+const qz = $('qz');
+if (qz) {
   import('./calc.mjs').then(({ einstieg, kaufnebenkosten, monthlyRate }) => {
-    const QIDS = ['qc_p', 'qc_r', 'qc_e', 'qc_l', 'qc_i', 'qc_t', 'qc_m', 'qc_c'];
+    const KEY = 'ia-qz';
+    const IDS = ['qz_e', 'qz_b', 'qz_p', 'qz_l', 'qz_r', 'qz_i', 'qz_t', 'qz_m'];
     const n = (id) => { const v = Number(String($(id).value).replace(',', '.')); return Number.isFinite(v) ? v : 0; };
-    const E = (v) => (Math.round(v)).toLocaleString('de-DE') + ' €';
-    const P = (v, d = 2) => v.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d }) + ' %';
-    let mode = 'investor';
-    try { const s = JSON.parse(localStorage.getItem('ia-qc') || '{}'); QIDS.forEach((id) => { if (s[id] != null) $(id).value = s[id]; }); if (s.mode === 'owner') mode = 'owner'; } catch { /* ohne Speicher */ }
-    const tile = (k, v, t, tone = '') => `<div class="qc-tile${tone ? ' ' + tone : ''}"><small>${k}</small><strong>${v}</strong>${t ? `<span>${t}</span>` : ''}</div>`;
-    const run = () => {
-      try { localStorage.setItem('ia-qc', JSON.stringify({ ...Object.fromEntries(QIDS.map((id) => [id, $(id).value])), mode })); } catch { /* ohne Speicher */ }
-      const price = n('qc_p'), r = n('qc_r'), equity = n('qc_e'), land = $('qc_l').value, i = n('qc_i') / 100, t = n('qc_t') / 100, broker = n('qc_m');
-      const out = $('qc_out');
-      if (!(price > 0)) { out.innerHTML = '<p class="qc-note">Bitte einen Kaufpreis eintragen.</p>'; return; }
-      if (mode === 'investor') {
-        const e = einstieg({ price, rent: r, equity, land, ratePa: i, repaymentPa: t, brokerPct: broker, costSharePct: n('qc_c') });
-        if (!e) { out.innerHTML = ''; return; }
-        const gross = (r * 12 / price) * 100;
-        out.innerHTML = `<div class="qc-tiles">${tile('Bruttomietrendite', P(gross), 'Jahreskaltmiete ÷ Kaufpreis', gross >= 4.5 ? 'ok' : gross < 3.5 ? 'warn' : '')}
-          ${tile('Cashflow vor Steuern / Monat', (e.cashflow >= 0 ? '+' : '') + E(e.cashflow), e.cashflow >= 0 ? 'trägt sich selbst' : 'Ihre monatliche Zuzahlung', e.cashflow >= 0 ? 'ok' : 'warn')}
-          ${tile('Rate / Monat', E(e.rate), `davon ${E(e.firstPrincipal)} Tilgung im 1. Monat`)}</div>
-          <p class="qc-note">Darlehen ${E(e.loan)} · Kaufnebenkosten ${E(e.nk.total)} (${P(e.nk.totalPct, 1)})${e.equityCoversCosts ? '' : ' · <strong>Eigenkapital deckt die Nebenkosten nicht</strong>'} · nicht umlagefähige Kosten ${E(e.costs)}/Monat angenommen.</p>`;
+    const E = (v) => Math.round(v).toLocaleString('de-DE') + ' €';
+    let use = 'owner', step = 1;
+    try { const st = JSON.parse(localStorage.getItem(KEY) || '{}'); IDS.forEach((id) => { if (st[id] != null && $(id)) $(id).value = st[id]; }); if (st.use === 'investor') use = 'investor'; } catch { /* ohne Speicher */ }
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ ...Object.fromEntries(IDS.map((id) => [id, $(id).value])), use })); } catch { /* ohne Speicher */ } };
+    const outs = () => {
+      [['qz_e', ''], ['qz_b', ' / Monat'], ['qz_p', ''], ['qz_r', ' / Monat']].forEach(([id, suf]) => { const o = $(id + '_o'); if (o) o.textContent = E(n(id)) + suf; });
+      qz.querySelectorAll('.qz-range').forEach((r) => r.style.setProperty('--pct', ((r.value - r.min) / (r.max - r.min)) * 100 + '%'));
+      qz.querySelectorAll('.qz-chips').forEach((c) => c.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === n(c.dataset.for)))));
+    };
+    // Ampel: 0 = grün, 1 = gelb, 2 = rot
+    const LBL = ['Passt', 'Knapp', 'Kritisch'];
+    const lv = [];
+    const lamp = (lvl, title, value, text, weight = 2) => { lv.push(Math.min(lvl, weight)); return `<li class="qz-lamp l${lvl}"><span class="qz-dot" aria-hidden="true"></span><div><strong>${title}</strong><b>${value}</b><small>${text}</small></div><em>${LBL[lvl]}</em></li>`; };
+    const gauge = (pct) => {
+      const v = Math.max(0, Math.min(1.5, pct)), a = Math.PI * (1 - v / 1.5), x = 60 + 46 * Math.cos(a), y = 62 - 46 * Math.sin(a);
+      const lvl = pct <= 0.9 ? 0 : pct <= 1.1 ? 1 : 2;
+      return `<div class="qz-gauge l${lvl}"><svg viewBox="0 0 120 70" aria-hidden="true"><path d="M14 62A46 46 0 0 1 74.2 18.3" class="g0"/><path d="M74.2 18.3A46 46 0 0 1 90.8 27.8" class="g1"/><path d="M90.8 27.8A46 46 0 0 1 106 62" class="g2"/><line x1="60" y1="62" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="gn"/><circle cx="60" cy="62" r="4" class="gn"/></svg>
+        <div><strong>${Math.round(pct * 100)}\u00a0%</strong><span>Ihres Monatsbudgets</span></div></div>`;
+    };
+    const result = () => {
+      lv.length = 0;
+      const equity = n('qz_e'), budget = n('qz_b'), price = n('qz_p'), land = $('qz_l').value, rent = n('qz_r');
+      const i = n('qz_i') / 100, t = n('qz_t') / 100, broker = n('qz_m');
+      const nk = kaufnebenkosten({ price, land, brokerPct: broker });
+      if (!nk || !(price > 0)) { $('qz_out').innerHTML = '<p class="qz-fine">Bitte einen Kaufpreis wählen.</p>'; return; }
+      const loan = Math.max(0, price + nk.total - equity);
+      const rate = monthlyRate(loan, i, t), rateS = monthlyRate(loan, i + 0.02, t);
+      let burden, burdenS, rows = [];
+      const ekL = equity >= nk.total + price * 0.1 ? 0 : equity >= nk.total ? 1 : 2;
+      rows.push(lamp(ekL, 'Eigenkapital', E(equity), ekL === 2 ? `Deckt die Kaufnebenkosten von ${E(nk.total)} nicht – die Bank müsste mehr als den Kaufpreis finanzieren.` : ekL === 1 ? `Deckt die Kaufnebenkosten (${E(nk.total)}), aber wenig darüber hinaus.` : `Deckt Kaufnebenkosten (${E(nk.total)}) und einen Teil des Kaufpreises.`));
+      if (use === 'investor') {
+        const e = einstieg({ price, rent, equity, land, ratePa: i, repaymentPa: t, brokerPct: broker, costSharePct: 15 });
+        const eS = einstieg({ price, rent, equity, land, ratePa: i + 0.02, repaymentPa: t, brokerPct: broker, costSharePct: 15 });
+        burden = Math.max(0, -e.cashflow); burdenS = Math.max(0, -eS.cashflow);
+        const cover = e.rate > 0 ? (rent - e.costs) / e.rate : 9;
+        const cL = cover >= 1 ? 0 : cover >= 0.8 ? 1 : 2;
+        rows.push(lamp(cL, 'Miete trägt die Rate', `${Math.round(cover * 100)}\u00a0%`, cL === 0 ? 'Die Miete deckt nach Kosten die ganze Rate.' : `Die Miete deckt nach Kosten ${Math.round(cover * 100)}\u00a0% der Rate – den Rest zahlen Sie zu.`, 1));
+        const tL = burden <= budget * 0.9 ? 0 : burden <= budget * 1.1 ? 1 : 2;
+        rows.unshift(lamp(tL, 'Ihre Zuzahlung', burden > 0 ? E(burden) + ' / Monat' : 'keine', burden > 0 ? `Rate ${E(e.rate)} minus Miete nach Kosten. Davon tilgen Sie ${E(e.firstPrincipal)} – das ist Vermögensaufbau.` : `Die Miete trägt Rate und Kosten. Tilgung im ersten Monat: ${E(e.firstPrincipal)}.`));
       } else {
-        const nk = kaufnebenkosten({ price, land, brokerPct: broker });
-        if (!nk) { out.innerHTML = ''; return; }
-        const loan = Math.max(0, price + nk.total - equity);
-        const rate = monthlyRate(loan, i, t);
-        const wish = r;
-        const maxLoan = i + t > 0 ? (wish * 12) / (i + t) : 0;
-        const maxPrice = (maxLoan + equity) / (1 + nk.totalPct / 100);
-        const income = rate / 0.35;
-        out.innerHTML = `<div class="qc-tiles">${tile('Rate / Monat', E(rate), `Darlehen ${E(loan)}`)}
-          ${tile('Kaufnebenkosten', E(nk.total), P(nk.totalPct, 1) + ' – zahlen Sie meist aus Eigenkapital', equity >= nk.total ? 'ok' : 'warn')}
-          ${tile(wish > 0 ? 'Mit Ihrer Wunschrate leistbar' : 'Wunschrate eintragen', wish > 0 ? 'bis ca. ' + E(maxPrice) : '–', wish > 0 ? `Kaufpreis bei ${E(wish)} Rate` : 'Feld „Wunschrate“ oben', wish > 0 ? (maxPrice >= price ? 'ok' : 'warn') : '')}</div>
-          <p class="qc-note">Faustregel: Die Rate sollte höchstens rund 35 % des Haushaltsnettos ausmachen – hier also ab ca. ${E(income)} netto im Monat. Entscheidend für die Bank ist Ihre vollständige Haushaltsrechnung. Hausgeld, Rücklagen und Nebenkosten des Wohnens kommen zur Rate hinzu.</p>`;
+        burden = rate; burdenS = rateS;
+        const tL = rate <= budget * 0.9 ? 0 : rate <= budget * 1.1 ? 1 : 2;
+        rows.unshift(lamp(tL, 'Monatliche Rate', E(rate), `Darlehen ${E(loan)} bei ${(i * 100).toLocaleString('de-DE')} % Zins und ${(t * 100).toLocaleString('de-DE')} % Tilgung. Hausgeld und Nebenkosten des Wohnens kommen hinzu.`));
       }
+      const sL = burdenS <= budget ? 0 : burdenS <= budget * 1.2 ? 1 : 2;
+      rows.push(lamp(sL, 'Zins-Puffer', `+2\u00a0% Zins → ${E(burdenS)}`, sL === 0 ? 'Auch bei 2 Prozentpunkten mehr Zins bleiben Sie im Budget.' : 'Steigt der Zins bei der Anschlussfinanzierung um 2 Prozentpunkte, wird es eng.'));
+      const pct = budget > 0 ? burden / budget : 2;
+      const worst = Math.max(...lv);
+      const head = ['Das sieht tragfähig aus.', 'Machbar – mit ein paar Stellschrauben.', 'So wird es schwierig.'][worst];
+      const tipTxt = worst === 0 ? 'Halten Sie das Ergebnis fest und bereiten Sie die Kreditmappe für die Bank vor.' : worst === 1 ? 'Mehr Eigenkapital, ein günstigeres Objekt oder eine längere Zinsbindung verbessern das Bild.' : 'Prüfen Sie Kaufpreis, Eigenkapital oder Ihr Monatsbudget – oder rechnen Sie ein anderes Objekt durch.';
+      $('qz_out').innerHTML = `<div class="qz-sum l${worst}"><h3>${head}</h3><p>${tipTxt}</p></div>${gauge(pct)}<ul class="qz-lamps">${rows.join('')}</ul>`;
+      try { window.iaTrack?.('qz_result', { use, worst }); } catch { /* ignore */ }
     };
-    const setMode = (m) => {
-      mode = m;
-      qc.querySelectorAll('[data-qm]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.qm === m)));
-      $('qc_rl').textContent = m === 'owner' ? 'Wunschrate pro Monat (€)' : 'Kaltmiete pro Monat (€)';
-      $('qc_cw').hidden = m === 'owner';
-      if (m === 'owner' && n('qc_r') === 1100) $('qc_r').value = 1400;
-      if (m === 'investor' && n('qc_r') === 1400) $('qc_r').value = 1100;
-      run();
+    const show = (k) => {
+      step = k;
+      qz.querySelectorAll('.qz-step').forEach((f) => { f.hidden = Number(f.dataset.qz) !== k; });
+      $('qz_count').textContent = k < 4 ? `Schritt ${k} von 3` : 'Ihr Ergebnis';
+      $('qz_bar').style.width = Math.min(100, (k / 3) * 100) + '%';
+      if (k === 4) result();
+      const f = qz.querySelector(`.qz-step[data-qz="${k}"]`);
+      f?.querySelector('legend, h3, input, button')?.focus?.({ preventScroll: true });
+      if (k > 1 && qz.getBoundingClientRect().top < 0) qz.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
-    qc.querySelectorAll('[data-qm]').forEach((b) => b.onclick = () => setMode(b.dataset.qm));
-    qc.addEventListener('input', run);
-    qc.addEventListener('submit', (e) => e.preventDefault());
-    setMode(mode);
+    const setUse = (u) => {
+      use = u;
+      qz.querySelectorAll('[data-use]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.use === u)));
+      $('qz_rw').hidden = u !== 'investor';
+    };
+    qz.addEventListener('click', (e) => {
+      const go = e.target.closest('[data-go]'); if (go) { e.preventDefault(); save(); show(Number(go.dataset.go)); return; }
+      const ch = e.target.closest('.qz-chips button'); if (ch) { $(ch.parentElement.dataset.for).value = ch.dataset.v; outs(); save(); if (step === 4) result(); return; }
+      const us = e.target.closest('[data-use]'); if (us) { setUse(us.dataset.use); save(); }
+    });
+    qz.addEventListener('input', () => { outs(); save(); if (step === 4) result(); });
+    qz.addEventListener('submit', (e) => e.preventDefault());
+    document.querySelectorAll('[data-qz-focus]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); qz.scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => $('qz_e').focus({ preventScroll: true }), 350); }));
+    setUse(use); outs(); show(1);
   });
 }
+
+// Erklär-Hinweise (?): Klick oder Tastatur öffnet, Escape oder Klick daneben schließt.
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.tip');
+  document.querySelectorAll('.tip[aria-expanded="true"]').forEach((x) => { if (x !== b) { x.setAttribute('aria-expanded', 'false'); x.nextElementSibling.hidden = true; } });
+  if (b) { e.preventDefault(); const open = b.getAttribute('aria-expanded') !== 'true'; b.setAttribute('aria-expanded', String(open)); b.nextElementSibling.hidden = !open; }
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.tip[aria-expanded="true"]').forEach((x) => { x.setAttribute('aria-expanded', 'false'); x.nextElementSibling.hidden = true; }); });
+
+// „Kreditmappe erstellen“ öffnet direkt den Kaufdialog (mit Garantie am Bezahlknopf); ohne JavaScript führt der Link in die Anwendung.
+document.querySelectorAll('.km-go').forEach((a) => a.addEventListener('click', async (e) => {
+  e.preventDefault();
+  try {
+    const [{ openBuy }, P] = await Promise.all([import('./buy.mjs'), fetch('/data/preise.json').then((r) => r.json())]);
+    const o = P.privat.plans.find((x) => x.id === 'credit-map');
+    if (o) { openBuy(o); return; }
+  } catch { /* weiter mit Link */ }
+  location.href = a.href;
+}));

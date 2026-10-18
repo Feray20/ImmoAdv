@@ -187,11 +187,6 @@ async function checkBerater() {
 }
 
 
-const PROFI = [
-  ['Szenarien: Anschlusszins und Verkauf', '/szenarien'], ['AfA-Plan inkl. Sonder-AfA § 7b', '/rechner/afa'], ['Mieterhöhung mit Briefentwurf', '/rechner/mieterhoehung'],
-  ['Angebotsvergleich', '/rechner/vergleich'], ['Kaufen oder mieten', '/rechner/kaufen-mieten'], ['Investment-Cockpit (Stresstest)', '/cockpit'],
-  ['Mietrecht- und Steuerrechner', '/rechner'], ['Glossar', '/wissen/glossar'],
-];
 
 function classify(el) {
   if (el.dataset.view) return el.dataset.view;
@@ -370,7 +365,17 @@ const PROD = {
 // Zahlender Kunde? (Tarif, Unternehmenskonto, Admin) – sonst kostenlose Demo mit Wasserzeichen auf PDFs.
 let ACCESS = null;
 const getAccess = () => (ACCESS ||= fetch('/api/me/access', { headers: { Authorization: 'Bearer ' + sessToken() }, cache: 'no-store' }).then((r) => (r.ok ? r.json() : { paid: false })).catch(() => ({ paid: false })));
-const DEMO_NOTE = 'Kostenlose Demo: PDFs tragen ein ImmoAdv-Wasserzeichen. Mit einem Abo bzw. gebuchten Tarif entfällt es.';
+const DEMO_NOTE = '<strong>Transparenter Entwurf:</strong> So sieht Ihre Kreditmappe für die Bank aus – noch mit Wasserzeichen. Beim Freischalten entfällt es, die Echtheitsprüfung per QR-Code kommt dazu, und Ihre Eingaben bleiben erhalten.';
+const UNLOCK = '<button type="button" class="btn btn-pay unlock-btn" data-unlock="credit-map">Kreditmappe freischalten · 39 €</button>';
+// Ein-Klick-Freischaltung aus dem Entwurf: öffnet direkt den Kaufdialog der Kreditmappe.
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest?.('[data-unlock]');
+  if (!b) return;
+  e.preventDefault();
+  const P = await fetch('/data/preise.json').then((r) => r.json()).catch(() => null);
+  const o = P?.privat?.plans?.find((x) => x.id === b.dataset.unlock);
+  if (o) openBuy(o, { onError: (t) => alert(t) }); else location.hash = '#angebot';
+});
 const sessToken = () => { try { return JSON.parse(localStorage.getItem('immoadv-auth-session-v1') || 'null')?.access_token || ''; } catch { return ''; } };
 // Darlehen, wenn nicht angegeben: Kaufpreis + Nebenkosten − Eigenkapital (mindestens 0).
 const autoLoan = (o) => Math.max(0, Math.round(Number(o.price) * (1 + (Number(o.purchaseCostPct) || 0) / 100) - (Number(o.equity) || 0)));
@@ -455,7 +460,7 @@ function bindKm(d, u, saveData, reload) {
     showPdf(blob, {
       filename: fileName(r, preview ? 'ImmoAdv_BankReady_Vorschau.pdf' : `ImmoAdv_BankReady${ver ? '_v' + ver : ''}.pdf`),
       title: `BankReady · ${o?.name || 'Kreditmappe'}`,
-      note: (preview ? 'Kostenlose Demo: Vorschau mit Wasserzeichen. Mit einem Abo bzw. gebuchten Tarif erhalten Sie die Fassung für die Bank – ohne Wasserzeichen und mit Echtheits-QR. <a class="ck-link" href="#angebot">Tarife ansehen</a>. ' : '') + extraNote,
+      note: (preview ? DEMO_NOTE + ' ' + UNLOCK + ' ' : '') + extraNote,
       onClose: () => reload?.(),
     });
     msg(preview ? 'BankReady-Vorschau erstellt. Fehlende Angaben ergänzen Sie beim Objekt unter „Bearbeiten“.' : `BankReady-Kreditmappe${ver ? ' Version ' + esc(ver) : ''} erstellt.`, 'ok');
@@ -653,7 +658,7 @@ function bindKm(d, u, saveData, reload) {
       finally { busy(false); }
     });
   };
-  getAccess().then((a) => { const h = $('kmDemo'); if (h && !a.paid) { h.hidden = false; h.innerHTML = `${DEMO_NOTE} <a class="ck-link" href="#angebot">Tarife ansehen</a>`; } });
+  getAccess().then((a) => { const h = $('kmDemo'); if (h && !a.paid) { h.hidden = false; h.innerHTML = `${DEMO_NOTE} ${UNLOCK} <a class="ck-link" href="#angebot">Alle Tarife</a>`; } });
   box.querySelectorAll('[data-kmdoc]').forEach((b) => b.onclick = () => { KM.doc = b.dataset.kmdoc; draw(); });
   box.querySelectorAll('[data-kmway]').forEach((b) => b.onclick = () => { KM.way = b.dataset.kmway; draw(); });
   draw();
@@ -746,6 +751,20 @@ function proKpis(d) {
   </div>`;
 }
 
+// Cockpit: zwei klare Hauptpfade statt vieler Einzelkacheln. Einsteiger geführt (nummeriert), Profi kompakt mit Fachbegriffen.
+function paths(mode, done) {
+  const A = mode === 'profi'
+    ? [['#objekte', 'Objekte & Analysen', 'RenditeRadar, DSCR, Cashflow nach Steuern'], ['#objekte', 'Kreditmappe (Studio)', 'BankReady für jedes Objekt'], ['/szenarien', 'Anschlusszins & Verkauf', 'Kipp-Zins, Forward, § 23 EStG'], ['/rechner/vergleich', 'Bankangebote vergleichen', 'Effektivzins, Restschuld, Gesamtkosten'], ['/cockpit', 'Stresstest-Cockpit', 'Zinsschock und Mietausfall']]
+    : [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#suche', 'Immobilie finden', 'Inserate der großen Portale'], ['#objekte', 'Objekt prüfen', 'Exposé oder Link – Rendite und Risiko'], ['#objekte', 'Kreditmappe erstellen', 'Bankfertig für Ihr Gespräch']];
+  const B = mode === 'profi'
+    ? [['#werkzeuge', 'Software-Tools', 'Portfolio, Betriebskosten, Fristen'], ['#steuer', 'Steuer & AfA', 'Anlage V, 15-%-Grenze, § 7b'], ['/rechner/afa', 'AfA-Plan', 'linear, degressiv, Sonder-AfA'], ['/rechner/mieterhoehung', 'Mieterhöhung', 'Kappungsgrenze, Briefentwurf'], ['/rechner', 'Rechner-Bibliothek', 'Mietrecht und Steuern'], ['#lernen', 'Fachwissen', `${done} von ${LERN.length} Themen`]]
+    : [['/rechner', 'Rechner-Bibliothek', 'Nebenkosten, Tilgung, Kaufen oder mieten'], ['/wissen/glossar', 'Lexikon', 'Fachbegriffe in einfachen Worten'], ['#steuer', 'Steuer-Grundlagen', 'Was Sie absetzen können'], ['#lernen', 'Lernplan', `${done} von ${LERN.length} Themen verstanden`]];
+  const list = (xs, num) => `<ul class="path-list">${xs.map(([h, t, sub], i) => `<li><a href="${h}"><i>${num ? i + 1 : '›'}</i><span><b>${t}</b><small>${sub}</small></span><em aria-hidden="true">→</em></a></li>`).join('')}</ul>`;
+  return `<div class="paths">
+    <section class="path a"><div class="path-h"><span aria-hidden="true">🏦</span><div><strong>${mode === 'profi' ? 'Finanzierung & Objekte' : 'Meine Finanzierung'}</strong><small>${mode === 'profi' ? 'Vom Exposé zur Bankentscheidung' : 'Schritt für Schritt zur Bank'}</small></div></div>${list(A, mode !== 'profi')}</section>
+    <section class="path b"><div class="path-h"><span aria-hidden="true">📚</span><div><strong>${mode === 'profi' ? 'Werkzeuge & Fachwissen' : 'Wissen & Werkzeuge'}</strong><small>${mode === 'profi' ? 'Steuer, Recht, Bestand' : 'Nachschlagen und nachrechnen'}</small></div></div>${list(B, false)}</section></div>`;
+}
+
 function startCard(mode, d) {
   const done = Object.values(d.progress?.lern || {}).filter(Boolean).length;
   if (!d.profile?.mode && !new URLSearchParams(location.search).get('modus')) {
@@ -756,23 +775,19 @@ function startCard(mode, d) {
   const ph = phaseOf(d);
   if (mode === 'profi') {
     // Profi: Kennzahlen des eigenen Bestands statt Erklärtexte – danach Werkzeuge.
-    const tools = [...PHASES[ph.idx].actions.map(([h, t]) => [t, h]), ['Software-Tools', '#werkzeuge'], ...PROFI.filter(([t]) => !/Glossar/.test(t))];
     return `<article class="dash-card wide start-card start-pro" data-view="start">
       <div class="stage-mini"><span class="stage-k">Stufe</span><strong><b class="stage-n">${ph.idx + 1}</b>${PHASES[ph.idx].name}</strong><button type="button" class="link-btn stage-open">ändern</button><div id="rankSlot" class="rank-slot mini"></div></div>
       ${proKpis(d)}
-      <div class="tool-grid">${tools.filter(([, h], i, all) => all.findIndex((x) => x[1] === h) === i).map(([t, h]) => `<a class="tool-a" href="${h}">${t}</a>`).join('')}</div></article>`;
+      ${paths('profi', done)}</article>`;
   }
   const tasks = fahrplan(ph.idx, d);
   const nextI = tasks.findIndex((x) => x[3] === false);
-  const extra = [['#lernen', 'Wissen auffrischen', `${done} von ${LERN.length} Themen verstanden`]];
-  const inPlan = new Set(tasks.map((x) => x[2]));
-  const actions = [...PHASES[ph.idx].actions.filter(([h]) => !inPlan.has(h)), ['#suche', 'Immobilien suchen', 'Inserate der großen Portale'], ...extra].filter((a, i, all) => all.findIndex((x) => x[0] === a[0]) === i);
   return `<article class="dash-card wide start-card" data-view="start">${phasePicker(ph.idx, ph.chosen)}
     <div id="rankSlot" class="rank-slot"></div>
     <h4 class="sc-h">Ihr Fahrplan für Stufe ${ph.idx + 1}</h4>
     <ol class="fp">${tasks.map(([t, sub, h, st], i) => `<li class="fp-i${st === true ? ' done' : ''}${i === nextI ? ' next' : ''}"><span class="fp-dot" aria-hidden="true">${st === true ? '✓' : i + 1}</span><span class="fp-t"><strong>${t}</strong><small>${sub}</small></span>${st === true ? '<span class="fp-st">erledigt</span>' : `<a class="btn ${i === nextI ? 'btn-dark' : 'btn-outline'} fp-go" href="${h}">${i === nextI ? 'Jetzt erledigen' : 'Öffnen'}</a>`}</li>`).join('')}</ol>
-    <h4 class="sc-h">Schnellzugriff</h4>
-    <div class="quick">${actions.map(([h, t, s2]) => `<a class="quick-a" href="${h}"><strong>${t}</strong><span>${s2}</span></a>`).join('')}</div></article>`;
+    <h4 class="sc-h">Ihre zwei Wege</h4>
+    ${paths('einsteiger', done)}</article>`;
 }
 
 function bindStart(mode, d, u, saveData, reload) {
@@ -906,9 +921,10 @@ async function renderOffers(mode) {
     box.innerHTML = `<div class="offer-head"><div><span class="form-note">Ihr Tarif</span><strong>${tierName}</strong></div>${st.starterUntil ? `<span class="form-note">Käufer-Pass aktiv bis ${new Date(st.starterUntil).toLocaleDateString('de-DE')}</span>` : ''}</div>
       <p class="form-note">${esc(m.zielgruppe)}</p>
       ${tier === 'pro' ? '<p class="auth-message">Investor Pro ist aktiv – alle Funktionen und Kreditmappen sind enthalten.</p>' : left ? `<p class="auth-message">Sie haben ${left} Kreditmappe${left === 1 ? '' : 'n'} frei.</p>` : ''}
-      <div class="offers">${m.plans.map((p) => `<div class="offer${p.id === next ? ' rec' : ''}">${p.id === next ? '<span class="offer-rec">Empfohlener nächster Schritt</span>' : p.badge ? `<span class="offer-badge">${esc(p.badge)}</span>` : ''}<div class="offer-top">${planIcon(p.id)}<h4>${esc(p.name)}</h4></div><div class="offer-price">${E(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.basis ? `<li class="offer-basis">${esc(p.basis)}</li>` : ''}${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+      <div class="offers">${m.plans.map((p) => `<div class="offer${p.id === next ? ' rec' : ''}">${p.id === next ? '<span class="offer-rec">Empfohlener nächster Schritt</span>' : p.badge ? `<span class="offer-badge">${esc(p.badge)}</span>` : ''}<div class="offer-top">${planIcon(p.id)}<h4>${esc(p.name)}</h4></div>${p.fuer ? `<p class="offer-for">${esc(p.fuer)}</p>` : ''}<div class="offer-price">${E(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.basis ? `<li class="offer-basis">${esc(p.basis)}</li>` : ''}${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
         ${cfg.enabled ? `<button class="btn btn-pay" type="button" data-buy="${p.id}"${tier === 'pro' ? ' disabled' : ''}>${tier === 'pro' ? 'In Investor Pro enthalten' : 'Jetzt buchen'}</button>` : '<button class="btn btn-pay" type="button" disabled>Buchung startet in Kürze</button>'}</div>`).join('')}</div>
       <div class="offer-free"><strong>Immer kostenlos:</strong> ${P.kostenlos.features.map(esc).join(' · ')}</div>
+      ${tier === 'free' && m.demo ? `<p class="offer-demo">${esc(m.demo)}</p>` : ''}
       ${cmpTable(m.vergleich, { free: 0, starter: 2, pro: 3 }[tier] ?? -1)}
       <p class="form-note">${esc(P.hinweis)} Es gelten die <a class="ck-link" href="/nutzungsbedingungen">Nutzungsbedingungen mit Widerrufsbelehrung</a>. Kündigung jederzeit über <a class="ck-link" href="/kuendigen">„Verträge hier kündigen“</a>.</p>`;
     const want = new URLSearchParams(location.search).get('buy');
