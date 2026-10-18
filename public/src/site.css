@@ -810,11 +810,6 @@ main table td{min-width:max-content}
 .buy-soon{margin:0;padding:12px;border-radius:10px;background:#EFF6FF;color:#1E3A8A;font-size:14px}
 .buy-secure{margin:0;display:flex;gap:6px;align-items:center;justify-content:center;font-size:12px;color:#64748B;text-align:center}
 .buy-resume{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:#EFF6FF;border:1px solid #BFDBFE;color:#1E3A8A;font-size:14px;font-weight:600}
-.pay-badges{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
-.pb{display:inline-flex;align-items:center;height:28px;padding:0 10px;border:1px solid #E2E8F0;border-radius:6px;background:#fff;font-size:12px;font-weight:700;color:#334155;white-space:nowrap}
-.pb-paypal{font-style:italic;font-size:14px;letter-spacing:-.02em}.pb-paypal b{color:#003087;font-weight:900}.pb-paypal i{color:#009CDE;font-weight:900}
-.pb-apple{background:#000;color:#fff;border-color:#000}.pb-google{color:#3C4043}.pb-klarna{background:#FFB3C7;color:#17120F;border-color:#FFB3C7}.pb-sepa{color:#10298E}
-.offer-pay{margin:14px 0 4px;padding:12px;border:1px dashed #CBD5E1;border-radius:12px;background:#F8FAFC}.offer-pay .form-note{margin:0 0 8px;text-align:center}
 .buy-overlay{position:fixed;inset:0;z-index:200;background:rgba(255,255,255,.92);display:grid;place-items:center;padding:20px}
 .buy-ov-box{display:grid;gap:10px;justify-items:center;text-align:center;color:#0F2C59}.buy-ov-box strong{font-size:18px}.buy-ov-box small{font-size:12.5px;color:#64748B;text-transform:none;letter-spacing:0}
 .buy-spin{width:44px;height:44px;border-radius:50%;border:4px solid #DBEAFE;border-top-color:#0284C7;animation:buyspin .8s linear infinite}

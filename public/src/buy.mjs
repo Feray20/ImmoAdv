@@ -1,5 +1,5 @@
 // „Jetzt buchen“: Kauf-Dialog mit Produkt, Preis, Zustimmung (§ 356 Abs. 4/5 BGB) und Zahlarten – danach direkt
-// zur sicheren Bezahlseite (Stripe Checkout mit Karte, PayPal, Apple Pay, Google Pay, Klarna, SEPA).
+// zur sicheren Bezahlseite (Stripe Checkout; Zahlarten steuert Stripe).
 // Nicht angemeldet: Kaufwunsch wird 30 Minuten gemerkt; nach der Anmeldung geht es automatisch weiter zur Bezahlung.
 const SESSION = 'immoadv-auth-session-v1';
 const INTENT = 'ia-buy-intent';
@@ -15,7 +15,6 @@ const IC = {
   'pro-monthly': ['#6D28D9', '#EDE9FE', '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'],
 };
 export const planIcon = (id) => { const i = IC[id] || ['#0F2C59', '#E2E8F0', '<circle cx="12" cy="12" r="8"/>']; return `<span class="offer-ic" style="--ic:${i[0]};--icbg:${i[1]}" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${i[2]}</svg></span>`; };
-export const PAY_BADGES = `<div class="pay-badges" aria-label="Zahlarten"><span class="pb pb-card">Kredit-/Debitkarte</span><span class="pb pb-paypal"><b>Pay</b><i>Pal</i></span><span class="pb pb-apple">Apple&nbsp;Pay</span><span class="pb pb-google">Google&nbsp;Pay</span><span class="pb pb-klarna">Klarna</span><span class="pb pb-sepa">SEPA-Lastschrift</span></div>`;
 
 const token = () => { try { return JSON.parse(localStorage.getItem(SESSION) || 'null')?.access_token || ''; } catch { return ''; } };
 export function takeIntent() {
@@ -78,7 +77,6 @@ export async function openBuy(offer, opts = {}) {
     <p class="buy-msg" id="buyMsg" role="alert"></p>` : `
     <p class="buy-soon"><strong>Buchung startet in Kürze.</strong> Die Zahlungsabwicklung wird gerade freigeschaltet. Bis dahin können Sie alles kostenlos ausprobieren.</p>
     <a class="btn btn-dark buy-go" href="/auth/register">Kostenlos starten</a>`}
-    ${PAY_BADGES}
     <p class="buy-secure"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/></svg> SSL-verschlüsselt · Zahlungsdaten gehen direkt an Stripe (PCI-DSS Level 1), ImmoAdv sieht keine Karten- oder Kontodaten.</p>
   </form>`;
   const go = d.querySelector('#buyGo');

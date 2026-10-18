@@ -409,7 +409,6 @@ if ($('pubOffers')) {
         ${cmpTable(m.vergleich)}
         <div class="offer-guar"><strong>Zufriedenheitsgarantie für die Kreditmappe:</strong> Lehnt Ihre finanzierende Bank das Format der Mappe ab, erstatten wir den vollen Kaufpreis. Melden Sie sich dazu innerhalb von 60 Tagen nach dem Kauf per E-Mail mit dem Namen der Bank. Die Garantie betrifft das Format der Mappe, nicht die Kreditentscheidung der Bank. Einzelheiten: <a class="ck-link" href="/nutzungsbedingungen#garantie">Nutzungsbedingungen Nr. 4a</a>.</div>
         <p class="form-note">Für Makler, Finanzierungsvermittler und Banken gibt es eigene Tarife (netto, mit Widget, Anfragen und Team): <a class="ck-link" href="/b2b">Angebot für Unternehmen</a>.</p>
-        <div class="offer-pay"><p class="form-note">„Jetzt buchen“ führt direkt zur sicheren Bezahlseite – bezahlen Sie bequem mit:</p>${PAY}</div>
         <p class="form-note">${esc(P.hinweis)} Widerrufsbelehrung: <a class="ck-link" href="/nutzungsbedingungen">Nutzungsbedingungen</a>. Kündigung: <a class="ck-link" href="/kuendigen">Verträge hier kündigen</a>.</p>`;
       document.querySelectorAll('#pubOffers [data-offer]').forEach((a) => a.onclick = async (e) => {
         e.preventDefault();
@@ -417,7 +416,7 @@ if ($('pubOffers')) {
         openBuy(m.plans[+a.dataset.offer]);
       });
     };
-    const { PAY_BADGES: PAY, planIcon: PIC } = await import('./buy.mjs');
+    const { planIcon: PIC } = await import('./buy.mjs');
     draw();
   }).catch(() => { $('pubOffers').innerHTML = '<p class="form-note">Preise konnten nicht geladen werden.</p>'; });
 }

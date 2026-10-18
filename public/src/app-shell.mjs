@@ -1,6 +1,6 @@
 // App-Rahmen für das Konto: Handy wie eine App (Tab-Leiste unten), Desktop wie ein Investment-Tool (Seitenleiste).
 // Ansichten über #hash; vorhandene Karten werden den Ansichten zugeordnet. Modus Einsteiger/Profi frei wählbar.
-import { openBuy, PAY_BADGES, planIcon, resumeIntent } from './buy.mjs';
+import { openBuy, planIcon, resumeIntent } from './buy.mjs';
 import { rank, GREST, portfolio, upcoming } from './calc.mjs';
 const GREST_KEYS = Object.keys(GREST);
 
@@ -683,7 +683,7 @@ async function renderFin() {
     <div class="fin-box"><small>Ihr Tarif</small><strong>${tierName}</strong><span>${until ? `aktiv bis ${dte(until)}` : st.tier === 'free' ? (acc.paid ? 'Alle Funktionen, PDFs ohne Wasserzeichen' : 'Alles ausprobieren · PDFs mit Wasserzeichen') : ''}${st.creditMaps ? ` · Kreditmappen: ${Math.max(0, (st.creditMaps || 0) - (st.creditMapsUsed || 0))} frei` : ''}</span></div>
     <div class="fin-actions">
       <a class="btn btn-dark" href="#angebot">${st.tier === 'free' ? 'Tarif buchen' : 'Upgrade / Tarife ansehen'}</a>
-      <button class="btn btn-outline" type="button" data-flow="update"${cfg.enabled && st.tier !== 'free' ? '' : ' disabled'}>Tarif wechseln</button>
+      <button class="btn btn-pay" type="button" data-flow="update"${cfg.enabled && st.tier !== 'free' ? '' : ' disabled'}>Tarif wechseln</button>
       <button class="btn btn-outline" type="button" data-flow="payment"${cfg.enabled && st.hasCustomer ? '' : ' disabled'}>Zahlungsmittel ändern</button>
       <button class="btn btn-outline fin-cancel" type="button" data-flow="cancel"${cfg.enabled && st.tier !== 'free' ? '' : ' disabled'}>Abo kündigen</button>
     </div></div>
@@ -907,10 +907,9 @@ async function renderOffers(mode) {
       <p class="form-note">${esc(m.zielgruppe)}</p>
       ${tier === 'pro' ? '<p class="auth-message">Investor Pro ist aktiv – alle Funktionen und Kreditmappen sind enthalten.</p>' : left ? `<p class="auth-message">Sie haben ${left} Kreditmappe${left === 1 ? '' : 'n'} frei.</p>` : ''}
       <div class="offers">${m.plans.map((p) => `<div class="offer${p.id === next ? ' rec' : ''}">${p.id === next ? '<span class="offer-rec">Empfohlener nächster Schritt</span>' : p.badge ? `<span class="offer-badge">${esc(p.badge)}</span>` : ''}<div class="offer-top">${planIcon(p.id)}<h4>${esc(p.name)}</h4></div><div class="offer-price">${E(p.cents)} <small>${esc(p.intervall)}</small></div><ul>${p.basis ? `<li class="offer-basis">${esc(p.basis)}</li>` : ''}${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
-        ${cfg.enabled ? `<button class="btn btn-pay" type="button" data-buy="${p.id}"${tier === 'pro' ? ' disabled' : ''}>${tier === 'pro' ? 'In Investor Pro enthalten' : 'Jetzt buchen'}</button>` : '<button class="btn btn-outline" type="button" disabled>Buchung startet in Kürze</button>'}</div>`).join('')}</div>
+        ${cfg.enabled ? `<button class="btn btn-pay" type="button" data-buy="${p.id}"${tier === 'pro' ? ' disabled' : ''}>${tier === 'pro' ? 'In Investor Pro enthalten' : 'Jetzt buchen'}</button>` : '<button class="btn btn-pay" type="button" disabled>Buchung startet in Kürze</button>'}</div>`).join('')}</div>
       <div class="offer-free"><strong>Immer kostenlos:</strong> ${P.kostenlos.features.map(esc).join(' · ')}</div>
       ${cmpTable(m.vergleich, { free: 0, starter: 2, pro: 3 }[tier] ?? -1)}
-      <div class="offer-pay"><p class="form-note">Bezahlen Sie auf der sicheren Bezahlseite mit:</p>${PAY_BADGES}</div>
       <p class="form-note">${esc(P.hinweis)} Es gelten die <a class="ck-link" href="/nutzungsbedingungen">Nutzungsbedingungen mit Widerrufsbelehrung</a>. Kündigung jederzeit über <a class="ck-link" href="/kuendigen">„Verträge hier kündigen“</a>.</p>`;
     const want = new URLSearchParams(location.search).get('buy');
     if (want) { const card = box.querySelector(`[data-buy="${CSS.escape(want)}"]`)?.closest('.offer'); if (card) { card.classList.add('offer-want'); card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }

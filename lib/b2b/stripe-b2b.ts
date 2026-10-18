@@ -31,6 +31,34 @@ export async function ensureTaxRateExclusive(): Promise<string> {
   return t.id;
 }
 
+// Zahlarten für Unternehmen – bewusst anders als bei Privatkunden: Firmenkarte und SEPA-Lastschrift,
+// keine Verbraucher-Zahlarten (Klarna, PayPal, Apple/Google Pay, Link). Eigene Stripe-Zahlarten-Konfiguration,
+// die einmal angelegt und danach wiederverwendet wird. Was im Stripe-Konto (noch) nicht freigeschaltet ist,
+// blendet Stripe einfach aus. Schlägt das Anlegen fehl, gilt die Standard-Konfiguration (Bezahlung bleibt möglich).
+const B2B_PMC_NAME = 'ImmoAdv B2B';
+let b2bPmc: string | null = null;
+export async function ensureB2BPaymentConfig(): Promise<string | undefined> {
+  if (b2bPmc) return b2bPmc;
+  try {
+    const s = stripe();
+    const list = await s.paymentMethodConfigurations.list({ limit: 100 });
+    const hit = list.data.find((c) => c.name === B2B_PMC_NAME && c.active);
+    if (hit) return (b2bPmc = hit.id);
+    const on = { display_preference: { preference: 'on' as const } };
+    const off = { display_preference: { preference: 'off' as const } };
+    const c = await s.paymentMethodConfigurations.create({
+      name: B2B_PMC_NAME,
+      card: on, sepa_debit: on,
+      apple_pay: off, google_pay: off, link: off, klarna: off, paypal: off, amazon_pay: off,
+      bancontact: off, eps: off, pix: off, kakao_pay: off, naver_pay: off, payco: off, samsung_pay: off, satispay: off, mb_way: off,
+    } as Stripe.PaymentMethodConfigurationCreateParams);
+    return (b2bPmc = c.id);
+  } catch (e) {
+    console.error('b2b_pmc_error', e instanceof Error ? e.message : e);
+    return undefined;
+  }
+}
+
 export async function ensureB2BCustomer(a: B2BAccount): Promise<string> {
   const s = stripe();
   if (a.stripe_customer_id) return a.stripe_customer_id;

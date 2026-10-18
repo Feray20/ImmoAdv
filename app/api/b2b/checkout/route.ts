@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { billingEnabled, stripe } from '@/lib/billing/stripe';
 import { B2B_PLANS, VERIFY_MSG } from '@/lib/b2b/core';
 import { json, requireMember } from '@/lib/b2b/http';
-import { ensureB2BCustomer, ensureB2BPrice, ensureTaxRateExclusive } from '@/lib/b2b/stripe-b2b';
+import { ensureB2BCustomer, ensureB2BPaymentConfig, ensureB2BPrice, ensureTaxRateExclusive } from '@/lib/b2b/stripe-b2b';
 import { NO_MANAGED_PAYMENTS } from '@/lib/billing/checkout-params';
 
 export const runtime = 'nodejs';
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     return json({ error: 'Es besteht bereits ein Abo. Wechsel und Kündigung über „Abo verwalten“.' }, 409);
   }
   try {
-    const [customer, price, tax] = await Promise.all([ensureB2BCustomer(a), ensureB2BPrice(plan.id), ensureTaxRateExclusive()]);
+    const [customer, price, tax, pmc] = await Promise.all([ensureB2BCustomer(a), ensureB2BPrice(plan.id), ensureTaxRateExclusive(), ensureB2BPaymentConfig()]);
     const metadata = { b2b_account_id: a.id, plan: plan.id, tier: plan.tier, terms_accepted: new Date().toISOString() };
     const origin = new URL(req.url).origin;
     const session = await stripe().checkout.sessions.create({
@@ -41,6 +41,7 @@ export async function POST(req: Request) {
       // Button-Lösung (§ 312j Abs. 3 BGB): Hinweis direkt am Bestellknopf der Bezahlseite.
       custom_text: { submit: { message: 'Mit Klick auf den Button schließen Sie einen zahlungspflichtigen Vertrag mit ImmoAdv ab.' } },
       ...NO_MANAGED_PAYMENTS,
+      ...(pmc ? { payment_method_configuration: pmc } : {}),
       metadata,
       subscription_data: { metadata, description: `${plan.name} – ${plan.intervall}` },
       success_url: `${origin}/b2b-portal?checkout=success#tarif`,
