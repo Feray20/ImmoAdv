@@ -893,3 +893,8 @@ body[data-ad-seg=system] .ad-segctl button[aria-pressed=true]{background:#334155
   .ad-segctl3 button span{display:inline}
 }
 .ad-bottom{grid-template-columns:repeat(auto-fit,minmax(0,1fr))!important}
+.fa-dual{margin-top:16px;border-top:1px solid #E2E8F0;padding-top:14px}.fa-dual h3{margin:0 0 10px;font-size:16px;color:#0F2C59}
+.fa-dual-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fa-dl{display:grid;gap:4px;text-align:left;padding:14px;border:1px solid #CBD5E1;border-radius:12px;background:#fff;color:#0F172A;text-decoration:none;cursor:pointer;font:inherit;min-height:44px}
+.fa-dl:hover{border-color:#0284C7;background:#F0F9FF}.fa-dl b{color:#0F2C59;font-size:15px}.fa-dl span{font-size:13px;color:#475569}.fa-dl:disabled{opacity:.6}
+@media (max-width:640px){.fa-dual-g{grid-template-columns:1fr}}
