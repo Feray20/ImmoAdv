@@ -32,6 +32,7 @@ export async function purgeUser(userId: string, b2bAccountId: string | null): Pr
   await db.from('immo_access_audit').delete().eq('owner_id', userId);
   await db.from('immo_kreditmappe_credits').delete().eq('owner_id', userId);
   await db.from('immo_audit_log').delete().eq('actor_user_id', userId);
+  await db.from('immo_feedback').delete().eq('user_id', userId);
 
   // Ältere Bank-Pakete (falls vorhanden) haben RESTRICT-Abhängigkeiten.
   const { data: pk } = await db.from('immo_bank_packages').select('id').eq('owner_id', userId);
