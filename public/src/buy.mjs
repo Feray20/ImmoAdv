@@ -40,19 +40,42 @@ function overlay(text) {
 }
 
 // Bezahlseite öffnen (angemeldet). Liefert eine Fehlermeldung oder leitet weiter.
-export async function goCheckout(plan) {
+export async function goCheckout(plan, addon = null) {
   const t = token();
   if (!t) return 'login';
   const o = overlay('Sichere Bezahlseite wird geöffnet …');
   try { window.iaTrack?.('checkout_start', { plan }); } catch { /* ignore */ }
   try {
-    const r = await fetch('/api/billing/checkout', { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'content-type': 'application/json' }, body: JSON.stringify({ plan, consent: true }) });
+    const r = await fetch('/api/billing/checkout', { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'content-type': 'application/json' }, body: JSON.stringify({ plan, consent: true, ...(addon ? { addon } : {}) }) });
     const j = await r.json().catch(() => ({}));
     if (r.status === 401) { o.remove(); return 'login'; }
     if (!r.ok || !j.url) throw Error(j.error || 'Die Bezahlseite konnte nicht geöffnet werden.');
     location.href = j.url;
     return null;
   } catch (e) { o.remove(); return e.message; }
+}
+
+// Zusatzprodukt (aus preise.json) – wird nie vorausgewählt.
+let ADDON = null;
+fetch('/data/preise.json').then((r) => r.json()).then((P) => { ADDON = (P?.privat?.addons || []).find((a) => a.id === 'leitfaden') || null; }).catch(() => {});
+
+// Zinskosten in 10 Jahren für ein Annuitätendarlehen (2 % Anfangstilgung).
+function interest10(loan, z, t = 0.02) { const rate = (loan * (z + t)) / 12; let s = loan, sum = 0; for (let m = 0; m < 120 && s > 0; m++) { const i = (s * z) / 12; sum += i; s -= rate - i; } return sum; }
+const roundTo = (x, k = 100) => Math.round(x / k) * k;
+
+// Entscheidungshilfe im Kaufdialog – nur mit echten Zahlen: aus dem Konto des Kunden (ctx) oder klar als Beispiel gekennzeichnet.
+// ctx = { loan, ratePct, gaps: [..], finPct, mappePct }
+function insights(offer, ctx = {}) {
+  const loan = Number(ctx.loan) || 0, z = (Number(ctx.ratePct) || 3.6) / 100;
+  const own = loan > 0;
+  const L = own ? loan : 300000;
+  const diff = roundTo(interest10(L, z + 0.002) - interest10(L, z));
+  const anchor = `<p class="buy-anchor"><b>${own ? 'Für Ihr Darlehen' : 'Beispiel'}:</b> ${own ? '' : `${eur(L * 100).replace(',00', '')} Darlehen, `}schon 0,2 Prozentpunkte schlechterer Zins kosten in 10 Jahren rund <b>${eur(diff * 100).replace(',00', '')}</b> mehr Zinsen. Eine vollständige, bankfertige Mappe hilft, Konditionen zu vergleichen und nachzuverhandeln – für einmalig ${eur(offer.cents)}.</p>`;
+  const gaps = Array.isArray(ctx.gaps) ? ctx.gaps.filter(Boolean) : [];
+  const gapBox = gaps.length ? `<p class="buy-gaps"><b>Ihr Fall hat ${gaps.length} offene ${gaps.length === 1 ? 'Angabe' : 'Angaben'}, die Banken typischerweise nachfordern:</b> ${gaps.slice(0, 4).map(esc).join(', ')}${gaps.length > 4 ? ' …' : ''}. Sie können diese auch nach dem Kauf noch ergänzen.</p>` : '';
+  const fin = Number.isFinite(ctx.finPct) ? Math.round(ctx.finPct) : null, mappe = Number.isFinite(ctx.mappePct) ? Math.round(ctx.mappePct) : null;
+  const steps = fin == null && mappe == null ? '' : `<ol class="buy-steps"><li class="${fin >= 100 ? 'done' : ''}"><span>Finanzdaten</span><b>${fin ?? '–'} %</b></li><li class="${mappe >= 100 ? 'done' : ''}"><span>Mappe vollständig</span><b>${mappe ?? '–'} %</b></li><li class="on"><span>Download freischalten</span><b>jetzt</b></li></ol>`;
+  return steps + anchor + gapBox;
 }
 
 // Kauf-Dialog. offer = { id, name, cents, intervall, features }
@@ -65,14 +88,16 @@ export async function openBuy(offer, opts = {}) {
   const sub = /monat/i.test(offer.intervall || '');
   d.innerHTML = `<form method="dialog" class="buy-in">
     <div class="buy-head">${IC[offer.id] ? planIcon(offer.id) : '<img src="/logo-icon.svg" alt="" width="34" height="29">'}<div><span class="buy-kick">ImmoAdv · Bestellung</span><h2>${esc(offer.name)}</h2></div><button class="buy-x" value="x" aria-label="Schließen">×</button></div>
-    <div class="buy-price"><strong>${eur(offer.cents)}</strong><span>${esc(offer.intervall || '')}</span></div>
+    <div class="buy-price"><strong id="buyTotal">${eur(offer.cents)}</strong><span>${esc(offer.intervall || '')}</span></div>
     <p class="buy-tax">inkl. 19&nbsp;% USt.${sub ? ' · monatlich kündbar' : ''}</p>
     ${offer.features?.length ? `<ul class="buy-feat">${offer.basis ? `<li class="offer-basis">${esc(offer.basis)}</li>` : ''}${offer.features.slice(0, 5).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
     ${cfg.enabled ? `
+    ${/credit-map|buyer-pass/.test(offer.id) ? insights(offer, opts.ctx) : ''}
+    ${/credit-map|buyer-pass/.test(offer.id) && ADDON ? `<label class="buy-bump"><input type="checkbox" id="buyAddon"> <span><strong>${esc(ADDON.name)} hinzufügen · + ${eur(ADDON.cents)}</strong><small>${esc(ADDON.beschreibung || '')}</small></span></label>` : ''}
     ${cfg.testMode ? '<p class="buy-test">Testmodus – es wird nichts berechnet. Testkarte 4242 4242 4242 4242, beliebiges Ablaufdatum in der Zukunft, beliebige Prüfziffer.</p>' : ''}
     <label class="consent buy-consent"><input type="checkbox" id="buyOk"> <span>Ich verlange ausdrücklich, dass ImmoAdv vor Ablauf der Widerrufsfrist mit der Leistung beginnt. Mir ist bekannt, dass mein Widerrufsrecht bei digitalen Inhalten damit erlischt und ich bei einem Widerruf eines Abos Wertersatz für bereits erbrachte Leistungen schulde.</span></label>
     <p class="buy-legal">Es gelten die <a href="/nutzungsbedingungen" target="_blank" rel="noopener">Nutzungsbedingungen</a> mit <a href="/nutzungsbedingungen#widerruf" target="_blank" rel="noopener">Widerrufsbelehrung</a>. Den kostenpflichtigen Kauf schließen Sie auf der folgenden Bezahlseite ab.</p>
-    ${/credit-map|buyer-pass/.test(offer.id) ? '<p class="buy-guar"><span aria-hidden="true">↺</span><span><strong>Bank-Akzeptanz-Garantie:</strong> Lehnt Ihre finanzierende Bank das Format der Kreditmappe ab, erstatten wir den vollen Kaufpreis – Meldung innerhalb von 60 Tagen genügt.</span></p>' : ''}
+    ${/credit-map|buyer-pass/.test(offer.id) ? '<p class="buy-guar"><span aria-hidden="true">↺</span><span><strong>Bank-Akzeptanz-Garantie:</strong> Lehnt Ihre finanzierende Bank das Format der Kreditmappe ab, erstatten wir den vollen Kaufpreis – Meldung innerhalb von 60 Tagen genügt. <a href="/nutzungsbedingungen#garantie" target="_blank" rel="noopener">Bedingungen</a>; Ihre gesetzlichen Rechte bleiben unberührt.</span></p>' : ''}
     <button class="btn btn-pay buy-go" type="button" id="buyGo"><svg class="pay-lock" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 1 1 6 0v3H9Z"/></svg>${loggedIn ? 'Weiter zur sicheren Bezahlung' : 'Anmelden und weiter zur Bezahlung'} <span aria-hidden="true">→</span></button>
     ${loggedIn ? '' : '<p class="buy-note">Ihr Kauf wird Ihrem ImmoAdv-Konto zugeordnet. Noch kein Konto? Auf der nächsten Seite in einer Minute kostenlos anlegen – danach geht es direkt weiter zur Bezahlung.</p>'}
     <p class="buy-msg" id="buyMsg" role="alert"></p>` : `
@@ -86,15 +111,17 @@ export async function openBuy(offer, opts = {}) {
     if (!ok.checked) { ok.closest('label').classList.add('consent-missing'); d.querySelector('#buyMsg').textContent = 'Bitte zuerst der sofortigen Bereitstellung zustimmen.'; ok.focus(); return; }
     go.disabled = true;
     if (!token()) {
-      try { localStorage.setItem(INTENT, JSON.stringify({ plan: offer.id, name: offer.name, consentAt: new Date().toISOString(), at: Date.now() })); } catch { /* ignore */ }
+      try { localStorage.setItem(INTENT, JSON.stringify({ plan: offer.id, name: offer.name, addon: d.querySelector('#buyAddon')?.checked ? 'leitfaden' : null, consentAt: new Date().toISOString(), at: Date.now() })); } catch { /* ignore */ }
       location.href = '/auth/login';
       return;
     }
+    const addon = d.querySelector('#buyAddon')?.checked ? 'leitfaden' : null;
     d.close();
-    const err = await goCheckout(offer.id);
-    if (err === 'login') { try { localStorage.setItem(INTENT, JSON.stringify({ plan: offer.id, name: offer.name, consentAt: new Date().toISOString(), at: Date.now() })); } catch { /* ignore */ } location.href = '/auth/login'; return; }
+    const err = await goCheckout(offer.id, addon);
+    if (err === 'login') { try { localStorage.setItem(INTENT, JSON.stringify({ plan: offer.id, name: offer.name, addon: d.querySelector('#buyAddon')?.checked ? 'leitfaden' : null, consentAt: new Date().toISOString(), at: Date.now() })); } catch { /* ignore */ } location.href = '/auth/login'; return; }
     if (err) { (opts.onError || alert)(err); }
   };
+  d.querySelector('#buyAddon')?.addEventListener('change', (e) => { const t = d.querySelector('#buyTotal'); if (t) t.textContent = eur(offer.cents + (e.target.checked ? ADDON.cents : 0)); });
   d.querySelector('#buyOk')?.addEventListener('change', (e) => { if (e.target.checked) { e.target.closest('label').classList.remove('consent-missing'); d.querySelector('#buyMsg').textContent = ''; } });
   d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
   if (typeof d.showModal === 'function') d.showModal(); else d.setAttribute('open', '');
@@ -107,7 +134,7 @@ export async function resumeIntent(onError) {
   const cfg = await config();
   if (!cfg.enabled) { takeIntent(); return false; }
   takeIntent();
-  const err = await goCheckout(x.plan);
+  const err = await goCheckout(x.plan, x.addon || null);
   if (err && err !== 'login') (onError || alert)(err);
   return !err;
 }

@@ -15,7 +15,7 @@ const today = new Date().toISOString().slice(0, 10);
 
 const ORG = {
   '@type': 'Organization', '@id': `${ORIGIN}/#org`, name: 'ImmoAdv', url: `${ORIGIN}/`,
-  logo: `${ORIGIN}/brand/immoadv-icon.svg`, email: 'support@immoadv.de',
+  logo: { '@type': 'ImageObject', url: `${ORIGIN}/icon-512.png`, width: 512, height: 512 }, email: 'support@immoadv.de',
   address: { '@type': 'PostalAddress', streetAddress: 'Georg-August-Zinn-Str. 25', postalCode: '64354', addressLocality: 'Reinheim', addressCountry: 'DE' },
 };
 const APP = {
@@ -27,7 +27,7 @@ const APP = {
 
 // Seitenliste: Pfad, Datei, Titel, Beschreibung, Brotkrumen, Indexierung, Zusatz-JSON-LD.
 const PAGES = [
-  { path: '/', file: 'index.html', title: 'In 5 Minuten wissen, ob sich Ihre Immobilie rechnet | ImmoAdv', desc: 'Kostenloser Schnellrechner für Kapitalanlage und Eigenheim: Rendite, Cashflow, Rate, Stresstest – plus bankfertige Kreditmappe. Unabhängig, ohne Provision.', crumbs: [], extra: ['website', 'app', 'howto'] },
+  { path: '/', file: 'index.html', title: 'Rechnet sich Ihre Immobilie? Rendite & Kreditmappe | ImmoAdv', desc: 'Kostenloser Schnellrechner für Kapitalanlage und Eigenheim: Rendite, Cashflow, Rate, Stresstest – plus bankfertige Kreditmappe. Unabhängig, ohne Provision.', crumbs: [], extra: ['website', 'app', 'howto'] },
   { path: '/wissen', title: `Immobilien und Geld verständlich erklärt – ${((f) => (Array.isArray(f) ? f : f.entries).length)(JSON.parse(readFileSync(new URL('../public/data/faq.json', import.meta.url), 'utf8')))} Antworten | ImmoAdv`, desc: 'Wissen in vier Phasen: Leistbarkeit, Objektprüfung, Steuern und Cashflow, Bankgespräch – verständlich erklärt, mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
   { path: '/cockpit', file: null, skip: true, title: '', desc: '' },
   { path: '/suche', file: 'suche/index.html', template: 'wissen/index.html', title: 'Suche | ImmoAdv', noindex: true, desc: 'Rechner, Antworten und Fachbegriffe rund um Immobilienkauf und Finanzierung durchsuchen.', crumbs: ['Suche'] },

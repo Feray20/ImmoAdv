@@ -14,7 +14,7 @@ else if(p==='/pro-begleiter'){title='PRO-BEGLEITER: 12 Monate vom Kassensturz bi
 ['2','Bonität und Unterlagen','SCHUFA-Selbstauskunft anfordern · Unterlagen nach Erwerbsstatus sammeln · Verbindlichkeiten auflisten','/checkliste',[['Art. 15 DSGVO (Auskunftsrecht)','https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX:32016R0679']]],
 ['3','Finanzierung verstehen','Annuität und Zinsbindung durchrechnen · Restschuld nach 10 Jahren · Sondertilgung','/szenarien',[['§ 489 BGB (Kündigungsrecht nach 10 Jahren)',G+'bgb/__489.html']]],
 ['4','Strategie festlegen','Investor-Profil bestimmen · Mindestwerte für DSCR und Cashflow setzen · Lagekriterien','/profiler',[]],
-['5','Objektsuche und Erstprüfung','3 Exposés erfassen · Kaufpreisfaktor vergleichen · Mietspiegel prüfen','/rechner',[['§ 558d BGB (Mietspiegel)',G+'bgb/__558d.html']]],
+['5','Objektauswahl und Erstprüfung','3 Exposés erfassen · Kaufpreisfaktor vergleichen · Mietspiegel prüfen','/rechner',[['§ 558d BGB (Mietspiegel)',G+'bgb/__558d.html']]],
 ['6','Mietrecht in Zahlen','Mietpreisbremse prüfen · Kappungsgrenze rechnen · Staffel- und Indexmiete verstehen','/rechner',[['§ 556d BGB',G+'bgb/__556d.html'],['§ 558 BGB',G+'bgb/__558.html'],['§ 557a BGB',G+'bgb/__557a.html'],['§ 557b BGB',G+'bgb/__557b.html']]],
 ['7','Eigentumswohnung prüfen','Teilungserklärung lesen · Protokolle der letzten 3 Jahre · Rücklage je m²','/checkliste',[['WEG – Wohnungseigentumsgesetz',G+'woeigg/']]],
 ['8','Technik und Energie','Energieausweis prüfen · Heizungsalter und mögliche Pflichten prüfen · Sanierungsfahrplan','/app/dashboard',[['Gebäudemodernisierungsgesetz (GModG, seit 29.07.2026)','https://www.gmodg.bund.de/']]],

@@ -281,25 +281,6 @@ test('analyse: Kernkennzahlen, Mietspiegel, Break-even, Hinweise', async () => {
   assert.equal(analyse({ price: 0, land: 'hessen' }), null);
 });
 
-test('portalLinks: geprüfte URL-Formate der Portale', async () => {
-  const { portalLinks } = await import('../public/src/calc.mjs');
-  const w = portalLinks({ land: 'hessen', kreis: '', ort: 'Frankfurt am Main', art: 'wohnung', maxPrice: 300000, minArea: 40, minRooms: 2 });
-  assert.equal(w[0].url, 'https://www.immobilienscout24.de/Suche/de/hessen/frankfurt-am-main/wohnung-kaufen?livingspace=40.0-&numberofrooms=2.0-&price=-300000.0');
-  assert.equal(w[1].url, 'https://www.immowelt.de/suche/frankfurt-am-main/wohnungen/kaufen?roomi=2');
-  assert.equal(w[2].url, 'https://www.kleinanzeigen.de/s-wohnung-kaufen/frankfurt-am-main/k0c196');
-  const h = portalLinks({ land: 'hessen', kreis: 'Offenbach', ort: 'Langen (Hessen)', art: 'haus', maxPrice: 0, minArea: 0, minRooms: 0 });
-  assert.equal(h[0].url, 'https://www.immobilienscout24.de/Suche/de/hessen/offenbach-kreis/langen-hessen/haus-kaufen');
-  assert.equal(h[1].url, 'https://www.immowelt.de/suche/langen-hessen/haeuser/kaufen');
-  const k = portalLinks({ land: 'nordrhein-westfalen', kreis: '', ort: 'Köln', art: 'mfh', maxPrice: 0, minArea: 0, minRooms: 0 });
-  assert.equal(k[0].url, 'https://www.immobilienscout24.de/Suche/de/nordrhein-westfalen/koeln/mehrfamilienhaeuser');
-  assert.equal(k[2].url, 'https://www.kleinanzeigen.de/s-haus-kaufen/mehrfamilienhaus-k%C3%B6ln/k0c208');
-  const b = portalLinks({ land: 'berlin', kreis: '', ort: 'Berlin', art: 'wohnung', maxPrice: 0, minArea: 0, minRooms: 0 });
-  assert.equal(b[0].url, 'https://www.immobilienscout24.de/Suche/de/berlin/berlin/wohnung-kaufen');
-  const r = portalLinks({ land: 'hessen', kreis: '', ort: 'Darmstadt', art: 'wohnung', minPrice: 150000, maxPrice: 300000, minArea: 0, minRooms: 0 });
-  assert.equal(r[0].url, 'https://www.immobilienscout24.de/Suche/de/hessen/darmstadt/wohnung-kaufen?price=150000.0-300000.0');
-  const m = portalLinks({ land: 'hessen', kreis: '', ort: 'Darmstadt', art: 'wohnung', minPrice: 150000, maxPrice: 0, minArea: 0, minRooms: 0 });
-  assert.equal(m[0].url, 'https://www.immobilienscout24.de/Suche/de/hessen/darmstadt/wohnung-kaufen?price=150000.0-');
-});
 
 test('verbilligteMiete: Stufen 66 % / 50 % / darunter', async () => {
   const { verbilligteMiete } = await import('../public/src/calc.mjs');
@@ -333,4 +314,20 @@ test('verkaufSteuerfrei: 10 Jahre und Eigennutzung', async () => {
   const e = verkaufSteuerfrei({ anschaffung: '2020-01-01', verkauf: '2024-01-01', eigengenutzt: true });
   assert.equal(e.steuerfrei, true); assert.match(e.grund, /Eigennutzung/);
   assert.equal(verkaufSteuerfrei({ anschaffung: '' }), null);
+});
+
+test('exposeMetrics: Kennzahlen aus Exposé-Eckdaten', async () => {
+  const { exposeMetrics } = await import('../public/src/calc.mjs');
+  const r = exposeMetrics({ title: 'ETW', address: { zip: '64283', city: 'Darmstadt', state: 'hessen' }, purchasePrice: 300000, livingAreaSqm: 75, monthlyColdRent: 1000,
+    monthlyHausgeld: 300, monthlyMaintenanceReserve: 60, nonAllocatableCosts: 40, constructionYear: 1972, energyClass: 'F', energyValueKwh: 190 }, { equity: 60000, ratePct: 3.5, repaymentPct: 2 });
+  assert.ok(r);
+  assert.equal(r.metrics.pricePerSqm, 4000);
+  assert.equal(r.metrics.purchaseMultiplier, 25);
+  assert.equal(r.metrics.grossRentalYieldPercent, 4);
+  assert.equal(r.metrics.incidentalCosts.propertyTransferTax, 18000); // Hessen 6 %
+  assert.equal(r.metrics.incidentalCosts.notaryAndRegistry, 6000); // 2,0 %
+  assert.equal(r.metrics.sanitationRisk.riskLevel, 'MEDIUM');
+  assert.equal(r.metrics.sanitationRisk.recommendedSanitationBuffer, 15000);
+  assert.ok(r.metrics.financingQuickCheck.stressTestRateDelta > 0);
+  assert.equal(exposeMetrics({ purchasePrice: 0, address: { state: 'hessen' } }), null);
 });

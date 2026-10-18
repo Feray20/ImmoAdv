@@ -1,7 +1,7 @@
 // App-Rahmen für das Konto: Handy wie eine App (Tab-Leiste unten), Desktop wie ein Investment-Tool (Seitenleiste).
 // Ansichten über #hash; vorhandene Karten werden den Ansichten zugeordnet. Modus Einsteiger/Profi frei wählbar.
 import { openBuy, planIcon, resumeIntent } from './buy.mjs';
-import { rank, GREST, portfolio, upcoming } from './calc.mjs';
+import { rank, GREST, portfolio, upcoming, readiness } from './calc.mjs';
 const GREST_KEYS = Object.keys(GREST);
 
 const $ = (id) => document.getElementById(id);
@@ -13,7 +13,7 @@ const cmpTable = (v, hl = -1) => (v?.zeilen?.length ? `<details class="cmp" open
 
 const ICON = {
   start: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
-  suche: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  suche: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M12 17v-6M9.5 13.5 12 11l2.5 2.5"/>',
   objekte: '<path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/>',
   lernen: '<path d="M2 8l10-5 10 5-10 5z"/><path d="M6 10v5c0 2 3 4 6 4s6-2 6-4v-5"/>',
   angebot: '<path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
@@ -24,8 +24,8 @@ const ICON = {
 const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
 const VIEWS = {
-  einsteiger: [['start', 'Übersicht'], ['suche', 'Suche'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
-  profi: [['start', 'Cockpit'], ['suche', 'Suche & Analyse'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer & AfA'], ['lernen', 'Fachwissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
+  einsteiger: [['start', 'Übersicht'], ['suche', 'Objekt prüfen'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
+  profi: [['start', 'Cockpit'], ['suche', 'Import & Analyse'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer & AfA'], ['lernen', 'Fachwissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
 };
 const TABS = ['start', 'suche', 'objekte', 'werkzeuge', 'lernen', 'konto'];
 
@@ -39,7 +39,7 @@ const LERN = [
   ['fristen', 'Wenn die Zinsbindung endet', 'Anschlussfinanzierung, Kipp-Punkt und wichtige Fristen.', [23, 24], ['Fristen-Rechner', '/fristen'], 'Leisten & Finanzieren'],
   ['beruf', 'Was die Bank je nach Beruf prüft', 'Angestellt, selbstständig, verbeamtet – und welche Unterlagen.', [4], ['Erwerbsstatus im Detail', '/wissen/erwerbsstatus'], 'Leisten & Finanzieren'],
   ['beleihung', 'Beleihungswert: wie die Bank rechnet', 'Warum die Bank anders bewertet als der Verkäufer.', [7], ['Deal-Scorecard', '/rechner/scorecard'], 'Leisten & Finanzieren'],
-  ['suche', 'Objekte suchen und vergleichen', 'Vom Inserat zur Kennzahl – und mehrere Angebote nebeneinander.', [10], ['Suche & Analyse', '#suche'], 'Objekt finden & prüfen'],
+  ['suche', 'Exposés prüfen und vergleichen', 'Vom Exposé zur Kennzahl – und mehrere Angebote nebeneinander.', [10], ['Import & Analyse', '#suche'], 'Objekt finden & prüfen'],
   ['etw', 'Eigentumswohnung richtig prüfen', 'Teilungserklärung, Protokolle, Rücklage.', [8, 9], ['Unterlagen-Checkliste', '/checkliste'], 'Objekt finden & prüfen'],
   ['cashflow', 'Rendite und Cashflow', 'Brutto, netto, vor und nach Steuern.', [12, 13, 14], ['Cashflow-Rechner', '/rechner/cashflow'], 'Rendite, Steuer & Miete'],
   ['steuer', 'Steuern: AfA, 15-%-Grenze, steuerfreier Verkauf', 'Was die Steuer beim Kauf, Vermieten und Verkaufen bedeutet.', [15, 16, 17], ['Steuer-Bereich', '#steuer'], 'Rendite, Steuer & Miete'],
@@ -51,7 +51,7 @@ const LERN = [
 // Die gewählte Phase steuert Startaktionen, Reihenfolge im Steuer-Bereich und empfohlene Wissensthemen.
 export const PHASES = [
   { name: 'Orientieren', plan: 'Erst verstehen, wie Geld, Eigenkapital und Finanzierung funktionieren – dann wissen Sie, was Sie sich leisten können.', steuer: 'kauf', lern: ['geld', 'budget', 'eigenkapital', 'annuitaet', 'beruf'],
-    actions: [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#lernen', 'Grundlagen auffrischen', 'Eigenkapital, Zins, Tilgung'], ['#suche', 'Immobilien ansehen', 'Suche bei den großen Portalen']] },
+    actions: [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#lernen', 'Grundlagen auffrischen', 'Eigenkapital, Zins, Tilgung'], ['#suche', 'Exposé prüfen', 'PDF oder Link hochladen – Kennzahlen sofort']] },
   { name: 'Objekte prüfen', plan: 'Lernen Sie, Angebote wie ein Profi zu lesen: Rendite, Cashflow, Zustand und was die Bank vom Objekt hält.', steuer: 'kauf', lern: ['suche', 'etw', 'cashflow', 'beleihung'],
     actions: [['#suche', 'Objekt analysieren', 'Inserat übernehmen, Kennzahlen sehen'], ['#objekte', 'Objekte im Konto', 'Anlegen, vergleichen, Bankreife'], ['#steuer', 'Steuern beim Kauf', 'Kaufkosten, Inventar, AfA']] },
   { name: 'Bankgespräch', plan: 'Bereiten Sie sich auf die Bank vor: Unterlagen, Beleihungswert und wie Ihr Beruf bewertet wird.', steuer: 'kauf', lern: ['unterlagen', 'beruf', 'beleihung', 'annuitaet'],
@@ -257,7 +257,7 @@ export function setupApp({ u, d, saveData, reload }) {
     ${views.map(([k, l]) => `<a class="app-nav" data-go="${k}" href="#${k}">${svg(k)}<span>${l}</span></a>`).join('')}
     <div class="app-side-foot"><span class="app-user">${esc(u.email)}</span><button class="text-btn" id="appLogout" type="button">Abmelden</button></div></nav>`);
   const main = app.querySelector('main');
-  main.insertAdjacentHTML('afterbegin', `<div class="app-top"><a class="brand app-top-brand" href="/"><img class="brand-logo" src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><h1 id="appTitle"></h1>
+  main.insertAdjacentHTML('afterbegin', `<div class="app-top"><a class="brand app-top-brand" href="/"><img class="brand-logo" src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="app-top-t"><small class="app-top-k">Privatbereich · ${mode === 'profi' ? 'Profi' : 'Einsteiger'}</small><h1 id="appTitle"></h1></div>
     <button class="mode-chip" id="modeChip" type="button" aria-label="Modus wechseln">${mode === 'profi' ? 'Profi' : 'Einsteiger'} <span aria-hidden="true">⇄</span></button></div>`);
   app.insertAdjacentHTML('beforeend', `<nav class="app-tabs" aria-label="Schnellnavigation">${TABS.map((k) => `<a class="app-tab" data-go="${k}" href="#${k}">${svg(k)}<span>${k === 'werkzeuge' ? 'Tools' : views.find((v) => v[0] === k)[1].split(' ')[0]}</span></a>`).join('')}</nav>`);
   $('appLogout').onclick = () => document.getElementById('logout')?.click();
@@ -327,6 +327,18 @@ export function setupApp({ u, d, saveData, reload }) {
     bindPw(u);
   }
   personalCard(grid);
+  // Verbesserungsvorschläge (Konto): gehen an den Web-Admin, Bereich Privatkunden.
+  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide fb-card-b2c" data-view="konto" id="fbCardB2C"><h3>Verbesserungsvorschläge</h3><div id="fbBodyB2C"></div></article>`);
+  import('/src/feedback-ui.mjs').then((m) => m.mountFeedback($('fbBodyB2C'), { area: 'b2c' })).catch(() => {});
+  // Gekaufter Leitfaden (Zusatzprodukt): nur sichtbar, wenn erworben.
+  fetch('/api/me/leitfaden', { headers: { Authorization: 'Bearer ' + sessToken() }, cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((L) => {
+    if (!L?.owned) return;
+    grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide lf-card" data-view="konto" id="lfCard"><h3>${esc(L.titel)}</h3><p class="form-note">${esc(L.hinweis)} · Stand ${esc(L.version)}</p>
+      ${L.abschnitte.map((a) => `<details class="lf-sec"><summary>${esc(a.titel)}</summary>${a.einleitung ? `<p>${esc(a.einleitung)}</p>` : ''}<ul class="lf-list">${a.punkte.map(([t, x]) => `<li><label class="chk"><input type="checkbox"> <span><b>${esc(t)}</b> – ${esc(x)}</span></label></li>`).join('')}</ul></details>`).join('')}
+      <p><button class="btn btn-outline" type="button" id="lfPrint">Drucken / als PDF speichern</button></p></article>`);
+    $('lfPrint').onclick = () => { document.querySelectorAll('#lfCard details').forEach((x) => { x.open = true; }); document.body.classList.add('lf-printing'); addEventListener('afterprint', () => document.body.classList.remove('lf-printing'), { once: true }); window.print(); };
+    window.__iaApplyView?.();
+  }).catch(() => {});
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="suche" id="sucheView"></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="werkzeuge" id="toolsView"><p class="form-note">Software-Tools werden geladen …</p></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);
@@ -340,16 +352,18 @@ export function setupApp({ u, d, saveData, reload }) {
   import('/src/field-help.mjs').then((m) => m.watchHelp(grid)).catch(() => {});
   import('/src/retention.mjs').then(async (m) => { const ac = await getAccess(); m.mountRetention(grid, { mode, d, u, saveData, paid: ac.tier === 'pro' || ac.b2b }); if (typeof window.__iaApplyView === 'function') window.__iaApplyView(); }).catch(() => {});
 
+  const CLASSIFIED = new WeakSet();
   const apply = () => {
     const v = (location.hash.slice(1) || 'start').split('?')[0];
     const cur = views.some((x) => x[0] === v) ? v : 'start';
     const sc = grid.querySelector('.start-card'); if (sc && grid.firstElementChild !== sc) grid.prepend(sc);
-    [...grid.children].forEach((el) => { el.dataset.view = classify(el); el.classList.toggle('v-show', el.dataset.view.split(' ').includes(cur)); });
+    // Einordnung je Karte nur einmal berechnen (vorher bei jedem Wechsel für alle Karten → spürbare Hänger).
+    [...grid.children].forEach((el) => { if (!CLASSIFIED.has(el)) { el.dataset.view = classify(el); CLASSIFIED.add(el); } el.classList.toggle('v-show', el.dataset.view.split(' ').includes(cur)); });
     document.querySelectorAll('[data-go]').forEach((a) => a.classList.toggle('on', a.dataset.go === cur));
     $('appTitle').textContent = views.find((x) => x[0] === cur)[1];
     if (cur === 'suche' && !$('sucheView').dataset.ready) {
       $('sucheView').dataset.ready = '1';
-      import('/src/objekt-ui.mjs').then((m) => m.mountObjekt($('sucheView'), { pdf: true, profile: APP?.d?.profile })).catch(() => { $('sucheView').innerHTML = '<p class="auth-message error">Suche konnte nicht geladen werden.</p>'; });
+      import('/src/objekt-ui.mjs').then((m) => m.mountObjekt($('sucheView'), { pdf: true, profile: APP?.d?.profile })).catch(() => { $('sucheView').innerHTML = '<p class="auth-message error">Import konnte nicht geladen werden.</p>'; });
     }
     if (cur === 'steuer' && !$('steuerView').dataset.ready) {
       $('steuerView').dataset.ready = '1';
@@ -362,12 +376,34 @@ export function setupApp({ u, d, saveData, reload }) {
   // Scroll-Animation oder vom Browser wiederhergestellte Position.
   const toTop = () => { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })); };
   try { history.scrollRestoration = 'manual'; } catch { /* ältere Browser */ }
-  window.__iaHash = () => { const v = (location.hash.slice(1) || 'start').split('?')[0]; apply(); if (v === '' || views.some((x) => x[0] === v)) toTop(); };
+  // Nicht blockierender Wechsel: aktiven Reiter sofort markieren (sichtbare Rückmeldung beim Tippen),
+  // die eigentliche Umschaltung im nächsten Frame – entspricht useTransition in React.
+  let pend = 0;
+  const schedule = () => { if (pend) return; pend = requestAnimationFrame(() => { pend = 0; apply(); }); };
+  window.__iaHash = () => {
+    const v = (location.hash.slice(1) || 'start').split('?')[0];
+    const isView = v === '' || views.some((x) => x[0] === v);
+    if (isView) {
+      try { const ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) ae.blur(); } catch { /* ignore */ }
+      const cur = views.some((x) => x[0] === v) ? v : 'start';
+      document.querySelectorAll('[data-go]').forEach((a) => a.classList.toggle('on', a.dataset.go === cur));
+      toTop();
+    }
+    schedule();
+    if (isView) requestAnimationFrame(toTop);
+  };
   window.addEventListener('hashchange', window.__iaHash);
   if (!window.__iaTopBound) { window.__iaTopBound = true; document.addEventListener('click', (e) => { const a = e.target.closest?.('a[data-go], .app-tab, .app-nav'); if (a && a.getAttribute('href') === location.hash) toTop(); }); }
   window.__iaApplyView = apply;
-  new MutationObserver(apply).observe(grid, { childList: true });
+  new MutationObserver(() => schedule()).observe(grid, { childList: true });
   apply();
+  // Erster Aufbau nach Login/Neuladen: immer ganz oben beginnen (kein vom Browser wiederhergestellter Scrollstand,
+  // kein Herunterscrollen durch Fokus auf Eingabefelder weiter unten, z. B. im Bereich Konto).
+  if (!window.__iaBooted) {
+    window.__iaBooted = true;
+    try { if (document.activeElement && document.activeElement !== document.body && main.contains(document.activeElement)) document.activeElement.blur(); } catch { /* ignore */ }
+    toTop();
+  }
 }
 
 // ImmoAdv Studio (Bereich Objekte): Produkt wählen – BankReady (Kreditmappe) oder RenditeRadar (Objekt-Analyse) –
@@ -388,6 +424,23 @@ let ACCESS = null;
 const getAccess = () => (ACCESS ||= fetch('/api/me/access', { headers: { Authorization: 'Bearer ' + sessToken() }, cache: 'no-store' }).then((r) => (r.ok ? r.json() : { paid: false })).catch(() => ({ paid: false })));
 const DEMO_NOTE = '<strong>Transparenter Entwurf:</strong> So sieht Ihre Kreditmappe für die Bank aus – noch mit Wasserzeichen. Beim Freischalten entfällt es, die Echtheitsprüfung per QR-Code kommt dazu, und Ihre Eingaben bleiben erhalten.';
 const UNLOCK = '<button type="button" class="btn btn-pay unlock-btn" data-unlock="credit-map">Kreditmappe freischalten · 39 €</button>';
+// Kontext für den Kaufdialog – nur echte Werte aus dem Konto (gewähltes bzw. erstes Objekt, Finanzprofil).
+function buyCtx() {
+  const d = APP?.d; if (!d) return {};
+  const objs = (Array.isArray(d.objects) ? d.objects : []).filter((o) => Number(o.price) > 0);
+  const sel = document.getElementById('kmObj')?.value;
+  const o = objs.find((x) => x.id === sel) || objs[0];
+  const p = d.profile || {};
+  const fin = [Number(p.netIncome) > 0, p.equity !== undefined && p.equity !== '', Boolean(p.employment), Number(p.householdSize) > 0];
+  const ctx = { finPct: (fin.filter(Boolean).length / fin.length) * 100 };
+  if (o) {
+    const r = readiness(o, []);
+    const g = r.groups.filter((x) => x.key !== 'unterlagen');
+    const done = g.reduce((a, x) => a + x.done, 0), total = g.reduce((a, x) => a + x.total, 0);
+    Object.assign(ctx, { loan: Number(o.loan) || autoLoan(o), ratePct: Number(o.interestPct) || null, gaps: g.flatMap((x) => x.missing), mappePct: total ? (done / total) * 100 : null });
+  }
+  return ctx;
+}
 // Ein-Klick-Freischaltung aus dem Entwurf: öffnet direkt den Kaufdialog der Kreditmappe.
 document.addEventListener('click', async (e) => {
   const b = e.target.closest?.('[data-unlock]');
@@ -395,7 +448,7 @@ document.addEventListener('click', async (e) => {
   e.preventDefault();
   const P = await fetch('/data/preise.json').then((r) => r.json()).catch(() => null);
   const o = P?.privat?.plans?.find((x) => x.id === b.dataset.unlock);
-  if (o) openBuy(o, { onError: (t) => alert(t) }); else location.hash = '#angebot';
+  if (o) openBuy(o, { onError: (t) => alert(t), ctx: buyCtx() }); else location.hash = '#angebot';
 });
 const sessToken = () => { try { return JSON.parse(localStorage.getItem('immoadv-auth-session-v1') || 'null')?.access_token || ''; } catch { return ''; } };
 // Darlehen, wenn nicht angegeben: Kaufpreis + Nebenkosten − Eigenkapital (mindestens 0).
@@ -739,7 +792,7 @@ function fahrplan(idx, d) {
     [['Finanzprofil ausfüllen', 'Nettoeinkommen und Eigenkapital – daraus ergibt sich Ihr Budget.', '#konto', prof],
       ['Budget berechnen', 'Welche Rate und welcher Kaufpreis zu Ihnen passen.', '/rechner/budget', null],
       ['Grundlagen lernen', 'Geld, Eigenkapital, Zins und Tilgung – je wenige Minuten.', '#lernen', learned(['geld', 'eigenkapital', 'annuitaet'])]],
-    [['Erstes Objekt anlegen', 'Inserat übernehmen oder Eckdaten eintragen.', '#suche', objs.length > 0],
+    [['Erstes Objekt anlegen', 'Exposé hochladen oder Eckdaten eintragen.', '#suche', objs.length > 0],
       ['Kennzahlen prüfen', 'Rendite, Cashflow und Bankreife mit RenditeRadar.', '#objekte', null],
       ['Exposé lesen lernen', 'Was hinter Cashflow und Beleihung steckt.', '#lernen', learned(['cashflow', 'beleihung'])]],
     [['Finanzprofil vollständig', 'Die Bank prüft Einkommen und Eigenkapital zuerst.', '#konto', prof],
@@ -776,9 +829,9 @@ function proKpis(d) {
 function paths(mode, done) {
   const A = mode === 'profi'
     ? [['#objekte', 'Objekte & Analysen', 'RenditeRadar, DSCR, Cashflow nach Steuern'], ['#objekte', 'Kreditmappe (Studio)', 'BankReady für jedes Objekt'], ['/szenarien', 'Anschlusszins & Verkauf', 'Kipp-Zins, Forward, § 23 EStG'], ['/rechner/vergleich', 'Bankangebote vergleichen', 'Effektivzins, Restschuld, Gesamtkosten'], ['/cockpit', 'Stresstest-Cockpit', 'Zinsschock und Mietausfall']]
-    : [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#suche', 'Immobilie finden', 'Inserate der großen Portale'], ['#objekte', 'Objekt prüfen', 'Exposé oder Link – Rendite und Risiko'], ['#objekte', 'Kreditmappe erstellen', 'Bankfertig für Ihr Gespräch']];
+    : [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#suche', 'Exposé importieren', 'PDF oder Link – Kennzahlen sofort'], ['#objekte', 'Objekt prüfen', 'Exposé oder Link – Rendite und Risiko'], ['#objekte', 'Kreditmappe erstellen', 'Bankfertig für Ihr Gespräch']];
   const B = mode === 'profi'
-    ? [['#werkzeuge', 'Software-Tools', 'Portfolio, Betriebskosten, Fristen'], ['#steuer', 'Steuer & AfA', 'Anlage V, 15-%-Grenze, § 7b'], ['/rechner/afa', 'AfA-Plan', 'linear, degressiv, Sonder-AfA'], ['/rechner/mieterhoehung', 'Mieterhöhung', 'Kappungsgrenze, Briefentwurf'], ['/rechner', 'Rechner-Bibliothek', 'Mietrecht und Steuern'], ['#lernen', 'Fachwissen', `${done} von ${LERN.length} Themen`]]
+    ? [['#werkzeuge', 'Software-Tools', 'Portfolio, Betriebskosten, Fristen'], ['#steuer', 'Steuer & AfA', 'Anlage V, 15-%-Grenze, AfA § 7 Abs. 4 / Sonder-AfA § 7b'], ['/rechner/afa', 'AfA-Plan', 'linear, degressiv, Sonder-AfA'], ['/rechner/mieterhoehung', 'Mieterhöhung', 'Kappungsgrenze, Briefentwurf'], ['/rechner', 'Rechner-Bibliothek', 'Mietrecht und Steuern'], ['#lernen', 'Fachwissen', `${done} von ${LERN.length} Themen`]]
     : [['/rechner', 'Rechner-Bibliothek', 'Nebenkosten, Tilgung, Kaufen oder mieten'], ['/wissen/glossar', 'Lexikon', 'Fachbegriffe in einfachen Worten'], ['#steuer', 'Steuer-Grundlagen', 'Was Sie absetzen können'], ['#lernen', 'Lernplan', `${done} von ${LERN.length} Themen verstanden`]];
   const list = (xs, num) => `<ul class="path-list">${xs.map(([h, t, sub], i) => `<li><a href="${h}"><i>${num ? i + 1 : '›'}</i><span><b>${t}</b><small>${sub}</small></span><em aria-hidden="true">→</em></a></li>`).join('')}</ul>`;
   return `<div class="paths">
@@ -799,12 +852,14 @@ function startCard(mode, d) {
     return `<article class="dash-card wide start-card start-pro" data-view="start">
       <div class="stage-mini"><span class="stage-k">Stufe</span><strong><b class="stage-n">${ph.idx + 1}</b>${PH()[ph.idx].name}</strong><button type="button" class="link-btn stage-open">ändern</button><div id="rankSlot" class="rank-slot mini"></div></div>
       ${proKpis(d)}
+      <div id="cmMode"></div>
       ${paths('profi', done)}</article>`;
   }
   const tasks = fahrplan(ph.idx, d);
   const nextI = tasks.findIndex((x) => x[3] === false);
   return `<article class="dash-card wide start-card" data-view="start">${phasePicker(ph.idx, ph.chosen)}
     <div id="rankSlot" class="rank-slot"></div>
+    <div id="cmMode"></div>
     <h4 class="sc-h">Ihr Fahrplan für Stufe ${ph.idx + 1}</h4>
     <ol class="fp">${tasks.map(([t, sub, h, st], i) => `<li class="fp-i${st === true ? ' done' : ''}${i === nextI ? ' next' : ''}"><span class="fp-dot" aria-hidden="true">${st === true ? '✓' : i + 1}</span><span class="fp-t"><strong>${t}</strong><small>${sub}</small></span>${st === true ? '<span class="fp-st">erledigt</span>' : `<a class="btn ${i === nextI ? 'btn-dark' : 'btn-outline'} fp-go" href="${h}">${i === nextI ? 'Jetzt erledigen' : 'Öffnen'}</a>`}</li>`).join('')}</ol>
     <h4 class="sc-h">Ihre zwei Wege</h4>
@@ -812,6 +867,9 @@ function startCard(mode, d) {
 }
 
 function bindStart(mode, d, u, saveData, reload) {
+  // Modusabhängiges Cockpit (Einsteiger: Budget-Tacho · Profi: RenditeRadar, Vermögenskurve, Szenarien).
+  const cm = document.getElementById('cmMode');
+  if (cm) import('/src/cockpit-mode.mjs').then((m) => (mode === 'profi' ? m.mountProfi(cm, { d }) : m.mountEinsteiger(cm, { d, save: (x) => { d.profile = { ...(d.profile || {}), ...x }; saveData(u, d).catch(() => {}); } }))).catch(() => {});
   document.querySelectorAll('[data-phase]').forEach((b) => b.onclick = async () => {
     d.profile = { ...(d.profile || {}), phase: Number(b.dataset.phase) };
     b.closest('.ph-pick')?.querySelectorAll('.ph-btn').forEach((x) => x.classList.toggle('on', x === b));
@@ -952,7 +1010,7 @@ async function renderOffers(mode) {
     if (want) { const card = box.querySelector(`[data-buy="${CSS.escape(want)}"]`)?.closest('.offer'); if (card) { card.classList.add('offer-want'); card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
     box.querySelectorAll('[data-buy]').forEach((b) => b.onclick = () => {
       const offer = m.plans.find((x) => x.id === b.dataset.buy);
-      if (offer) openBuy(offer, { onError: (t) => alert(t) });
+      if (offer) openBuy(offer, { onError: (t) => alert(t), ctx: buyCtx() });
     });
   };
   draw();

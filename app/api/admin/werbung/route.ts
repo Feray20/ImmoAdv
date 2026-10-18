@@ -6,6 +6,7 @@ import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { adminAudit } from '@/lib/b2b/core';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
 import { unsubToken } from '@/lib/marketing/consent';
+import { customerScope, scopeError } from '@/lib/admin/scope';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,11 +36,14 @@ export async function GET(req: Request) {
     const { data } = await db.from('immo_newsletter_deliveries').select('email, ok, at').eq('send_id', sid).order('at').limit(5000);
     return j({ deliveries: data ?? [] });
   }
+  // Nur Kampagnen, Abonnenten und Versände des gewählten Bereichs.
+  const scope = customerScope(req);
+  if (!scope) return j(scopeError, 400);
   const [{ data: camps }, { data: stats }, { data: subs }, { data: sends }, { data: letters }] = await Promise.all([
-    db.from('immo_campaigns').select('*').order('created_at', { ascending: false }).limit(200),
+    db.from('immo_campaigns').select('*').eq('segment', scope).order('created_at', { ascending: false }).limit(200),
     db.rpc('admin_campaign_stats', { days: 365 }),
-    db.from('immo_newsletter').select('id, created_at, email, name, company, segment, source, confirmed_at, unsubscribed_at').order('created_at', { ascending: false }).limit(5000),
-    db.from('immo_newsletter_sends').select('id, created_at, campaign_slug, subject, segment, recipients, failed, actor').order('created_at', { ascending: false }).limit(100),
+    db.from('immo_newsletter').select('id, created_at, email, name, company, segment, source, confirmed_at, unsubscribed_at').eq('segment', scope).order('created_at', { ascending: false }).limit(5000),
+    db.from('immo_newsletter_sends').select('id, created_at, campaign_slug, subject, segment, recipients, failed, actor').eq('segment', scope).order('created_at', { ascending: false }).limit(100),
     db.from('immo_crm_activities').select('campaign').eq('type', 'brief').not('campaign', 'is', null).limit(20000),
   ]);
   const lettersBy: Record<string, number> = {};
@@ -47,7 +51,7 @@ export async function GET(req: Request) {
   const st = (stats || {}) as Record<string, { visitors: number; pageviews: number; requests: number; registrations: number }>;
   return j({
     campaigns: (camps ?? []).map((c) => ({ ...c, link: linkOf(c), stats: st[c.slug] || { visitors: 0, pageviews: 0, requests: 0, registrations: 0 }, letters: lettersBy[c.slug] || 0 })),
-    subscribers: subs ?? [], sends: sends ?? [], mail: mailConfigured(),
+    scope, subscribers: subs ?? [], sends: sends ?? [], mail: mailConfigured(),
   });
 }
 
@@ -63,6 +67,9 @@ export async function POST(req: Request) {
   if (auth instanceof NextResponse) return auth;
   if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
   const p = Act.safeParse(await req.json().catch(() => null));
+  // Anlegen und Versenden nur im gewählten Bereich (verhindert z. B. einen B2C-Versand aus der B2B-Ansicht).
+  const scope = customerScope(req);
+  if (p.success && (p.data.action === 'campaign' || p.data.action === 'send') && p.data.segment !== scope) return j({ error: 'Bereich passt nicht zur gewählten Ansicht (oben B2C/B2B).' }, 403);
   if (!p.success) return j({ error: `Bitte „${String(p.error.issues[0]?.path.at(-1) ?? '')}“ prüfen.` }, 400);
   const a = p.data, db = supabaseAdmin(), actor = auth.user.email;
   if (a.action === 'campaign') {

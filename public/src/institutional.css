@@ -238,7 +238,7 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 .ez-out .btn,.obj-actions .btn{white-space:normal;text-align:center}
 .feat-status.part{color:#0369A1;background:#E0F2FE}
 .glossar{margin:0}.gl-item{padding:14px 0;border-top:1px solid #E2E8F0;scroll-margin-top:90px}.gl-item:first-child{border-top:0}.gl-item[hidden]{display:none}.gl-item dt{font-weight:700;color:var(--ia-navy)}.gl-item dd{margin:4px 0 0;color:#334155;line-height:1.55}.gl-item:target dt{color:var(--ia-link)}.gl-anchor{display:block;position:relative;top:-90px}
-.route-hero h1{overflow-wrap:break-word;hyphens:auto;-webkit-hyphens:auto}.gl-search{grid-template-columns:1fr!important;margin-bottom:10px}.gl-search input{width:100%}.land-links a{min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center}
+.route-hero h1{overflow-wrap:break-word;hyphens:none;-webkit-hyphens:none;word-break:normal;text-wrap:balance}.gl-search{grid-template-columns:1fr!important;margin-bottom:10px}.gl-search input{width:100%}.land-links a{min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center}
 .acct-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}.acct-grid>*{min-width:0}.acct-grid h4{margin:0 0 6px;color:var(--ia-navy)}.acct-grid label{display:grid;gap:6px;margin:8px 0}.acct-grid input{border:1px solid var(--ia-hair);border-radius:4px;padding:8px 10px}.btn-danger{background:#B91C1C;color:#fff;border:1px solid #B91C1C}.btn-danger:disabled{opacity:.45;cursor:not-allowed}
 .obj-grid select{width:100%;min-width:0;border:1px solid var(--ia-hair);border-radius:4px;padding:8px 10px;background:#fff;color:var(--ia-navy);font:inherit;min-height:42px}
 .br-item{border-top:1px solid #E2E8F0;padding:10px 0}.br-item summary{display:grid;grid-template-columns:minmax(0,1fr) minmax(80px,2fr) auto;gap:12px;align-items:center;cursor:pointer;list-style:none}.br-item summary::-webkit-details-marker{display:none}.br-name{font-weight:600;color:var(--ia-navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.br-bar{display:block;height:8px;border-radius:4px;background:#E2E8F0;overflow:hidden}.br-bar>span{display:block;height:100%;background:linear-gradient(90deg,#0F2C59,#0284C7)}.br-groups{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}.frist-list li.hint{opacity:.85}
@@ -773,7 +773,7 @@ body{max-width:100%;overflow-x:clip}
 img,svg,video,canvas,iframe{max-width:100%}
 /* Lange deutsche Wörter (z. B. „Beleihungswertermittlungsverordnung“) dürfen auf schmalen Handys umbrechen, statt die Seite zu verbreitern. */
 @media (max-width:480px){
-  main p,main li,main dd,main dt,main td,main label,main em,main .module-card,main .dash-card{overflow-wrap:anywhere;hyphens:auto;-webkit-hyphens:auto}
+  main p,main li,main dd,main dt,main td,main label,main em,main .module-card,main .dash-card{overflow-wrap:break-word;hyphens:manual;-webkit-hyphens:manual}
   main h1,main h2,main h3,main h4,main nav,main nav a,main .btn{overflow-wrap:normal;hyphens:manual}
   main input,main select,main textarea,main .btn{max-width:100%}
   main .btn{white-space:normal}
@@ -1234,3 +1234,107 @@ img,svg,video,canvas,iframe{max-width:100%}
 /* Profi-Schwerpunkte im Stufen-Dialog: eigene Werkzeug-Chips */
 .stage-opts.pro .stage-opt{border-color:#C4B5FD}.stage-opts.pro .stage-n{background:#6D28D9}
 .stage-tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.stage-tools i{font-style:normal;font-size:12px;font-weight:700;color:#5B21B6;background:#EDE9FE;border-radius:999px;padding:2px 8px}
+
+/* Etappe 1: Umbruch nie buchstabenweise. 'break-word' (statt 'anywhere') hält die Mindestbreite eines Wortes,
+   damit Grid-/Flex-Spalten nicht auf einen Buchstaben zusammenfallen. Überschriften ohne automatische Silbentrennung. */
+h1,h2,h3,.route-hero h1,.hero h1{hyphens:none;-webkit-hyphens:none;word-break:normal;overflow-wrap:break-word}
+@media (max-width:640px){.route-hero h1,.hero h1{font-size:clamp(1.5rem,6.4vw,1.9rem);line-height:1.18;letter-spacing:-.01em}}
+
+/* Etappe 1: Privatbereich – Logo + Ebene immer oben */
+.app-top-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.app-top-k{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0284C7}
+.app-top .app-top-t h1{flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:900px){.app-top{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);min-height:56px;padding-top:8px;padding-bottom:8px}.app-top .app-top-t h1{font-size:17px;line-height:1.2}.app-top-k{font-size:10.5px}.app-top-brand,.mode-chip{min-height:44px}}
+
+/* Markenlader: ImmoAdv-Logo bleibt fest in der Mitte, ein Ring in Markenfarben dreht sich darum, das Logo pulsiert leicht. */
+.ia-ll{position:relative;width:84px;height:84px;display:grid;place-items:center}
+.ia-ll::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(2,132,199,0) 0deg,#38BDF8 120deg,#0284C7 220deg,#0F2C59 300deg,rgba(15,44,89,0) 360deg);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));animation:iaSpin 1s linear infinite}
+.ia-ll svg{width:46px;height:auto;animation:iaPulse 1.6s ease-in-out infinite}
+.ia-ll-s{width:56px;height:56px}.ia-ll-s svg{width:30px}
+.ia-ll-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 12px;color:#64748B;font-size:14px}
+.ia-work.ok .ia-ll::before{animation:none;background:#10B981}
+@keyframes iaPulse{0%,100%{transform:scale(1)}50%{transform:scale(.9)}}
+@media (prefers-reduced-motion:reduce){.ia-ll::before,.ia-ll svg{animation:none}}
+
+/* Verbesserungsvorschläge (Web-Admin und Portale) */
+.fb-list{display:grid;gap:12px;margin-top:12px}
+.fb-card{border:1px solid #E2E8F0;border-radius:12px;padding:14px;background:#fff;display:grid;gap:10px}
+.fb-card header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.fb-card header small{display:block;color:#64748B;font-size:12.5px;text-transform:none;letter-spacing:0;margin-top:2px}
+.fb-text{margin:0;white-space:pre-wrap;color:#0F172A;line-height:1.5}
+.fb-stars{display:inline-flex;gap:2px;vertical-align:middle}.fb-stars i,.fb-stars button{font-style:normal;color:#CBD5E1;font-size:18px;line-height:1}
+.fb-stars button{border:0;background:none;cursor:pointer;min-width:36px;min-height:36px;font-size:24px;padding:0}.fb-stars .on{color:#F59E0B}
+.fb-admin{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;border-top:1px solid #F1F5F9;padding-top:10px}
+.fb-admin label{display:grid;gap:4px;font-size:13px;font-weight:600;color:#334155}.fb-admin .fb-wide{grid-column:1/-1}
+.fb-admin select,.fb-admin textarea{border:1px solid #CBD5E1;border-radius:8px;padding:8px 10px;font:inherit;width:100%}
+@media (max-width:640px){.fb-admin{grid-template-columns:1fr}}
+.fb-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}.fb-form .fb-wide{grid-column:1/-1}
+.fb-form label{display:grid;gap:6px;font-size:14px;font-weight:600;color:#334155}
+.fb-form select,.fb-form textarea{border:1px solid #CBD5E1;border-radius:10px;padding:10px 12px;font:inherit;width:100%;background:#fff}
+.fb-l{display:block;font-size:14px;font-weight:600;color:#334155;margin-bottom:4px}.fb-imp{display:inline;font-size:13px;color:#64748B;text-transform:none;letter-spacing:0}
+.fb-act{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.fb-h{margin:18px 0 6px;color:#0F2C59}.fb-mine ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.fb-mine li{border:1px solid #E2E8F0;border-radius:10px;padding:10px 12px;background:#fff}.fb-mine li small{display:block;color:#64748B;font-size:12.5px;text-transform:none;letter-spacing:0}
+.fb-mine li p{margin:6px 0 0;font-size:14px}.fb-ans{background:#F0F9FF;border-radius:8px;padding:8px 10px}
+@media (max-width:640px){.fb-form{grid-template-columns:1fr}}
+/* Etappe 3: Objekt- & Dokumenten-Import (ersetzt die Immobiliensuche) */
+.ox{display:grid;gap:12px;margin-bottom:18px}
+.ox-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:12px}
+.ox-drop{display:grid;justify-items:center;align-content:center;gap:6px;text-align:center;min-height:170px;padding:22px 16px;border:2px dashed #7DD3FC;border-radius:16px;background:#F0F9FF;cursor:pointer;transition:background .15s,border-color .15s}
+.ox-drop:hover,.ox-drop.on,.ox-drop:focus-visible{background:#E0F2FE;border-color:#0284C7;outline:none}
+.ox-drop svg{width:44px;height:44px;fill:none;stroke:#0284C7;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ox-drop strong{font-size:17px;color:#0F2C59}.ox-drop span{font-size:13.5px;color:#475569;max-width:34ch}
+.ox-link{display:grid;gap:8px;align-content:start;padding:16px;border:1px solid #E2E8F0;border-radius:16px;background:#fff}
+.ox-link label{display:grid;gap:2px}.ox-link label strong{color:#0F2C59}.ox-link label span{font-size:13.5px;color:#64748B}
+.ox-row{display:flex;gap:8px}.ox-row input{flex:1;min-width:0;border:1px solid #CBD5E1;border-radius:10px;padding:10px 12px;min-height:46px}
+.ox-more{border:1px solid #E2E8F0;border-radius:12px;padding:10px 14px;background:#fff}.ox-more summary{font-weight:700;color:#0369A1;min-height:36px;align-items:center}
+.ox-metrics:empty{display:none}.ox-metrics{border:1px solid #E2E8F0;border-radius:16px;padding:14px;background:#fff}.ox-metrics h3{margin:0 0 10px;color:#0F2C59}
+.ox-two{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-top:10px;align-items:start}
+.ox-risk{display:grid;gap:4px;padding:14px;border-radius:12px;border:1px solid #E2E8F0}.ox-risk small{font-size:12px;color:#64748B;text-transform:uppercase;letter-spacing:.06em}.ox-risk strong{font-size:20px}.ox-risk span{font-size:13.5px;color:#334155}
+.ox-risk.ok{background:#F0FDF4;border-color:#BBF7D0}.ox-risk.ok strong{color:#15803D}.ox-risk.warn{background:#FFFBEB;border-color:#FDE68A}.ox-risk.warn strong{color:#B45309}.ox-risk.bad{background:#FEF2F2;border-color:#FECACA}.ox-risk.bad strong{color:#B91C1C}
+@media (max-width:760px){.ox-grid,.ox-two{grid-template-columns:1fr}.ox-drop{min-height:140px}}
+.ox,.ox>*,.ox-grid>*,.ox-two>*,.ox-metrics{min-width:0;max-width:100%}
+.ox-row button{flex:none}.ox-two table{width:100%;table-layout:auto}.ox-two td:last-child{text-align:right;white-space:nowrap}
+.ox-metrics .an-chips{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+.ox-link{grid-template-columns:minmax(0,1fr)}.ox-row input{width:100%}
+/* Etappe 4: Cockpit je Modus */
+.cm{display:grid;gap:12px;margin:8px 0 16px}
+.cm-in{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.cm-in label,.cm-pro-h label{display:grid;gap:4px;font-size:13px;font-weight:600;color:#334155}
+.cm-in input,.cm-in select,.cm-pro-h select{border:1px solid #CBD5E1;border-radius:10px;padding:9px 11px;min-height:44px;background:#fff;width:100%}
+.cm-empty{margin:0;padding:14px;border:1px dashed #CBD5E1;border-radius:12px;color:#475569;background:#F8FAFC}
+.cm-grid{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:14px;align-items:center}
+.cm-tacho{display:grid;justify-items:center;text-align:center;padding:10px;border-radius:14px;background:#F8FAFC;border:1px solid #E2E8F0}
+.cm-tacho .tacho{width:100%;max-width:210px}.cm-tacho strong{font-size:20px}.cm-tacho small{font-size:12.5px;color:#475569;text-transform:none;letter-spacing:0}
+.cm-tacho.ok strong{color:#15803D}.cm-tacho.warn strong{color:#B45309}.cm-tacho.bad strong{color:#B91C1C}
+.cm-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.cm-k{display:grid;gap:2px;padding:12px;border:1px solid #E2E8F0;border-radius:12px;background:#fff;min-width:0}
+.cm-k small{font-size:12px;color:#64748B;text-transform:none;letter-spacing:0}.cm-k strong{font-size:19px;color:#0F2C59}.cm-k span{font-size:12.5px;color:#475569}
+.cm-k.ok{border-color:#BBF7D0;background:#F0FDF4}.cm-k.warn{border-color:#FDE68A;background:#FFFBEB}.cm-k.bad{border-color:#FECACA;background:#FEF2F2}
+.amp{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}.amp.ok{background:#22C55E}.amp.warn{background:#F59E0B}.amp.bad{background:#EF4444}
+.cm-hh small{display:block;font-size:12.5px;color:#64748B;text-transform:none;letter-spacing:0;margin-bottom:6px}
+.cm-bar{display:flex;height:16px;border-radius:999px;overflow:hidden;background:#F1F5F9}.cm-bar span{height:100%}
+.b-out{background:#94A3B8}.b-wohn{background:#0284C7}.b-rest{background:#22C55E}.b-rest.neg{background:#EF4444}
+.cm-leg{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px;font-size:13px;color:#334155}.cm-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
+.tipw{white-space:nowrap}.tip{display:inline-grid;place-items:center;width:20px;height:20px;margin-left:4px;border-radius:50%;border:1px solid #93C5FD;background:#EFF6FF;color:#0369A1;font-size:12px;font-weight:800;cursor:pointer;vertical-align:1px;padding:0;position:relative}
+.tip::after{content:"";position:absolute;inset:-12px}
+.tip-pop{display:block;margin:6px 0;padding:10px 12px;border-radius:10px;background:#0F2C59;color:#fff;font-size:13.5px;line-height:1.45;white-space:normal;max-width:34ch;font-weight:400;text-transform:none;letter-spacing:0}
+.cm-pro-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:10px}
+.cm-pro-g{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px}
+.cm-card{border:1px solid #E2E8F0;border-radius:14px;padding:12px;background:#fff;min-width:0}.cm-card h5{margin:0 0 6px;font-size:15px;color:#0F2C59}
+.radar{width:100%;max-width:300px;display:block;margin:auto;overflow:visible}.radar .rg{fill:none;stroke:#E2E8F0}.radar .rp{fill:rgba(2,132,199,.22);stroke:#0284C7;stroke-width:2}
+.radar .rl{font-size:10px;fill:#334155;font-weight:700}.radar .rv{font-size:9.5px;fill:#64748B}
+.wcurve{width:100%;display:block}.wcurve .wl{fill:none;stroke:#0284C7;stroke-width:2.5}.wcurve .wa{fill:rgba(2,132,199,.12)}.wcurve .wz{stroke:#CBD5E1;stroke-dasharray:3 3}.wcurve .wt{font-size:9px;fill:#64748B}.wcurve .wv{font-size:11px;font-weight:800;fill:#0F2C59}
+.cm-sl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:10px}
+.cm-sl label{display:grid;gap:4px;font-size:13px;font-weight:600;color:#334155}.cm-sl input[type=range]{width:100%;min-height:32px;accent-color:#0284C7}.cm-sl output{font-weight:800;color:#0F2C59}
+@media (max-width:760px){.cm-in{grid-template-columns:1fr 1fr}.cm-grid,.cm-pro-g,.cm-sl{grid-template-columns:1fr}}
+@media (max-width:420px){.cm-in{grid-template-columns:1fr}}
+/* Etappe 6: Kaufdialog mit echten Zahlen, Zusatzprodukt */
+.buy-steps{list-style:none;margin:10px 0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;counter-reset:bs}
+.buy-steps li{display:grid;gap:2px;padding:8px;border-radius:10px;background:#F1F5F9;font-size:12.5px;color:#475569;text-align:center}.buy-steps li b{font-size:15px;color:#0F2C59}
+.buy-steps li.done{background:#DCFCE7}.buy-steps li.done b{color:#15803D}.buy-steps li.on{background:#0F2C59;color:#E2E8F0}.buy-steps li.on b{color:#fff}
+.buy-anchor,.buy-gaps{margin:8px 0;padding:10px 12px;border-radius:10px;font-size:13.5px;line-height:1.5}
+.buy-anchor{background:#F0F9FF;border:1px solid #BAE6FD;color:#0F172A}.buy-gaps{background:#FFFBEB;border:1px solid #FDE68A;color:#78350F}
+.buy-bump{display:flex;gap:10px;align-items:flex-start;margin:10px 0;padding:12px;border:2px dashed #CBD5E1;border-radius:12px;cursor:pointer}
+.buy-bump input{width:22px;height:22px;flex:none;margin-top:2px}.buy-bump strong{display:block;color:#0F2C59;font-size:14px}.buy-bump small{display:block;font-size:12.5px;color:#475569;text-transform:none;letter-spacing:0}
+.lf-sec{border-top:1px solid #E2E8F0;padding:8px 0}.lf-sec summary{font-weight:700;color:#0F2C59;min-height:40px;align-items:center}.lf-list{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}.lf-list .chk{align-items:flex-start;font-size:14px;line-height:1.5}
+@media print{body.lf-printing .dash-card:not(#lfCard),body.lf-printing .app-side,body.lf-printing .app-tabs,body.lf-printing .app-top{display:none!important}}

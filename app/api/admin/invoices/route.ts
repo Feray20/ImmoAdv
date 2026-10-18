@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { adminAudit, type B2BAccount } from '@/lib/b2b/core';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
+import { customerScope, scopeError } from '@/lib/admin/scope';
 import { bankDetails, buyerFromAccount, issueInvoice, loadInvoicePdf, type InvoiceRow } from '@/lib/b2b/invoice';
 
 export const runtime = 'nodejs';
@@ -34,7 +35,10 @@ export async function GET(req: Request) {
     });
   }
   const q = (u.searchParams.get('q') || '').trim();
+  const scope = customerScope(req);
+  if (!scope) return j(scopeError, 400);
   let query = db.from('immo_invoices').select('id, invoice_number, kind, refers_to, source, account_id, buyer, net_cents, vat_cents, gross_cents, payment_method, payment_status, issue_date, due_date, paid_at, pdf_sha256, stripe_pdf_url, created_at').order('created_at', { ascending: false }).limit(1000);
+  query = scope === 'b2b' ? query.not('account_id', 'is', null) : query.is('account_id', null);
   if (q) query = query.ilike('invoice_number', `%${q.replace(/[%_]/g, '')}%`);
   const { data, error } = await query;
   if (error) return j({ error: error.message }, 500);

@@ -118,7 +118,7 @@ async function run(files, box, ctx) {
   S = {
     docs, facts: f, info: ctx.info, tab: 'berater', slides: ['titel', 'ueberblick', 'varianten', 'stress', 'unterlagen', 'schritte'],
     inputs: {
-      kunde: '', kaufpreis: f.kaufpreis || 0, nkPct: 0.105, modern: 0, eigenkapital: f.eigenkapital || 0, abschlag: 0.1,
+      kunde: '', objekt: '', flaeche: f.flaeche || 0, baujahr: f.baujahr || 0, energie: f.klasse || '', kaufpreis: f.kaufpreis || 0, nkPct: 0.105, modern: 0, eigenkapital: f.eigenkapital || 0, abschlag: 0.1,
       netto: f.nettoMonat || 0, miete: f.kaltmiete || 0, hausgeld: f.hausgeld || 0, sonst: 0, personen: 2, lebens1: 1000, lebensWeitere: 350,
       varianten: DEF_VAR.map((v) => ({ ...v })),
     },
@@ -164,7 +164,7 @@ function berater(c, f, sv, miss) {
       ${v0.stress > v0.rate * 1.2 && v0.rest ? `<p class="fa-flag warn">Anschlussrisiko: Rate steigt bei +2 Prozentpunkten um ${P(v0.stress / v0.rate - 1, 0)}.</p>` : ''}
       ${f.lasten.length ? `<p class="fa-flag warn">Grundbuch Abt. II: ${esc(f.lasten.join(', '))}</p>` : ''}</section>
     <section class="pt-card"><h2>Eckdaten – aus den Unterlagen übernommen, bitte prüfen</h2>
-      <div class="fa-in">${inField('kunde', 'Kunde (für Präsentation)', i.kunde, 'text')}${inField('kaufpreis', 'Kaufpreis €', i.kaufpreis)}${inField('nkPct', 'Nebenkosten %', +(i.nkPct * 100).toFixed(2))}${inField('modern', 'Modernisierung €', i.modern)}${inField('eigenkapital', 'Eigenkapital €', i.eigenkapital)}${inField('netto', 'Haushaltsnetto mtl. €', i.netto)}${inField('miete', 'Mieteinnahmen mtl. €', i.miete)}${inField('hausgeld', 'Hausgeld / Bewirtschaftung mtl. €', i.hausgeld)}${inField('sonst', 'Sonstige Raten mtl. €', i.sonst)}${inField('personen', 'Personen im Haushalt', i.personen)}${inField('lebens1', 'Lebenshaltung 1. Person €', i.lebens1)}${inField('lebensWeitere', 'je weitere Person €', i.lebensWeitere)}${inField('abschlag', 'Sicherheitsabschlag %', +(i.abschlag * 100).toFixed(1))}</div>
+      <div class="fa-in">${inField('kunde', 'Kunde (für Präsentation)', i.kunde, 'text')}${inField('objekt', 'Objekt (Titel)', i.objekt, 'text')}${inField('flaeche', 'Wohnfläche m²', i.flaeche)}${inField('baujahr', 'Baujahr', i.baujahr)}${inField('energie', 'Energieeffizienz (A+–H)', i.energie, 'text')}${inField('kaufpreis', 'Kaufpreis €', i.kaufpreis)}${inField('nkPct', 'Nebenkosten %', +(i.nkPct * 100).toFixed(2))}${inField('modern', 'Modernisierung €', i.modern)}${inField('eigenkapital', 'Eigenkapital €', i.eigenkapital)}${inField('netto', 'Haushaltsnetto mtl. €', i.netto)}${inField('miete', 'Mieteinnahmen mtl. €', i.miete)}${inField('hausgeld', 'Hausgeld / Bewirtschaftung mtl. €', i.hausgeld)}${inField('sonst', 'Sonstige Raten mtl. €', i.sonst)}${inField('personen', 'Personen im Haushalt', i.personen)}${inField('lebens1', 'Lebenshaltung 1. Person €', i.lebens1)}${inField('lebensWeitere', 'je weitere Person €', i.lebensWeitere)}${inField('abschlag', 'Sicherheitsabschlag %', +(i.abschlag * 100).toFixed(1))}</div>
       <p class="form-note">Netto aus ${f.gehaltsMonate || 0} Gehaltsabrechnung(en) gemittelt${f.selbststaendig ? '; selbstständig – Einkommen aus Steuerbescheiden/BWA bitte manuell ansetzen' : ''}. Mieten zu 75 % angesetzt. Lebenshaltungspauschalen sind Annahmen – bitte durch die Werte Ihres Hauses ersetzen.</p></section>
     <section class="pt-card"><h2>Varianten</h2>${varTable(c)}</section>
     <section class="pt-card"><h2>Unterlagen im Einzelnen</h2><div class="fa-docs">${S.docs.map((d, k) => docCard(d, k)).join('')}</div>
@@ -219,13 +219,16 @@ function praesUI() {
     <p class="form-note">Erscheinungsbild: <strong>${({ immoadv: 'ImmoAdv', eigen: 'Ihr Logo und Ihre Farben', whitelabel: 'komplett im Erscheinungsbild Ihres Hauses' })[b.mode]}</strong>${b.mode === 'immoadv' ? ' · Eigenes Logo ab Pro, vollständiges White-Label mit Enterprise.' : ''} <a href="#profil">Anpassen</a></p>
     <fieldset class="fa-slides"><legend>Folien auswählen</legend>${SLIDES.map(([k, l]) => `<label class="chk"><input type="checkbox" data-sl="${k}"${S.slides.includes(k) ? ' checked' : ''}> ${l}</label>`).join('')}</fieldset>
     <div class="pt-row"><button class="btn btn-dark" type="button" id="faShow">Präsentation starten</button><button class="btn btn-outline" type="button" id="faPrint">Als PDF speichern / drucken</button></div>
+    <div class="fa-dual"><h3>Download-Paket für den Kundentermin</h3>
+      <div class="fa-dual-g"><button type="button" class="fa-dl" id="faPptx"><b>PowerPoint (.pptx)</b><span>6 Folien: Deckblatt, Objekt, Haushalt, Finanzierung, Stresstest, nächste Schritte${b.mode === 'immoadv' ? '' : ' – im Erscheinungsbild Ihres Hauses'}</span></button>
+      <a class="fa-dl" href="/app/dashboard#objekte"><b>BankReady-Kreditmappe (PDF)</b><span>Mit SHA-256-Prüfsumme, nummeriertem Anlagenverzeichnis und Selbstauskunft – im Studio erstellen</span></a></div></div>
     <p class="form-note">Varianten und Eckdaten stellen Sie unter „Analyse für Sie“ ein. Im Präsentationsmodus mit Pfeiltasten oder Wischen blättern, Esc beendet.</p></section>`;
 }
 
 function bindInputs(tab, box, ctx) {
   const i = S.inputs;
   const pct = new Set(['nkPct', 'abschlag']);
-  tab.querySelectorAll('[data-in]').forEach((el) => el.onchange = () => { const k = el.dataset.in; i[k] = k === 'kunde' ? el.value.trim() : pct.has(k) ? num(el.value) / 100 : num(el.value); paint(box, ctx); });
+  tab.querySelectorAll('[data-in]').forEach((el) => el.onchange = () => { const k = el.dataset.in; i[k] = ['kunde', 'objekt', 'energie'].includes(k) ? el.value.trim().slice(0, 80) : pct.has(k) ? num(el.value) / 100 : num(el.value); paint(box, ctx); });
   tab.querySelectorAll('[data-vz],[data-vt],[data-vb],[data-vn]').forEach((el) => el.onchange = () => {
     const k = +(el.dataset.vz ?? el.dataset.vt ?? el.dataset.vb ?? el.dataset.vn), v = i.varianten[k];
     if (el.dataset.vz != null) v.zins = num(el.value) / 100; else if (el.dataset.vt != null) v.tilgung = num(el.value) / 100; else if (el.dataset.vb != null) v.bindung = Math.min(30, Math.max(5, Math.round(num(el.value)))); else v.name = el.value.trim().slice(0, 30) || v.name;
@@ -248,6 +251,11 @@ function bindInputs(tab, box, ctx) {
   };
   tab.querySelector('#faShow')?.addEventListener('click', () => open(false));
   tab.querySelector('#faPrint')?.addEventListener('click', () => open(true));
+  tab.querySelector('#faPptx')?.addEventListener('click', async (e) => {
+    if (!S.praesTaken) { const t = await ctx.api('/api/b2b/fall', { method: 'POST', body: JSON.stringify({ kind: 'praesentation' }) }); if (!t.ok) { ctx.toast(t.data?.error || 'Kontingent nicht verfügbar.', true); return; } S.praesTaken = true; }
+    e.currentTarget.disabled = true;
+    try { await exportPptx(); ctx.toast('PowerPoint erstellt.'); } catch (err) { ctx.toast('PowerPoint konnte nicht erstellt werden.', true); console.warn(err); } finally { e.currentTarget.disabled = false; }
+  });
 }
 
 // ---------- Präsentation ----------
@@ -289,4 +297,106 @@ function showDeck(print) {
   d.addEventListener('touchend', (e) => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1); x0 = null; });
   if (d.requestFullscreen && !print) d.requestFullscreen().catch(() => {});
   if (print) { const done = () => { removeEventListener('afterprint', done); close(); }; addEventListener('afterprint', done); setTimeout(() => print && window.print(), 300); }
+}
+
+
+// ---------- PowerPoint (.pptx) – erzeugt im Browser mit PptxGenJS (MIT), Daten verlassen das Gerät nicht ----------
+// Whitelabel: Ab „Kanzlei & Baufi Pro“ Logo, Hausfarben und Schrift des Unternehmens im Master-Layout.
+const PPTX_JS = '/vendor/pptxgenjs-4.0.1/pptxgen.bundle.js';
+function loadPptx() {
+  if (window.PptxGenJS) return Promise.resolve(window.PptxGenJS);
+  return new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = PPTX_JS; sc.onload = () => ok(window.PptxGenJS); sc.onerror = bad; document.head.append(sc); });
+}
+const hex = (c, d) => (/^#?[0-9a-f]{6}$/i.test(String(c || '')) ? String(c).replace('#', '').toUpperCase() : d);
+const PFONT = { sans: 'Calibri', serif: 'Georgia', klassisch: 'Arial' };
+export async function exportPptx() {
+  const Pptx = await loadPptx();
+  const c = calc(S.inputs), i = S.inputs, b = S.info.branding, v = c.variants, v0 = v[0];
+  const own = b.mode !== 'immoadv';
+  const C1 = hex(b.color, '0F2C59'), C2 = hex(b.color2, '0284C7'), F = own ? PFONT[b.font] || 'Calibri' : 'Calibri';
+  const pres = new Pptx();
+  pres.layout = 'LAYOUT_WIDE'; // 13,33 × 7,5 Zoll (16:9)
+  pres.author = b.advisor || b.company || 'ImmoAdv'; pres.company = b.company || 'ImmoAdv'; pres.title = `${b.title || 'Finanzierungsübersicht'}${i.kunde ? ' – ' + i.kunde : ''}`;
+  const logo = b.logo && /^data:image\/(png|jpe?g);base64,/.test(b.logo) ? b.logo : null;
+  const foot = `${b.footer || b.company || 'ImmoAdv'}${b.mode === 'eigen' ? ' · erstellt mit ImmoAdv' : ''}${b.mode === 'immoadv' ? ' · immoadv.de' : ''}`;
+  pres.defineSlideMaster({
+    title: 'IA', background: { color: 'FFFFFF' },
+    objects: [
+      { rect: { x: 0, y: 0, w: 13.33, h: 0.12, fill: { color: C1 } } },
+      ...(logo ? [{ image: { data: logo, x: 11.4, y: 0.3, w: 1.6, h: 0.6, sizing: { type: 'contain', w: 1.6, h: 0.6 } } }] : [{ text: { text: own ? (b.company || '') : 'ImmoAdv', options: { x: 9.3, y: 0.3, w: 3.7, h: 0.5, align: 'right', fontFace: F, fontSize: 14, bold: true, color: C1 } } }]),
+      { line: { x: 0.6, y: 6.85, w: 12.1, h: 0, line: { color: 'E2E8F0', width: 1 } } },
+      { text: { text: foot, options: { x: 0.6, y: 6.9, w: 9, h: 0.35, fontFace: F, fontSize: 10, color: '64748B' } } },
+    ],
+    slideNumber: { x: 12.2, y: 6.9, w: 0.6, h: 0.35, fontFace: F, fontSize: 10, color: '64748B', align: 'right' },
+  });
+  const H = (sl, t, sub) => { sl.addText(t, { x: 0.6, y: 0.45, w: 10.5, h: 0.7, fontFace: F, fontSize: 28, bold: true, color: C1 }); if (sub) sl.addText(sub, { x: 0.6, y: 1.1, w: 11.5, h: 0.4, fontFace: F, fontSize: 14, color: '475569' }); };
+  const card = (sl, x, y, w, h, label, value, tone) => {
+    sl.addShape(pres.ShapeType.roundRect, { x, y, w, h, rectRadius: 0.08, fill: { color: tone === 'bad' ? 'FEF2F2' : tone === 'ok' ? 'F0FDF4' : 'F8FAFC' }, line: { color: 'E2E8F0', width: 1 } });
+    sl.addText(label, { x: x + 0.2, y: y + 0.15, w: w - 0.4, h: 0.35, fontFace: F, fontSize: 12, color: '64748B' });
+    sl.addText(value, { x: x + 0.2, y: y + 0.5, w: w - 0.4, h: h - 0.65, fontFace: F, fontSize: 24, bold: true, color: C1, valign: 'top' });
+  };
+  const date = new Date().toLocaleDateString('de-DE');
+
+  // 1 Deckblatt
+  const s1 = pres.addSlide({ masterName: 'IA' });
+  s1.addShape(pres.ShapeType.rect, { x: 0, y: 0.12, w: 13.33, h: 3.6, fill: { color: C1 } });
+  s1.addText(b.title || 'Finanzierungsübersicht', { x: 0.8, y: 0.9, w: 11, h: 0.5, fontFace: F, fontSize: 16, color: 'CBD5E1' });
+  s1.addText(i.kunde ? `für ${i.kunde}` : 'Ihre Immobilienfinanzierung', { x: 0.8, y: 1.4, w: 11.5, h: 1.1, fontFace: F, fontSize: 40, bold: true, color: 'FFFFFF' });
+  s1.addText(i.objekt || `Kaufpreis ${E(i.kaufpreis)} · Darlehen ${E(c.D)}`, { x: 0.8, y: 2.6, w: 11.5, h: 0.6, fontFace: F, fontSize: 20, color: 'E2E8F0' });
+  s1.addText([{ text: 'Ihr Berater', options: { color: '64748B', fontSize: 12, breakLine: true } }, { text: [b.advisor, b.company].filter(Boolean).join(' · ') || 'ImmoAdv', options: { color: C1, fontSize: 18, bold: true, breakLine: true } }, { text: `${b.city ? b.city + ', ' : ''}${date}`, options: { color: '475569', fontSize: 14 } }], { x: 0.8, y: 4.3, w: 8, h: 1.4, fontFace: F, valign: 'top' });
+
+  // 2 Objekt- & Standortübersicht
+  const s2 = pres.addSlide({ masterName: 'IA' });
+  H(s2, 'Objekt im Überblick', i.objekt || 'Eckdaten der Immobilie');
+  const qm = i.flaeche > 0 ? E(i.kaufpreis / i.flaeche) : '–';
+  [['Kaufpreis', E(i.kaufpreis)], ['Kaufpreis je m²', qm], ['Wohnfläche', i.flaeche > 0 ? `${Math.round(i.flaeche).toLocaleString('de-DE')} m²` : '–'], ['Baujahr', i.baujahr > 0 ? String(Math.round(i.baujahr)) : '–'], ['Energieeffizienz', i.energie || '–'], ['Mieteinnahmen', i.miete > 0 ? E(i.miete) + ' / Monat' : 'Eigennutzung']]
+    .forEach(([l, x], k) => card(s2, 0.6 + (k % 3) * 4.1, 1.8 + Math.floor(k / 3) * 2.2, 3.9, 1.9, l, x, l === 'Energieeffizienz' && /^[F-H]/i.test(i.energie || '') ? 'bad' : ''));
+
+  // 3 Haushaltsrechnung & Leistbarkeit (Wasserfall)
+  const s3 = pres.addSlide({ masterName: 'IA' });
+  H(s3, 'Haushaltsrechnung & Leistbarkeit', 'Einkommen minus Fixkosten = monatlicher Spielraum (Variante ' + (v0?.name || 'A') + ')');
+  const inc = i.netto + i.miete * 0.75;
+  const steps = [['Einkommen', inc, 0, C2], ['Lebenshaltung', -c.lebens, inc, '94A3B8'], ['Wohnkosten', -i.hausgeld - i.sonst, inc - c.lebens, '94A3B8'], ['Kreditrate', -v0.rate, inc - c.lebens - i.hausgeld - i.sonst, 'F59E0B'], ['Überschuss', v0.ueber, 0, v0.ueber >= 0 ? '22C55E' : 'EF4444']];
+  const maxV = Math.max(1, inc), X0 = 0.9, Wb = 2.1, base = 6.2, Hmax = 4.2;
+  steps.forEach(([l, val, start, col], k) => {
+    const top = val >= 0 ? start + val : start, bottom = val >= 0 ? start : start + val;
+    const y = base - (Math.max(top, bottom) / maxV) * Hmax, h = Math.max(0.04, (Math.abs(val) / maxV) * Hmax);
+    s3.addShape(pres.ShapeType.rect, { x: X0 + k * 2.45, y: Math.min(base - 0.04, y), w: Wb, h, fill: { color: col } });
+    s3.addText(`${val < 0 ? '− ' : ''}${E(Math.abs(val))}`, { x: X0 + k * 2.45, y: Math.min(base - 0.04, y) - 0.4, w: Wb, h: 0.35, align: 'center', fontFace: F, fontSize: 13, bold: true, color: C1 });
+    s3.addText(l, { x: X0 + k * 2.45, y: base + 0.08, w: Wb, h: 0.35, align: 'center', fontFace: F, fontSize: 12, color: '334155' });
+  });
+
+  // 4 Finanzierungsstruktur
+  const s4 = pres.addSlide({ masterName: 'IA' });
+  H(s4, 'Finanzierungsstruktur', `Gesamtbedarf ${E(c.bedarf)} = Kaufpreis ${E(i.kaufpreis)} + Nebenkosten ${E(c.nk)}${i.modern ? ' + Modernisierung ' + E(i.modern) : ''}`);
+  card(s4, 0.6, 1.8, 3.9, 1.7, 'Eigenkapital', E(i.eigenkapital), c.nkGedeckt ? 'ok' : 'bad');
+  card(s4, 4.7, 1.8, 3.9, 1.7, 'Darlehen', E(c.D));
+  card(s4, 8.8, 1.8, 3.9, 1.7, 'Beleihungsauslauf', P(c.auslauf));
+  const th = (t) => ({ text: t, options: { bold: true, color: 'FFFFFF', fill: { color: C1 } } });
+  s4.addTable([[th('Variante'), th('Sollzins'), th('Tilgung'), th('Zinsbindung'), th('Monatsrate'), th('Restschuld am Ende')], ...v.map((x) => [x.name, P(x.zins, 2), P(x.tilgung, 1), `${x.bindung} Jahre`, E(x.rate), E(x.rest)])],
+    { x: 0.6, y: 3.8, w: 12.1, colW: [2.2, 1.7, 1.7, 1.9, 2.1, 2.5], fontFace: F, fontSize: 14, color: '0F172A', border: { type: 'solid', color: 'E2E8F0', pt: 1 }, rowH: 0.5 });
+
+  // 5 Stresstest & Sicherheit
+  const s5 = pres.addSlide({ masterName: 'IA' });
+  H(s5, 'Stresstest & Sicherheit', 'Rate für die Restschuld, wenn der Zins nach der Zinsbindung um 2 Prozentpunkte höher liegt');
+  s5.addChart(pres.ChartType.bar, [{ name: 'Rate heute', labels: v.map((x) => x.name), values: v.map((x) => Math.round(x.rate)) }, { name: 'Rate danach (+2 %)', labels: v.map((x) => x.name), values: v.map((x) => Math.round(x.stress)) }],
+    { x: 0.6, y: 1.7, w: 7.6, h: 4.9, barGrouping: 'clustered', chartColors: [C1, 'F59E0B'], showLegend: true, legendPos: 'b', legendFontFace: F, catAxisLabelFontFace: F, valAxisLabelFontFace: F, showValue: true, dataLabelFormatCode: '#,##0 "€"', valAxisLabelFormatCode: '#,##0 "€"' });
+  v.forEach((x, k) => card(s5, 8.6, 1.7 + k * 1.65, 4.1, 1.5, `${x.name}: Mehrbelastung`, `+ ${E(Math.max(0, x.stress - x.rate))}`, x.ueber - Math.max(0, x.stress - x.rate) < 0 ? 'bad' : 'ok'));
+
+  // 6 Nächste Schritte
+  const miss = missingDocs(S.docs.map((d) => d.type), S.facts);
+  const s6 = pres.addSlide({ masterName: 'IA' });
+  H(s6, 'Nächste Schritte bis zum Notartermin');
+  const todo = [[miss.length ? 'Unterlagen nachreichen' : 'Unterlagen vollständig', miss.length ? miss.slice(0, 4).join(', ') : 'Alles liegt vor', 'diese Woche'], ['Variante festlegen', 'Zinsbindung und Tilgung gemeinsam auswählen', 'im Termin'], ['Finanzierungsanfrage', 'Einreichung mit BankReady-Kreditmappe', '1–2 Wochen'], ['Darlehensangebot & ESIS', 'Verbindliches Angebot prüfen und unterschreiben', '2–4 Wochen'], ['Notartermin', 'Kaufvertrag beurkunden, Grundschuld bestellen', 'nach Zusage']];
+  todo.forEach(([t, d, when], k) => {
+    const y = 1.5 + k * 1.02;
+    s6.addShape(pres.ShapeType.ellipse, { x: 0.7, y: y + 0.08, w: 0.5, h: 0.5, fill: { color: k === 0 && miss.length ? 'F59E0B' : C2 } });
+    s6.addText(String(k + 1), { x: 0.7, y: y + 0.08, w: 0.5, h: 0.5, align: 'center', valign: 'middle', fontFace: F, fontSize: 14, bold: true, color: 'FFFFFF' });
+    s6.addText([{ text: t, options: { bold: true, color: C1, fontSize: 17, breakLine: true } }, { text: d, options: { color: '475569', fontSize: 13 } }], { x: 1.4, y, w: 8.6, h: 0.9, fontFace: F, valign: 'top' });
+    s6.addText(when, { x: 10.2, y, w: 2.5, h: 0.6, align: 'right', fontFace: F, fontSize: 13, color: '64748B' });
+  });
+  s6.addText('Rechnerische Orientierung, keine Kreditzusage. Die Entscheidung trifft das finanzierende Institut.', { x: 0.6, y: 6.45, w: 12, h: 0.35, fontFace: F, fontSize: 10, italic: true, color: '94A3B8' });
+
+  const safe = (t) => String(t || '').replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_|_$/g, '').slice(0, 40);
+  await pres.writeFile({ fileName: `${new Date().toISOString().slice(0, 10)}_Beratung_${safe(i.kunde) || 'Kunde'}.pptx` });
 }

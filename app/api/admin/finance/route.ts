@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { B2B_PLANS, effectiveTier, type B2BAccount } from '@/lib/b2b/core';
+import { customerScope, scopeError } from '@/lib/admin/scope';
+import { b2cFinance } from '@/lib/admin/b2c-finance';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,11 +42,19 @@ export async function GET(req: Request) {
   if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
   const u = new URL(req.url);
   const r = range(u.searchParams.get('zeitraum') || 'monat', u.searchParams.get('von'), u.searchParams.get('bis'));
+  // Strikte Bereichstrennung: B2C rechnet ausschließlich aus Stripe-Käufen der Privattarife, B2B ausschließlich aus Unternehmensrechnungen.
+  const scope = customerScope(req);
+  if (!scope) return j(scopeError, 400);
+  if (scope === 'b2c') {
+    try { return j({ scope, range: r, ...(await b2cFinance(r.from, r.to, berlinDay(new Date()))) }); }
+    catch (e) { return j({ error: e instanceof Error ? e.message : 'Stripe nicht erreichbar.' }, 502); }
+  }
   const db = supabaseAdmin();
 
   const { data: inv } = await db
     .from('immo_invoices')
     .select('id, invoice_number, kind, net_cents, vat_cents, gross_cents, payment_status, issue_date, due_date, paid_at, buyer, account_id, source')
+    .not('account_id', 'is', null)
     .gte('issue_date', r.from).lte('issue_date', r.to)
     .order('issue_date', { ascending: false })
     .limit(5000);
@@ -59,6 +69,7 @@ export async function GET(req: Request) {
     .select('id, invoice_number, gross_cents, due_date, issue_date, buyer, payment_status')
     .in('payment_status', ['PENDING', 'OVERDUE'])
     .eq('kind', 'invoice')
+    .not('account_id', 'is', null)
     .order('due_date', { ascending: true })
     .limit(500);
   const openItems = (open ?? []).map((x) => {
@@ -103,7 +114,7 @@ export async function GET(req: Request) {
 
   // Netto-Umsatz der letzten 12 Kalendermonate (unabhängig vom gewählten Zeitraum).
   const m0 = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 12, 1)).toISOString().slice(0, 10);
-  const { data: last12 } = await db.from('immo_invoices').select('issue_date, net_cents').gte('issue_date', m0).limit(20000);
+  const { data: last12 } = await db.from('immo_invoices').select('issue_date, net_cents').not('account_id', 'is', null).gte('issue_date', m0).limit(20000);
   const months: { m: string; net: number }[] = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1 - i, 1));
@@ -112,6 +123,7 @@ export async function GET(req: Request) {
   }
 
   return j({
+    scope,
     months,
     range: r, revenue, invoices: rows.slice(0, 200), openItems,
     recurring: { mrrNet: mrr, arrNet: mrr * 12, activeAccounts: active.length, byTier, manualWithoutPrice: manual, expiredInRange: expired },

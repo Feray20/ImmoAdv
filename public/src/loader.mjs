@@ -11,7 +11,7 @@ export function work(title, steps = []) {
   el.className = 'ia-work';
   el.setAttribute('role', 'status');
   el.setAttribute('aria-live', 'polite');
-  el.innerHTML = `<div class="ia-work-box">${LOGO}<div class="ia-work-spin" aria-hidden="true"></div><strong>${esc(title)}</strong>
+  el.innerHTML = `<div class="ia-work-box"><div class="ia-ll" aria-hidden="true">${LOGO}</div><strong>${esc(title)}</strong>
     <ol class="ia-work-steps">${steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol></div>`;
   document.body.appendChild(el);
   document.body.classList.add('ia-working');
@@ -41,3 +41,7 @@ export function work(title, steps = []) {
 
 // Für klassische Skripte (ohne Modul-Import).
 window.iaWork = work;
+
+// Kleines Markenlade-Symbol für Platzhalter („Wird geladen …“): Logo fest, Ring dreht sich.
+export const logoLoader = (text = 'Wird geladen …') => `<div class="ia-ll-wrap" role="status"><div class="ia-ll ia-ll-s" aria-hidden="true">${LOGO}</div><span>${esc(text)}</span></div>`;
+window.iaLogoLoader = logoLoader;

@@ -1,15 +1,17 @@
 // Unternehmensportal (/b2b-portal): Registrierung mit § 14 BGB und AVV, Anfragen-Pipeline,
 // Widget- und QR-Studio, Team, Profil mit Co-Branding, Tarif und Rechnungen.
+import { logoLoader } from './loader.mjs';
 import { BRANCHEN, BRANCHE_KEYS, brancheFromType } from './b2b-branche.mjs';
 import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession } from './sess.mjs';
 
 const root = document.getElementById('portal');
+try { history.scrollRestoration = 'manual'; } catch { /* ältere Browser */ }
 const $ = (s, el = document) => el.querySelector(s);
 // Bereiche in drei Gruppen: Tagesgeschäft, Werkzeuge & Wissen, Konto.
 const VIEWS = [
   ['start', 'Übersicht', 'arbeit'], ['fall', 'Fall-Analyse', 'arbeit'], ['kunden', 'Kunden', 'arbeit'], ['anfragen', 'Anfragen', 'arbeit'], ['einreichungen', 'Einreichungen', 'arbeit'],
   ['tools', 'Software-Tools', 'werk'], ['wissen', 'Beratungskompass', 'werk'], ['werkzeuge', 'Widget & QR', 'werk'],
-  ['verifizierung', 'Verifizierung', 'konto'], ['team', 'Team', 'konto'], ['profil', 'Profil', 'konto'], ['tarif', 'Tarif & Rechnungen', 'konto'],
+  ['verifizierung', 'Verifizierung', 'konto'], ['team', 'Team', 'konto'], ['profil', 'Profil', 'konto'], ['tarif', 'Tarif & Rechnungen', 'konto'], ['vorschlaege', 'Verbesserungsvorschläge', 'konto'],
 ];
 const GROUPS = [['arbeit', 'Tagesgeschäft'], ['werk', 'Werkzeuge & Wissen'], ['konto', 'Konto']];
 // Handy-Leiste: vier Hauptbereiche plus „Mehr“ (alle übrigen Bereiche als Liste).
@@ -54,7 +56,7 @@ function shell() {
       <nav>${navGroups((v) => true)}</nav>
       <div class="pt-foot"><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><button type="button" class="pt-logout" id="ptLogout">Abmelden</button></div>
     </aside>
-    <section class="pt-main"><header class="pt-top"><h1 id="ptTitle"></h1><button type="button" class="pt-pres-btn" id="ptPres" hidden title="Vollbild für das Kundengespräch am Tablet"><span aria-hidden="true">⛶</span> Präsentieren</button><button type="button" class="pt-br" id="ptBr" title="Branche wechseln – das Portal passt sich an"><span aria-hidden="true">${B().icon}</span> ${esc(B().short)} <b aria-hidden="true">⇄</b></button><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
+    <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#start" aria-label="ImmoAdv Unternehmensportal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Unternehmensportal</small><h1 id="ptTitle"></h1></div><button type="button" class="pt-pres-btn" id="ptPres" hidden title="Vollbild für das Kundengespräch am Tablet"><span aria-hidden="true">⛶</span> Präsentieren</button><button type="button" class="pt-br" id="ptBr" title="Branche wechseln – das Portal passt sich an"><span aria-hidden="true">${B().icon}</span> ${esc(B().short)} <b aria-hidden="true">⇄</b></button><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
       ${a.status === 'locked' ? `<div class="pt-alert bad"><strong>Konto gesperrt.</strong> ${esc(a.lockReason || '')} Rechnungen und AVV bleiben abrufbar. Fragen an support@immoadv.de.</div>` : ''}
       <div id="ptView"></div><p class="pt-liab">ImmoAdv stellt rein technische Analyse- und Erfassungsinstrumente bereit und trifft keine Votierungs-, Bonitäts- oder Kreditentscheidung. Die aufsichtsrechtliche Pflicht zur Prüfung nach MaRisk, KWG oder § 34i GewO verbleibt vollumfänglich beim beratenden bzw. finanzierenden Institut. <a href="/nutzungsbedingungen#hinweise">Rechtliche Hinweise</a> · <a href="/datenschutz">Datenschutz</a></p></section>
     <nav class="pt-tabs" aria-label="Bereiche">${MAIN.map(([v, l, ic]) => `<a href="#${v}" data-v="${v}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${v === 'kunden' ? B().kunden : l}</span>${v === 'anfragen' && me.usage.leadsNew ? `<b class="pt-dot">${me.usage.leadsNew}</b>` : ''}</a>`).join('')}<button type="button" id="ptMore" aria-expanded="false" aria-controls="ptSheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>Mehr</span></button></nav>
@@ -94,10 +96,10 @@ function route() {
   $('#ptTitle').textContent = vLabel(view, VIEWS.find(([k]) => k === view)[1]);
   const box = $('#ptView');
   // Neuer Bereich: immer oben beginnen (Kapitel-Sprünge innerhalb eines Bereichs behalten ihre Position).
-  if (route.last !== view) { window.scrollTo(0, 0); route.last = view; }
-  box.innerHTML = '<p class="form-note">Wird geladen …</p>';
+  if (route.last !== view) { const ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) ae.blur(); window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })); route.last = view; }
+  box.innerHTML = logoLoader();
   { const pb = $('#ptPres'); if (pb) pb.hidden = !['wissen', 'tools'].includes(view); if (!['wissen', 'tools'].includes(view)) presentation(false); }
-  ({ start: vStart, tools: (b) => import('./b2b-tools.mjs').then((m) => m.renderPrograms(b, { tier: me.tier, branche: br(), toast, brand: { color: me.limits?.cobranding && me.account.brandColor ? me.account.brandColor : '#0F2C59', logo: me.limits?.cobranding && me.account.hasLogo && me.account.slug ? `/api/b2b/logo?slug=${encodeURIComponent(me.account.slug)}` : '', sender: [me.account.companyName, me.account.advisorName].filter(Boolean).join(' · ') } })).catch(() => { b.innerHTML = '<p class="form-note">Programme konnten nicht geladen werden.</p>'; }), fall: (b) => import('./b2b-fall.mjs').then((m) => m.renderFall(b, { api, toast, me })).catch(() => { b.innerHTML = '<p class="form-note">Fall-Analyse konnte nicht geladen werden.</p>'; }), kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs').then((m) => m.renderWissen(b, br())).catch(() => { b.innerHTML = '<p class="form-note">Fachwissen konnte nicht geladen werden.</p>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: (b) => vTeam(b).then(() => addPw(b)), profil: (b) => { vProfil(b); addPw(b); }, tarif: vTarif })[view](box);
+  ({ start: vStart, tools: (b) => import('./b2b-tools.mjs').then((m) => m.renderPrograms(b, { tier: me.tier, branche: br(), toast, brand: { color: me.limits?.cobranding && me.account.brandColor ? me.account.brandColor : '#0F2C59', logo: me.limits?.cobranding && me.account.hasLogo && me.account.slug ? `/api/b2b/logo?slug=${encodeURIComponent(me.account.slug)}` : '', sender: [me.account.companyName, me.account.advisorName].filter(Boolean).join(' · ') } })).catch(() => { b.innerHTML = '<p class="form-note">Programme konnten nicht geladen werden.</p>'; }), fall: (b) => import('./b2b-fall.mjs').then((m) => m.renderFall(b, { api, toast, me })).catch(() => { b.innerHTML = '<p class="form-note">Fall-Analyse konnte nicht geladen werden.</p>'; }), kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs').then((m) => m.renderWissen(b, br())).catch(() => { b.innerHTML = '<p class="form-note">Fachwissen konnte nicht geladen werden.</p>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: (b) => vTeam(b).then(() => addPw(b)), profil: (b) => { vProfil(b); addPw(b); }, tarif: vTarif, vorschlaege: (b) => { b.innerHTML = '<section class="pt-card" id="fbBox"></section>'; import('./feedback-ui.mjs').then((m) => m.mountFeedback(b.querySelector('#fbBox'), { area: 'b2b' })).catch(() => { b.innerHTML = '<p class="form-note">Konnte nicht geladen werden.</p>'; }); } })[view](box);
 }
 
 // ---------- Kunden: einladen und Fortschritt sehen (nur mit Einwilligung des Kunden) ----------
@@ -258,7 +260,7 @@ async function todo() {
   }
   sum.textContent = items.length ? `${items.length} Punkt${items.length === 1 ? '' : 'e'}` : 'Alles erledigt';
   list.innerHTML = items.length ? items.map(([t, h, x, href]) => `<li class="${t}"><a href="${href}"><span class="todo-dot" aria-hidden="true"></span><span><strong>${esc(h)}</strong><small>${esc(x)}</small></span><em aria-hidden="true">→</em></a></li>`).join('')
-    : '<li class="empty">Keine offenen Aufgaben. <a href="#kunden">Neuen Kunden einladen</a> oder <a href="#werkzeuge">Widget einbinden</a>.</li>';
+    : '<li class="empty"><p>Keine offenen Aufgaben.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden">Neue Kunden einladen</a><a class="btn btn-outline" href="#werkzeuge">Widget einbinden</a></div></li>';
 }
 
 // ---------- Verifizierung (Gewerbenachweis) ----------
@@ -314,7 +316,7 @@ async function vLeads(box) {
   const n = (v) => (v == null || v === '' ? '–' : Number(v).toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' €');
   box.innerHTML = `<div class="pt-bar"><div class="seg" role="tablist">${['alle', ...Object.keys(STATUS)].map((s, i) => `<button type="button" data-f="${s}" aria-selected="${i === 0}">${s === 'alle' ? 'Alle' : STATUS[s]}</button>`).join('')}<button type="button" data-f="mine" aria-selected="false">Mir zugewiesen</button></div>
     <button class="btn btn-ghost" id="csv" type="button">CSV exportieren</button></div>
-    ${leads.length ? '' : '<div class="pt-empty"><strong>Noch keine Anfragen.</strong><p>Binden Sie das <a href="#werkzeuge">Widget</a> ein oder teilen Sie Ihre Partnerseite. Jede Anfrage erscheint hier mit Objektdaten und Kennzahlen.</p></div>'}
+    ${leads.length ? '' : '<div class="pt-empty"><strong>Noch keine Anfragen.</strong><p>Jede Anfrage aus Widget, QR-Code oder Partnerseite erscheint hier mit Objektdaten und Kennzahlen.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden">Mandanten einladen via Link</a><a class="btn btn-outline" href="#werkzeuge">QR-Code &amp; Widget</a></div></div>'}
     <div class="pt-leads">${leads.map((l) => {
       const p = l.property_data || {}, m = l.metrics || {};
       return `<article class="pt-lead" data-s="${l.status}" data-a="${l.assigned_to || ''}" data-id="${l.id}">
@@ -370,7 +372,7 @@ async function vSubs(box) {
         ${s.note ? `<p class="pt-msg">${esc(s.note)}</p>` : ''}
         <p class="pt-row"><button class="btn btn-dark" data-dl="${s.id}" type="button"${s.version_id ? '' : ' disabled'}>Kreditmappe öffnen</button>${s.sha256 ? `<a class="text-btn" href="/verify/${esc(s.version_id)}" target="_blank" rel="noopener">Echtheit prüfen</a>` : ''}</p>
         <label class="pt-field">Antwort an den Einreicher<textarea data-rp="${s.id}" rows="2" maxlength="1000">${esc(s.reply || '')}</textarea></label>
-        <button class="btn btn-ghost" data-sv="${s.id}" type="button">Status und Antwort senden</button></article>`).join('') : '<div class="pt-empty">Noch keine Einreichungen.</div>'}</section>` : ''}
+        <button class="btn btn-ghost" data-sv="${s.id}" type="button">Status und Antwort senden</button></article>`).join('') : '<div class="pt-empty"><strong>Noch keine Einreichungen.</strong><p>So sieht eine eingereichte Kreditmappe aus:</p><div class="todo-empty-a"><a class="btn btn-outline" href="/mustermappe" target="_blank" rel="noopener">Musterfall ansehen</a></div></div>'}</section>` : ''}
     <section class="pt-card"><h2>Kreditmappe bei einem Institut einreichen</h2>
       ${!me.tier ? '<p class="form-note">Einreichungen gibt es ab einem gebuchten Tarif.</p>' : !targets.length ? '<p class="form-note">Derzeit nimmt noch kein Institut über ImmoAdv Einreichungen an.</p>' : !versions.length ? '<p class="form-note">Sie haben noch keine registrierte Kreditmappe. Erstellen Sie zuerst eine Kreditmappe zu einem Fall.</p>' : `
       <form id="subF" class="obj-grid">
@@ -382,7 +384,7 @@ async function vSubs(box) {
       <label class="consent"><input type="checkbox" id="subC"> Die Einwilligung meines Kunden zur Weitergabe dieser Kreditmappe an das gewählte Institut liegt mir vor.</label>
       <button class="btn btn-dark" id="subGo" type="button">Einreichen</button>`}
       <p class="form-note">Das Institut erhält die registrierte Kreditmappe (mit Echtheits-QR) und kann Status und Rückfragen setzen. Die Kreditentscheidung trifft allein das Institut.</p></section>
-    <section class="pt-card"><h2>Ihre Einreichungen</h2>${outbox.length ? `<table class="bill-table"><thead><tr><th>Objekt</th><th>Institut</th><th>Datum</th><th>Status</th><th>Antwort</th></tr></thead><tbody>${outbox.map((s) => `<tr><td>${esc(s.object_label)}</td><td>${esc(s.to)}</td><td>${dt(s.created_at)}</td><td>${SUB[s.status]}</td><td>${esc(s.reply || '–')}</td></tr>`).join('')}</tbody></table>` : '<p class="form-note">Noch keine.</p>'}</section>`;
+    <section class="pt-card"><h2>Ihre Einreichungen</h2>${outbox.length ? `<table class="bill-table"><thead><tr><th>Objekt</th><th>Institut</th><th>Datum</th><th>Status</th><th>Antwort</th></tr></thead><tbody>${outbox.map((s) => `<tr><td>${esc(s.object_label)}</td><td>${esc(s.to)}</td><td>${dt(s.created_at)}</td><td>${SUB[s.status]}</td><td>${esc(s.reply || '–')}</td></tr>`).join('')}</tbody></table>` : '<div class="pt-empty"><strong>Noch keine Einreichungen.</strong><p>Erstellen Sie eine Kreditmappe zu einem Fall und reichen Sie sie hier ein.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#fall">Fall anlegen</a><a class="btn btn-outline" href="/mustermappe" target="_blank" rel="noopener">Musterfall ansehen</a></div></div>'}</section>`;
   box.querySelectorAll('[data-dl]').forEach((b) => b.onclick = () => busy(b, () => download('/api/b2b/submissions?id=' + b.dataset.dl, {}, 'Kreditmappe.pdf')));
   box.querySelectorAll('[data-sv]').forEach((b) => b.onclick = () => busy(b, async () => {
     const id = b.dataset.sv;
@@ -613,9 +615,20 @@ async function vTarif(box) {
     <section class="pt-card"><h2>Aktueller Tarif</h2>
       <p><strong>${me.tier ? TIER[me.tier] : 'Kein Tarif gebucht'}</strong>${a.planSource === 'manual' ? ' (vom Betreiber freigeschaltet)' : ''}${a.planUntil ? ` · läuft bis ${dt(a.planUntil)}` : ''}</p>
       ${a.planSource === 'stripe' ? '<button class="btn btn-ghost" id="aboPortal" type="button">Abo verwalten (Zahlungsmittel, Wechsel, Kündigung)</button>' : ''}</section>
+    <section class="pt-card roi-card"><h2>Lohnt sich das für Sie?</h2>
+      <p class="form-note">Ihre eigene Rechnung – tragen Sie Ihre Werte ein. ImmoAdv nennt bewusst keine pauschale Zeitersparnis.</p>
+      <div class="roi-in"><label>Fälle pro Monat<input id="roiN" type="number" min="0" step="1" inputmode="numeric" placeholder="z. B. 4"></label>
+        <label>Minuten Vorarbeit, die Sie je Fall sparen<input id="roiM" type="number" min="0" step="5" inputmode="numeric" placeholder="Ihre Schätzung"></label>
+        <label>Ihr interner Stundensatz (€)<input id="roiH" type="number" min="0" step="5" inputmode="decimal" placeholder="z. B. 80"></label></div>
+      <div id="roiOut" class="roi-res" aria-live="polite"></div></section>
+    <section class="pt-card trust-card"><h2>Rechtssicher für Unternehmen</h2><ul class="trust-l">
+      <li><b>AVV nach Art. 28 DSGVO</b><span>bei der Registrierung abgeschlossen, im Profil jederzeit abrufbar</span></li>
+      <li><b>GoBD-gerechtes Rechnungsarchiv</b><span>Rechnungen unveränderbar gespeichert, SHA-256-geprüft</span></li>
+      <li><b>Hosting in Frankfurt am Main</b><span>Anwendung (Vercel, Region fra1) und Datenbank (Supabase, eu-central-1) in der EU</span></li>
+      <li><b>USt-IdNr. ${esc(a.taxId || '–')}</b><span id="vatSt">${/^[A-Z]{2}[0-9A-Z]{2,12}$/.test(String(a.taxId || '').replace(/\s+/g, '')) ? '<button type="button" class="text-btn" id="vatChk">Beim EU-System VIES prüfen</button>' : 'im Profil hinterlegen, um sie per VIES prüfen zu lassen'}</span></li></ul></section>
     <label class="consent b2b-terms" id="termsL"><input type="checkbox" id="terms"> <span>Ich buche als <strong>Unternehmer (§ 14 BGB)</strong> zu den <a href="/nutzungsbedingungen#b2b" target="_blank">Nutzungsbedingungen für Unternehmen</a>. Preise netto zzgl. 19 % USt. – auf der Bezahlseite sehen Sie Netto, USt. und Brutto. Ein Widerrufsrecht besteht nicht.</span></label>
     <div class="seg" role="tablist" id="ivl"><button type="button" data-i="month" aria-selected="true">Monatlich</button><button type="button" data-i="year" aria-selected="false">Jährlich (2 Monate gespart)</button></div>
-    <div class="offers">${tiers.map((t) => b2b.plans.filter((p) => p.tier === t).map((p) => `<div class="offer${t === 'PRO' ? ' rec' : ''}" data-ivl="${p.interval}"${p.interval === 'year' ? ' hidden' : ''}>${t === 'PRO' ? '<span class="offer-rec">Am häufigsten gewählt</span>' : ''}
+    <div class="offers">${tiers.map((t) => b2b.plans.filter((p) => p.tier === t).map((p) => `<div class="offer${t === 'PRO' ? ' rec' : ''}" data-ivl="${p.interval}"${p.interval === 'year' ? ' hidden' : ''}>${t === 'PRO' ? '<span class="offer-rec">Empfohlen für Kanzleien &amp; Baufi-Teams</span>' : ''}
         <h4>${esc(p.name.replace(' (Jahr)', ''))}</h4><div class="offer-price">${net(p.netto_cents)} <small>netto ${esc(p.intervall)}</small></div>
         <ul>${p.basis ? `<li class="offer-basis">${esc(p.basis)}</li>` : ''}${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
         ${me.tier === t ? '<span class="st ok">Gebucht</span>' : `<button class="btn btn-pay" data-plan="${p.id}" type="button"${billingOn ? '' : ' disabled'}>${billingOn ? 'Zahlungspflichtig als Unternehmer buchen' : 'Buchung startet in Kürze'}</button>`}</div>`).join('')).join('')}
@@ -630,6 +643,22 @@ async function vTarif(box) {
     box.querySelectorAll('.offer[data-ivl]').forEach((o) => { o.hidden = o.dataset.ivl !== b.dataset.i; });
   });
   $('#terms').onchange = () => $('#termsL').classList.remove('consent-missing');
+  // ROI nur aus Eingaben des Beraters; verglichen mit dem Netto-Monatspreis der Tarife.
+  const roi = () => {
+    const n = Number($('#roiN').value) || 0, mi = Number($('#roiM').value) || 0, h = Number($('#roiH').value) || 0, o = $('#roiOut');
+    if (!n || !mi || !h) { o.innerHTML = '<p class="form-note">Alle drei Werte eintragen – dann sehen Sie Ihren Gegenwert pro Monat.</p>'; return; }
+    const val = (n * mi / 60) * h;
+    const pl = b2b.plans.filter((p) => p.interval === 'month');
+    o.innerHTML = `<p class="roi-big"><b>${(n * mi / 60).toLocaleString('de-DE', { maximumFractionDigits: 1 })} Stunden</b> pro Monat · Gegenwert <b>${eur(Math.round(val * 100))}</b></p>
+      <ul class="roi-l">${pl.map((p) => `<li><span>${esc(p.name)}</span><b class="${val * 100 >= p.netto_cents ? 'ok' : 'warn'}">${val * 100 >= p.netto_cents ? 'rechnet sich' : 'rechnet sich noch nicht'}</b><small>${net(p.netto_cents)} netto / Monat</small></li>`).join('')}</ul>`;
+  };
+  ['#roiN', '#roiM', '#roiH'].forEach((id) => $(id).addEventListener('input', roi)); roi();
+  $('#vatChk')?.addEventListener('click', (e) => busy(e.target, async () => {
+    const r = await api('/api/b2b/vat-check', { method: 'POST' });
+    const st = $('#vatSt');
+    if (!r.ok || !r.data.checked) { st.textContent = r.data?.error || 'Prüfung nicht möglich.'; return; }
+    st.innerHTML = r.data.valid ? `<span class="st ok">gültig laut VIES</span> ${esc(r.data.name || '')} · ${esc(new Date(r.data.at).toLocaleDateString('de-DE'))}` : '<span class="st bad">laut VIES ungültig</span> – bitte im Profil korrigieren';
+  }));
   box.querySelectorAll('[data-plan]').forEach((b) => b.onclick = () => busy(b, async () => {
     if (!$('#terms').checked) { const l = $('#termsL'); l.classList.add('consent-missing'); l.scrollIntoView({ behavior: 'smooth', block: 'center' }); $('#terms').focus({ preventScroll: true }); throw Error('Bitte zuerst bestätigen, dass Sie als Unternehmer buchen.'); }
     try { window.iaTrack?.('checkout_start', { seg: 'b2b', plan: b.dataset.plan }); } catch { /* ignore */ }
@@ -838,6 +867,8 @@ async function start() {
 }
 
 window.addEventListener('hashchange', () => { if (me) route(); });
+// Erneutes Tippen auf den aktiven Bereich: zurück nach oben.
+document.addEventListener('click', (e) => { const a = e.target.closest?.('a[data-v]'); if (a && a.getAttribute('href') === (location.hash || '#start')) window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); });
 root.addEventListener('click', (e) => { if (e.target.closest('[data-brsw]')) chooseBranche(); });
 root.addEventListener('submit', async (e) => {
   if (e.target.id !== 'brandF') return;

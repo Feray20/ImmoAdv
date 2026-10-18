@@ -3,6 +3,7 @@ import { stripe } from '@/lib/billing/stripe';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { fromAddress } from '@/lib/notify/mail';
 import { pushConfigured } from '@/lib/security/push';
+import { resolveTxt } from 'node:dns/promises';
 
 // Live-Prüfung der Einrichtung (Web-Admin → Einrichtung): fragt Stripe, Resend und die Datenbank direkt ab,
 // statt nur Umgebungsvariablen zu prüfen. Liefert je Prüfung ok/warn/fail mit Erklärung.
@@ -72,6 +73,8 @@ export async function liveChecks(origin: string): Promise<Check[]> {
       }
     } catch { out.push({ id: 'mail', label: 'E-Mail-Absender', state: 'warn', info: 'Resend nicht erreichbar.' }); }
   }
+  // Zustellbarkeit: DMARC, SPF und Markenlogo (BIMI) per DNS prüfen – entscheidend gegen Spam-Einordnung.
+  if (dom) out.push(...(await mailDnsChecks(dom)));
   // Datenbank
   if (!adminConfigured()) out.push({ id: 'db', label: 'Datenbank', state: 'fail', info: 'Supabase-Service-Schlüssel fehlt.' });
   else {
@@ -81,5 +84,28 @@ export async function liveChecks(origin: string): Promise<Check[]> {
   }
   out.push({ id: 'cron', label: 'Täglicher Lauf', state: process.env.CRON_SECRET ? 'ok' : 'fail', info: process.env.CRON_SECRET ? 'CRON_SECRET gesetzt (läuft täglich 03:17 UTC).' : 'CRON_SECRET fehlt.' });
   out.push({ id: 'push', label: 'Sofort-Alarm (Telegram/Slack)', state: pushConfigured() ? 'ok' : 'warn', info: pushConfigured() ? 'eingerichtet' : 'optional: ALERT_TELEGRAM_BOT_TOKEN + ALERT_TELEGRAM_CHAT_ID oder ALERT_WEBHOOK_URL in Vercel setzen.' });
+  return out;
+}
+
+const txt = async (name: string): Promise<string[]> => {
+  try { return (await resolveTxt(name)).map((r) => r.join('')); } catch { return []; }
+};
+
+// DNS-Prüfung für die Absenderdomain. DKIM prüft Resend selbst (siehe „E-Mail-Absender“).
+export async function mailDnsChecks(dom: string): Promise<Check[]> {
+  const out: Check[] = [];
+  const root = dom.split('.').slice(-2).join('.');
+  const dmarc = (await txt(`_dmarc.${dom}`)).concat(dom !== root ? await txt(`_dmarc.${root}`) : []).find((t) => /^v=DMARC1/i.test(t));
+  if (!dmarc) out.push({ id: 'dmarc', label: 'DMARC', state: 'fail', info: `Kein DMARC-Eintrag für ${root}. Beim DNS-Anbieter TXT „_dmarc“ = „v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc@${root}“ anlegen. Ohne DMARC sortieren Gmail und Yahoo Massenmails aus.` });
+  else {
+    const p = /;\s*p=(\w+)/i.exec(dmarc)?.[1]?.toLowerCase() || 'none';
+    out.push({ id: 'dmarc', label: 'DMARC', state: p === 'none' ? 'warn' : 'ok', info: p === 'none' ? `DMARC vorhanden, aber p=none (nur Beobachtung). Nach 2–4 Wochen ohne Fehler auf p=quarantine stellen – Voraussetzung für das Logo in Mail-Apps.` : `DMARC aktiv (p=${p}).` });
+  }
+  const spfHosts = [`send.${dom}`, dom];
+  let spf = '';
+  for (const h of spfHosts) { spf = (await txt(h)).find((t) => /^v=spf1/i.test(t)) || ''; if (spf) break; }
+  out.push({ id: 'spf', label: 'SPF', state: spf && /amazonses|resend/i.test(spf) ? 'ok' : spf ? 'warn' : 'fail', info: spf ? `SPF gefunden: ${spf.slice(0, 120)}` : 'Kein SPF-Eintrag gefunden. Die Einträge zeigt Resend unter Domains → immoadv.de an; beim DNS-Anbieter genau so übernehmen.' });
+  const bimi = (await txt(`default._bimi.${root}`)).find((t) => /^v=BIMI1/i.test(t));
+  out.push({ id: 'bimi', label: 'Logo in Mail-Apps (BIMI)', state: bimi ? 'ok' : 'warn', info: bimi ? `BIMI aktiv: ${bimi.slice(0, 120)}` : `Optional: TXT „default._bimi“ = „v=BIMI1; l=https://${root}/brand/bimi.svg;“ – zeigt das Logo z. B. bei Yahoo; Gmail und Apple Mail verlangen zusätzlich ein Markenzertifikat (VMC/CMC) und DMARC p=quarantine.` });
   return out;
 }

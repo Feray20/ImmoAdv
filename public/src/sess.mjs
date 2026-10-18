@@ -38,7 +38,10 @@ export async function refresh() {
 
 // Aufruf eigener Schnittstellen mit Anmeldung; liefert { ok, status, data, res }.
 export async function api(path, opts = {}, retry = true) {
-  const headers = { Authorization: 'Bearer ' + token(), ...(opts.body && typeof opts.body === 'string' ? { 'content-type': 'application/json' } : {}), ...(opts.headers || {}) };
+  // Web-Admin: aktiver Datenbereich (B2C / B2B / System) geht bei jeder Anfrage mit – der Server filtert danach.
+  let scope = null;
+  if (AREA === 'admin' && path.startsWith('/api/admin/')) { try { scope = localStorage.getItem('ia-admin-seg'); } catch { /* ignore */ } scope = ['b2c', 'b2b', 'system'].includes(scope) ? scope : 'b2c'; }
+  const headers = { Authorization: 'Bearer ' + token(), ...(scope ? { 'x-admin-scope': scope } : {}), ...(opts.body && typeof opts.body === 'string' ? { 'content-type': 'application/json' } : {}), ...(opts.headers || {}) };
   const res = await fetch(path, { cache: 'no-store', ...opts, headers });
   if (res.status === 401 && retry && (await refresh())) return api(path, opts, false);
   const ct = res.headers.get('content-type') || '';

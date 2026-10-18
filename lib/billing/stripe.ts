@@ -79,6 +79,20 @@ export async function ensurePrice(plan: Plan, s: Stripe = stripe()): Promise<str
   return price.id;
 }
 
+// Zusatzprodukt (Order-Bump) zu Kreditmappe oder Käufer-Pass: Notar-Checkliste & Banken-Verhandlungsleitfaden.
+type JsonAddon = { id: string; name: string; cents: number };
+const ADDONS: JsonAddon[] = ((PRICES.privat as unknown as { addons?: JsonAddon[] }).addons) || [];
+export const ADDON_LEITFADEN = ADDONS.find((a) => a.id === 'leitfaden') || null;
+export async function ensureAddonPrice(s: Stripe = stripe()): Promise<string | null> {
+  const a = ADDON_LEITFADEN;
+  if (!a) return null;
+  const key = `immoadv_addon_leitfaden_${a.cents}`;
+  const found = await s.prices.list({ lookup_keys: [key], active: true, limit: 1 });
+  if (found.data[0]) return found.data[0].id;
+  const price = await s.prices.create({ currency: 'eur', unit_amount: a.cents, tax_behavior: 'inclusive', lookup_key: key, product_data: { name: `ImmoAdv ${a.name}`, metadata: { immoadv_addon: 'leitfaden' } }, metadata: { immoadv_addon: 'leitfaden' } });
+  return price.id;
+}
+
 // Steuersatz 19 % USt (inklusive) holen oder anlegen, damit Rechnungen die Umsatzsteuer ausweisen.
 export async function ensureTaxRate(s: Stripe = stripe()): Promise<string> {
   const list = await s.taxRates.list({ active: true, inclusive: true, limit: 100 });
@@ -121,6 +135,7 @@ export type Entitlements = {
   tier: 'free' | 'starter' | 'pro';
   creditMaps: number;
   hasCustomer: boolean;
+  leitfaden?: boolean;
 };
 
 const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
@@ -154,7 +169,8 @@ export async function entitlementsFor(userId: string, email: string): Promise<En
     .filter((until) => until > Date.now())
     .sort((a, b) => b - a);
 
-  if (activeSub) return { pro: true, proSource: 'subscription', proUntil: null, starter, starterUntil, tier: 'pro', creditMaps, hasCustomer: true };
-  if (passes[0]) return { pro: true, proSource: 'pass', proUntil: new Date(passes[0]).toISOString(), starter, starterUntil, tier: 'pro', creditMaps, hasCustomer: true };
-  return { pro: false, proSource: null, proUntil: null, starter, starterUntil, tier: starter ? 'starter' : 'free', creditMaps, hasCustomer: true };
+  const leitfaden = paid.some((x) => x.metadata?.addon === 'leitfaden');
+  if (activeSub) return { pro: true, proSource: 'subscription', proUntil: null, starter, starterUntil, tier: 'pro', creditMaps, hasCustomer: true, leitfaden };
+  if (passes[0]) return { pro: true, proSource: 'pass', proUntil: new Date(passes[0]).toISOString(), starter, starterUntil, tier: 'pro', creditMaps, hasCustomer: true, leitfaden };
+  return { pro: false, proSource: null, proUntil: null, starter, starterUntil, tier: starter ? 'starter' : 'free', creditMaps, hasCustomer: true, leitfaden };
 }
