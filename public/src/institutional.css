@@ -238,7 +238,7 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 .ez-out .btn,.obj-actions .btn{white-space:normal;text-align:center}
 .feat-status.part{color:#0369A1;background:#E0F2FE}
 .glossar{margin:0}.gl-item{padding:14px 0;border-top:1px solid #E2E8F0;scroll-margin-top:90px}.gl-item:first-child{border-top:0}.gl-item[hidden]{display:none}.gl-item dt{font-weight:700;color:var(--ia-navy)}.gl-item dd{margin:4px 0 0;color:#334155;line-height:1.55}.gl-item:target dt{color:var(--ia-link)}.gl-anchor{display:block;position:relative;top:-90px}
-.route-hero h1{overflow-wrap:break-word;hyphens:auto;-webkit-hyphens:auto}.gl-search{grid-template-columns:1fr!important;margin-bottom:10px}.gl-search input{width:100%}.land-links a{min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center}
+.route-hero h1{overflow-wrap:break-word;hyphens:none;-webkit-hyphens:none;word-break:normal;text-wrap:balance}.gl-search{grid-template-columns:1fr!important;margin-bottom:10px}.gl-search input{width:100%}.land-links a{min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center}
 .acct-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}.acct-grid>*{min-width:0}.acct-grid h4{margin:0 0 6px;color:var(--ia-navy)}.acct-grid label{display:grid;gap:6px;margin:8px 0}.acct-grid input{border:1px solid var(--ia-hair);border-radius:4px;padding:8px 10px}.btn-danger{background:#B91C1C;color:#fff;border:1px solid #B91C1C}.btn-danger:disabled{opacity:.45;cursor:not-allowed}
 .obj-grid select{width:100%;min-width:0;border:1px solid var(--ia-hair);border-radius:4px;padding:8px 10px;background:#fff;color:var(--ia-navy);font:inherit;min-height:42px}
 .br-item{border-top:1px solid #E2E8F0;padding:10px 0}.br-item summary{display:grid;grid-template-columns:minmax(0,1fr) minmax(80px,2fr) auto;gap:12px;align-items:center;cursor:pointer;list-style:none}.br-item summary::-webkit-details-marker{display:none}.br-name{font-weight:600;color:var(--ia-navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.br-bar{display:block;height:8px;border-radius:4px;background:#E2E8F0;overflow:hidden}.br-bar>span{display:block;height:100%;background:linear-gradient(90deg,#0F2C59,#0284C7)}.br-groups{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}.frist-list li.hint{opacity:.85}
@@ -773,7 +773,7 @@ body{max-width:100%;overflow-x:clip}
 img,svg,video,canvas,iframe{max-width:100%}
 /* Lange deutsche Wörter (z. B. „Beleihungswertermittlungsverordnung“) dürfen auf schmalen Handys umbrechen, statt die Seite zu verbreitern. */
 @media (max-width:480px){
-  main p,main li,main dd,main dt,main td,main label,main em,main .module-card,main .dash-card{overflow-wrap:anywhere;hyphens:auto;-webkit-hyphens:auto}
+  main p,main li,main dd,main dt,main td,main label,main em,main .module-card,main .dash-card{overflow-wrap:break-word;hyphens:manual;-webkit-hyphens:manual}
   main h1,main h2,main h3,main h4,main nav,main nav a,main .btn{overflow-wrap:normal;hyphens:manual}
   main input,main select,main textarea,main .btn{max-width:100%}
   main .btn{white-space:normal}
@@ -1234,3 +1234,24 @@ img,svg,video,canvas,iframe{max-width:100%}
 /* Profi-Schwerpunkte im Stufen-Dialog: eigene Werkzeug-Chips */
 .stage-opts.pro .stage-opt{border-color:#C4B5FD}.stage-opts.pro .stage-n{background:#6D28D9}
 .stage-tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.stage-tools i{font-style:normal;font-size:12px;font-weight:700;color:#5B21B6;background:#EDE9FE;border-radius:999px;padding:2px 8px}
+
+/* Etappe 1: Umbruch nie buchstabenweise. 'break-word' (statt 'anywhere') hält die Mindestbreite eines Wortes,
+   damit Grid-/Flex-Spalten nicht auf einen Buchstaben zusammenfallen. Überschriften ohne automatische Silbentrennung. */
+h1,h2,h3,.route-hero h1,.hero h1{hyphens:none;-webkit-hyphens:none;word-break:normal;overflow-wrap:break-word}
+@media (max-width:640px){.route-hero h1,.hero h1{font-size:clamp(1.5rem,6.4vw,1.9rem);line-height:1.18;letter-spacing:-.01em}}
+
+/* Etappe 1: Privatbereich – Logo + Ebene immer oben */
+.app-top-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.app-top-k{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0284C7}
+.app-top .app-top-t h1{flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:900px){.app-top{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);min-height:56px;padding-top:8px;padding-bottom:8px}.app-top .app-top-t h1{font-size:17px;line-height:1.2}.app-top-k{font-size:10.5px}.app-top-brand,.mode-chip{min-height:44px}}
+
+/* Markenlader: ImmoAdv-Logo bleibt fest in der Mitte, ein Ring in Markenfarben dreht sich darum, das Logo pulsiert leicht. */
+.ia-ll{position:relative;width:84px;height:84px;display:grid;place-items:center}
+.ia-ll::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(2,132,199,0) 0deg,#38BDF8 120deg,#0284C7 220deg,#0F2C59 300deg,rgba(15,44,89,0) 360deg);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));animation:iaSpin 1s linear infinite}
+.ia-ll svg{width:46px;height:auto;animation:iaPulse 1.6s ease-in-out infinite}
+.ia-ll-s{width:56px;height:56px}.ia-ll-s svg{width:30px}
+.ia-ll-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 12px;color:#64748B;font-size:14px}
+.ia-work.ok .ia-ll::before{animation:none;background:#10B981}
+@keyframes iaPulse{0%,100%{transform:scale(1)}50%{transform:scale(.9)}}
+@media (prefers-reduced-motion:reduce){.ia-ll::before,.ia-ll svg{animation:none}}

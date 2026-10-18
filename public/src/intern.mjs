@@ -1,5 +1,6 @@
 // Web-Admin (nur ADMIN_EMAILS, mit zweitem Faktor): Finanz-Cockpit, System, Nutzer, Sicherheit, Partner, Rechnungsarchiv,
 // Steuer-Export, Anfragen und Codes, Protokoll und Betreiber-Kennzahlen.
+import { logoLoader } from './loader.mjs';
 import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs';
 
 // Zwei-Faktor-Code: Autofill aus der Tastatur (iOS/Android), Eingabe säubern und mit 6 Ziffern automatisch absenden.
@@ -104,7 +105,7 @@ function paintSeg() {
 
 function frame() {
   const ic = (d) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-  root.innerHTML = `<header class="ad-head ad-sticky"><h1>Admin</h1>
+  root.innerHTML = `<header class="ad-head ad-sticky"><a class="ad-brand" href="#uebersicht" aria-label="Web-Admin – Übersicht"><img src="/logo-icon.svg" alt="" width="28" height="24"></a><div class="ad-title"><small class="ad-kicker" id="adKicker">Web-Admin</small><h1 id="adTitle">Admin</h1></div>
       <div class="ad-segctl" role="group" aria-label="Bereich: Privatkunden oder Unternehmen"><button type="button" data-segset="b2c">B2C · Privat</button><button type="button" data-segset="b2b">B2B · Unternehmen</button></div>
       <button type="button" class="btn btn-outline ad-out" id="adLogout">Abmelden</button></header>
     <p class="form-note ad-note">Nur für Administratoren · zweiter Faktor · alle Aktionen werden protokolliert · Abmeldung nach 15 Minuten ohne Aktivität.</p>
@@ -131,8 +132,9 @@ function frame() {
 function show() {
   const h = location.hash.slice(1).split('-')[0];
   const t = TABS.find(([k]) => k === h)?.[0] || 'uebersicht';
-  if (show.last !== t) { window.scrollTo(0, 0); show.last = t; }
+  if (show.last !== t) { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); show.last = t; }
   const g = groupOf(t);
+  { const tt = $('#adTitle'), kk = $('#adKicker'); if (tt) tt.textContent = tabLabel(t); if (kk) kk.textContent = `Web-Admin · ${g[1]}`; }
   try { sessionStorage.setItem('ia-admin-last-' + g[0], t); } catch { /* ignore */ }
   $('#adSub').innerHTML = `<span class="ad-sub-h">${g[1]}</span>${g[4].map((k) => `<button type="button" role="tab" data-t="${k}">${tabLabel(k)}</button>`).join('')}`;
   $('#adSub').querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { location.hash = b.dataset.t; });
@@ -140,7 +142,7 @@ function show() {
   root.querySelectorAll('[data-g]').forEach((b) => b.setAttribute('aria-current', b.dataset.g === g[0] ? 'page' : 'false'));
   $('#adSub').querySelector(`[data-t="${t}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center' });
   const v = $('#adView');
-  v.innerHTML = '<p class="form-note">Wird geladen …</p>';
+  v.innerHTML = logoLoader();
   msg('');
   ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)) })[t](v);
 }
@@ -726,7 +728,7 @@ async function partner(v) {
 // Nur lesende Detailansicht eines Unternehmens (kein Einloggen als Partner).
 async function details(id) {
   const box = $('#invForm');
-  box.innerHTML = '<p class="form-note">Wird geladen …</p>';
+  box.innerHTML = logoLoader();
   const r = await api('/api/admin/b2b?id=' + id);
   if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
   const { account: a, members, leads, invoices, verificationDocs: vd = [] } = r.data;

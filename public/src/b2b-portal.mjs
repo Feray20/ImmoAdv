@@ -1,9 +1,11 @@
 // Unternehmensportal (/b2b-portal): Registrierung mit § 14 BGB und AVV, Anfragen-Pipeline,
 // Widget- und QR-Studio, Team, Profil mit Co-Branding, Tarif und Rechnungen.
+import { logoLoader } from './loader.mjs';
 import { BRANCHEN, BRANCHE_KEYS, brancheFromType } from './b2b-branche.mjs';
 import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession } from './sess.mjs';
 
 const root = document.getElementById('portal');
+try { history.scrollRestoration = 'manual'; } catch { /* ältere Browser */ }
 const $ = (s, el = document) => el.querySelector(s);
 // Bereiche in drei Gruppen: Tagesgeschäft, Werkzeuge & Wissen, Konto.
 const VIEWS = [
@@ -54,7 +56,7 @@ function shell() {
       <nav>${navGroups((v) => true)}</nav>
       <div class="pt-foot"><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><button type="button" class="pt-logout" id="ptLogout">Abmelden</button></div>
     </aside>
-    <section class="pt-main"><header class="pt-top"><h1 id="ptTitle"></h1><button type="button" class="pt-pres-btn" id="ptPres" hidden title="Vollbild für das Kundengespräch am Tablet"><span aria-hidden="true">⛶</span> Präsentieren</button><button type="button" class="pt-br" id="ptBr" title="Branche wechseln – das Portal passt sich an"><span aria-hidden="true">${B().icon}</span> ${esc(B().short)} <b aria-hidden="true">⇄</b></button><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
+    <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#start" aria-label="ImmoAdv Unternehmensportal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Unternehmensportal</small><h1 id="ptTitle"></h1></div><button type="button" class="pt-pres-btn" id="ptPres" hidden title="Vollbild für das Kundengespräch am Tablet"><span aria-hidden="true">⛶</span> Präsentieren</button><button type="button" class="pt-br" id="ptBr" title="Branche wechseln – das Portal passt sich an"><span aria-hidden="true">${B().icon}</span> ${esc(B().short)} <b aria-hidden="true">⇄</b></button><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
       ${a.status === 'locked' ? `<div class="pt-alert bad"><strong>Konto gesperrt.</strong> ${esc(a.lockReason || '')} Rechnungen und AVV bleiben abrufbar. Fragen an support@immoadv.de.</div>` : ''}
       <div id="ptView"></div><p class="pt-liab">ImmoAdv stellt rein technische Analyse- und Erfassungsinstrumente bereit und trifft keine Votierungs-, Bonitäts- oder Kreditentscheidung. Die aufsichtsrechtliche Pflicht zur Prüfung nach MaRisk, KWG oder § 34i GewO verbleibt vollumfänglich beim beratenden bzw. finanzierenden Institut. <a href="/nutzungsbedingungen#hinweise">Rechtliche Hinweise</a> · <a href="/datenschutz">Datenschutz</a></p></section>
     <nav class="pt-tabs" aria-label="Bereiche">${MAIN.map(([v, l, ic]) => `<a href="#${v}" data-v="${v}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${v === 'kunden' ? B().kunden : l}</span>${v === 'anfragen' && me.usage.leadsNew ? `<b class="pt-dot">${me.usage.leadsNew}</b>` : ''}</a>`).join('')}<button type="button" id="ptMore" aria-expanded="false" aria-controls="ptSheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>Mehr</span></button></nav>
@@ -94,8 +96,8 @@ function route() {
   $('#ptTitle').textContent = vLabel(view, VIEWS.find(([k]) => k === view)[1]);
   const box = $('#ptView');
   // Neuer Bereich: immer oben beginnen (Kapitel-Sprünge innerhalb eines Bereichs behalten ihre Position).
-  if (route.last !== view) { window.scrollTo(0, 0); route.last = view; }
-  box.innerHTML = '<p class="form-note">Wird geladen …</p>';
+  if (route.last !== view) { const ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) ae.blur(); window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })); route.last = view; }
+  box.innerHTML = logoLoader();
   { const pb = $('#ptPres'); if (pb) pb.hidden = !['wissen', 'tools'].includes(view); if (!['wissen', 'tools'].includes(view)) presentation(false); }
   ({ start: vStart, tools: (b) => import('./b2b-tools.mjs').then((m) => m.renderPrograms(b, { tier: me.tier, branche: br(), toast, brand: { color: me.limits?.cobranding && me.account.brandColor ? me.account.brandColor : '#0F2C59', logo: me.limits?.cobranding && me.account.hasLogo && me.account.slug ? `/api/b2b/logo?slug=${encodeURIComponent(me.account.slug)}` : '', sender: [me.account.companyName, me.account.advisorName].filter(Boolean).join(' · ') } })).catch(() => { b.innerHTML = '<p class="form-note">Programme konnten nicht geladen werden.</p>'; }), fall: (b) => import('./b2b-fall.mjs').then((m) => m.renderFall(b, { api, toast, me })).catch(() => { b.innerHTML = '<p class="form-note">Fall-Analyse konnte nicht geladen werden.</p>'; }), kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs').then((m) => m.renderWissen(b, br())).catch(() => { b.innerHTML = '<p class="form-note">Fachwissen konnte nicht geladen werden.</p>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: (b) => vTeam(b).then(() => addPw(b)), profil: (b) => { vProfil(b); addPw(b); }, tarif: vTarif })[view](box);
 }
@@ -258,7 +260,7 @@ async function todo() {
   }
   sum.textContent = items.length ? `${items.length} Punkt${items.length === 1 ? '' : 'e'}` : 'Alles erledigt';
   list.innerHTML = items.length ? items.map(([t, h, x, href]) => `<li class="${t}"><a href="${href}"><span class="todo-dot" aria-hidden="true"></span><span><strong>${esc(h)}</strong><small>${esc(x)}</small></span><em aria-hidden="true">→</em></a></li>`).join('')
-    : '<li class="empty">Keine offenen Aufgaben. <a href="#kunden">Neuen Kunden einladen</a> oder <a href="#werkzeuge">Widget einbinden</a>.</li>';
+    : '<li class="empty"><p>Keine offenen Aufgaben.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden">Neue Kunden einladen</a><a class="btn btn-outline" href="#werkzeuge">Widget einbinden</a></div></li>';
 }
 
 // ---------- Verifizierung (Gewerbenachweis) ----------
@@ -314,7 +316,7 @@ async function vLeads(box) {
   const n = (v) => (v == null || v === '' ? '–' : Number(v).toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' €');
   box.innerHTML = `<div class="pt-bar"><div class="seg" role="tablist">${['alle', ...Object.keys(STATUS)].map((s, i) => `<button type="button" data-f="${s}" aria-selected="${i === 0}">${s === 'alle' ? 'Alle' : STATUS[s]}</button>`).join('')}<button type="button" data-f="mine" aria-selected="false">Mir zugewiesen</button></div>
     <button class="btn btn-ghost" id="csv" type="button">CSV exportieren</button></div>
-    ${leads.length ? '' : '<div class="pt-empty"><strong>Noch keine Anfragen.</strong><p>Binden Sie das <a href="#werkzeuge">Widget</a> ein oder teilen Sie Ihre Partnerseite. Jede Anfrage erscheint hier mit Objektdaten und Kennzahlen.</p></div>'}
+    ${leads.length ? '' : '<div class="pt-empty"><strong>Noch keine Anfragen.</strong><p>Jede Anfrage aus Widget, QR-Code oder Partnerseite erscheint hier mit Objektdaten und Kennzahlen.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden">Mandanten einladen via Link</a><a class="btn btn-outline" href="#werkzeuge">QR-Code &amp; Widget</a></div></div>'}
     <div class="pt-leads">${leads.map((l) => {
       const p = l.property_data || {}, m = l.metrics || {};
       return `<article class="pt-lead" data-s="${l.status}" data-a="${l.assigned_to || ''}" data-id="${l.id}">
@@ -370,7 +372,7 @@ async function vSubs(box) {
         ${s.note ? `<p class="pt-msg">${esc(s.note)}</p>` : ''}
         <p class="pt-row"><button class="btn btn-dark" data-dl="${s.id}" type="button"${s.version_id ? '' : ' disabled'}>Kreditmappe öffnen</button>${s.sha256 ? `<a class="text-btn" href="/verify/${esc(s.version_id)}" target="_blank" rel="noopener">Echtheit prüfen</a>` : ''}</p>
         <label class="pt-field">Antwort an den Einreicher<textarea data-rp="${s.id}" rows="2" maxlength="1000">${esc(s.reply || '')}</textarea></label>
-        <button class="btn btn-ghost" data-sv="${s.id}" type="button">Status und Antwort senden</button></article>`).join('') : '<div class="pt-empty">Noch keine Einreichungen.</div>'}</section>` : ''}
+        <button class="btn btn-ghost" data-sv="${s.id}" type="button">Status und Antwort senden</button></article>`).join('') : '<div class="pt-empty"><strong>Noch keine Einreichungen.</strong><p>So sieht eine eingereichte Kreditmappe aus:</p><div class="todo-empty-a"><a class="btn btn-outline" href="/mustermappe" target="_blank" rel="noopener">Musterfall ansehen</a></div></div>'}</section>` : ''}
     <section class="pt-card"><h2>Kreditmappe bei einem Institut einreichen</h2>
       ${!me.tier ? '<p class="form-note">Einreichungen gibt es ab einem gebuchten Tarif.</p>' : !targets.length ? '<p class="form-note">Derzeit nimmt noch kein Institut über ImmoAdv Einreichungen an.</p>' : !versions.length ? '<p class="form-note">Sie haben noch keine registrierte Kreditmappe. Erstellen Sie zuerst eine Kreditmappe zu einem Fall.</p>' : `
       <form id="subF" class="obj-grid">
@@ -382,7 +384,7 @@ async function vSubs(box) {
       <label class="consent"><input type="checkbox" id="subC"> Die Einwilligung meines Kunden zur Weitergabe dieser Kreditmappe an das gewählte Institut liegt mir vor.</label>
       <button class="btn btn-dark" id="subGo" type="button">Einreichen</button>`}
       <p class="form-note">Das Institut erhält die registrierte Kreditmappe (mit Echtheits-QR) und kann Status und Rückfragen setzen. Die Kreditentscheidung trifft allein das Institut.</p></section>
-    <section class="pt-card"><h2>Ihre Einreichungen</h2>${outbox.length ? `<table class="bill-table"><thead><tr><th>Objekt</th><th>Institut</th><th>Datum</th><th>Status</th><th>Antwort</th></tr></thead><tbody>${outbox.map((s) => `<tr><td>${esc(s.object_label)}</td><td>${esc(s.to)}</td><td>${dt(s.created_at)}</td><td>${SUB[s.status]}</td><td>${esc(s.reply || '–')}</td></tr>`).join('')}</tbody></table>` : '<p class="form-note">Noch keine.</p>'}</section>`;
+    <section class="pt-card"><h2>Ihre Einreichungen</h2>${outbox.length ? `<table class="bill-table"><thead><tr><th>Objekt</th><th>Institut</th><th>Datum</th><th>Status</th><th>Antwort</th></tr></thead><tbody>${outbox.map((s) => `<tr><td>${esc(s.object_label)}</td><td>${esc(s.to)}</td><td>${dt(s.created_at)}</td><td>${SUB[s.status]}</td><td>${esc(s.reply || '–')}</td></tr>`).join('')}</tbody></table>` : '<div class="pt-empty"><strong>Noch keine Einreichungen.</strong><p>Erstellen Sie eine Kreditmappe zu einem Fall und reichen Sie sie hier ein.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#fall">Fall anlegen</a><a class="btn btn-outline" href="/mustermappe" target="_blank" rel="noopener">Musterfall ansehen</a></div></div>'}</section>`;
   box.querySelectorAll('[data-dl]').forEach((b) => b.onclick = () => busy(b, () => download('/api/b2b/submissions?id=' + b.dataset.dl, {}, 'Kreditmappe.pdf')));
   box.querySelectorAll('[data-sv]').forEach((b) => b.onclick = () => busy(b, async () => {
     const id = b.dataset.sv;
@@ -838,6 +840,8 @@ async function start() {
 }
 
 window.addEventListener('hashchange', () => { if (me) route(); });
+// Erneutes Tippen auf den aktiven Bereich: zurück nach oben.
+document.addEventListener('click', (e) => { const a = e.target.closest?.('a[data-v]'); if (a && a.getAttribute('href') === (location.hash || '#start')) window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); });
 root.addEventListener('click', (e) => { if (e.target.closest('[data-brsw]')) chooseBranche(); });
 root.addEventListener('submit', async (e) => {
   if (e.target.id !== 'brandF') return;

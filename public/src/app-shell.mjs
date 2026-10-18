@@ -257,7 +257,7 @@ export function setupApp({ u, d, saveData, reload }) {
     ${views.map(([k, l]) => `<a class="app-nav" data-go="${k}" href="#${k}">${svg(k)}<span>${l}</span></a>`).join('')}
     <div class="app-side-foot"><span class="app-user">${esc(u.email)}</span><button class="text-btn" id="appLogout" type="button">Abmelden</button></div></nav>`);
   const main = app.querySelector('main');
-  main.insertAdjacentHTML('afterbegin', `<div class="app-top"><a class="brand app-top-brand" href="/"><img class="brand-logo" src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><h1 id="appTitle"></h1>
+  main.insertAdjacentHTML('afterbegin', `<div class="app-top"><a class="brand app-top-brand" href="/"><img class="brand-logo" src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="app-top-t"><small class="app-top-k">Privatbereich · ${mode === 'profi' ? 'Profi' : 'Einsteiger'}</small><h1 id="appTitle"></h1></div>
     <button class="mode-chip" id="modeChip" type="button" aria-label="Modus wechseln">${mode === 'profi' ? 'Profi' : 'Einsteiger'} <span aria-hidden="true">⇄</span></button></div>`);
   app.insertAdjacentHTML('beforeend', `<nav class="app-tabs" aria-label="Schnellnavigation">${TABS.map((k) => `<a class="app-tab" data-go="${k}" href="#${k}">${svg(k)}<span>${k === 'werkzeuge' ? 'Tools' : views.find((v) => v[0] === k)[1].split(' ')[0]}</span></a>`).join('')}</nav>`);
   $('appLogout').onclick = () => document.getElementById('logout')?.click();
@@ -340,11 +340,13 @@ export function setupApp({ u, d, saveData, reload }) {
   import('/src/field-help.mjs').then((m) => m.watchHelp(grid)).catch(() => {});
   import('/src/retention.mjs').then(async (m) => { const ac = await getAccess(); m.mountRetention(grid, { mode, d, u, saveData, paid: ac.tier === 'pro' || ac.b2b }); if (typeof window.__iaApplyView === 'function') window.__iaApplyView(); }).catch(() => {});
 
+  const CLASSIFIED = new WeakSet();
   const apply = () => {
     const v = (location.hash.slice(1) || 'start').split('?')[0];
     const cur = views.some((x) => x[0] === v) ? v : 'start';
     const sc = grid.querySelector('.start-card'); if (sc && grid.firstElementChild !== sc) grid.prepend(sc);
-    [...grid.children].forEach((el) => { el.dataset.view = classify(el); el.classList.toggle('v-show', el.dataset.view.split(' ').includes(cur)); });
+    // Einordnung je Karte nur einmal berechnen (vorher bei jedem Wechsel für alle Karten → spürbare Hänger).
+    [...grid.children].forEach((el) => { if (!CLASSIFIED.has(el)) { el.dataset.view = classify(el); CLASSIFIED.add(el); } el.classList.toggle('v-show', el.dataset.view.split(' ').includes(cur)); });
     document.querySelectorAll('[data-go]').forEach((a) => a.classList.toggle('on', a.dataset.go === cur));
     $('appTitle').textContent = views.find((x) => x[0] === cur)[1];
     if (cur === 'suche' && !$('sucheView').dataset.ready) {
@@ -362,12 +364,34 @@ export function setupApp({ u, d, saveData, reload }) {
   // Scroll-Animation oder vom Browser wiederhergestellte Position.
   const toTop = () => { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })); };
   try { history.scrollRestoration = 'manual'; } catch { /* ältere Browser */ }
-  window.__iaHash = () => { const v = (location.hash.slice(1) || 'start').split('?')[0]; apply(); if (v === '' || views.some((x) => x[0] === v)) toTop(); };
+  // Nicht blockierender Wechsel: aktiven Reiter sofort markieren (sichtbare Rückmeldung beim Tippen),
+  // die eigentliche Umschaltung im nächsten Frame – entspricht useTransition in React.
+  let pend = 0;
+  const schedule = () => { if (pend) return; pend = requestAnimationFrame(() => { pend = 0; apply(); }); };
+  window.__iaHash = () => {
+    const v = (location.hash.slice(1) || 'start').split('?')[0];
+    const isView = v === '' || views.some((x) => x[0] === v);
+    if (isView) {
+      try { const ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) ae.blur(); } catch { /* ignore */ }
+      const cur = views.some((x) => x[0] === v) ? v : 'start';
+      document.querySelectorAll('[data-go]').forEach((a) => a.classList.toggle('on', a.dataset.go === cur));
+      toTop();
+    }
+    schedule();
+    if (isView) requestAnimationFrame(toTop);
+  };
   window.addEventListener('hashchange', window.__iaHash);
   if (!window.__iaTopBound) { window.__iaTopBound = true; document.addEventListener('click', (e) => { const a = e.target.closest?.('a[data-go], .app-tab, .app-nav'); if (a && a.getAttribute('href') === location.hash) toTop(); }); }
   window.__iaApplyView = apply;
-  new MutationObserver(apply).observe(grid, { childList: true });
+  new MutationObserver(() => schedule()).observe(grid, { childList: true });
   apply();
+  // Erster Aufbau nach Login/Neuladen: immer ganz oben beginnen (kein vom Browser wiederhergestellter Scrollstand,
+  // kein Herunterscrollen durch Fokus auf Eingabefelder weiter unten, z. B. im Bereich Konto).
+  if (!window.__iaBooted) {
+    window.__iaBooted = true;
+    try { if (document.activeElement && document.activeElement !== document.body && main.contains(document.activeElement)) document.activeElement.blur(); } catch { /* ignore */ }
+    toTop();
+  }
 }
 
 // ImmoAdv Studio (Bereich Objekte): Produkt wählen – BankReady (Kreditmappe) oder RenditeRadar (Objekt-Analyse) –
