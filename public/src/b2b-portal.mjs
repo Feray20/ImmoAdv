@@ -54,9 +54,9 @@ function shell() {
     <aside class="pt-side"><a class="pt-brand" href="/"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a>
       <small class="pt-tag">Unternehmensportal</small>
       <nav>${navGroups((v) => true)}</nav>
-      <div class="pt-foot"><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><button type="button" class="pt-logout" id="ptLogout">Abmelden</button></div>
+      <div class="pt-foot"><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><button type="button" class="pt-br-side" id="ptBr" title="Branche wechseln – das Portal passt sich an"><span aria-hidden="true">${B().icon}</span> ${esc(B().short)} · wechseln</button><button type="button" class="pt-logout" id="ptLogout">Abmelden</button></div>
     </aside>
-    <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#start" aria-label="ImmoAdv Unternehmensportal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Unternehmensportal</small><h1 id="ptTitle"></h1></div><button type="button" class="pt-pres-btn" id="ptPres" hidden title="Vollbild für das Kundengespräch am Tablet"><span aria-hidden="true">⛶</span> Präsentieren</button><button type="button" class="pt-br" id="ptBr" title="Branche wechseln – das Portal passt sich an"><span aria-hidden="true">${B().icon}</span> ${esc(B().short)} <b aria-hidden="true">⇄</b></button><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
+    <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#start" aria-label="ImmoAdv Unternehmensportal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Unternehmensportal</small><h1 id="ptTitle"></h1></div><button type="button" class="pt-pres-btn" id="ptPres" hidden title="Vollbild für das Kundengespräch am Tablet"><span aria-hidden="true">⛶</span> Präsentieren</button><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
       ${a.status === 'locked' ? `<div class="pt-alert bad"><strong>Konto gesperrt.</strong> ${esc(a.lockReason || '')} Rechnungen und AVV bleiben abrufbar. Fragen an support@immoadv.de.</div>` : ''}
       <div id="ptView"></div><p class="pt-liab">ImmoAdv stellt rein technische Analyse- und Erfassungsinstrumente bereit und trifft keine Votierungs-, Bonitäts- oder Kreditentscheidung. Die aufsichtsrechtliche Pflicht zur Prüfung nach MaRisk, KWG oder § 34i GewO verbleibt vollumfänglich beim beratenden bzw. finanzierenden Institut. <a href="/nutzungsbedingungen#hinweise">Rechtliche Hinweise</a> · <a href="/datenschutz">Datenschutz</a></p></section>
     <nav class="pt-tabs" aria-label="Bereiche">${MAIN.map(([v, l, ic]) => `<a href="#${v}" data-v="${v}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${v === 'kunden' ? B().kunden : l}</span>${v === 'anfragen' && me.usage.leadsNew ? `<b class="pt-dot">${me.usage.leadsNew}</b>` : ''}</a>`).join('')}<button type="button" id="ptMore" aria-expanded="false" aria-controls="ptSheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>Mehr</span></button></nav>
@@ -64,7 +64,7 @@ function shell() {
       <nav>${navGroups((v) => !MAIN.some(([m]) => m === v))}<button type="button" class="pt-logout" id="ptLogoutS">Abmelden</button></nav></div></div>
   </div>`;
   root.querySelectorAll('#ptLogout,#ptLogoutM,#ptLogoutS').forEach((b) => { b.onclick = async () => { try { (await import('./b2b-tools.mjs')).clearAll(); } catch { /* weiter */ } logout(); }; });
-  $('#ptBr').onclick = () => chooseBranche();
+  const brb = $('#ptBr'); if (brb) brb.onclick = () => chooseBranche();
   const sheet = $('#ptSheet'), more = $('#ptMore');
   const openSheet = (on) => { sheet.hidden = !on; more.setAttribute('aria-expanded', String(on)); document.body.classList.toggle('pt-sheet-open', on); };
   more.onclick = () => openSheet(sheet.hidden);
@@ -86,7 +86,7 @@ function presentation(on) {
   }
 }
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('pt-present')) presentation(false); });
-document.addEventListener('click', (e) => { if (e.target.closest?.('#ptPres')) presentation(true); });
+document.addEventListener('click', (e) => { if (e.target.closest?.('#ptPres') && matchMedia('(min-width:768px)').matches) presentation(true); });
 
 function route() {
   const v = (location.hash.slice(1).split('=')[0] || 'start');
@@ -217,7 +217,7 @@ function vStart(box) {
   const quota = lim ? (lim.dossiersPerMonth == null ? 'unbegrenzt' : `${u.dossiersThisMonth} von ${lim.dossiersPerMonth + (a.dossierBonus || 0)}`) : '–';
   const done = setupSteps().filter(([ok]) => ok).length;
   const col = me.limits?.cobranding && a.brandColor ? a.brandColor : '#0F2C59';
-  box.innerHTML = `${a.verified ? '' : `<div class="pt-alert warn"><strong>Ihr Konto ist noch nicht freigeschaltet.</strong> Bitte laden Sie Ihre Gewerbeanmeldung oder einen Handelsregisterauszug hoch. Nach unserer Prüfung schalten wir Partnerseite, Widget, Anfragen, Kreditmappen und Tarife frei. <a class="btn btn-dark" href="#verifizierung">Zur Verifizierung</a></div>`}
+  box.innerHTML = `<p class="pt-mobile-hint" role="note"><span aria-hidden="true">💻</span> Für die bestmögliche Performance und komplexe Votierungsanalysen empfehlen wir Tablet oder Computer. Die mobile Ansicht wird laufend optimiert.</p>${a.verified ? '' : `<div class="pt-alert warn"><strong>Ihr Konto ist noch nicht freigeschaltet.</strong> Bitte laden Sie Ihre Gewerbeanmeldung oder einen Handelsregisterauszug hoch. Nach unserer Prüfung schalten wir Partnerseite, Widget, Anfragen, Kreditmappen und Tarife frei. <a class="btn btn-dark" href="#verifizierung">Zur Verifizierung</a></div>`}
     <section class="pt-card todo"><div class="todo-h"><h2>Heute zu tun</h2><span class="form-note" id="todoSum">wird geladen …</span></div><ul class="todo-list" id="todoList"></ul></section>
     <div class="pt-kpis">
       <div class="pt-kpi"><small>Neue Anfragen</small><strong>${u.leadsNew}</strong><a href="#anfragen">Ansehen</a></div>
@@ -888,7 +888,7 @@ function chooseBranche(first = false) {
   let pre = null; if (first) { try { pre = localStorage.getItem('ia-b2b-branche'); } catch { /* ohne Speicher */ } }
   const cur = BRANCHEN[pre] ? pre : br();
   d.innerHTML = `<div class="ad-dlg-in"><div class="ad-dlg-h"><h2>${first ? 'In welcher Branche arbeiten Sie?' : 'Branche wechseln'}</h2>${first ? '' : '<button type="button" class="stage-x" data-x aria-label="Schließen">×</button>'}</div>
-    <p class="form-note">Startseite, Bezeichnungen und der Beratungskompass passen sich an Ihre Branche an. Sie können jederzeit wechseln – oben rechts.</p>
+    <p class="form-note">Startseite, Bezeichnungen und der Beratungskompass passen sich an Ihre Branche an. Sie können jederzeit wechseln – auf der Übersicht unter „Ihre Ansicht“.</p>
     <div class="br-tiles">${BRANCHE_KEYS.map((k) => `<button type="button" class="br-tile${k === cur ? ' on' : ''}" data-br="${k}"><span aria-hidden="true">${BRANCHEN[k].icon}</span><strong>${esc(BRANCHEN[k].label)}</strong><small>${esc(BRANCHEN[k].desc)}</small></button>`).join('')}</div>
     <p class="form-note" id="brMsg" role="status"></p></div>`;
   d.querySelector('[data-x]')?.addEventListener('click', () => d.close());

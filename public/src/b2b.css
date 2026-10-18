@@ -911,3 +911,16 @@ body[data-ad-seg=system] .ad-segctl button[aria-pressed=true]{background:#334155
 .acc-f{display:grid;gap:12px;padding:20px}.acc-f h2{margin:0;color:#0F2C59}.acc-t{border:1px solid #E2E8F0;border-radius:12px;padding:10px 12px;display:grid;gap:8px}
 .acc-t .chk{align-items:flex-start;line-height:1.45}.acc-f label{display:grid;gap:4px;font-size:13.5px;font-weight:600;color:#334155}.acc-f .chk{display:flex;gap:8px;font-weight:400}
 .acc-f input[type=number],.acc-f input[type=date],.acc-f textarea{border:1px solid #CBD5E1;border-radius:8px;padding:8px 10px;font:inherit}
+
+/* Branche wechseln: in der Seitenleiste statt in der Kopfzeile */
+.pt-br-side{display:block;width:100%;margin:8px 0 4px;padding:8px 10px;border:1px solid rgba(255,255,255,.25);border-radius:8px;background:rgba(255,255,255,.08);color:#fff;font-family:inherit;font-size:12.5px;font-weight:600;text-align:left;cursor:pointer}
+.pt-br-side:hover{background:rgba(255,255,255,.16)}
+/* Handy: Hinweis auf Tablet/Computer; Präsentationsmodus erst ab 768px */
+.pt-mobile-hint{display:none}
+@media (max-width:767px){
+  .pt-mobile-hint{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border:1px solid #BAE6FD;border-radius:12px;background:#F0F9FF;color:#0C4A6E;font-size:14px;line-height:1.5}
+  .pt-pres-btn,.pt-pres-x{display:none!important}
+}
+.ad-h-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.ad-h-row h2{margin:0}
+.ad-mk-one{min-height:44px}
+.ad-mk-tiles:has(>:only-child){grid-template-columns:1fr}

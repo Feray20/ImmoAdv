@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
 const SITE = 'https://immoadv.de';
 const j = (b: unknown, s = 200) => NextResponse.json(b, { status: s, headers: { 'Cache-Control': 'no-store' } });
 const Body = z.object({
-  action: z.enum(['signup', 'recover', 'resend']),
+  action: z.enum(['signup', 'recover', 'resend', 'magic']),
   email: z.string().trim().toLowerCase().email().max(200),
   password: z.string().min(8).max(200).optional(),
   ref: z.string().regex(/^[a-z0-9-]{3,40}$/).optional(),
@@ -78,6 +78,19 @@ export async function POST(req: Request) {
       biz ? 'Guten Tag,\n\nSie haben angefordert, Ihr Passwort für das ImmoAdv-Unternehmensportal zurückzusetzen. Über den Knopf legen Sie ein neues Passwort fest und gelangen danach direkt ins Portal.'
         : 'Guten Tag,\n\nSie haben angefordert, Ihr ImmoAdv-Passwort zurückzusetzen. Über den Knopf legen Sie ein neues Passwort fest.',
       [], { area, title: 'Neues Passwort festlegen', button: { label: 'Neues Passwort festlegen', url: confirmUrl(data.properties.hashed_token, 'recovery', next) }, note: 'Der Link ist nur kurze Zeit gültig und kann einmal verwendet werden. Wenn Sie das nicht angefordert haben, ignorieren Sie diese E-Mail – Ihr Passwort bleibt unverändert.' });
+    return j(DONE);
+  }
+
+  // magic: Anmeldung ohne Passwort per Einmal-Link – nur für bestehende Konten (kein Konto ohne Registrierung und AGB).
+  if (action === 'magic') {
+    const { data, error } = await admin.generateLink({ type: 'magiclink', email, options: { redirectTo: biz ? `${SITE}/b2b-portal` : `${SITE}/app/dashboard` } });
+    if (error || !data.properties?.hashed_token) return j(DONE);
+    const u = data.user;
+    // Falls Supabase dabei ein neues Konto angelegt hat: sofort wieder entfernen und nichts senden (gleiche Antwort für alle Adressen).
+    if (u && !u.last_sign_in_at && !u.email_confirmed_at && Date.now() - new Date(u.created_at).getTime() < 5_000) { await admin.deleteUser(u.id).catch(() => null); return j(DONE); }
+    await sendMail(email, biz ? 'Ihr Anmeldelink – ImmoAdv Unternehmensportal' : 'Ihr Anmeldelink – ImmoAdv',
+      biz ? 'Guten Tag,\n\nhier ist Ihr Anmeldelink für das ImmoAdv-Unternehmensportal. Ein Klick genügt – ganz ohne Passwort.' : 'Guten Tag,\n\nhier ist Ihr Anmeldelink für ImmoAdv. Ein Klick genügt – ganz ohne Passwort.',
+      [], { area, title: 'Jetzt anmelden', button: { label: 'Bei ImmoAdv anmelden', url: confirmUrl(data.properties.hashed_token, 'magiclink', next) }, note: 'Der Link ist nur kurze Zeit gültig und kann einmal verwendet werden. Wenn Sie das nicht angefordert haben, ignorieren Sie diese E-Mail – Ihr Konto bleibt geschützt.' });
     return j(DONE);
   }
 
