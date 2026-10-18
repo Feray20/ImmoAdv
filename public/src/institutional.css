@@ -1419,3 +1419,8 @@ body.menu-open .cw-fab,body.menu-open .cw-panel,body.is-app .cw-fab,body.is-app 
 .br-next.ok{background:#F0FDF4;border-color:#BBF7D0;color:#14532D}
 .br-next .link-btn,.br-groups .link-btn{min-height:36px;padding:4px 2px;font-size:13.5px}
 .br-why{margin:8px 0 4px;font-size:13px;font-weight:600;color:var(--ia-navy)}
+
+/* Fußzeile immer am unteren Rand – auch auf kurzen Seiten (Anmeldung, Fehler, Danke-Seiten), auf allen Geräten */
+body:not(.is-app) #app{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+body:not(.is-app) #app>main{flex:1 0 auto}
+body:not(.is-app) #app>footer{margin-top:auto}
