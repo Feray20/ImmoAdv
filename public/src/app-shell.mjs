@@ -327,6 +327,9 @@ export function setupApp({ u, d, saveData, reload }) {
     bindPw(u);
   }
   personalCard(grid);
+  // Verbesserungsvorschläge (Konto): gehen an den Web-Admin, Bereich Privatkunden.
+  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide fb-card-b2c" data-view="konto" id="fbCardB2C"><h3>Verbesserungsvorschläge</h3><div id="fbBodyB2C"></div></article>`);
+  import('/src/feedback-ui.mjs').then((m) => m.mountFeedback($('fbBodyB2C'), { area: 'b2c' })).catch(() => {});
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="suche" id="sucheView"></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="werkzeuge" id="toolsView"><p class="form-note">Software-Tools werden geladen …</p></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);

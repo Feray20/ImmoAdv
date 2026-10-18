@@ -22,11 +22,15 @@ export function periodRange(p: string): { from: string; to: string; label: strin
 
 // Archiv für die Steuerkanzlei: alle Rechnungen des Zeitraums als PDF, Dateiname beginnt mit dem Rechnungsdatum
 // (JJJJ-MM-TT_Rechnungsnummer_Kunde.pdf), optional DATEV-Buchungsstapel und USt-Journal.
-export async function generateMonthlyTaxArchive(monat: string, skr: Kontenrahmen, withDatev = true): Promise<TaxArchive> {
+// scope: 'b2c' nur Privatkunden-Rechnungen, 'b2b' nur Unternehmensrechnungen, 'all' alles (Kanzlei-Versand per Zeitplan).
+export async function generateMonthlyTaxArchive(monat: string, skr: Kontenrahmen, withDatev = true, scope: 'b2c' | 'b2b' | 'all' = 'all'): Promise<TaxArchive> {
   const { from, to, label } = periodRange(monat);
-  const { data, error } = await supabaseAdmin()
+  let base = supabaseAdmin()
     .from('immo_invoices')
-    .select('*')
+    .select('*');
+  if (scope === 'b2b') base = base.not('account_id', 'is', null);
+  if (scope === 'b2c') base = base.is('account_id', null);
+  const { data, error } = await base
     .gte('issue_date', from).lte('issue_date', to)
     .order('issue_date', { ascending: true })
     .order('invoice_number', { ascending: true })

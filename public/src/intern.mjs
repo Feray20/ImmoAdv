@@ -83,18 +83,30 @@ async function mfa() {
 
 // ---------- Rahmen ----------
 // Bereich wie „Einsteiger ⇄ Profi“: B2C (Privatkunden) oder B2B (Unternehmen) – steuert Übersicht und Nutzer-Liste.
-const SEGS = { b2c: 'Privatkunden (B2C)', b2b: 'Unternehmen (B2B)' };
-const getSeg = () => { try { return localStorage.getItem('ia-admin-seg') === 'b2b' ? 'b2b' : 'b2c'; } catch { return 'b2c'; } };
+// Strikte Trennung: Jede Ansicht zeigt nur Daten des gewählten Bereichs. „System“ ist der einzige Bereich mit
+// bereichsübergreifenden Betriebsdaten (Einrichtung, Server, Webhooks, Sicherheit, Audit-Protokoll).
+const SEGS = { b2c: 'Privatkunden (B2C)', b2b: 'Unternehmen (B2B)', system: 'System (gesamt)' };
+const getSeg = () => { try { const x = localStorage.getItem('ia-admin-seg'); return x === 'b2b' || x === 'system' ? x : 'b2c'; } catch { return 'b2c'; } };
+// Welche Reiter es in welchem Bereich gibt (alles andere ist im Bereich ausgeblendet).
+const TAB_SCOPES = {
+  uebersicht: ['b2c', 'b2b'], nutzer: ['b2c', 'b2b', 'system'], vorschlaege: ['b2c', 'b2b'], werbung: ['b2c', 'b2b'], cockpit: ['b2c', 'b2b'], rechnungen: ['b2c', 'b2b'], steuer: ['b2c', 'b2b'],
+  analyse: ['b2c', 'b2b'], kennzahlen: ['b2c', 'b2b'], partner: ['b2b'], anfragen: ['b2b'], akquise: ['b2b'],
+  einrichtung: ['system'], system: ['system'], testkauf: ['system'], sicherheit: ['system'], protokoll: ['system'],
+};
+const inScope = (t, g = getSeg()) => (TAB_SCOPES[t] || ['system']).includes(g);
+const firstTab = (g = getSeg()) => (g === 'system' ? 'einrichtung' : 'uebersicht');
 const setSeg = (x) => { try { localStorage.setItem('ia-admin-seg', x); } catch { /* nur Komfort */ } };
-const TABS = [['uebersicht', 'Übersicht'], ['einrichtung', 'Einrichtung'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'GoBD-Export (ZIP, DATEV)'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
+const TABS = [['uebersicht', 'Übersicht'], ['einrichtung', 'Einrichtung'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'GoBD-Export (ZIP, DATEV)'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen'], ['vorschlaege', 'Vorschläge']];
 // Vier Hauptbereiche (Handy: untere Leiste + Unterreiter; Desktop: Seitenleiste mit Gruppen).
 const GROUPS = [
-  ['ops', 'Operations & CRM', 'CRM', '<path d="M16 11a4 4 0 1 0-8 0"/><circle cx="12" cy="7" r="3"/><path d="M4 21v-2a6 6 0 0 1 16 0v2"/>', ['uebersicht', 'partner', 'nutzer', 'anfragen', 'akquise', 'werbung']],
+  ['ops', 'Operations & CRM', 'CRM', '<path d="M16 11a4 4 0 1 0-8 0"/><circle cx="12" cy="7" r="3"/><path d="M4 21v-2a6 6 0 0 1 16 0v2"/>', ['uebersicht', 'vorschlaege', 'partner', 'nutzer', 'anfragen', 'akquise', 'werbung']],
   ['fin', 'Finanzen & Compliance', 'Finanzen', '<path d="M4 7h16v12H4z"/><path d="M4 11h16M8 15h3"/>', ['cockpit', 'rechnungen', 'steuer']],
   ['ana', 'Analytics & Monitoring', 'Analyse', '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', ['analyse', 'kennzahlen', 'protokoll', 'sicherheit']],
   ['sys', 'System & Setup', 'System', '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', ['einrichtung', 'system', 'testkauf']],
 ];
-const groupOf = (t) => GROUPS.find((g) => g[4].includes(t)) || GROUPS[0];
+// Gruppen und Reiter nur des aktiven Bereichs; leere Gruppen entfallen.
+const groupsIn = (sc = getSeg()) => GROUPS.map(([a, b, c, d, ts]) => [a, b, c, d, ts.filter((t) => inScope(t, sc))]).filter((g) => g[4].length);
+const groupOf = (t) => groupsIn().find((g) => g[4].includes(t)) || groupsIn()[0];
 const tabLabel = (t) => TABS.find(([k]) => k === t)?.[1] || t;
 
 function paintSeg() {
@@ -106,36 +118,42 @@ function paintSeg() {
 function frame() {
   const ic = (d) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   root.innerHTML = `<header class="ad-head ad-sticky"><a class="ad-brand" href="#uebersicht" aria-label="Web-Admin – Übersicht"><img src="/logo-icon.svg" alt="" width="28" height="24"></a><div class="ad-title"><small class="ad-kicker" id="adKicker">Web-Admin</small><h1 id="adTitle">Admin</h1></div>
-      <div class="ad-segctl" role="group" aria-label="Bereich: Privatkunden oder Unternehmen"><button type="button" data-segset="b2c">B2C · Privat</button><button type="button" data-segset="b2b">B2B · Unternehmen</button></div>
+      <div class="ad-segctl ad-segctl3" role="group" aria-label="Datenbereich"><button type="button" data-segset="b2c">B2C<span> · Privat</span></button><button type="button" data-segset="b2b">B2B<span> · Unternehmen</span></button><button type="button" data-segset="system">System</button></div>
       <button type="button" class="btn btn-outline ad-out" id="adLogout">Abmelden</button></header>
     <p class="form-note ad-note">Nur für Administratoren · zweiter Faktor · alle Aktionen werden protokolliert · Abmeldung nach 15 Minuten ohne Aktivität.</p>
-    <div class="ad-shell"><nav class="ad-tabs" aria-label="Bereiche">${GROUPS.map(([g, l, , , ts]) => `<div class="ad-grp"><span class="ad-grp-h">${l}</span>${ts.map((k) => `<button type="button" data-t="${k}">${tabLabel(k)}</button>`).join('')}</div>`).join('')}</nav>
-    <div class="ad-main"><div class="ad-subtabs" id="adSub" role="tablist"></div><p id="adMsg" class="form-note" role="status"></p><div id="adView"></div></div></div>
-    <nav class="ad-bottom" aria-label="Hauptbereiche">${GROUPS.map(([g, , sh, d]) => `<button type="button" data-g="${g}">${ic(d)}<span>${sh}</span></button>`).join('')}</nav>`;
+    <div class="ad-shell"><nav class="ad-tabs" aria-label="Bereiche">${groupsIn().map(([g, l, , , ts]) => `<div class="ad-grp"><span class="ad-grp-h">${l}</span>${ts.map((k) => `<button type="button" data-t="${k}">${tabLabel(k)}</button>`).join('')}</div>`).join('')}</nav>
+    <div class="ad-main"><div class="ad-scope-band" id="adBand"></div><div class="ad-subtabs" id="adSub" role="tablist"></div><p id="adMsg" class="form-note" role="status"></p><div id="adView"></div></div></div>
+    <nav class="ad-bottom" aria-label="Hauptbereiche">${groupsIn().map(([g, , sh, d]) => `<button type="button" data-g="${g}">${ic(d)}<span>${sh}</span></button>`).join('')}</nav>`;
   root.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { location.hash = b.dataset.t; });
   root.querySelectorAll('[data-g]').forEach((b) => b.onclick = () => {
-    const g = GROUPS.find((x) => x[0] === b.dataset.g);
-    let last = null; try { last = sessionStorage.getItem('ia-admin-last-' + g[0]); } catch { /* ignore */ }
+    const g = groupsIn().find((x) => x[0] === b.dataset.g);
+    let last = null; try { last = sessionStorage.getItem(`ia-admin-last-${getSeg()}-${g[0]}`); } catch { /* ignore */ }
     location.hash = g[4].includes(last) ? last : g[4][0];
   });
   $('#adLogout').onclick = logout;
   paintSeg();
   root.querySelectorAll('[data-segset]').forEach((b) => b.onclick = () => {
     if (b.dataset.segset === getSeg()) return;
-    setSeg(b.dataset.segset); paintSeg();
-    // Weicher Wechsel ohne Seitenneuladen: Ansicht kurz ausblenden, mit neuem Bereich neu laden.
-    const v = $('#adView'); v.classList.add('ad-switching');
-    setTimeout(() => { show(); requestAnimationFrame(() => v.classList.remove('ad-switching')); }, 140);
+    setSeg(b.dataset.segset);
+    CK_CACHE.clear();
+    // Bereichswechsel: Navigation neu aufbauen (nur Reiter dieses Bereichs) und – falls der aktuelle Reiter hier
+    // nicht existiert – auf den Start des Bereichs springen. Nie Daten des vorigen Bereichs stehen lassen.
+    const cur = location.hash.slice(1).split('-')[0];
+    frame();
+    if (!inScope(cur)) location.hash = firstTab(); else show();
   });
 }
 
 function show() {
   const h = location.hash.slice(1).split('-')[0];
-  const t = TABS.find(([k]) => k === h)?.[0] || 'uebersicht';
+  let t = TABS.find(([k]) => k === h)?.[0] || firstTab();
+  // Reiter gehört nicht zum aktiven Bereich → Start des Bereichs (keine Fremddaten anzeigen).
+  if (!inScope(t)) { t = firstTab(); history.replaceState(null, '', '#' + t); }
+  { const band = $('#adBand'), sg = getSeg(); if (band) { band.dataset.seg = sg; band.innerHTML = `<span class="ad-scope-dot"></span><strong>${SEGS[sg]}</strong><span>${sg === 'system' ? 'Betrieb gesamt: Einrichtung, Server, Webhooks, Sicherheit, Protokoll' : sg === 'b2b' ? 'Es werden ausschließlich Unternehmensdaten angezeigt.' : 'Es werden ausschließlich Privatkunden-Daten angezeigt.'}</span>`; } }
   if (show.last !== t) { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); show.last = t; }
   const g = groupOf(t);
-  { const tt = $('#adTitle'), kk = $('#adKicker'); if (tt) tt.textContent = tabLabel(t); if (kk) kk.textContent = `Web-Admin · ${g[1]}`; }
-  try { sessionStorage.setItem('ia-admin-last-' + g[0], t); } catch { /* ignore */ }
+  { const tt = $('#adTitle'), kk = $('#adKicker'); if (tt) tt.textContent = tabLabel(t); if (kk) kk.textContent = `Web-Admin · ${({ b2c: 'B2C Privat', b2b: 'B2B Unternehmen', system: 'System' })[getSeg()]}`; }
+  try { sessionStorage.setItem(`ia-admin-last-${getSeg()}-${g[0]}`, t); } catch { /* ignore */ }
   $('#adSub').innerHTML = `<span class="ad-sub-h">${g[1]}</span>${g[4].map((k) => `<button type="button" role="tab" data-t="${k}">${tabLabel(k)}</button>`).join('')}`;
   $('#adSub').querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { location.hash = b.dataset.t; });
   root.querySelectorAll('[data-t]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.t === t)));
@@ -144,7 +162,7 @@ function show() {
   const v = $('#adView');
   v.innerHTML = logoLoader();
   msg('');
-  ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)) })[t](v);
+  ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)) })[t](v);
 }
 
 // ---------- Nutzer: Konten im Überblick, sperren/entsperren, Passwort-Reset, löschen ----------
@@ -154,7 +172,7 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
   const us = r.data.users || [];
   const ago = (x) => (x ? dtt(x) : 'nie');
   v.innerHTML = `<section class="pt-card"><h2>Nutzer</h2>
-    <div class="seg us-seg" role="tablist" aria-label="Bereich">${[['b2c', 'Privatkunden (B2C)'], ['b2b', 'Unternehmen (B2B)'], ['admin', 'Administratoren']].map(([k, l]) => `<button type="button" data-seg="${k}" aria-selected="${k === seg}">${l}</button>`).join('')}</div>
+    <div class="seg us-seg" role="tablist" aria-label="Bereich">${[['b2c', 'Privatkunden (B2C)'], ['b2b', 'Unternehmen (B2B)'], ['admin', 'Administratoren']].filter(([k]) => k === (getSeg() === 'system' ? 'admin' : getSeg())).map(([k, l]) => `<button type="button" data-seg="${k}" aria-selected="${k === seg}">${l}</button>`).join('')}</div>
     <form class="ad-search" id="usF"><input id="usQ" type="search" placeholder="E-Mail suchen" value="${esc(q)}" aria-label="E-Mail suchen" autocomplete="off"><button class="btn btn-dark" type="submit">Suchen</button></form>
     <p class="form-note">${us.length} Konten auf dieser Seite. Angezeigt werden nur Kontodaten – keine Inhalte. Jede Aktion wird protokolliert.</p>
     <div class="us-list">${us.map((u) => `<article class="us-card${u.banned ? ' banned' : ''}">
@@ -481,12 +499,25 @@ function rangeOf(z) {
   if (z === 'jahr') return [isoD(new Date(now.getFullYear(), 0, 1)), t];
   return ['', t];
 }
+function ckResultsB2C(d) {
+  const tile = (l, x, s = '') => `<div class="pt-kpi"><small>${l}</small><strong>${x}</strong>${s ? `<span class="form-note">${s}</span>` : ''}</div>`;
+  const P = d.byPlan || {}, pl = (k) => P[k] || { count: 0, gross: 0, name: k };
+  return `
+    <h2>${esc(d.range.label)} · Privatkunden</h2>
+    ${d.billingLive ? '' : '<p class="pt-alert">Zahlungen sind noch im Testbetrieb (BILLING_ENABLED ≠ true) – Werte stammen aus dem Stripe-Testmodus.</p>'}
+    <div class="pt-kpis">${tile('Umsatz brutto', eur(d.revenue.gross), `${d.revenue.count} Zahlungen${d.revenue.refunds ? ` · ${d.revenue.refunds} erstattet` : ''}`)}${tile('Umsatz netto', eur(d.revenue.net))}${tile('Umsatzsteuer 19 %', eur(d.revenue.vat))}${tile('Kreditmappen vergeben', String(d.downloads.kreditmappen), 'BankReady-PDF im Zeitraum')}</div>
+    <div class="pt-kpis">${tile('BankReady Kreditmappe · 39 €', String(pl('credit-map').count), eur(pl('credit-map').gross))}${tile('Käufer-Pass · 49 €', String(pl('buyer-pass').count), eur(pl('buyer-pass').gross))}${tile('Investor Pro · 29 €/Monat', String(pl('pro-monthly').count), `${eur(pl('pro-monthly').gross)} inkl. Verlängerungen`)}${tile('Laufende Pro-Abos', String(d.recurring.activeSubs), `MRR netto ${eur(d.recurring.mrrNet)} · ARR ${eur(d.recurring.arrNet)}`)}</div>
+    <h2>Netto-Umsatz der letzten 12 Monate</h2>${monthsChart(d.months || [])}
+    <h2>Zahlungen im Zeitraum</h2>${(d.payments || []).length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Datum</th><th>Tarif</th><th>Art</th><th>Brutto</th><th>Netto</th><th>Status</th></tr></thead><tbody>${d.payments.map((x) => `<tr><td>${dt(x.date)}</td><td>${esc(x.planName)}</td><td>${x.kind === 'kauf' ? 'Kauf' : 'Abo-Verlängerung'}</td><td>${eur(x.gross)}</td><td>${eur(x.net)}</td><td>${x.refunded ? '<span class="st warn">erstattet</span>' : '<span class="st ok">bezahlt</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine Zahlungen im Zeitraum.</p>'}
+    <p class="form-note">Quelle: Stripe (nur Privattarife, ohne Unternehmen und Testkäufe). Belege für Privatkunden erstellt Stripe; Export für die Kanzlei: Stripe → Berichte.</p>`;
+}
 function ckResults(d) {
+  if (d.scope === 'b2c') return ckResultsB2C(d);
   const tile = (l, x, s = '') => `<div class="pt-kpi"><small>${l}</small><strong>${x}</strong>${s ? `<span class="form-note">${s}</span>` : ''}</div>`;
   return `
-    <h2>${esc(d.range.label)}</h2>
+    <h2>${esc(d.range.label)} · Unternehmen</h2>
     <div class="pt-kpis">${tile('Umsatz netto', eur(d.revenue.net), `${d.revenue.count} Rechnungen${d.revenue.stornos ? `, ${d.revenue.stornos} Korrekturen` : ''}`)}${tile('Umsatzsteuer 19 %', eur(d.revenue.vat))}${tile('Umsatz brutto', eur(d.revenue.gross))}${tile('Offene Posten', String(d.openItems.length), eur(d.openItems.reduce((s, x) => s + Number(x.gross_cents), 0)))}</div>
-    <div class="pt-kpis">${tile('MRR netto', eur(d.recurring.mrrNet), 'aus Stripe-Abos zum Listenpreis')}${tile('ARR netto', eur(d.recurring.arrNet))}${tile('Aktive Tarife', String(d.recurring.activeAccounts), `Basic ${d.recurring.byTier.BASIC} · Pro ${d.recurring.byTier.PRO} · Enterprise ${d.recurring.byTier.ENTERPRISE}${d.recurring.manualWithoutPrice ? ` · ${d.recurring.manualWithoutPrice} manuell` : ''}`)}${tile('Abgelaufen im Zeitraum', String(d.recurring.expiredInRange))}</div>
+    <div class="pt-kpis">${tile('MRR netto', eur(d.recurring.mrrNet), 'Basic 59 € · Pro 139 € · Enterprise ab 349 € netto')}${tile('ARR netto', eur(d.recurring.arrNet))}${tile('Aktive Tarife', String(d.recurring.activeAccounts), `Basic ${d.recurring.byTier.BASIC} · Pro ${d.recurring.byTier.PRO} · Enterprise ${d.recurring.byTier.ENTERPRISE}${d.recurring.manualWithoutPrice ? ` · ${d.recurring.manualWithoutPrice} manuell` : ''}`)}${tile('Abgelaufen im Zeitraum', String(d.recurring.expiredInRange))}</div>
     <h2>Netto-Umsatz der letzten 12 Monate</h2>${monthsChart(d.months || [])}
     <h2>Weiterempfehlung über Kreditmappen</h2>
     <div class="pt-kpis">${tile('Kreditmappen von Unternehmen', String(d.viral.partnerDossiers))}${tile('Aufrufe der Prüfseite', String(d.viral.verifyViews))}${tile('Neue Unternehmenskonten', String(d.viral.newAccounts), `davon über Prüfseite: ${d.viral.viaVerify}`)}${tile('Endkunden-Anfragen', String(d.viral.leads))}</div>
@@ -819,7 +850,7 @@ function steuer(v) {
   const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const m = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
   const q = Math.floor(prev.getMonth() / 3) + 1;
-  v.innerHTML = `<section class="pt-card"><h2>Rechnungen für die Steuerkanzlei (ZIP)</h2>
+  v.innerHTML = `<section class="pt-card"><h2>${getSeg() === 'b2b' ? 'Unternehmensrechnungen' : 'Privatkunden-Rechnungen'} für die Steuerkanzlei (ZIP)</h2>${getSeg() === 'b2c' ? '<p class="pt-alert">Privatkäufe (Kreditmappe, Käufer-Pass, Investor Pro) werden über Stripe abgerechnet; deren Belege exportieren Sie in Stripe unter Berichte. Hier erscheinen nur manuell gestellte Privatkunden-Rechnungen.</p>' : ''}
     <p>Alle Rechnungen eines Zeitraums als ZIP zum Herunterladen und Weitergeben. Jede Datei beginnt mit dem Rechnungsdatum – <code>2026-10-14_IMMO-2026-0042_Kunde.pdf</code> –, damit die Kanzlei sie sofort zuordnen kann. Stornos und Gutschriften liegen im Ordner <code>Korrekturen</code>.</p>
     <div class="pt-row ad-form"><label class="form-note">Zeitraum <select id="per"><option value="m">Monat</option><option value="q">Quartal</option><option value="y">Jahr</option></select></label>
       <label class="form-note" id="perM">Monat <input type="month" id="mon" value="${m}"></label>
@@ -899,8 +930,11 @@ async function kennzahlen(v) {
   const n = (x) => (x == null ? '–' : x.toLocaleString('de-DE'));
   const tile = (l, x) => `<div class="an-chip"><small>${l}</small><strong>${x}</strong></div>`;
   const on = (b) => (b ? '<span class="st ok">aktiv</span>' : '<span class="st bad">fehlt</span>');
-  v.innerHTML = `<div class="an-chips">${tile('Konten', n(j.users))}${tile('Neu (7 Tage)', n(j.users7))}${tile('Objekte', n(j.objects))}${tile('Dokumente', n(j.docs))}${tile('Freigaben aktiv', `${n(j.sharesActive)} / ${n(j.shares)}`)}${tile('Kreditmappen', n(j.versions))}${tile('Erinnerungen an', n(j.reminders))}${tile('Offene Unterlagen-Anforderungen', n(j.requestsOpen))}${tile('Unternehmenskonten', `${n(j.b2bActive)} aktiv / ${n(j.b2b)}`)}${tile('Endkunden-Anfragen', n(j.leads))}${tile('Offene B2B-Anfragen', n(j.contactsOpen))}</div>
-    <p class="form-note">Einstellungen: Bezahlung ${on(j.config.billing)} · E-Mail-Versand ${on(j.config.mail)} · Täglicher Lauf ${on(j.config.cron)} · Aktive Co-Branding-Partner (alt): ${n(j.partners)}</p>`;
+  const chips = j.scope === 'b2b'
+    ? [['Unternehmenskonten', n(j.b2b)], ['davon mit aktivem Tarif', n(j.b2bActive)], ['Kundenanfragen gesamt', n(j.leads)], ['Kontaktanfragen offen', n(j.contactsOpen)], ['Mandanten-Mappen', n(j.versions)], ['Einreichungen', n(j.submissions)], ['Co-Branding-Partner (alt)', n(j.partners)]]
+    : [['Privatkonten', n(j.users)], ['Neu (7 Tage)', n(j.users7)], ['Objekte', n(j.objects)], ['Dokumente', n(j.docs)], ['Freigaben aktiv', `${n(j.sharesActive)} / ${n(j.shares)}`], ['BankReady-Kreditmappen', n(j.versions)], ['Erinnerungen an', n(j.reminders)], ['Offene Unterlagen-Anforderungen', n(j.requestsOpen)]];
+  v.innerHTML = `<div class="an-chips">${chips.map(([l, x]) => tile(l, x)).join('')}</div>
+    <p class="form-note">Nur ${j.scope === 'b2b' ? 'Unternehmen' : 'Privatkunden'} · Einstellungen: Bezahlung ${on(j.config.billing)} · E-Mail-Versand ${on(j.config.mail)} · Täglicher Lauf ${on(j.config.cron)}</p>`;
 }
 
 

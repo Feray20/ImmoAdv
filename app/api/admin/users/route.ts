@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { adminScope } from '@/lib/admin/scope';
 import { z } from 'zod';
 import { requireAdmin, isAdminEmail } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
@@ -23,6 +24,9 @@ export async function GET(req: Request) {
   const page = Math.max(1, Number(q.get('page')) || 1);
   const term = (q.get('q') || '').trim().toLowerCase().slice(0, 100);
   const seg = (['b2c', 'b2b', 'admin'] as const).find((x) => x === q.get('seg')) || 'b2c';
+  // Bereichstrennung serverseitig erzwingen: B2C zeigt nur Privatkonten, B2B nur Unternehmenskonten, System nur Administratoren.
+  const sc = adminScope(req);
+  if (sc && seg !== (sc === 'system' ? 'admin' : sc)) return j({ error: 'Diese Konten gehören nicht zum gewählten Bereich.' }, 403);
   const db = supabaseAdmin();
   const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 });
   if (error) return j({ error: 'Nutzerliste nicht verfügbar.' }, 502);

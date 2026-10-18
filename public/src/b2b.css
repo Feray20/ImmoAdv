@@ -875,3 +875,21 @@ body[data-ad-seg=b2b] .ad-segctl button[aria-pressed=true]{background:#0F2C59;co
 .todo-list .todo-empty-a a.btn-outline{background:#fff;color:#0F2C59;border:1px solid #0F2C59}
 .todo-list .todo-empty-a a.btn:hover{background:#0B2246;color:#fff}.todo-list .todo-empty-a a.btn-outline:hover{background:#F0F9FF;color:#0F2C59}
 @media (max-width:900px){.pt-main>.pt-top:first-child{margin-top:0}}
+/* Etappe 2: Drei Datenbereiche im Web-Admin (B2C · B2B · System) – farblich klar unterscheidbar */
+.ad-segctl.ad-segctl3{grid-template-columns:repeat(3,auto)}
+body[data-ad-seg=b2c] .ad-segctl button[aria-pressed=true]{background:#0284C7;color:#fff}
+body[data-ad-seg=system] .ad-segctl button[aria-pressed=true]{background:#334155;color:#fff}
+.ad-scope-band{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:10px 0 6px;padding:8px 12px;border-radius:10px;font-size:13.5px;color:#334155;background:#F0F9FF;border:1px solid #BAE6FD}
+.ad-scope-band strong{color:#0F2C59}
+.ad-scope-dot{width:10px;height:10px;border-radius:50%;background:#0284C7;flex:none}
+.ad-scope-band[data-seg=b2b]{background:#EEF2FF;border-color:#C7D2FE}.ad-scope-band[data-seg=b2b] .ad-scope-dot{background:#0F2C59}
+.ad-scope-band[data-seg=system]{background:#F1F5F9;border-color:#CBD5E1}.ad-scope-band[data-seg=system] .ad-scope-dot{background:#334155}
+@media (max-width:640px){.ad-segctl3 button span{display:none}.ad-segctl.ad-segctl3{margin-left:0}}
+/* Admin-Kopf am Handy: Logo + Ebene in Zeile 1, Bereichsumschalter volle Breite in Zeile 2 */
+@media (max-width:640px){
+  .ad-head.ad-sticky{flex-wrap:wrap;row-gap:8px}
+  .ad-head .ad-title{order:1;flex:1 1 0}.ad-head .ad-brand{order:0}.ad-head .ad-out{order:2;min-height:40px;padding:0 12px}
+  .ad-head .ad-segctl.ad-segctl3{order:3;flex:1 1 100%;display:grid;grid-template-columns:repeat(3,1fr);margin:0}
+  .ad-segctl3 button span{display:inline}
+}
+.ad-bottom{grid-template-columns:repeat(auto-fit,minmax(0,1fr))!important}
