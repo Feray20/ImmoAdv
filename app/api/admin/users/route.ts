@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       }
     }
     try {
-      await purgeUser(id, acc?.id || null);
+      await purgeUser(id, acc?.id || null, email);
     } catch (e) {
       console.error('admin_user_delete', e instanceof Error ? e.message : e);
       return j({ error: 'Löschen nicht vollständig möglich.' }, 500);

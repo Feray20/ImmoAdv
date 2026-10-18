@@ -87,7 +87,7 @@ export async function DELETE(req: Request) {
     return json({ error: 'Bitte zuerst das Abo des Unternehmenskontos kündigen (Unternehmensportal → Tarif & Rechnungen → Abo verwalten).' }, 409);
   }
   try {
-    await purgeUser(user.id, b2b?.id || null);
+    await purgeUser(user.id, b2b?.id || null, user.email);
   } catch (e) {
     console.error('account_delete_error', e instanceof Error ? e.message : e);
     return json({ error: 'Löschen nicht vollständig möglich. Bitte an support@immoadv.de wenden.' }, 500);
