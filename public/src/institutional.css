@@ -1424,3 +1424,33 @@ body.menu-open .cw-fab,body.menu-open .cw-panel,body.is-app .cw-fab,body.is-app 
 body:not(.is-app) #app{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
 body:not(.is-app) #app>main{flex:1 0 auto}
 body:not(.is-app) #app>footer{margin-top:auto}
+/* Fußzeile im Privatbereich und im Unternehmensportal */
+.ia-legal{background:#0B1F3F;color:#94A3B8;margin-top:auto}
+.ia-legal-in{width:min(1240px,100% - 32px);margin:0 auto;padding:22px 0 calc(24px + env(safe-area-inset-bottom));display:grid;gap:10px}
+.ia-legal-links{display:flex;flex-wrap:wrap;gap:4px 18px}
+.ia-legal-links a{color:#E2E8F0;font-size:14px;font-weight:600;text-decoration:none;min-height:32px;display:inline-flex;align-items:center}
+.ia-legal-links a:hover{text-decoration:underline}
+.ia-legal small{display:block;font-size:12px;line-height:1.6;letter-spacing:.02em;color:#94A3B8;text-transform:none}
+body.is-app main .ia-legal{margin:40px -28px -48px;border-radius:0}
+body.is-app main .ia-legal-in{width:auto;padding-left:28px;padding-right:28px}
+body.is-portal{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+body.is-portal>#portal{flex:1 0 auto}
+@media (max-width:900px){
+  body.is-app main .ia-legal{margin:32px -14px calc(-88px - env(safe-area-inset-bottom))}
+  body.is-app main .ia-legal-in{padding-left:14px;padding-right:14px;padding-bottom:calc(100px + env(safe-area-inset-bottom))}
+  body.is-portal:has(.pt-tabs) .ia-legal-b2b .ia-legal-in{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+}
+body.pt-present .ia-legal{display:none}
+@media print{.ia-legal{display:none}}
+
+/* Ladeanzeige ohne Skript (statische Seiten, Platzhalter): ImmoAdv-Zeichen fest, Markenring dreht sich – gleiche Optik wie .ia-ll */
+.ia-ld{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:100px 16px 32px;min-height:180px;color:var(--ia-muted,#64748B);font-size:14px;text-align:center;margin:0}
+.ia-ld::before,.ia-ld::after{content:"";position:absolute;left:50%;top:28px;width:56px;height:56px;margin-left:-28px}
+.ia-ld::before{border-radius:50%;background:conic-gradient(from 0deg,rgba(2,132,199,0) 0deg,#38BDF8 120deg,#0284C7 220deg,#0F2C59 300deg,rgba(15,44,89,0) 360deg);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));animation:iaSpin 1s linear infinite}
+.ia-ld::after{background:url("/logo-icon.svg") center/30px auto no-repeat;animation:iaPulse 1.6s ease-in-out infinite}
+.ia-ld.full{min-height:60vh;justify-content:center;padding-top:110px}
+.ia-ld.full::before,.ia-ld.full::after{top:calc(50% - 56px)}
+.ia-ld.sm{flex-direction:row;justify-content:flex-start;min-height:0;padding:10px 0 10px 40px}
+.ia-ld.sm::before,.ia-ld.sm::after{left:0;top:50%;width:28px;height:28px;margin:-14px 0 0}
+.ia-ld.sm::after{background-size:15px auto}
+@media (prefers-reduced-motion:reduce){.ia-ld::before{animation-duration:2.4s}.ia-ld::after{animation:none}}

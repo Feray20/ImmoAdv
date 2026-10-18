@@ -962,3 +962,12 @@ body.intern:has(.ad-head) main{padding-top:0}
 .fb-sort{margin:4px 0 12px;max-width:280px}
 .us-card[hidden]{display:none}
 .ad-subtabs button:focus-visible,.ad-tabs button:focus-visible,.ad-bottom button:focus-visible,.ad-segctl button:focus-visible{outline:3px solid #0284C7;outline-offset:2px}
+/* Tarifkarten: Buchungsknopf bricht sauber um, Symbol bleibt im Knopf; § 14 BGB-Häkchen bündig zum Text */
+.offer{min-width:0}
+.offer .btn-pay{display:block;width:100%;max-width:100%;min-width:0;white-space:normal;text-align:center;line-height:1.3;padding:11px 16px;min-height:48px;height:auto;overflow-wrap:anywhere;text-wrap:balance}
+.offer .btn-pay::before{display:inline-block;vertical-align:-3px;margin-right:8px}
+label.consent.b2b-terms{display:grid!important;grid-template-columns:22px minmax(0,1fr);gap:12px;align-items:start;padding:14px 16px;position:static}
+label.consent.b2b-terms>input[type="checkbox"]{position:static;width:20px;height:20px;margin:2px 0 0}
+/* Portal-Hintergrund ohne Kartenrahmen (Klasse .is-portal wird auch für Karten genutzt) – Fußzeile über die volle Breite */
+body.is-portal{padding:0;border:0;border-radius:0;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+body.is-portal>#portal{flex:1 0 auto}

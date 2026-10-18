@@ -289,7 +289,7 @@ async function uebersicht(v) {
     tile('Umsatz diesen Monat', eur(x.revenueMonthCents), 'bezahlte Rechnungen (brutto)', 'cockpit'),
     tile('Offene Rechnungen', n(x.openInvoices), 'Privatkunden', 'rechnungen', x.openInvoices ? 'warn' : ''),
   ];
-  const funnelBox = '<h3 class="ad-sub">Funnel: wo Nutzer abspringen</h3><div class="ad-period fn-period" role="group" aria-label="Zeitraum">' + [['30', '30 Tage'], ['90', '90 Tage'], ['', 'Gesamt']].map(([k, l]) => `<button type="button" data-fn="${k}" aria-pressed="${k === ''}">${l}</button>`).join('') + '</div><div id="funnel" class="fn"><p class="form-note">Wird geladen …</p></div>';
+  const funnelBox = '<h3 class="ad-sub">Funnel: wo Nutzer abspringen</h3><div class="ad-period fn-period" role="group" aria-label="Zeitraum">' + [['30', '30 Tage'], ['90', '90 Tage'], ['', 'Gesamt']].map(([k, l]) => `<button type="button" data-fn="${k}" aria-pressed="${k === ''}">${l}</button>`).join('') + '</div><div id="funnel" class="fn"><p class="ia-ld" role="status">Wird geladen …</p></div>';
   const mails = MAILS[seg].map(([l, k]) => { const [a, t] = mailState(k, m); return `<li><span class="ad-amp ${a}"></span><span>${l}</span><small>${t}</small></li>`; }).join('');
   v.innerHTML = `<section class="ad-over">
     <div class="ad-over-h"><h2>${SEGS[seg]}</h2><p class="form-note">Gleiche Kennzahlen, getrennt nach Bereich. Umschalten oben rechts (${seg === 'b2b' ? 'B2B' : 'B2C'} ⇄). Administratoren zählen nicht mit. Nur Zahlen, keine Inhalte.</p></div>
@@ -567,7 +567,7 @@ async function cockpit(v, zeitraum = 'monat', von = '', bis = '') {
     const [dv, db] = rangeOf(zeitraum);
     v.innerHTML = `<div class="ad-period"><div class="seg" role="tablist" aria-label="Zeitraum">${[['heute', 'Heute'], ['woche', 'Woche'], ['monat', 'Monat'], ['jahr', 'Jahr'], ['gesamt', 'Gesamt']].map(([k, l]) => `<button type="button" role="tab" data-z="${k}" aria-selected="${k === zeitraum}">${l}</button>`).join('')}</div>
       <div class="ad-range"><label>Von<span class="de-date"><span class="de-txt" data-for="zv"></span><input type="date" id="zv" value="${esc(von || dv)}" max="${today}"></span></label><label>Bis<span class="de-date"><span class="de-txt" data-for="zb"></span><input type="date" id="zb" value="${esc(bis || db)}" max="${today}"></span></label><button class="btn btn-outline" id="zf" type="button">Eigener Zeitraum</button></div></div>
-      <div id="ckRes" class="ck-res" aria-live="polite"><p class="form-note">Wird geladen …</p></div>`;
+      <div id="ckRes" class="ck-res" aria-live="polite"><p class="ia-ld" role="status">Wird geladen …</p></div>`;
     v.querySelectorAll('[data-z]').forEach((b) => b.onclick = () => {
       v.querySelectorAll('[data-z]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
       const [a1, b1] = rangeOf(b.dataset.z); $('#zv').value = a1; $('#zb').value = b1; v.__deTxt?.();
@@ -668,9 +668,9 @@ async function sicherheit(v) {
       <li>Keine IP-Sperre für den Admin: Sie können von überall (auch mobil) zugreifen. Schutz durch Anmeldung, Admin-Liste, Zwei-Faktor, Zeitlimit und Not-Aus.</li>
       <li>Anmeldeversuche: Supabase begrenzt fehlgeschlagene Anmeldungen; zusätzlich sperrt ImmoAdv eine Quelle automatisch für 24 Stunden nach 10 Fehlversuchen in 15 Minuten (ebenso bei wiederholten Admin-Zugriffsversuchen; Scanner für 7 Tage).</li>
       <li>Alle Admin-Aktionen stehen im Reiter Protokoll.</li></ul></section>
-    <section class="pt-card"><h2>Sicherheitsprotokoll</h2><p class="form-note">Gedrosselte Zugriffe (zu viele Anfragen je Nutzer oder IP) und abgewiesene Zugriffe auf den Admin-Bereich. Gespeichert werden nur Bereich und ein gekürzter Hash, keine IP-Adressen; Löschung nach 30 Tagen. Die Zählung erfolgt je Serverinstanz, Spitzen können sich verteilen.</p><div id="secLog"><p class="form-note">Wird geladen …</p></div><button class="btn btn-ghost" id="secRe" type="button">Aktualisieren</button></section>`;
+    <section class="pt-card"><h2>Sicherheitsprotokoll</h2><p class="form-note">Gedrosselte Zugriffe (zu viele Anfragen je Nutzer oder IP) und abgewiesene Zugriffe auf den Admin-Bereich. Gespeichert werden nur Bereich und ein gekürzter Hash, keine IP-Adressen; Löschung nach 30 Tagen. Die Zählung erfolgt je Serverinstanz, Spitzen können sich verteilen.</p><div id="secLog"><p class="ia-ld" role="status">Wird geladen …</p></div><button class="btn btn-ghost" id="secRe" type="button">Aktualisieren</button></section>`;
   // Vorfälle: Angriffe und Bot-Wellen der letzten 7 Tage mit Sperren / Erledigt.
-  v.insertAdjacentHTML('afterbegin', '<section class="pt-card sec-inc" id="secInc"><p class="form-note">Vorfälle werden geladen …</p></section>');
+  v.insertAdjacentHTML('afterbegin', '<section class="pt-card sec-inc" id="secInc"><p class="ia-ld" role="status">Vorfälle werden geladen …</p></section>');
   const loadInc = async () => {
     const box = $('#secInc'); const x = await api('/api/admin/sec');
     if (!x.ok) { box.innerHTML = `<p class="form-note">${esc(x.data?.error || 'Nicht verfügbar.')}</p>`; return; }
@@ -1085,7 +1085,7 @@ async function analyse(v) {
   v.innerHTML = `<section class="ad-over an"><div class="ad-over-h"><h2>Analyse · ${seg === 'b2b' ? 'B2B (Unternehmen)' : 'B2C (Privatkunden)'}</h2>
     <p class="form-note">Reichweitenmessung ohne Cookies und ohne gespeicherte IP-Adressen. Bereich oben rechts umschalten (B2C ⇄ B2B).</p></div>
     <div class="ad-period"><div class="seg" role="group" aria-label="Zeitraum">${[[1, 'Heute'], [7, '7 Tage'], [30, '30 Tage'], [90, '90 Tage'], [365, '12 Monate']].map(([k, l]) => `<button type="button" data-ad="${k}" aria-pressed="${k === AN_DAYS}">${l}</button>`).join('')}</div></div>
-    <div id="anBody"><p class="form-note">Wird geladen …</p></div></section>`;
+    <div id="anBody"><p class="ia-ld" role="status">Wird geladen …</p></div></section>`;
   v.querySelectorAll('[data-ad]').forEach((b) => b.onclick = () => { AN_DAYS = Number(b.dataset.ad); v.querySelectorAll('[data-ad]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); load(); });
   const load = async () => {
     const box = $('#anBody'); box.style.opacity = '.55';

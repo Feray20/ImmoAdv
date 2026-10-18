@@ -15,7 +15,7 @@ export async function mountFeedback(box, { area }) {
       <div class="fb-wide"><span class="fb-l">Wie wichtig ist Ihnen das?</span><span class="fb-stars" role="radiogroup" aria-label="Wichtigkeit">${[1, 2, 3, 4, 5].map((k) => `<button type="button" role="radio" data-imp="${k}" aria-label="${k} von 5 – ${IMP[k]}" aria-checked="${k === imp}" class="${k <= imp ? 'on' : ''}">★</button>`).join('')}</span> <small class="fb-imp" id="fbImp">${IMP[imp]}</small></div>
       <div class="fb-wide fb-act"><button class="btn btn-dark" type="submit">Vorschlag senden</button><span class="form-note" id="fbMsg" role="status" aria-live="polite"></span></div>
     </form>
-    <h4 class="fb-h">Ihre Vorschläge</h4><div id="fbMine" class="fb-mine"><p class="form-note">Wird geladen …</p></div>`;
+    <h4 class="fb-h">Ihre Vorschläge</h4><div id="fbMine" class="fb-mine"><p class="ia-ld" role="status">Wird geladen …</p></div>`;
   const f = box.querySelector('#fbF');
   const paintImp = () => { f.querySelectorAll('[data-imp]').forEach((b) => { const k = Number(b.dataset.imp); b.classList.toggle('on', k <= imp); b.setAttribute('aria-checked', String(k === imp)); }); box.querySelector('#fbImp').textContent = IMP[imp]; };
   f.querySelectorAll('[data-imp]').forEach((b) => b.onclick = () => { imp = Number(b.dataset.imp); paintImp(); });
