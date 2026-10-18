@@ -7,13 +7,28 @@
 (function () {
   'use strict';
   var AREA = location.pathname.indexOf('/intern') === 0 ? 'admin' : location.pathname.indexOf('/b2b-portal') === 0 ? 'b2b' : 'app';
-  var SFX = AREA === 'app' ? '' : '-' + AREA;
-  var K = AREA === 'app' ? 'immoadv-auth-session-v1' : 'immoadv-' + AREA + '-session-v1', ACT = 'ia-last-active' + SFX, REM = 'ia-remember' + SFX, WHY = 'ia-logout-reason' + SFX;
+  // Privatbereich und Unternehmensportal: eine gemeinsame Sitzung. Admin-Zentrale: eigene Sitzung.
+  var SFX = AREA === 'admin' ? '-admin' : '';
+  var K = AREA === 'admin' ? 'immoadv-admin-session-v1' : 'immoadv-auth-session-v1', ACT = 'ia-last-active' + SFX, REM = 'ia-remember' + SFX, WHY = 'ia-logout-reason' + SFX;
   var MIN = 60 * 1000, DAY = 24 * 60 * MIN;
   var path = location.pathname.replace(/\/+$/, '') || '/';
   var isAdmin = path.indexOf('/intern') === 0;
   var isProtected = isAdmin || path.indexOf('/app/') === 0 || path === '/b2b-portal';
   var ls = (function () { try { var t = '__ia'; localStorage.setItem(t, '1'); localStorage.removeItem(t); return localStorage; } catch (e) { return null; } })();
+  // Einmalige Übernahme einer früheren, getrennten Unternehmensportal-Sitzung in die gemeinsame Sitzung.
+  try {
+    if (ls && AREA !== 'admin') {
+      var oldB = ls.getItem('immoadv-b2b-session-v1');
+      if (oldB) {
+        if (!ls.getItem('immoadv-auth-session-v1')) {
+          ls.setItem('immoadv-auth-session-v1', oldB);
+          if (ls.getItem('ia-remember-b2b') === '1') ls.setItem('ia-remember', '1');
+          ls.setItem('ia-last-active', ls.getItem('ia-last-active-b2b') || String(Date.now()));
+        }
+        ['immoadv-b2b-session-v1', 'ia-remember-b2b', 'ia-last-active-b2b', 'ia-logout-reason-b2b'].forEach(function (k) { ls.removeItem(k); });
+      }
+    }
+  } catch (e) { /* ignore */ }
   function g(k) { try { return ls ? ls.getItem(k) : null; } catch (e) { return null; } }
   function s(k, v) { try { if (ls) { v == null ? ls.removeItem(k) : ls.setItem(k, v); } } catch (e) { /* ignore */ } }
   function has() { return !!g(K); }

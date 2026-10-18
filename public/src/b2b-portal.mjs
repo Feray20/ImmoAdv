@@ -781,7 +781,8 @@ function portalGate() {
 // Login ohne Unternehmenskonto: Zugänge vergibt ImmoAdv nach Anfrage.
 function noAccount() {
   root.innerHTML = `<div class="pt-onb"><h1>Kein Unternehmenskonto</h1><p>Mit dieser Anmeldung ist kein Unternehmenskonto verbunden. Zugänge zum Unternehmensportal vergibt ImmoAdv nach einer kurzen Anfrage.</p>
-    <p class="pt-row"><button class="btn btn-dark" type="button" id="ptReq">Unternehmenskonto anfragen</button><button class="btn btn-outline" type="button" id="ptOther">Mit anderen Zugangsdaten anmelden</button></p></div>`;
+    <p class="pt-row"><button class="btn btn-dark" type="button" id="ptReq">Unternehmenskonto anfragen</button><a class="btn btn-outline" href="/app/dashboard">Zum Privatbereich</a><button class="btn btn-outline" type="button" id="ptOther">Mit anderen Zugangsdaten anmelden</button></p>
+    <p class="form-note">Sie sind bereits angemeldet – Privatbereich und Unternehmensportal nutzen dieselbe Anmeldung.</p></div>`;
   $('#ptOther').onclick = () => { setSession(null); location.reload(); };
   $('#ptReq').onclick = () => { setSession(null); location.replace(location.pathname + '#anfrage'); location.reload(); };
 }

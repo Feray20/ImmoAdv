@@ -14,8 +14,8 @@ if (!window.__iaOtp) {
 }
 
 const AREA = location.pathname.startsWith('/intern') ? 'admin' : location.pathname.startsWith('/b2b-portal') ? 'b2b' : 'app';
-const KEY = AREA === 'app' ? 'immoadv-auth-session-v1' : `immoadv-${AREA}-session-v1`;
-const ACT = AREA === 'app' ? 'ia-last-active' : `ia-last-active-${AREA}`;
+const KEY = AREA === 'admin' ? 'immoadv-admin-session-v1' : 'immoadv-auth-session-v1';
+const ACT = AREA === 'admin' ? 'ia-last-active-admin' : 'ia-last-active';
 // SMS als zweiter Faktor ist vorbereitet, aber ausgeblendet (verursacht Kosten pro SMS). Zum Aktivieren auf true setzen.
 const SMS_ENABLED = false;
 let cfg = null;
