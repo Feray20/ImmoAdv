@@ -620,7 +620,7 @@ async function vTarif(box) {
       <div class="roi-in"><label>Fälle pro Monat<input id="roiN" type="number" min="0" step="1" inputmode="numeric" placeholder="z. B. 4"></label>
         <label>Minuten Vorarbeit, die Sie je Fall sparen<input id="roiM" type="number" min="0" step="5" inputmode="numeric" placeholder="Ihre Schätzung"></label>
         <label>Ihr interner Stundensatz (€)<input id="roiH" type="number" min="0" step="5" inputmode="decimal" placeholder="z. B. 80"></label></div>
-      <div id="roiOut" class="roi-out" aria-live="polite"></div></section>
+      <div id="roiOut" class="roi-res" aria-live="polite"></div></section>
     <section class="pt-card trust-card"><h2>Rechtssicher für Unternehmen</h2><ul class="trust-l">
       <li><b>AVV nach Art. 28 DSGVO</b><span>bei der Registrierung abgeschlossen, im Profil jederzeit abrufbar</span></li>
       <li><b>GoBD-gerechtes Rechnungsarchiv</b><span>Rechnungen unveränderbar gespeichert, SHA-256-geprüft</span></li>

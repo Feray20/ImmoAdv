@@ -907,4 +907,4 @@ body[data-ad-seg=system] .ad-segctl button[aria-pressed=true]{background:#334155
 .trust-l{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}.trust-l li{display:grid;gap:2px;padding:10px 12px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0}
 .trust-l b{color:#0F2C59;font-size:14px}.trust-l span{font-size:13px;color:#475569}
 @media (max-width:700px){.roi-in,.trust-l{grid-template-columns:1fr}}
-.roi-out{display:block;width:100%;grid-column:1/-1}.roi-out p{max-width:none}
+.roi-res{display:block;width:100%}
