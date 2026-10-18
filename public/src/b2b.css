@@ -941,3 +941,24 @@ body.intern:has(.ad-head) main{padding-top:0}
 .ad-brand{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:800;font-size:17px;color:#0F2C59}
 .ad-brand span span{color:#0284C7}
 @media (max-width:520px){.ad-brand span{display:none}}
+
+/* Web-Admin: einheitliche Lade-, Fehler- und Leer-Zustände */
+.ad-skel{display:grid;gap:14px}
+.ad-skel-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.ad-skel-kpis span,.ad-skel-card i{display:block;border-radius:8px;background:linear-gradient(90deg,#EEF2F7 25%,#F8FAFC 37%,#EEF2F7 63%);background-size:400% 100%}
+.ad-skel-kpis span{height:84px;border-radius:12px}
+.ad-skel-card{display:grid;gap:12px;padding:18px;border:1px solid #E2E8F0;border-radius:12px}
+.ad-skel-card i{height:14px}.ad-skel-card i.w40{width:40%;height:18px}.ad-skel-card i:nth-child(odd):not(.w40){width:88%}
+@media (prefers-reduced-motion:no-preference){.ad-skel-kpis span,.ad-skel-card i{animation:ad-shim 1.4s ease infinite}}
+@keyframes ad-shim{0%{background-position:100% 50%}100%{background-position:0 50%}}
+.ad-state{display:grid;justify-items:center;gap:6px;text-align:center;padding:32px 18px;border:1px dashed #CBD5E1;border-radius:12px;background:#F8FAFC;color:#64748B}
+.ad-state svg{color:#94A3B8}.ad-state strong{color:#0F2C59;font-size:15.5px}.ad-state span{font-size:14px;max-width:46ch}
+.ad-state.err{border-style:solid;border-color:#FECACA;background:#FEF2F2}.ad-state.err svg{color:#DC2626}
+.ad-state .btn{margin-top:8px;min-height:44px}
+/* Nutzerliste und Vorschläge: Filter + Sortierung */
+.us-tools{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;justify-content:space-between;margin:4px 0 12px}
+.us-sort{display:grid;gap:4px;font-size:12.5px;font-weight:600;color:#64748B}
+.us-sort select{min-height:44px;padding:0 10px;border:1px solid #CBD5E1;border-radius:8px;background:#fff;font:inherit;font-size:14px;color:#0F2C59}
+.fb-sort{margin:4px 0 12px;max-width:280px}
+.us-card[hidden]{display:none}
+.ad-subtabs button:focus-visible,.ad-tabs button:focus-visible,.ad-bottom button:focus-visible,.ad-segctl button:focus-visible{outline:3px solid #0284C7;outline-offset:2px}

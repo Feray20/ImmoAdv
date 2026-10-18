@@ -21,6 +21,13 @@ const $ = (s, el = document) => el.querySelector(s);
 const TIER = { BASIC: 'Basic', PRO: 'Pro', ENTERPRISE: 'Enterprise' };
 const PAY = { PAID: 'bezahlt', PENDING: 'offen', OVERDUE: 'überfällig', CANCELLED: 'storniert' };
 const msg = (t, bad = false) => { const el = $('#adMsg'); if (el) { el.textContent = t; el.className = 'form-note ' + (bad ? 'st bad' : ''); } };
+// Einheitliche Zustände: Skelett beim Laden, verständlicher Fehler mit „Erneut versuchen“, leerer Zustand mit Erklärung.
+const skel = () => `<div class="ad-skel" aria-busy="true" aria-label="Daten werden geladen"><div class="ad-skel-kpis">${'<span></span>'.repeat(4)}</div><div class="ad-skel-card"><i class="w40"></i>${'<i></i>'.repeat(5)}</div></div>`;
+function errState(v, text) {
+  v.innerHTML = `<div class="ad-state err" role="alert"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg><strong>Die Daten konnten nicht geladen werden.</strong>${text ? `<span>${esc(text)}</span>` : ''}<button type="button" class="btn btn-outline" data-retry>Erneut versuchen</button></div>`;
+  v.querySelector('[data-retry]').onclick = () => show();
+}
+const emptyState = (title, text) => `<div class="ad-state"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg><strong>${title}</strong>${text ? `<span>${text}</span>` : ''}</div>`;
 
 // ---------- Zugang ----------
 async function gate() {
@@ -160,30 +167,55 @@ function show() {
   root.querySelectorAll('[data-g]').forEach((b) => b.setAttribute('aria-current', b.dataset.g === g[0] ? 'page' : 'false'));
   $('#adSub').querySelector(`[data-t="${t}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center' });
   const v = $('#adView');
-  v.innerHTML = logoLoader();
+  v.innerHTML = skel();
   msg('');
-  ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)) })[t](v);
+  const view = ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)) })[t](v);
+  Promise.resolve(view).catch((e) => { console.warn('[admin]', e); errState(v, ''); });
 }
 
 // ---------- Nutzer: Konten im Überblick, sperren/entsperren, Passwort-Reset, löschen ----------
+// Filter für die Nutzerliste (auf der geladenen Seite): aktiv = Anmeldung in den letzten 30 Tagen, neu = Registrierung in den letzten 14 Tagen.
+const US_F = [['alle', 'Alle'], ['aktiv', 'Aktiv'], ['inaktiv', 'Inaktiv'], ['neu', 'Neu'], ['bestaetigt', 'Bestätigt'], ['gesperrt', 'Gesperrt']];
+function usTags(u) {
+  const now = Date.now(), d = (x) => (x ? (now - new Date(x).getTime()) / 864e5 : Infinity);
+  const t = ['alle'];
+  t.push(d(u.lastSignIn) <= 30 ? 'aktiv' : 'inaktiv');
+  if (d(u.createdAt) <= 14) t.push('neu');
+  if (u.confirmed) t.push('bestaetigt');
+  if (u.banned) t.push('gesperrt');
+  return t;
+}
 async function nutzer(v, page = 1, q = '', seg = 'b2c') {
   const r = await api(`/api/admin/users?page=${page}&seg=${seg}&q=${encodeURIComponent(q)}`);
-  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  if (!r.ok) { errState(v, r.data?.error); return; }
   const us = r.data.users || [];
   const ago = (x) => (x ? dtt(x) : 'nie');
   const mk = seg === 'b2c' ? '<button type="button" class="btn btn-dark ad-mk-one" id="usMk">+ Privatkunde anlegen</button>' : seg === 'b2b' ? '<button type="button" class="btn btn-dark ad-mk-one" id="usMk">+ Unternehmen anlegen</button>' : '';
   const segLabel = { b2c: 'Privatkunden', b2b: 'Unternehmen', admin: 'Administratoren' }[seg] || '';
   v.innerHTML = `<section class="pt-card"><div class="ad-h-row"><h2>${segLabel}</h2>${mk}</div>
-    <form class="ad-search" id="usF"><input id="usQ" type="search" placeholder="E-Mail suchen" value="${esc(q)}" aria-label="E-Mail suchen" autocomplete="off"><button class="btn btn-dark" type="submit">Suchen</button></form>
+    <form class="ad-search" id="usF"><input id="usQ" type="search" placeholder="Nutzer per E-Mail suchen …" value="${esc(q)}" aria-label="Nutzer per E-Mail suchen" autocomplete="off"><button class="btn btn-dark" type="submit">Suchen</button></form>
     <p class="form-note">${us.length} Konten auf dieser Seite. Angezeigt werden nur Kontodaten – keine Inhalte. Jede Aktion wird protokolliert.</p>
-    <div class="us-list">${us.map((u) => `<article class="us-card${u.banned ? ' banned' : ''}">
+    <div class="us-tools"><div class="pc-chips" role="group" aria-label="Filter">${US_F.map(([k, l]) => `<button type="button" data-usf="${k}" aria-pressed="${k === 'alle'}">${l} <b>${us.filter((u) => usTags(u).includes(k)).length}</b></button>`).join('')}</div>
+      <label class="us-sort">Sortieren<select id="usSort"><option value="created">Registrierung (neueste)</option><option value="last">Letzte Anmeldung</option><option value="mail">E-Mail A–Z</option></select></label></div>
+    <div class="us-list">${us.map((u) => `<article class="us-card${u.banned ? ' banned' : ''}" data-tags="${usTags(u).join(' ')}" data-created="${esc(u.createdAt || '')}" data-last="${esc(u.lastSignIn || '')}" data-mail="${esc(u.email || '')}">
       <div class="us-top"><strong>${esc(u.email || '(ohne E-Mail)')}</strong><span class="us-tags">${u.admin ? '<span class="st ok">Admin</span>' : ''}${u.banned ? '<span class="st bad">gesperrt</span>' : ''}${u.confirmed ? '' : '<span class="st warn">unbestätigt</span>'}${u.mfa ? '<span class="st ok">2FA</span>' : '<span class="st">ohne 2FA</span>'}</span></div>
       ${u.company ? `<p class="us-co"><strong>${esc(u.company.name)}</strong> · ${esc(u.company.number || '')} · ${u.company.role === 'owner' ? 'Inhaber' : 'Berater'} · ${u.company.verified ? '<span class="st ok">verifiziert</span>' : `<span class="st warn">${esc(u.company.status || 'offen')}</span>`}</p>` : ''}
       <dl class="us-meta"><div><dt>Registriert</dt><dd>${dt(u.createdAt)}</dd></div><div><dt>Letzte Anmeldung</dt><dd>${ago(u.lastSignIn)}</dd></div></dl>
       <div class="us-act">${seg === 'b2c' && !u.admin && !u.company ? `<button type="button" class="btn btn-dark" data-acc="${esc(u.id)}" data-mail="${esc(u.email)}">Zugriff freischalten</button>` : ''}${u.confirmed ? '' : `<button type="button" class="btn btn-dark" data-us="confirm" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Bestätigung erneut senden</button>`}<button type="button" class="btn btn-outline" data-us="reset" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Passwort-Reset senden</button>${u.admin ? '' : `<button type="button" class="btn ${u.banned ? 'btn-outline' : 'btn-danger'}" data-us="${u.banned ? 'unban' : 'ban'}" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">${u.banned ? 'Entsperren' : 'Sperren'}</button><button type="button" class="btn btn-danger" data-us="delete" data-id="${esc(u.id)}" data-mail="${esc(u.email)}" data-co="${u.company ? esc(u.company.role) : ''}">Konto löschen</button>`}</div>
-    </article>`).join('') || '<p class="form-note">Keine Konten gefunden.</p>'}</div>
+    </article>`).join('') || emptyState('Keine Konten gefunden', q ? 'Für diese Suche gibt es keinen Treffer. Bitte die E-Mail-Adresse prüfen.' : 'Sobald sich jemand registriert, erscheint das Konto hier.')}</div>
     <div class="pt-row">${page > 1 ? '<button class="btn btn-ghost" id="usPrev" type="button">← Zurück</button>' : ''}${r.data.more ? '<button class="btn btn-ghost" id="usNext" type="button">Weiter →</button>' : ''}</div></section>`;
   $('#usMk')?.addEventListener('click', () => (seg === 'b2c' ? openCreatePrivate(() => nutzer(v, 1, '', seg)) : openCreateAccount(null, () => nutzer(v, 1, '', seg))));
+  const list = v.querySelector('.us-list');
+  const applyUs = () => {
+    const f = v.querySelector('[data-usf][aria-pressed=true]')?.dataset.usf || 'alle', so = $('#usSort')?.value || 'created';
+    const cards = [...list.querySelectorAll('.us-card')];
+    cards.sort((a, b) => so === 'mail' ? a.dataset.mail.localeCompare(b.dataset.mail, 'de') : (b.dataset[so] || '').localeCompare(a.dataset[so] || ''));
+    cards.forEach((c) => { c.hidden = !c.dataset.tags.split(' ').includes(f); list.append(c); });
+    let em = list.querySelector('.us-none'); const none = cards.length && cards.every((c) => c.hidden);
+    if (none && !em) { list.insertAdjacentHTML('beforeend', `<div class="us-none">${emptyState('Keine Konten in dieser Auswahl', 'Wählen Sie einen anderen Filter.')}</div>`); } else if (!none && em) em.remove();
+  };
+  v.querySelectorAll('[data-usf]').forEach((b) => b.onclick = () => { v.querySelectorAll('[data-usf]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); applyUs(); });
+  $('#usSort')?.addEventListener('change', applyUs);
   $('#usF').onsubmit = (e) => { e.preventDefault(); nutzer(v, 1, $('#usQ').value.trim(), seg); };
   v.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => { if (b.dataset.seg !== 'admin') { setSeg(b.dataset.seg); paintSeg(); } nutzer(v, 1, '', b.dataset.seg); });
   $('#usPrev')?.addEventListener('click', () => nutzer(v, page - 1, q, seg));
@@ -228,7 +260,7 @@ function mailState(kind, m) {
 async function uebersicht(v) {
   const seg = getSeg();
   const [r, sys] = await Promise.all([api('/api/admin/system?segment=' + seg), api('/api/admin/system')]);
-  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  if (!r.ok) { errState(v, r.data?.error); return; }
   const d = r.data, x = d[seg] || {}, m = sys.data?.mail || {};
   const n = (k) => Number(k || 0).toLocaleString('de-DE');
   const pct = (a, b) => (b ? ` · ${Math.round((a / b) * 100)} %` : '');
@@ -420,7 +452,7 @@ async function testkauf(v) {
   const q = new URLSearchParams(location.search);
   const back = q.get('testkauf');
   const r = await api('/api/admin/testkauf');
-  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  if (!r.ok) { errState(v, r.data?.error); return; }
   const d = r.data;
   const PN = Object.fromEntries((d.plans || []).map((p) => [p.id, p.name]));
   const PS = { paid: 'bezahlt', unpaid: 'offen', no_payment_required: 'ohne Zahlung' };
@@ -463,7 +495,7 @@ async function testkauf(v) {
 // ---------- System: Einrichtung, Test-E-Mail, Nutzer-Suche ----------
 async function system(v, focusMail = false) {
   const r = await api('/api/admin/system');
-  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  if (!r.ok) { errState(v, r.data?.error); return; }
   const c = r.data.checks, need = c.filter((x) => !x.ok && !x.optional);
   v.innerHTML = `<h2>Einrichtung</h2>
     <p class="form-note">${need.length ? `<strong>${need.length} Punkt(e) offen.</strong> Die Werte werden in Vercel unter Settings → Environment Variables eingetragen (nie per Chat oder E-Mail weitergeben), danach neu deployen.` : 'Alle Pflichtpunkte eingerichtet.'} Umgebung: ${esc(r.data.env)}${r.data.commit ? ` · Version ${esc(r.data.commit)}` : ''}</p>
@@ -680,7 +712,7 @@ async function sicherheit(v) {
 // ---------- Partner ----------
 async function partner(v) {
   const r = await api('/api/admin/b2b');
-  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  if (!r.ok) { errState(v, r.data?.error); return; }
   const list = r.data.accounts;
   const pend = list.filter((a) => a.verification_status === 'eingereicht').length;
   v.innerHTML = `<div class="ad-mk-tiles"><button class="ad-mk b2b" type="button" id="mkNew"><b>+ Unternehmen anlegen</b><span>B2B · Firmenzugang zum Unternehmensportal</span></button></div>${pend ? `<p class="auth-message" style="margin-bottom:10px"><strong>${pend} Unternehmen</strong> ${pend === 1 ? 'wartet' : 'warten'} auf Prüfung und Freischaltung. Filter „Zur Prüfung eingereicht“ wählen und „Prüfen“ öffnen.</p>` : ''}<div class="pt-row" style="margin-bottom:10px"><input id="pq" aria-label="Unternehmen suchen" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-ghost" id="pCsv" type="button">CSV</button></div>
@@ -700,7 +732,7 @@ async function partner(v) {
           <button data-a="credits" data-id="${a.id}" type="button">Kontingent +</button>
           <button data-a="invoice" data-id="${a.id}" data-name="${esc(a.company_name)}" type="button">Rechnung schreiben</button>
           ${a.status === 'locked' ? `<button data-a="unlock" data-id="${a.id}" type="button">Entsperren</button>` : `<button data-a="lock" data-id="${a.id}" type="button" class="pc-danger">Sperren</button>`}
-        </div></details></footer></article>`; }).join('')}</div>` : '<p class="form-note">Noch keine Unternehmenskonten.</p>'}
+        </div></details></footer></article>`; }).join('')}</div>` : emptyState('Noch keine Unternehmenskonten', 'Legen Sie ein Unternehmen an oder übernehmen Sie eine Kontoanfrage unter „Anfragen“.')}
     <div id="invForm"></div>`;
   let pf = '';
   const filter = () => {
@@ -856,7 +888,7 @@ function invoiceForm(accountId, name) {
 // ---------- Rechnungsarchiv ----------
 async function rechnungen(v, q = '') {
   const r = await api('/api/admin/invoices' + (q ? '?q=' + encodeURIComponent(q) : ''));
-  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  if (!r.ok) { errState(v, r.data?.error); return; }
   v.innerHTML = `<p class="form-note">GoBD-Archiv: Rechnungen sind in der Datenbank gegen Ändern und Löschen gesperrt; jede PDF-Datei wird beim Abruf gegen ihre SHA-256-Prüfsumme geprüft. Korrekturen nur per Storno.${r.data.bankConfigured ? '' : ' <strong>Bankverbindung fehlt:</strong> INVOICE_IBAN, INVOICE_BIC, INVOICE_BANK_NAME in Vercel setzen, sonst sind Überweisungsrechnungen gesperrt.'}</p>
     <div class="pt-row" style="margin-bottom:10px"><input id="iq" aria-label="Rechnungsnummer suchen" value="${esc(q)}" placeholder="Rechnungsnummer" style="border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-ghost" id="is" type="button">Suchen</button><button class="btn btn-outline" id="iv" type="button">Alle Prüfsummen prüfen</button></div><p class="form-note" id="ivMsg" role="status"></p>${invTable(r.data.invoices)}
     <p class="form-note">Neue Rechnung: unter „Partner“ beim Unternehmen auf „Rechnung“ klicken.</p>`;
@@ -903,7 +935,7 @@ function steuer(v) {
 // ---------- Anfragen & Codes ----------
 async function anfragen(v) {
   const r = await api('/api/admin/misc');
-  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  if (!r.ok) { errState(v, r.data?.error); return; }
   const { contacts, codes } = r.data;
   v.innerHTML = `<section class="pt-card"><h2>B2B-Anfragen</h2><p class="form-note">Kontoanfragen prüfen und mit „Konto anlegen“ den Zugang erzeugen – Firmendaten werden übernommen.</p>${contacts.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Eingang</th><th>Anliegen</th><th>Kontakt</th><th>Nachricht</th><th></th></tr></thead><tbody>
     ${contacts.map((c) => `<tr><td>${dtt(c.created_at)}</td><td>${({ konto: '<span class="st warn">Kontoanfrage</span>', demo: 'Demo', enterprise: 'Enterprise', kooperation: 'Kooperation' })[c.kind] || esc(c.kind)}${c.city ? `<br><small>${esc(c.city)}</small>` : ''}</td><td><strong>${esc(c.company)}</strong><br>${esc(c.name)}<br><a href="mailto:${esc(c.email)}">${esc(c.email)}</a> ${esc(c.phone || '')}</td><td>${esc(c.message || '')}${c.register_number || c.tax_id ? `<br><small>${esc([c.legal_form, c.register_number, c.tax_id].filter(Boolean).join(' · '))}</small>` : ''}${c.proof_name ? `<br><button class="text-btn" data-proof="${c.id}" type="button">📎 Nachweis: ${esc(c.proof_name)}</button>` : ''}</td><td>${c.kind === 'konto' && !c.account_id ? `<button class="btn btn-dark btn-sm" data-mk="${c.id}" type="button">Konto anlegen</button> ` : c.account_id ? '<span class="st ok">Konto angelegt</span> ' : ''}${c.status === 'offen' ? `<button class="text-btn" data-done="${c.id}" type="button">Erledigt</button>` : 'erledigt'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine Anfragen.</p>'}</section>
@@ -935,7 +967,7 @@ const AUD = {
 const AUD_CAT = (a) => /^panic|^sec_|security/.test(a) ? 'sec' : /^invoice|datev/.test(a) ? 'fin' : /^b2b_/.test(a) ? 'b2b' : /^user|users_list/.test(a) ? 'user' : 'sys';
 async function protokoll(v, reveal = false) {
   const [r, pr] = await Promise.all([api('/api/admin/misc' + (reveal ? '?reveal=1' : '')), api('/api/admin/b2b')]);
-  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  if (!r.ok) { errState(v, r.data?.error); return; }
   const firms = new Map((pr.ok ? pr.data.accounts : []).map((a) => [a.id, a.company_name]));
   const who = (x) => { const t = String(x || ''); if (!t || t === 'system') return ['Sys', 'System']; if (/@/.test(t)) return ['Admin', t]; return ['Admin', 'Admin ' + t.replace(/^ps:/, '').slice(0, 6)]; };
   const target = (a) => { const t = String(a.target || ''); if (!t) return '–'; if (firms.has(t)) return `Unternehmen · ${esc(firms.get(t))}`; if (/@/.test(t)) return esc(t); if (/^[0-9a-f-]{36}$/.test(t)) return `${/^invoice/.test(a.action) ? 'Rechnung' : /^user/.test(a.action) ? 'Konto' : 'Datensatz'} · ${t.slice(0, 8)}`; return esc(t.replace(/^ps:/, 'Person ').slice(0, 24)); };
@@ -952,7 +984,7 @@ async function protokoll(v, reveal = false) {
 
 async function kennzahlen(v) {
   const r = await api('/api/admin/stats');
-  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  if (!r.ok) { errState(v, r.data?.error); return; }
   const j = r.data;
   const n = (x) => (x == null ? '–' : x.toLocaleString('de-DE'));
   const tile = (l, x) => `<div class="an-chip"><small>${l}</small><strong>${x}</strong></div>`;
@@ -1066,7 +1098,7 @@ function chart(series) {
 // ---------- Einrichtung: offene Punkte mit Anleitung, Erledigtes eingeklappt ----------
 async function einrichtung(v) {
   const r = await api('/api/admin/setup');
-  if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  if (!r.ok) { errState(v, r.data?.error); return; }
   const all = r.data.items || [];
   const open = all.filter((x) => !x.ok), done = all.filter((x) => x.ok);
   const must = open.filter((x) => !x.optional);
