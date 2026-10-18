@@ -838,3 +838,4 @@ body[data-ad-seg=b2b] .ad-segctl button[aria-pressed=true]{background:#0F2C59;co
 .aud-who,.aud-tgt{font-size:13px;color:#475569;overflow-wrap:anywhere}.aud-who i{font-style:normal;font-size:11px;font-weight:800;background:#F1F5F9;border-radius:6px;padding:1px 6px;margin-right:6px;color:#334155}
 .aud-det{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}.aud-kv{font-size:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:2px 6px;color:#334155;overflow-wrap:anywhere}.aud-kv b{color:#64748B;font-weight:600}
 @media(max-width:600px){.aud-list li{grid-template-columns:1fr;gap:4px}}
+.b2b-login-hint{margin:-8px 0 18px;font-size:14.5px;color:#BAE6FD}.b2b-login-hint a{color:#fff;font-weight:700;text-decoration:underline;text-underline-offset:3px}

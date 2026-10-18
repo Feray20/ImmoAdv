@@ -66,13 +66,31 @@ if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/aut
   let state = { user: false, paid: false, b2b: false };
   // Unternehmenskunden arbeiten im Unternehmensportal: dort gibt es keine „Anwendung“, der Link führt ins Portal.
   const portal = () => {
+    if (B2B_PAGE) return;
     document.querySelectorAll('a[href="/app/dashboard"], a[data-app-link]').forEach((a) => {
       if (!a.dataset.appLink) { a.dataset.appLink = '1'; a.dataset.appOrig = a.textContent; }
       a.setAttribute('href', state.b2b ? '/b2b-portal' : '/app/dashboard');
       if (/Zur Anwendung/.test(a.dataset.appOrig)) a.textContent = state.b2b ? 'Zum Portal' : a.dataset.appOrig;
     });
   };
+  // Unternehmensseiten (/b2b …): „Anmelden“ führt direkt zum Login des Unternehmensportals, nicht zur Privatkunden-App.
+  const B2B_PAGE = /^\/b2b(\/|$)/.test(location.pathname);
+  const b2bLogin = () => {
+    document.querySelectorAll('.nav-actions a[href="/auth/login"], .mobile-nav a[href="/auth/login"], .nav-actions a[href="/b2b-portal"].b2b-login, .mobile-nav a.b2b-login').forEach((a) => {
+      a.setAttribute('href', '/b2b-portal'); a.textContent = 'Login für Unternehmen'; a.classList.add('b2b-login'); a.dataset.orig = a.dataset.orig || 'Anmelden';
+    });
+    // Kein Link in die Privatkunden-Anwendung auf den Unternehmensseiten.
+    document.querySelectorAll('.nav-actions a[href="/app/dashboard"], .mobile-nav a[href="/app/dashboard"]').forEach((a) => { a.hidden = true; });
+  };
+  // Privatkunden-Seiten: im Handy-Menü zusätzlich ein Login für Unternehmen.
+  const addB2bMenu = () => {
+    const m = document.querySelector('.mobile-nav');
+    if (!m || m.querySelector('a.b2b-login')) return;
+    const a = document.createElement('a'); a.href = '/b2b-portal'; a.className = 'b2b-login'; a.textContent = 'Login für Unternehmen'; m.append(a);
+  };
   const relabel = () => {
+    if (B2B_PAGE) { b2bLogin(); return; }
+    addB2bMenu();
     document.querySelectorAll('.nav-actions a[href="/auth/login"], .mobile-nav a[href="/auth/login"], a.nav-acc').forEach((a) => {
       const acc = state.user && !state.paid;
       if (!a.dataset.orig) a.dataset.orig = a.textContent;

@@ -59,6 +59,27 @@ export const PHASES = [
   { name: 'Bestand', plan: 'Ihre Immobilie gut führen: Steuern, Mietrecht, Fristen und was tun, wenn die Miete ausbleibt.', steuer: 'halten', lern: ['steuer', 'miete', 'mahnung', 'fristen'],
     actions: [['/fristen', 'Fristen im Blick', 'Zinsbindung, 15-%-Grenze, Spekulationsfrist'], ['#steuer', 'Steuern & Werbungskosten', 'Anlage V, 66-%-Check, Verkauf'], ['#lernen', 'Mieter zahlt nicht?', 'Mahnung, Mahnverfahren, Kündigung']] },
 ];
+// Profi-Stufen: gleiche Nummerierung (profile.phase 0–3), aber eigene Ziele, Werkzeuge und Fachthemen –
+// für Investoren mit Erfahrung statt Erklärtext für den ersten Kauf.
+export const PHASES_PRO = [
+  { name: 'Ankauf prüfen', plan: 'Deal-Screening nach harten Kennzahlen: Kaufpreisfaktor, Nettomietrendite, DSCR, Kipp-Zins und Cashflow nach Steuern – bevor Sie ein Angebot abgeben.', steuer: 'kauf', lern: ['cashflow', 'beleihung', 'etw', 'steuer'],
+    actions: [['/rechner/scorecard', 'Deal-Scorecard', 'Faktor, Rendite, DSCR auf einen Blick'], ['#suche', 'Exposé-Analyse', 'Inserat übernehmen, Kennzahlen rechnen'], ['/rechner/cashflow', 'Cashflow nach Steuern', 'AfA, Grenzsteuersatz, Zinsanteil']] },
+  { name: 'Finanzierung strukturieren', plan: 'Beleihungsauslauf, Zinsbindung, Tilgungsstrategie und Forward optimieren – Bankangebote auf gleicher Basis vergleichen und verhandeln.', steuer: 'kauf', lern: ['beleihung', 'unterlagen', 'annuitaet', 'beruf'],
+    actions: [['/rechner/vergleich', 'Bankangebote vergleichen', 'Effektivzins, Restschuld, Gesamtkosten'], ['/szenarien', 'Anschluss & Forward', 'Kipp-Zins und Zinsszenarien'], ['#objekte', 'Kreditmappe', 'BankReady mit Prüfsumme']] },
+  { name: 'Portfolio aufbauen', plan: 'Weitere Objekte hebeln: Eigenkapital-Recycling, Zinsschock auf den Gesamtbestand und die Drei-Objekt-Grenze (gewerblicher Grundstückshandel) im Blick.', steuer: 'halten', lern: ['steuer', 'fristen', 'cashflow', 'beleihung'],
+    actions: [['/cockpit', 'Portfolio-Stresstest', 'Zinsschock und Mietausfall auf den Bestand'], ['#werkzeuge', 'Portfolio-Kennzahlen', 'LTV, DSCR und Cashflow je Objekt'], ['/fristen', 'Fristen & Grenzen', '§ 23 EStG, Drei-Objekt-Grenze']] },
+  { name: 'Bestand optimieren', plan: 'Rendite im Bestand heben: Mieterhöhung nach Mietspiegel, Anlage V, 15-%-Grenze bei Sanierungen und Exit-Planung nach zehn Jahren.', steuer: 'halten', lern: ['miete', 'steuer', 'mahnung', 'fristen'],
+    actions: [['/rechner/mieterhoehung', 'Mieterhöhung', 'Kappungsgrenze und Briefentwurf'], ['#steuer', 'Anlage V & AfA', '15-%-Grenze, Erhaltungsaufwand'], ['/szenarien', 'Exit-Szenario', 'Verkauf, Restschuld, Steuer']] },
+];
+const STAGE_EFFECT_PRO = [
+  'Cockpit: Scorecard, Exposé-Analyse, Cashflow nach Steuern · Fachwissen: Beleihung, ETW-Prüfung · Steuer: Kaufpreisaufteilung',
+  'Cockpit: Angebotsvergleich, Anschluss & Forward, Kreditmappe · Fachwissen: Beleihungswert, Unterlagen · Steuer: Kaufphase',
+  'Cockpit: Portfolio-Stresstest und Kennzahlen je Objekt · Fachwissen: Steuern, Fristen · Steuer: Bestand',
+  'Cockpit: Mieterhöhung, Anlage V, Exit · Fachwissen: Mietrecht, Mahnverfahren · Steuer: Bestand und Verkauf',
+];
+// Stufen passend zur Ansicht (Einsteiger oder Profi).
+const isPro = () => document.body?.dataset?.mode === 'profi';
+const PH = () => (isPro() ? PHASES_PRO : PHASES);
 export function phaseOf(d) {
   const p = d.profile?.phase;
   if (Number.isInteger(p) && p >= 0 && p < PHASES.length) return { idx: p, chosen: true };
@@ -71,7 +92,7 @@ const STAGE_EFFECT = [
   'Cockpit zeigt Kreditmappe und Unterlagen · Lernplan: Unterlagen, Beruf, Beleihungswert · Steuern: Kaufphase',
   'Cockpit zeigt Fristen und Steuern · Lernplan: Steuern, Mietrecht, Mahnung, Fristen · Steuern: Bestand halten',
 ];
-const phasePicker = (idx, chosen) => `<div class="stage-row" role="group" aria-label="Ihre Stufe"><div class="stage-cur"><span class="stage-k">Ihre Stufe${chosen ? '' : ' · automatisch erkannt'}</span><strong><b class="stage-n">${idx + 1}</b>${PHASES[idx].name}</strong><small>${PHASES[idx].plan}</small></div><button type="button" class="btn btn-outline stage-open">Stufe ändern</button></div>`;
+const phasePicker = (idx, chosen) => `<div class="stage-row" role="group" aria-label="Ihre Stufe"><div class="stage-cur"><span class="stage-k">Ihre Stufe${chosen ? '' : ' · automatisch erkannt'}</span><strong><b class="stage-n">${idx + 1}</b>${PH()[idx].name}</strong><small>${PH()[idx].plan}</small></div><button type="button" class="btn btn-outline stage-open">Stufe ändern</button></div>`;
 let STAGE_D = null;
 function stageToast(t) {
   let el = document.getElementById('stageToast');
@@ -83,10 +104,10 @@ function openStage() {
   const cur = phaseOf(STAGE_D);
   let dlg = document.getElementById('stageDlg');
   if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'stageDlg'; dlg.className = 'stage-dlg'; document.body.append(dlg); }
-  dlg.innerHTML = `<form method="dialog" class="stage-in"><div class="stage-head"><div><span class="stage-k">Einstellung</span><h2>Ihre Stufe</h2></div><button class="stage-x" value="x" aria-label="Schließen">×</button></div>
-    <p class="form-note">Wählen Sie, wo Sie gerade stehen. Die ganze Anwendung stellt sich darauf ein: Startseite, Lernplan, Reihenfolge im Wissen und der Steuer-Bereich. Sie können jederzeit wechseln.</p>
-    <div class="stage-opts">${PHASES.map((p, i) => `<button type="button" class="stage-opt${cur.chosen && cur.idx === i ? ' on' : ''}" data-stage="${i}"><b class="stage-n">${i + 1}</b><span><strong>${p.name}</strong><small>${p.plan}</small><em>${STAGE_EFFECT[i]}</em></span></button>`).join('')}
-    <button type="button" class="stage-opt stage-auto${cur.chosen ? '' : ' on'}" data-stage="auto"><b class="stage-n">A</b><span><strong>Automatisch</strong><small>ImmoAdv erkennt die Stufe aus Ihren Daten (Finanzprofil, Objekte, Bankreife) und stellt sie selbst um.</small></span></button></div>
+  dlg.innerHTML = `<form method="dialog" class="stage-in"><div class="stage-head"><div><span class="stage-k">Einstellung</span><h2>${isPro() ? 'Ihr Schwerpunkt' : 'Ihre Stufe'}</h2></div><button class="stage-x" value="x" aria-label="Schließen">×</button></div>
+    <p class="form-note">${isPro() ? 'Profi-Ansicht: Wählen Sie Ihren aktuellen Investitions-Schwerpunkt. Cockpit-Werkzeuge, Fachwissen und Steuer-Bereich werden danach priorisiert.' : 'Wählen Sie, wo Sie gerade stehen. Die ganze Anwendung stellt sich darauf ein: Startseite, Lernplan, Reihenfolge im Wissen und der Steuer-Bereich. Sie können jederzeit wechseln.'}</p>
+    <div class="stage-opts${isPro() ? ' pro' : ''}">${PH().map((p, i) => `<button type="button" class="stage-opt${cur.chosen && cur.idx === i ? ' on' : ''}" data-stage="${i}"><b class="stage-n">${i + 1}</b><span><strong>${p.name}</strong><small>${p.plan}</small><em>${(isPro() ? STAGE_EFFECT_PRO : STAGE_EFFECT)[i]}</em>${isPro() ? `<span class="stage-tools">${p.actions.map(([, t]) => `<i>${t}</i>`).join('')}</span>` : ''}</span></button>`).join('')}
+    <button type="button" class="stage-opt stage-auto${cur.chosen ? '' : ' on'}" data-stage="auto"><b class="stage-n">A</b><span><strong>Automatisch</strong><small>${isPro() ? 'ImmoAdv leitet den Schwerpunkt aus Ihrem Bestand ab (Objekte, Finanzierungen, Fristen).' : 'ImmoAdv erkennt die Stufe aus Ihren Daten (Finanzprofil, Objekte, Bankreife) und stellt sie selbst um.'}</small></span></button></div>
     <p class="form-note wiz-again">Ziel geändert? <button type="button" class="link-btn wiz-open">Einrichtung neu starten</button> – Ziel, Stufe und Ansicht in drei Fragen.</p></form>`;
   dlg.querySelectorAll('[data-stage]').forEach((b) => b.onclick = () => {
     const v = b.dataset.stage === 'auto' ? null : Number(b.dataset.stage);
@@ -107,7 +128,7 @@ const GOALS = {
 };
 const WIZ_STAND = ['Ich informiere mich erst', 'Ich prüfe konkrete Objekte', 'Ich bereite das Bankgespräch vor', 'Ich habe bereits gekauft'];
 // Empfohlene Lernthemen: Stufe plus Ziel (ohne Dopplung).
-const recLern = (d) => [...new Set([...PHASES[phaseOf(d).idx].lern, ...(GOALS[d.profile?.goal]?.lern || [])])];
+const recLern = (d) => [...new Set([...PH()[phaseOf(d).idx].lern, ...(GOALS[d.profile?.goal]?.lern || [])])];
 function openWizard() {
   if (!APP) return;
   const pr = APP.d.profile || {};
@@ -120,13 +141,13 @@ function openWizard() {
     const dots = `<div class="wiz-dots" aria-label="Schritt ${step + 1} von 4">${[0, 1, 2, 3].map((i) => `<i class="${i <= step ? 'on' : ''}"></i>`).join('')}</div>`;
     let body = '';
     if (step === 0) body = `<h2>Was haben Sie vor?</h2><div class="stage-opts">${Object.entries(GOALS).map(([k, g]) => `<button type="button" class="stage-opt${st.goal === k ? ' on' : ''}" data-goal="${k}"><b class="stage-n">${{ selbst: '⌂', anlage: '€', bestand: '✓' }[k]}</b><span><strong>${g.name}</strong><small>${g.sub}</small></span></button>`).join('')}</div>`;
-    if (step === 1) body = `<h2>Wo stehen Sie gerade?</h2><div class="stage-opts">${WIZ_STAND.map((t, i) => `<button type="button" class="stage-opt${st.phase === i ? ' on' : ''}" data-ph="${i}"><b class="stage-n">${i + 1}</b><span><strong>${t}</strong><small>Stufe ${i + 1} · ${PHASES[i].name}</small></span></button>`).join('')}</div>`;
+    if (step === 1) body = `<h2>Wo stehen Sie gerade?</h2><div class="stage-opts">${WIZ_STAND.map((t, i) => `<button type="button" class="stage-opt${st.phase === i ? ' on' : ''}" data-ph="${i}"><b class="stage-n">${i + 1}</b><span><strong>${t}</strong><small>Stufe ${i + 1} · ${PH()[i].name}</small></span></button>`).join('')}</div>`;
     if (step === 2) body = `<h2>Ihre Zahlen <small class="wiz-opt">optional</small></h2><p class="form-note">Damit rechnet ImmoAdv Budget und Bankreife für Sie. Sie können das auch später im Konto eintragen.</p>
       <label class="wiz-f">Nettoeinkommen im Monat (Haushalt)<input id="wizInc" type="number" inputmode="decimal" min="0" step="50" placeholder="z. B. 4200" value="${st.income}"></label>
       <label class="wiz-f">Eigenkapital<input id="wizEq" type="number" inputmode="decimal" min="0" step="1000" placeholder="z. B. 60000" value="${st.equity}"></label>`;
     if (step === 3) {
       const m = st.mode || autoMode();
-      body = `<h2>So stellen wir ImmoAdv für Sie ein</h2><ul class="wiz-sum"><li><span>Ziel</span><strong>${GOALS[st.goal]?.name || '–'}</strong></li><li><span>Stufe</span><strong>${st.phase + 1} · ${PHASES[st.phase].name}</strong></li><li><span>Lernplan</span><strong>${[...new Set([...PHASES[st.phase].lern, ...(GOALS[st.goal]?.lern || [])])].length} passende Themen</strong></li>${st.income ? `<li><span>Finanzprofil</span><strong>wird ausgefüllt</strong></li>` : ''}</ul>
+      body = `<h2>So stellen wir ImmoAdv für Sie ein</h2><ul class="wiz-sum"><li><span>Ziel</span><strong>${GOALS[st.goal]?.name || '–'}</strong></li><li><span>Stufe</span><strong>${st.phase + 1} · ${PH()[st.phase].name}</strong></li><li><span>Lernplan</span><strong>${[...new Set([...PH()[st.phase].lern, ...(GOALS[st.goal]?.lern || [])])].length} passende Themen</strong></li>${st.income ? `<li><span>Finanzprofil</span><strong>wird ausgefüllt</strong></li>` : ''}</ul>
         <p class="form-note">Ansicht:</p><div class="seg wiz-mode" role="group"><button type="button" data-mode="einsteiger" aria-pressed="${m === 'einsteiger'}">Einsteiger – mit Fahrplan und Erklärungen</button><button type="button" data-mode="profi" aria-pressed="${m === 'profi'}">Profi – nur Werkzeuge</button></div>
         <p class="form-note">Alles bleibt jederzeit änderbar: Stufe über „Stufe ändern“, Ansicht oben rechts, den Assistenten können Sie neu starten.</p>`;
     }
@@ -210,7 +231,7 @@ export function setupApp({ u, d, saveData, reload }) {
     if (m != null) {
       sessionStorage.removeItem('ia-stage-msg');
       const ph = phaseOf(d);
-      setTimeout(() => stageToast(m === 'wiz' ? `<strong>ImmoAdv ist eingerichtet: ${GOALS[d.profile?.goal]?.name || ''} · Stufe ${ph.idx + 1} · ${d.profile?.mode === 'profi' ? 'Profi' : 'Einsteiger'}.</strong> ${d.profile?.mode === 'profi' ? 'Werkzeuge, Lernplan und Steuer-Bereich' : 'Startseite, Fahrplan, Lernplan und Steuer-Bereich'} sind angepasst.` : `<strong>Auf Stufe ${ph.idx + 1} · ${PHASES[ph.idx].name} umgestellt${m === 'auto' ? ' (automatisch)' : ''}.</strong> Startseite, Lernplan und Steuer-Bereich sind angepasst.`), 250);
+      setTimeout(() => stageToast(m === 'wiz' ? `<strong>ImmoAdv ist eingerichtet: ${GOALS[d.profile?.goal]?.name || ''} · Stufe ${ph.idx + 1} · ${d.profile?.mode === 'profi' ? 'Profi' : 'Einsteiger'}.</strong> ${d.profile?.mode === 'profi' ? 'Werkzeuge, Lernplan und Steuer-Bereich' : 'Startseite, Fahrplan, Lernplan und Steuer-Bereich'} sind angepasst.` : `<strong>Auf Stufe ${ph.idx + 1} · ${PH()[ph.idx].name} umgestellt${m === 'auto' ? ' (automatisch)' : ''}.</strong> Startseite, Lernplan und Steuer-Bereich sind angepasst.`), 250);
     }
   } catch { /* ignore */ }
   // Kaufwunsch von der Angebotsseite (vor der Anmeldung gemerkt): direkt weiter zur Bezahlseite.
@@ -332,7 +353,7 @@ export function setupApp({ u, d, saveData, reload }) {
     }
     if (cur === 'steuer' && !$('steuerView').dataset.ready) {
       $('steuerView').dataset.ready = '1';
-      import('/src/steuer.mjs').then((m) => m.mountSteuer($('steuerView'), { mode, phase: PHASES[phaseOf(d).idx].steuer })).catch(() => { $('steuerView').innerHTML = '<p class="auth-message error">Steuer-Bereich konnte nicht geladen werden.</p>'; });
+      import('/src/steuer.mjs').then((m) => m.mountSteuer($('steuerView'), { mode, phase: PH()[phaseOf(d).idx].steuer })).catch(() => { $('steuerView').innerHTML = '<p class="auth-message error">Steuer-Bereich konnte nicht geladen werden.</p>'; });
     }
     if (cur === 'angebot' && !$('angebotView').dataset.ready) { $('angebotView').dataset.ready = '1'; renderOffers(mode); }
   };
@@ -776,7 +797,7 @@ function startCard(mode, d) {
   if (mode === 'profi') {
     // Profi: Kennzahlen des eigenen Bestands statt Erklärtexte – danach Werkzeuge.
     return `<article class="dash-card wide start-card start-pro" data-view="start">
-      <div class="stage-mini"><span class="stage-k">Stufe</span><strong><b class="stage-n">${ph.idx + 1}</b>${PHASES[ph.idx].name}</strong><button type="button" class="link-btn stage-open">ändern</button><div id="rankSlot" class="rank-slot mini"></div></div>
+      <div class="stage-mini"><span class="stage-k">Stufe</span><strong><b class="stage-n">${ph.idx + 1}</b>${PH()[ph.idx].name}</strong><button type="button" class="link-btn stage-open">ändern</button><div id="rankSlot" class="rank-slot mini"></div></div>
       ${proKpis(d)}
       ${paths('profi', done)}</article>`;
   }
@@ -835,7 +856,7 @@ function lernCard(mode, d) {
     <div class="lp-bar" role="progressbar" aria-label="Verstandene Themen" aria-valuenow="${n}" aria-valuemin="0" aria-valuemax="${LERN.length}"><span style="width:${Math.round((n / LERN.length) * 100)}%"></span></div>
     <p class="form-note" id="lpNote">${n} von ${LERN.length} Themen verstanden.</p>
     ${phasePicker(phaseOf(d).idx, phaseOf(d).chosen)}
-    <div class="lt-list">${lernTopics(st, recLern(d), PHASES[phaseOf(d).idx].name + (GOALS[d.profile?.goal] ? ' · ' + GOALS[d.profile.goal].name : ''), PHASES[phaseOf(d).idx].plan)}</div></article>`;
+    <div class="lt-list">${lernTopics(st, recLern(d), PH()[phaseOf(d).idx].name + (GOALS[d.profile?.goal] ? ' · ' + GOALS[d.profile.goal].name : ''), PH()[phaseOf(d).idx].plan)}</div></article>`;
 }
 
 let FAQ = null;

@@ -1231,3 +1231,6 @@ img,svg,video,canvas,iframe{max-width:100%}
   .tip{min-width:28px;min-height:28px}
   .offer-price{font-size:28px}
 }
+/* Profi-Schwerpunkte im Stufen-Dialog: eigene Werkzeug-Chips */
+.stage-opts.pro .stage-opt{border-color:#C4B5FD}.stage-opts.pro .stage-n{background:#6D28D9}
+.stage-tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.stage-tools i{font-style:normal;font-size:12px;font-weight:700;color:#5B21B6;background:#EDE9FE;border-radius:999px;padding:2px 8px}

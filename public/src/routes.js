@@ -58,6 +58,7 @@ else if(p==='/b2b'){title='ImmoAdv für Finanzierungsberater, Makler und Banken'
 <h2 id="rbH">Vorqualifizierte Fälle statt Unterlagen-Jagd – Ihr Zeitgewinn, offen gerechnet.</h2>
 <p id="rbP">Ihre Kunden laden Unterlagen hoch und füllen die Selbstauskunft aus. ImmoAdv prüft Beleihungsauslauf, Haushaltsüberschuss, DSCR und Zins-Stresstest automatisch. Sie übernehmen den Fall, wenn er entscheidungsreif ist.</p>
 <div class="b2b-exec-cta"><a class="btn btn-lg b2b-cta-main" href="#demo">Demo sofort starten – ohne Anmeldung</a><a class="b2b-cta-link" href="#anfrage">Unternehmenskonto anfragen →</a></div>
+<p class="b2b-login-hint">Bereits Kunde? <a href="/b2b-portal">Zum Login für Unternehmen →</a></p>
 <ul class="cbadges" aria-label="Compliance"><li><b>AVV</b><span>Art. 28 DSGVO</span></li><li><b>FRA</b><span>Server in Frankfurt</span></li><li><b>SHA-256</b><span>Prüfsumme je Mappe</span></li><li><b>0 %</b><span>Provision, keine Vermittlung</span></li></ul>
 </div>
 <aside class="roi" aria-labelledby="roiH"><div class="roi-h"><h3 id="roiH">Ihr Zeitgewinn pro Monat</h3><span>Modellrechnung mit Ihren Werten</span></div>
