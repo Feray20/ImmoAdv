@@ -1,7 +1,7 @@
 // App-Rahmen für das Konto: Handy wie eine App (Tab-Leiste unten), Desktop wie ein Investment-Tool (Seitenleiste).
 // Ansichten über #hash; vorhandene Karten werden den Ansichten zugeordnet. Modus Einsteiger/Profi frei wählbar.
 import { openBuy, planIcon, resumeIntent } from './buy.mjs';
-import { rank, GREST, portfolio, upcoming } from './calc.mjs';
+import { rank, GREST, portfolio, upcoming, readiness } from './calc.mjs';
 const GREST_KEYS = Object.keys(GREST);
 
 const $ = (id) => document.getElementById(id);
@@ -330,6 +330,15 @@ export function setupApp({ u, d, saveData, reload }) {
   // Verbesserungsvorschläge (Konto): gehen an den Web-Admin, Bereich Privatkunden.
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide fb-card-b2c" data-view="konto" id="fbCardB2C"><h3>Verbesserungsvorschläge</h3><div id="fbBodyB2C"></div></article>`);
   import('/src/feedback-ui.mjs').then((m) => m.mountFeedback($('fbBodyB2C'), { area: 'b2c' })).catch(() => {});
+  // Gekaufter Leitfaden (Zusatzprodukt): nur sichtbar, wenn erworben.
+  fetch('/api/me/leitfaden', { headers: { Authorization: 'Bearer ' + sessToken() }, cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((L) => {
+    if (!L?.owned) return;
+    grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide lf-card" data-view="konto" id="lfCard"><h3>${esc(L.titel)}</h3><p class="form-note">${esc(L.hinweis)} · Stand ${esc(L.version)}</p>
+      ${L.abschnitte.map((a) => `<details class="lf-sec"><summary>${esc(a.titel)}</summary>${a.einleitung ? `<p>${esc(a.einleitung)}</p>` : ''}<ul class="lf-list">${a.punkte.map(([t, x]) => `<li><label class="chk"><input type="checkbox"> <span><b>${esc(t)}</b> – ${esc(x)}</span></label></li>`).join('')}</ul></details>`).join('')}
+      <p><button class="btn btn-outline" type="button" id="lfPrint">Drucken / als PDF speichern</button></p></article>`);
+    $('lfPrint').onclick = () => { document.querySelectorAll('#lfCard details').forEach((x) => { x.open = true; }); document.body.classList.add('lf-printing'); addEventListener('afterprint', () => document.body.classList.remove('lf-printing'), { once: true }); window.print(); };
+    window.__iaApplyView?.();
+  }).catch(() => {});
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="suche" id="sucheView"></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="werkzeuge" id="toolsView"><p class="form-note">Software-Tools werden geladen …</p></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);
@@ -415,6 +424,23 @@ let ACCESS = null;
 const getAccess = () => (ACCESS ||= fetch('/api/me/access', { headers: { Authorization: 'Bearer ' + sessToken() }, cache: 'no-store' }).then((r) => (r.ok ? r.json() : { paid: false })).catch(() => ({ paid: false })));
 const DEMO_NOTE = '<strong>Transparenter Entwurf:</strong> So sieht Ihre Kreditmappe für die Bank aus – noch mit Wasserzeichen. Beim Freischalten entfällt es, die Echtheitsprüfung per QR-Code kommt dazu, und Ihre Eingaben bleiben erhalten.';
 const UNLOCK = '<button type="button" class="btn btn-pay unlock-btn" data-unlock="credit-map">Kreditmappe freischalten · 39 €</button>';
+// Kontext für den Kaufdialog – nur echte Werte aus dem Konto (gewähltes bzw. erstes Objekt, Finanzprofil).
+function buyCtx() {
+  const d = APP?.d; if (!d) return {};
+  const objs = (Array.isArray(d.objects) ? d.objects : []).filter((o) => Number(o.price) > 0);
+  const sel = document.getElementById('kmObj')?.value;
+  const o = objs.find((x) => x.id === sel) || objs[0];
+  const p = d.profile || {};
+  const fin = [Number(p.netIncome) > 0, p.equity !== undefined && p.equity !== '', Boolean(p.employment), Number(p.householdSize) > 0];
+  const ctx = { finPct: (fin.filter(Boolean).length / fin.length) * 100 };
+  if (o) {
+    const r = readiness(o, []);
+    const g = r.groups.filter((x) => x.key !== 'unterlagen');
+    const done = g.reduce((a, x) => a + x.done, 0), total = g.reduce((a, x) => a + x.total, 0);
+    Object.assign(ctx, { loan: Number(o.loan) || autoLoan(o), ratePct: Number(o.interestPct) || null, gaps: g.flatMap((x) => x.missing), mappePct: total ? (done / total) * 100 : null });
+  }
+  return ctx;
+}
 // Ein-Klick-Freischaltung aus dem Entwurf: öffnet direkt den Kaufdialog der Kreditmappe.
 document.addEventListener('click', async (e) => {
   const b = e.target.closest?.('[data-unlock]');
@@ -422,7 +448,7 @@ document.addEventListener('click', async (e) => {
   e.preventDefault();
   const P = await fetch('/data/preise.json').then((r) => r.json()).catch(() => null);
   const o = P?.privat?.plans?.find((x) => x.id === b.dataset.unlock);
-  if (o) openBuy(o, { onError: (t) => alert(t) }); else location.hash = '#angebot';
+  if (o) openBuy(o, { onError: (t) => alert(t), ctx: buyCtx() }); else location.hash = '#angebot';
 });
 const sessToken = () => { try { return JSON.parse(localStorage.getItem('immoadv-auth-session-v1') || 'null')?.access_token || ''; } catch { return ''; } };
 // Darlehen, wenn nicht angegeben: Kaufpreis + Nebenkosten − Eigenkapital (mindestens 0).
@@ -984,7 +1010,7 @@ async function renderOffers(mode) {
     if (want) { const card = box.querySelector(`[data-buy="${CSS.escape(want)}"]`)?.closest('.offer'); if (card) { card.classList.add('offer-want'); card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }
     box.querySelectorAll('[data-buy]').forEach((b) => b.onclick = () => {
       const offer = m.plans.find((x) => x.id === b.dataset.buy);
-      if (offer) openBuy(offer, { onError: (t) => alert(t) });
+      if (offer) openBuy(offer, { onError: (t) => alert(t), ctx: buyCtx() });
     });
   };
   draw();

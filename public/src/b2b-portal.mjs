@@ -615,6 +615,17 @@ async function vTarif(box) {
     <section class="pt-card"><h2>Aktueller Tarif</h2>
       <p><strong>${me.tier ? TIER[me.tier] : 'Kein Tarif gebucht'}</strong>${a.planSource === 'manual' ? ' (vom Betreiber freigeschaltet)' : ''}${a.planUntil ? ` · läuft bis ${dt(a.planUntil)}` : ''}</p>
       ${a.planSource === 'stripe' ? '<button class="btn btn-ghost" id="aboPortal" type="button">Abo verwalten (Zahlungsmittel, Wechsel, Kündigung)</button>' : ''}</section>
+    <section class="pt-card roi-card"><h2>Lohnt sich das für Sie?</h2>
+      <p class="form-note">Ihre eigene Rechnung – tragen Sie Ihre Werte ein. ImmoAdv nennt bewusst keine pauschale Zeitersparnis.</p>
+      <div class="roi-in"><label>Fälle pro Monat<input id="roiN" type="number" min="0" step="1" inputmode="numeric" placeholder="z. B. 4"></label>
+        <label>Minuten Vorarbeit, die Sie je Fall sparen<input id="roiM" type="number" min="0" step="5" inputmode="numeric" placeholder="Ihre Schätzung"></label>
+        <label>Ihr interner Stundensatz (€)<input id="roiH" type="number" min="0" step="5" inputmode="decimal" placeholder="z. B. 80"></label></div>
+      <div id="roiOut" class="roi-out" aria-live="polite"></div></section>
+    <section class="pt-card trust-card"><h2>Rechtssicher für Unternehmen</h2><ul class="trust-l">
+      <li><b>AVV nach Art. 28 DSGVO</b><span>bei der Registrierung abgeschlossen, im Profil jederzeit abrufbar</span></li>
+      <li><b>GoBD-gerechtes Rechnungsarchiv</b><span>Rechnungen unveränderbar gespeichert, SHA-256-geprüft</span></li>
+      <li><b>Hosting in Frankfurt am Main</b><span>Anwendung (Vercel, Region fra1) und Datenbank (Supabase, eu-central-1) in der EU</span></li>
+      <li><b>USt-IdNr. ${esc(a.taxId || '–')}</b><span id="vatSt">${/^[A-Z]{2}[0-9A-Z]{2,12}$/.test(String(a.taxId || '').replace(/\s+/g, '')) ? '<button type="button" class="text-btn" id="vatChk">Beim EU-System VIES prüfen</button>' : 'im Profil hinterlegen, um sie per VIES prüfen zu lassen'}</span></li></ul></section>
     <label class="consent b2b-terms" id="termsL"><input type="checkbox" id="terms"> <span>Ich buche als <strong>Unternehmer (§ 14 BGB)</strong> zu den <a href="/nutzungsbedingungen#b2b" target="_blank">Nutzungsbedingungen für Unternehmen</a>. Preise netto zzgl. 19 % USt. – auf der Bezahlseite sehen Sie Netto, USt. und Brutto. Ein Widerrufsrecht besteht nicht.</span></label>
     <div class="seg" role="tablist" id="ivl"><button type="button" data-i="month" aria-selected="true">Monatlich</button><button type="button" data-i="year" aria-selected="false">Jährlich (2 Monate gespart)</button></div>
     <div class="offers">${tiers.map((t) => b2b.plans.filter((p) => p.tier === t).map((p) => `<div class="offer${t === 'PRO' ? ' rec' : ''}" data-ivl="${p.interval}"${p.interval === 'year' ? ' hidden' : ''}>${t === 'PRO' ? '<span class="offer-rec">Am häufigsten gewählt</span>' : ''}
@@ -632,6 +643,22 @@ async function vTarif(box) {
     box.querySelectorAll('.offer[data-ivl]').forEach((o) => { o.hidden = o.dataset.ivl !== b.dataset.i; });
   });
   $('#terms').onchange = () => $('#termsL').classList.remove('consent-missing');
+  // ROI nur aus Eingaben des Beraters; verglichen mit dem Netto-Monatspreis der Tarife.
+  const roi = () => {
+    const n = Number($('#roiN').value) || 0, mi = Number($('#roiM').value) || 0, h = Number($('#roiH').value) || 0, o = $('#roiOut');
+    if (!n || !mi || !h) { o.innerHTML = '<p class="form-note">Alle drei Werte eintragen – dann sehen Sie Ihren Gegenwert pro Monat.</p>'; return; }
+    const val = (n * mi / 60) * h;
+    const pl = b2b.plans.filter((p) => p.interval === 'month');
+    o.innerHTML = `<p class="roi-big"><b>${(n * mi / 60).toLocaleString('de-DE', { maximumFractionDigits: 1 })} Stunden</b> pro Monat · Gegenwert <b>${eur(Math.round(val * 100))}</b></p>
+      <ul class="roi-l">${pl.map((p) => `<li><span>${esc(p.name)}</span><b class="${val * 100 >= p.netto_cents ? 'ok' : 'warn'}">${val * 100 >= p.netto_cents ? 'rechnet sich' : 'rechnet sich noch nicht'}</b><small>${net(p.netto_cents)} netto / Monat</small></li>`).join('')}</ul>`;
+  };
+  ['#roiN', '#roiM', '#roiH'].forEach((id) => $(id).addEventListener('input', roi)); roi();
+  $('#vatChk')?.addEventListener('click', (e) => busy(e.target, async () => {
+    const r = await api('/api/b2b/vat-check', { method: 'POST' });
+    const st = $('#vatSt');
+    if (!r.ok || !r.data.checked) { st.textContent = r.data?.error || 'Prüfung nicht möglich.'; return; }
+    st.innerHTML = r.data.valid ? `<span class="st ok">gültig laut VIES</span> ${esc(r.data.name || '')} · ${esc(new Date(r.data.at).toLocaleDateString('de-DE'))}` : '<span class="st bad">laut VIES ungültig</span> – bitte im Profil korrigieren';
+  }));
   box.querySelectorAll('[data-plan]').forEach((b) => b.onclick = () => busy(b, async () => {
     if (!$('#terms').checked) { const l = $('#termsL'); l.classList.add('consent-missing'); l.scrollIntoView({ behavior: 'smooth', block: 'center' }); $('#terms').focus({ preventScroll: true }); throw Error('Bitte zuerst bestätigen, dass Sie als Unternehmer buchen.'); }
     try { window.iaTrack?.('checkout_start', { seg: 'b2b', plan: b.dataset.plan }); } catch { /* ignore */ }

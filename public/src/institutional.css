@@ -1328,3 +1328,13 @@ h1,h2,h3,.route-hero h1,.hero h1{hyphens:none;-webkit-hyphens:none;word-break:no
 .cm-sl label{display:grid;gap:4px;font-size:13px;font-weight:600;color:#334155}.cm-sl input[type=range]{width:100%;min-height:32px;accent-color:#0284C7}.cm-sl output{font-weight:800;color:#0F2C59}
 @media (max-width:760px){.cm-in{grid-template-columns:1fr 1fr}.cm-grid,.cm-pro-g,.cm-sl{grid-template-columns:1fr}}
 @media (max-width:420px){.cm-in{grid-template-columns:1fr}}
+/* Etappe 6: Kaufdialog mit echten Zahlen, Zusatzprodukt */
+.buy-steps{list-style:none;margin:10px 0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;counter-reset:bs}
+.buy-steps li{display:grid;gap:2px;padding:8px;border-radius:10px;background:#F1F5F9;font-size:12.5px;color:#475569;text-align:center}.buy-steps li b{font-size:15px;color:#0F2C59}
+.buy-steps li.done{background:#DCFCE7}.buy-steps li.done b{color:#15803D}.buy-steps li.on{background:#0F2C59;color:#E2E8F0}.buy-steps li.on b{color:#fff}
+.buy-anchor,.buy-gaps{margin:8px 0;padding:10px 12px;border-radius:10px;font-size:13.5px;line-height:1.5}
+.buy-anchor{background:#F0F9FF;border:1px solid #BAE6FD;color:#0F172A}.buy-gaps{background:#FFFBEB;border:1px solid #FDE68A;color:#78350F}
+.buy-bump{display:flex;gap:10px;align-items:flex-start;margin:10px 0;padding:12px;border:2px dashed #CBD5E1;border-radius:12px;cursor:pointer}
+.buy-bump input{width:22px;height:22px;flex:none;margin-top:2px}.buy-bump strong{display:block;color:#0F2C59;font-size:14px}.buy-bump small{display:block;font-size:12.5px;color:#475569;text-transform:none;letter-spacing:0}
+.lf-sec{border-top:1px solid #E2E8F0;padding:8px 0}.lf-sec summary{font-weight:700;color:#0F2C59;min-height:40px;align-items:center}.lf-list{list-style:none;margin:6px 0;padding:0;display:grid;gap:8px}.lf-list .chk{align-items:flex-start;font-size:14px;line-height:1.5}
+@media print{body.lf-printing .dash-card:not(#lfCard),body.lf-printing .app-side,body.lf-printing .app-tabs,body.lf-printing .app-top{display:none!important}}

@@ -131,7 +131,19 @@
     ]
    ]
   },
-  "demo": "Erst testen, dann entscheiden: Kostenlos erstellen Sie Ihre komplette Kreditmappe als Entwurf mit Wasserzeichen. Gefällt sie Ihnen, schalten Sie sie mit einem Klick frei – Ihre Eingaben bleiben erhalten."
+  "demo": "Erst testen, dann entscheiden: Kostenlos erstellen Sie Ihre komplette Kreditmappe als Entwurf mit Wasserzeichen. Gefällt sie Ihnen, schalten Sie sie mit einem Klick frei – Ihre Eingaben bleiben erhalten.",
+  "addons": [
+   {
+    "id": "leitfaden",
+    "name": "Notar-Checkliste & Banken-Verhandlungsleitfaden",
+    "cents": 900,
+    "zu": [
+     "credit-map",
+     "buyer-pass"
+    ],
+    "beschreibung": "Checkliste für Bankgespräch, Notartermin und die Zeit danach – als druckbare Seite in Ihrem Konto."
+   }
+  ]
  },
  "b2b": {
   "name": "Für Unternehmen",

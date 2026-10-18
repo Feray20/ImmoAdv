@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { userFromRequest } from '@/lib/billing/auth';
 import { checkoutParams } from '@/lib/billing/checkout-params';
-import { billingEnabled, ensureCustomer, ensurePrice, ensureTaxRate, isPlan, stripe } from '@/lib/billing/stripe';
+import { billingEnabled, ensureAddonPrice, ensureCustomer, ensurePrice, ensureTaxRate, isPlan, PLANS, stripe } from '@/lib/billing/stripe';
 import { intakeClosed } from '@/lib/security/panic';
 
 export const dynamic = 'force-dynamic';
@@ -18,9 +18,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Zu viele Anfragen. Bitte kurz warten.' }, { status: 429 });
   }
 
-  let body: { plan?: unknown; consent?: unknown };
+  let body: { plan?: unknown; consent?: unknown; addon?: unknown };
   try {
-    body = (await req.json()) as { plan?: unknown; consent?: unknown };
+    body = (await req.json()) as { plan?: unknown; consent?: unknown; addon?: unknown };
   } catch {
     return NextResponse.json({ error: 'Ungültige Anfrage.' }, { status: 400 });
   }
@@ -34,19 +34,23 @@ export async function POST(req: Request) {
   const origin = new URL(req.url).origin;
 
   try {
-    const [customer, price, taxRate] = await Promise.all([
+    // Zusatzprodukt nur zu Einmalkäufen (Kreditmappe, Käufer-Pass) und nur auf ausdrücklichen Wunsch (kein vorausgewähltes Kästchen).
+    const withAddon = body.addon === 'leitfaden' && PLANS[plan].mode === 'payment';
+    const [customer, price, taxRate, addonPrice] = await Promise.all([
       ensureCustomer(user.id, user.email),
       ensurePrice(plan),
       ensureTaxRate(),
+      withAddon ? ensureAddonPrice() : Promise.resolve(null),
     ]);
-    const metadata = {
+    const metadata: Record<string, string> = {
       plan,
+      ...(addonPrice ? { addon: 'leitfaden' } : {}),
       supabase_user_id: user.id,
       consent_immediate_start: new Date().toISOString(),
     };
 
     const params = checkoutParams({
-      plan, customer: customer.id, clientRef: user.id, price, taxRate, metadata,
+      plan, customer: customer.id, clientRef: user.id, price, taxRate, metadata, addonPrice,
       successUrl: `${origin}/app/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${origin}/angebote?checkout=cancel`,
     });

@@ -9,14 +9,14 @@ export const NO_MANAGED_PAYMENTS = { managed_payments: { enabled: false } } as u
 
 export function checkoutParams(o: {
   plan: Plan; customer: string; clientRef: string; price: string; taxRate: string;
-  metadata: Record<string, string>; successUrl: string; cancelUrl: string;
+  metadata: Record<string, string>; successUrl: string; cancelUrl: string; addonPrice?: string | null;
 }): Stripe.Checkout.SessionCreateParams {
   const def = PLANS[o.plan];
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: def.mode,
     customer: o.customer,
     client_reference_id: o.clientRef,
-    line_items: [{ price: o.price, quantity: 1, tax_rates: [o.taxRate] }],
+    line_items: [{ price: o.price, quantity: 1, tax_rates: [o.taxRate] }, ...(o.addonPrice && def.mode === 'payment' ? [{ price: o.addonPrice, quantity: 1, tax_rates: [o.taxRate] }] : [])],
     locale: 'de',
     billing_address_collection: 'required',
     tax_id_collection: { enabled: true },
