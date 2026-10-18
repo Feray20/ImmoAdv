@@ -683,45 +683,49 @@ export function analyse(i) {
   };
 }
 
-// ---------- Portal-Links (nur an öffentlich indexierten Portalseiten geprüfte URL-Formate, Stand Oktober 2026) ----------
-// Es wird nichts von den Portalen geladen; die Links öffnen die Suche beim jeweiligen Portal.
-const slug = (t) => String(t).trim().toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
-  .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-const CITY_STATES = new Set(['berlin', 'hamburg', 'bremen']);
 
-export function portalLinks({ land, kreis, ort, art, minPrice = 0, maxPrice, minArea, minRooms }) {
-  const o = slug(ort), k = slug(kreis);
-  const out = [];
-  // ImmoScout24: /Suche/de/{land}[/{kreis}-kreis]/{ort}/{typ}?price=-X.0&livingspace=Y.0-&numberofrooms=Z.0-
-  {
-    let path = `/Suche/de/${land}`;
-    if (CITY_STATES.has(land)) path += `/${land}`;
-    else if (o) path += (k ? `/${k.endsWith('kreis') ? k : `${k}-kreis`}` : '') + `/${o}`;
-    const type = art === 'haus' ? 'haus-kaufen' : art === 'mfh' ? 'mehrfamilienhaeuser' : 'wohnung-kaufen';
-    const q = new URLSearchParams();
-    if (art !== 'mfh') {
-      if (minArea > 0) q.set('livingspace', `${minArea.toFixed(1)}-`);
-      if (minRooms > 0) q.set('numberofrooms', `${minRooms.toFixed(1)}-`);
-      if (maxPrice > 0 || minPrice > 0) q.set('price', `${minPrice > 0 ? minPrice.toFixed(1) : ''}-${maxPrice > 0 ? maxPrice.toFixed(1) : ''}`);
-    }
-    out.push({ name: 'ImmoScout24', url: `https://www.immobilienscout24.de${path}/${type}${q.toString() ? '?' + q.toString() : ''}`,
-      filters: art === 'mfh' ? 'Ort und Objektart; Preis, Fläche und Zimmer bitte im Portal setzen.' : 'Ort, Objektart, Preisrahmen, Mindestfläche, Mindestzimmer.' });
-  }
-  // Immowelt: /suche/{ort}/{wohnungen|haeuser}/kaufen?roomi=Z  bzw. /suche/bl-{land}/…
-  {
-    const type = art === 'wohnung' ? 'wohnungen' : 'haeuser';
-    const where = o || `bl-${land}`;
-    const q = minRooms > 0 ? `?roomi=${Math.floor(minRooms)}` : '';
-    out.push({ name: 'Immowelt', url: `https://www.immowelt.de/suche/${where}/${type}/kaufen${q}`,
-      filters: `Ort${o ? '' : ' (Bundesland)'}, Objektart${minRooms > 0 ? ', Mindestzimmer' : ''}${art === 'mfh' ? ' (Häuser; Mehrfamilienhaus im Portal wählen)' : ''}; Preis und Fläche bitte im Portal setzen.` });
-  }
-  // Kleinanzeigen: /s-{wohnung|haus}-kaufen/{stichwort}/k0c{196|208}
-  {
-    const cat = art === 'wohnung' ? ['s-wohnung-kaufen', 'c196'] : ['s-haus-kaufen', 'c208'];
-    const kw = [art === 'mfh' ? 'mehrfamilienhaus' : '', ort.trim()].filter(Boolean).join(' ').toLowerCase().replace(/\s+/g, '-');
-    out.push({ name: 'Kleinanzeigen', url: `https://www.kleinanzeigen.de/${cat[0]}/${encodeURIComponent(kw || 'deutschland')}/k0${cat[1]}`,
-      filters: 'Kategorie und Ort als Stichwort; weitere Filter bitte im Portal setzen.' });
-  }
-  return out;
+
+// ---------- Exposé-Kennzahlen (Metrics Engine) ----------
+// Aus den Eckdaten eines Exposés (PDF-Import, Ein-Klick-Übernahme oder Eingabe) das typisierte Ergebnis
+// ExposeMetricsResult (siehe lib/domain/expose-metrics.ts). Rechnet mit dem gleichen Kern wie die Objekt-Analyse.
+// Sanierungspuffer je m² sind ImmoAdv-Annahmen (Größenordnung für Hülle/Heizung), kein Gutachten.
+export const SANIERUNG_QM = { E: 100, F: 200, G: 300, H: 400 };
+export function exposeMetrics(p, f = {}) {
+  const n = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? 0 : Number(v));
+  const price = n(p.purchasePrice), area = n(p.livingAreaSqm), rent = n(p.monthlyColdRent);
+  const land = GREST[p.address?.state] ? p.address.state : null;
+  if (!(price > 0) || !land) return null;
+  const nonAlloc = n(p.nonAllocatableCosts), reserve = n(p.monthlyMaintenanceReserve);
+  const a = analyse({ price, area, land, brokerPct: f.brokerPct ?? 3.57, rent, vacancyPct: f.vacancyPct ?? 0,
+    nonRecoverable: nonAlloc + reserve, maintenanceQm: 0, equity: n(f.equity), ratePct: f.ratePct ?? 3.5, repaymentPct: f.repaymentPct ?? 2, fixedYears: f.fixedYears ?? 10,
+    yearBuilt: n(p.constructionYear), energyClass: p.energyClass || '' });
+  const nk = kaufnebenkosten({ price, land, brokerPct: f.brokerPct ?? 3.57 });
+  const part = (k) => nk.parts.filter((x) => x.key === k).reduce((s, x) => s + x.amount, 0);
+  const ec = String(p.energyClass || '').toUpperCase(), yr = n(p.constructionYear);
+  let riskLevel = ec in SANIERUNG_QM ? (['G', 'H'].includes(ec) ? 'HIGH' : 'MEDIUM') : 'LOW';
+  if (riskLevel === 'LOW' && yr > 0 && yr < 1978 && !ec) riskLevel = 'MEDIUM';
+  const buffer = ec in SANIERUNG_QM && area > 0 ? r2(SANIERUNG_QM[ec] * area) : 0;
+  const ann = price > 0 ? r2(a.rate) : 0;
+  return {
+    property: { ...p },
+    metrics: {
+      pricePerSqm: area > 0 ? r2(price / area) : 0,
+      rentPerSqm: area > 0 && rent > 0 ? r2(rent / area) : 0,
+      purchaseMultiplier: rent > 0 ? Math.round((price / (rent * 12)) * 10) / 10 : 0,
+      grossRentalYieldPercent: rent > 0 ? Math.round(((rent * 12) / price) * 10000) / 100 : 0,
+      netRentalYieldPercent: a.netYield ?? 0,
+      incidentalCosts: {
+        propertyTransferTax: r2(part('grest')), notaryAndRegistry: r2(part('notar') + part('grundbuch')), brokerCommission: r2(part('makler')),
+        totalIncidentalCosts: nk.total, totalInvestment: nk.allIn,
+      },
+      financingQuickCheck: {
+        calculatedMonthlyRate: ann,
+        monthlyPreTaxCashflow: r2(rent - ann - nonAlloc - reserve),
+        dscrValue: a.dscr ?? 0,
+        ltvPercent: a.ltv ?? 0,
+        stressTestRateDelta: a.rateStress != null ? r2(a.rateStress - ann) : 0,
+      },
+      sanitationRisk: { riskLevel, recommendedSanitationBuffer: buffer },
+    },
+  };
 }
-

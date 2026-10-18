@@ -13,7 +13,7 @@ const cmpTable = (v, hl = -1) => (v?.zeilen?.length ? `<details class="cmp" open
 
 const ICON = {
   start: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
-  suche: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  suche: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M12 17v-6M9.5 13.5 12 11l2.5 2.5"/>',
   objekte: '<path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/>',
   lernen: '<path d="M2 8l10-5 10 5-10 5z"/><path d="M6 10v5c0 2 3 4 6 4s6-2 6-4v-5"/>',
   angebot: '<path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
@@ -24,8 +24,8 @@ const ICON = {
 const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
 const VIEWS = {
-  einsteiger: [['start', 'Übersicht'], ['suche', 'Suche'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
-  profi: [['start', 'Cockpit'], ['suche', 'Suche & Analyse'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer & AfA'], ['lernen', 'Fachwissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
+  einsteiger: [['start', 'Übersicht'], ['suche', 'Objekt prüfen'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
+  profi: [['start', 'Cockpit'], ['suche', 'Import & Analyse'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer & AfA'], ['lernen', 'Fachwissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
 };
 const TABS = ['start', 'suche', 'objekte', 'werkzeuge', 'lernen', 'konto'];
 
@@ -39,7 +39,7 @@ const LERN = [
   ['fristen', 'Wenn die Zinsbindung endet', 'Anschlussfinanzierung, Kipp-Punkt und wichtige Fristen.', [23, 24], ['Fristen-Rechner', '/fristen'], 'Leisten & Finanzieren'],
   ['beruf', 'Was die Bank je nach Beruf prüft', 'Angestellt, selbstständig, verbeamtet – und welche Unterlagen.', [4], ['Erwerbsstatus im Detail', '/wissen/erwerbsstatus'], 'Leisten & Finanzieren'],
   ['beleihung', 'Beleihungswert: wie die Bank rechnet', 'Warum die Bank anders bewertet als der Verkäufer.', [7], ['Deal-Scorecard', '/rechner/scorecard'], 'Leisten & Finanzieren'],
-  ['suche', 'Objekte suchen und vergleichen', 'Vom Inserat zur Kennzahl – und mehrere Angebote nebeneinander.', [10], ['Suche & Analyse', '#suche'], 'Objekt finden & prüfen'],
+  ['suche', 'Exposés prüfen und vergleichen', 'Vom Exposé zur Kennzahl – und mehrere Angebote nebeneinander.', [10], ['Import & Analyse', '#suche'], 'Objekt finden & prüfen'],
   ['etw', 'Eigentumswohnung richtig prüfen', 'Teilungserklärung, Protokolle, Rücklage.', [8, 9], ['Unterlagen-Checkliste', '/checkliste'], 'Objekt finden & prüfen'],
   ['cashflow', 'Rendite und Cashflow', 'Brutto, netto, vor und nach Steuern.', [12, 13, 14], ['Cashflow-Rechner', '/rechner/cashflow'], 'Rendite, Steuer & Miete'],
   ['steuer', 'Steuern: AfA, 15-%-Grenze, steuerfreier Verkauf', 'Was die Steuer beim Kauf, Vermieten und Verkaufen bedeutet.', [15, 16, 17], ['Steuer-Bereich', '#steuer'], 'Rendite, Steuer & Miete'],
@@ -51,7 +51,7 @@ const LERN = [
 // Die gewählte Phase steuert Startaktionen, Reihenfolge im Steuer-Bereich und empfohlene Wissensthemen.
 export const PHASES = [
   { name: 'Orientieren', plan: 'Erst verstehen, wie Geld, Eigenkapital und Finanzierung funktionieren – dann wissen Sie, was Sie sich leisten können.', steuer: 'kauf', lern: ['geld', 'budget', 'eigenkapital', 'annuitaet', 'beruf'],
-    actions: [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#lernen', 'Grundlagen auffrischen', 'Eigenkapital, Zins, Tilgung'], ['#suche', 'Immobilien ansehen', 'Suche bei den großen Portalen']] },
+    actions: [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#lernen', 'Grundlagen auffrischen', 'Eigenkapital, Zins, Tilgung'], ['#suche', 'Exposé prüfen', 'PDF oder Link hochladen – Kennzahlen sofort']] },
   { name: 'Objekte prüfen', plan: 'Lernen Sie, Angebote wie ein Profi zu lesen: Rendite, Cashflow, Zustand und was die Bank vom Objekt hält.', steuer: 'kauf', lern: ['suche', 'etw', 'cashflow', 'beleihung'],
     actions: [['#suche', 'Objekt analysieren', 'Inserat übernehmen, Kennzahlen sehen'], ['#objekte', 'Objekte im Konto', 'Anlegen, vergleichen, Bankreife'], ['#steuer', 'Steuern beim Kauf', 'Kaufkosten, Inventar, AfA']] },
   { name: 'Bankgespräch', plan: 'Bereiten Sie sich auf die Bank vor: Unterlagen, Beleihungswert und wie Ihr Beruf bewertet wird.', steuer: 'kauf', lern: ['unterlagen', 'beruf', 'beleihung', 'annuitaet'],
@@ -354,7 +354,7 @@ export function setupApp({ u, d, saveData, reload }) {
     $('appTitle').textContent = views.find((x) => x[0] === cur)[1];
     if (cur === 'suche' && !$('sucheView').dataset.ready) {
       $('sucheView').dataset.ready = '1';
-      import('/src/objekt-ui.mjs').then((m) => m.mountObjekt($('sucheView'), { pdf: true, profile: APP?.d?.profile })).catch(() => { $('sucheView').innerHTML = '<p class="auth-message error">Suche konnte nicht geladen werden.</p>'; });
+      import('/src/objekt-ui.mjs').then((m) => m.mountObjekt($('sucheView'), { pdf: true, profile: APP?.d?.profile })).catch(() => { $('sucheView').innerHTML = '<p class="auth-message error">Import konnte nicht geladen werden.</p>'; });
     }
     if (cur === 'steuer' && !$('steuerView').dataset.ready) {
       $('steuerView').dataset.ready = '1';
@@ -766,7 +766,7 @@ function fahrplan(idx, d) {
     [['Finanzprofil ausfüllen', 'Nettoeinkommen und Eigenkapital – daraus ergibt sich Ihr Budget.', '#konto', prof],
       ['Budget berechnen', 'Welche Rate und welcher Kaufpreis zu Ihnen passen.', '/rechner/budget', null],
       ['Grundlagen lernen', 'Geld, Eigenkapital, Zins und Tilgung – je wenige Minuten.', '#lernen', learned(['geld', 'eigenkapital', 'annuitaet'])]],
-    [['Erstes Objekt anlegen', 'Inserat übernehmen oder Eckdaten eintragen.', '#suche', objs.length > 0],
+    [['Erstes Objekt anlegen', 'Exposé hochladen oder Eckdaten eintragen.', '#suche', objs.length > 0],
       ['Kennzahlen prüfen', 'Rendite, Cashflow und Bankreife mit RenditeRadar.', '#objekte', null],
       ['Exposé lesen lernen', 'Was hinter Cashflow und Beleihung steckt.', '#lernen', learned(['cashflow', 'beleihung'])]],
     [['Finanzprofil vollständig', 'Die Bank prüft Einkommen und Eigenkapital zuerst.', '#konto', prof],
@@ -803,7 +803,7 @@ function proKpis(d) {
 function paths(mode, done) {
   const A = mode === 'profi'
     ? [['#objekte', 'Objekte & Analysen', 'RenditeRadar, DSCR, Cashflow nach Steuern'], ['#objekte', 'Kreditmappe (Studio)', 'BankReady für jedes Objekt'], ['/szenarien', 'Anschlusszins & Verkauf', 'Kipp-Zins, Forward, § 23 EStG'], ['/rechner/vergleich', 'Bankangebote vergleichen', 'Effektivzins, Restschuld, Gesamtkosten'], ['/cockpit', 'Stresstest-Cockpit', 'Zinsschock und Mietausfall']]
-    : [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#suche', 'Immobilie finden', 'Inserate der großen Portale'], ['#objekte', 'Objekt prüfen', 'Exposé oder Link – Rendite und Risiko'], ['#objekte', 'Kreditmappe erstellen', 'Bankfertig für Ihr Gespräch']];
+    : [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#suche', 'Exposé importieren', 'PDF oder Link – Kennzahlen sofort'], ['#objekte', 'Objekt prüfen', 'Exposé oder Link – Rendite und Risiko'], ['#objekte', 'Kreditmappe erstellen', 'Bankfertig für Ihr Gespräch']];
   const B = mode === 'profi'
     ? [['#werkzeuge', 'Software-Tools', 'Portfolio, Betriebskosten, Fristen'], ['#steuer', 'Steuer & AfA', 'Anlage V, 15-%-Grenze, § 7b'], ['/rechner/afa', 'AfA-Plan', 'linear, degressiv, Sonder-AfA'], ['/rechner/mieterhoehung', 'Mieterhöhung', 'Kappungsgrenze, Briefentwurf'], ['/rechner', 'Rechner-Bibliothek', 'Mietrecht und Steuern'], ['#lernen', 'Fachwissen', `${done} von ${LERN.length} Themen`]]
     : [['/rechner', 'Rechner-Bibliothek', 'Nebenkosten, Tilgung, Kaufen oder mieten'], ['/wissen/glossar', 'Lexikon', 'Fachbegriffe in einfachen Worten'], ['#steuer', 'Steuer-Grundlagen', 'Was Sie absetzen können'], ['#lernen', 'Lernplan', `${done} von ${LERN.length} Themen verstanden`]];

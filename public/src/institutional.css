@@ -1276,3 +1276,23 @@ h1,h2,h3,.route-hero h1,.hero h1{hyphens:none;-webkit-hyphens:none;word-break:no
 .fb-mine li{border:1px solid #E2E8F0;border-radius:10px;padding:10px 12px;background:#fff}.fb-mine li small{display:block;color:#64748B;font-size:12.5px;text-transform:none;letter-spacing:0}
 .fb-mine li p{margin:6px 0 0;font-size:14px}.fb-ans{background:#F0F9FF;border-radius:8px;padding:8px 10px}
 @media (max-width:640px){.fb-form{grid-template-columns:1fr}}
+/* Etappe 3: Objekt- & Dokumenten-Import (ersetzt die Immobiliensuche) */
+.ox{display:grid;gap:12px;margin-bottom:18px}
+.ox-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:12px}
+.ox-drop{display:grid;justify-items:center;align-content:center;gap:6px;text-align:center;min-height:170px;padding:22px 16px;border:2px dashed #7DD3FC;border-radius:16px;background:#F0F9FF;cursor:pointer;transition:background .15s,border-color .15s}
+.ox-drop:hover,.ox-drop.on,.ox-drop:focus-visible{background:#E0F2FE;border-color:#0284C7;outline:none}
+.ox-drop svg{width:44px;height:44px;fill:none;stroke:#0284C7;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ox-drop strong{font-size:17px;color:#0F2C59}.ox-drop span{font-size:13.5px;color:#475569;max-width:34ch}
+.ox-link{display:grid;gap:8px;align-content:start;padding:16px;border:1px solid #E2E8F0;border-radius:16px;background:#fff}
+.ox-link label{display:grid;gap:2px}.ox-link label strong{color:#0F2C59}.ox-link label span{font-size:13.5px;color:#64748B}
+.ox-row{display:flex;gap:8px}.ox-row input{flex:1;min-width:0;border:1px solid #CBD5E1;border-radius:10px;padding:10px 12px;min-height:46px}
+.ox-more{border:1px solid #E2E8F0;border-radius:12px;padding:10px 14px;background:#fff}.ox-more summary{font-weight:700;color:#0369A1;min-height:36px;align-items:center}
+.ox-metrics:empty{display:none}.ox-metrics{border:1px solid #E2E8F0;border-radius:16px;padding:14px;background:#fff}.ox-metrics h3{margin:0 0 10px;color:#0F2C59}
+.ox-two{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-top:10px;align-items:start}
+.ox-risk{display:grid;gap:4px;padding:14px;border-radius:12px;border:1px solid #E2E8F0}.ox-risk small{font-size:12px;color:#64748B;text-transform:uppercase;letter-spacing:.06em}.ox-risk strong{font-size:20px}.ox-risk span{font-size:13.5px;color:#334155}
+.ox-risk.ok{background:#F0FDF4;border-color:#BBF7D0}.ox-risk.ok strong{color:#15803D}.ox-risk.warn{background:#FFFBEB;border-color:#FDE68A}.ox-risk.warn strong{color:#B45309}.ox-risk.bad{background:#FEF2F2;border-color:#FECACA}.ox-risk.bad strong{color:#B91C1C}
+@media (max-width:760px){.ox-grid,.ox-two{grid-template-columns:1fr}.ox-drop{min-height:140px}}
+.ox,.ox>*,.ox-grid>*,.ox-two>*,.ox-metrics{min-width:0;max-width:100%}
+.ox-row button{flex:none}.ox-two table{width:100%;table-layout:auto}.ox-two td:last-child{text-align:right;white-space:nowrap}
+.ox-metrics .an-chips{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+.ox-link{grid-template-columns:minmax(0,1fr)}.ox-row input{width:100%}

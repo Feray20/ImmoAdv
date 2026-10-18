@@ -1,8 +1,7 @@
-// Immobiliensuche (Weiterleitung zu Portalen) und Objekt-Analyse – gemeinsam genutzt von Startseite, Anwendung und internem Bereich.
-// Rechtlicher Rahmen: Es werden keine Inhalte von Portalen geladen, gespeichert oder angezeigt.
-// Die Suche baut nur Links zu den Suchseiten der Portale (Formate an öffentlich indexierten Portalseiten geprüft);
-// die Analyse rechnet ausschließlich mit Angaben, die der Nutzer selbst einträgt.
-import { GREST, kaufnebenkosten, budget, analyse, portalLinks } from './calc.mjs';
+// Objekt- & Dokumenten-Import mit Metrics Engine und Objekt-Analyse – gemeinsam genutzt von Anwendung und internem Bereich.
+// Es gibt keine Immobiliensuche: Objekte kommen per Exposé-PDF (Dropzone), Link, Ein-Klick-Übernahme im eigenen
+// Browser oder Eingabe. Große Portale werden nicht automatisiert abgerufen (deren Nutzungsbedingungen).
+import { GREST, kaufnebenkosten, analyse, exposeMetrics } from './calc.mjs';
 import { parseListing, bookmarklet } from './listing-parse.mjs';
 import { work } from './loader.mjs';
 import { showPdf } from './pdf-view.mjs';
@@ -26,64 +25,35 @@ const pv = (v) => (Number(v) > 0 ? Number(v) : '');
 const landOpts = () => { const sel = GREST[PROF.land] ? PROF.land : 'hessen'; return Object.entries(GREST).map(([k, g]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${g.name}</option>`).join(''); };
 const F = (id, label, value = '', step = 'any', type = 'number') => `<label>${label}<input id="${id}" type="${type}" ${type === 'number' ? `step="${step}" min="0"` : ''} value="${esc(value)}"></label>`;
 
-function renderSearch() {
-  return `<section class="is-search" aria-label="Objektsuche">
-  <div class="is-bar">
-    <label class="is-what">Objektart<select id="s_art"><option value="wohnung">Wohnung kaufen</option><option value="haus">Haus kaufen</option><option value="mfh">Mehrfamilienhaus kaufen</option></select></label>
-    <label class="is-where">Ort<input id="s_ort" type="text" placeholder="z. B. Darmstadt" autocomplete="off"></label>
-    <label>Bundesland<select id="s_land">${landOpts()}</select></label>
-    <label>Preis ab (€)<input id="s_pmin" type="number" min="0" step="1000" value=""></label>
-    <label>Preis bis (€)<input id="s_price" type="number" min="0" step="1000" value="${pv(PROF.targetPrice)}"></label>
-    <label>Fläche ab (m²)<input id="s_area" type="number" min="0" step="1" value=""></label>
-    <label>Zimmer ab<input id="s_rooms" type="number" min="0" step="0.5" value=""></label>
+function renderImport() {
+  return `<section class="ox" aria-label="Objekt- und Dokumenten-Import">
+  <div class="ox-grid">
+    <label class="ox-drop" id="ox_drop" tabindex="0"><input id="imp_pdf" type="file" accept="application/pdf" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M12 17v-6M9.5 13.5 12 11l2.5 2.5"/></svg>
+      <strong>Exposé-PDF hierher ziehen</strong><span>oder antippen, um eine Datei zu wählen · bis 40 MB · die Datei bleibt auf Ihrem Gerät</span></label>
+    <form class="ox-link" id="ox_link"><label for="ox_url"><strong>Link zum Exposé</strong><span>Exposé-PDF oder Seite eines Anbieters (https://…)</span></label>
+      <div class="ox-row"><input id="ox_url" type="url" inputmode="url" placeholder="https://…" autocomplete="off"><button class="btn btn-dark" type="submit">Übernehmen</button></div>
+      <p class="form-note">ImmoScout24- und Immowelt-Links werden aus rechtlichen Gründen nicht automatisch abgerufen. Dafür: Ein-Klick-Übernahme unten oder im Portal „Exposé als PDF“ speichern und hier hochladen.</p></form>
   </div>
-  <details class="is-more"><summary>Landkreis, Finanzierung und Mindestkapital</summary><div class="obj-grid">
-    ${F('s_kreis', 'Landkreis (nur bei kreisangehörigen Gemeinden, z. B. Darmstadt-Dieburg)', '', 'any', 'text')}
-    ${F('s_eq', 'Eigenkapital (€)', pv(PROF.equity))}${F('s_net', 'Haushaltsnetto pro Monat (€, optional)', pv(PROF.netIncome))}${F('s_out', 'Lebenshaltung und Raten pro Monat (€, optional)', '')}
-    ${F('s_broker', 'Makler, Käuferanteil (%)', 3.57, '0.01')}${F('s_z', 'Sollzins p. a. (%)', 3.5, '0.01')}${F('s_t', 'Anfängliche Tilgung p. a. (%)', 2, '0.1')}
-  </div></details>
-  <div class="is-result" id="s_out_box" aria-live="polite"></div>
-  <div class="is-portals" id="s_links"></div>
-  <p class="form-note">Die Suche öffnet die Trefferlisten direkt bei den Portalen. ImmoAdv lädt keine Inserate von Portalen. Die Portalnamen sind Marken ihrer Inhaber; ImmoAdv steht mit ihnen in keiner Verbindung.</p>
-  <article class="imp-card" id="imp">
-    <div class="imp-head"><div><h3>Inserate mit einem Klick übernehmen</h3>
-      <p>Inserat im Portal öffnen, auf den Button klicken – Kaufpreis, Fläche, Zimmer, Miete, Baujahr, Hausgeld und Provision landen mit dem Link in Ihrer Trefferliste, alle Kennzahlen werden sofort berechnet.</p></div>
+  <p class="imp-msg" id="imp_msg" role="status" aria-live="polite"></p>
+  <details class="ox-more"><summary>Weitere Wege: Ein-Klick-Übernahme oder Text einfügen</summary>
+  ${''}<article class="imp-card" id="imp">
+    <div class="imp-head"><div><h3>Ein-Klick-Übernahme aus ImmoScout24, Immowelt & Co.</h3>
+      <p>Inserat im Portal öffnen, auf den Button klicken – Kaufpreis, Fläche, Zimmer, Miete, Baujahr, Hausgeld und Provision landen mit dem Link in Ihrer Objektliste, alle Kennzahlen werden sofort berechnet.</p></div>
       <a class="btn btn-dark imp-bm" id="imp_bm" href="#" draggable="true" title="In die Lesezeichenleiste ziehen">＋ Zu ImmoAdv</a></div>
     <ol class="imp-steps"><li><strong>Einmalig:</strong> den Button „＋ Zu ImmoAdv“ mit der Maus in die Lesezeichenleiste ziehen (Leiste einblenden: Strg+Umschalt+B, am Mac ⌘+Umschalt+B).</li>
       <li>Im Portal ein <strong>einzelnes Inserat</strong> öffnen und in der Lesezeichenleiste auf „＋ Zu ImmoAdv“ klicken.</li>
       <li>Für jedes weitere Inserat wiederholen – alle erscheinen untereinander in der Trefferliste.</li></ol>
-    <div class="imp-expose"><strong>Exposé als PDF?</strong> <span>Datei wählen – Kaufpreis, Fläche, Miete usw. werden automatisch erkannt.</span>
-      <label class="btn btn-outline imp-file">Exposé (PDF) auswählen<input id="imp_pdf" type="file" accept="application/pdf" hidden></label></div>
     <details class="imp-paste"><summary>Am Handy oder ohne Lesezeichen: Inseratstext einfügen</summary>
       <p class="form-note">Im Inserat den Text markieren und kopieren (am Handy: lange tippen → „Alle auswählen“ → „Kopieren“), hier einfügen und die Adresse des Inserats dazusetzen.</p>
       <label>Link zum Inserat<input id="imp_url" type="url" placeholder="https://…" autocomplete="off"></label>
       <label>Text des Inserats<textarea id="imp_text" rows="5" maxlength="30000" placeholder="Kaufpreis 349.000 € · Wohnfläche 72 m² · Zimmer 3 …"></textarea></label>
       <button class="btn btn-dark" id="imp_go" type="button">Übernehmen</button></details>
-    <p class="imp-msg" id="imp_msg" role="status" aria-live="polite"></p>
-    <p class="form-note">Die Übernahme läuft nur in Ihrem Browser: Gelesen wird ausschließlich das Inserat bzw. Exposé, das Sie selbst öffnen oder auswählen, und nur Zahlen und Fakten für Ihre eigene Berechnung (Kaufpreis, Fläche, Miete, Baujahr, Hausgeld, Energieklasse). Namen, Telefonnummern, E-Mail-Adressen und Fotos von Maklern oder Verkäufern werden sofort verworfen und nirgends gespeichert. Die Exposé-Datei wird nicht hochgeladen; an ImmoAdv wird dabei nichts übertragen.</p>
+        <p class="form-note">Die Übernahme läuft nur in Ihrem Browser: Gelesen wird ausschließlich das Inserat bzw. Exposé, das Sie selbst öffnen oder auswählen, und nur Zahlen und Fakten für Ihre eigene Berechnung (Kaufpreis, Fläche, Miete, Baujahr, Hausgeld, Energieklasse). Namen, Telefonnummern, E-Mail-Adressen und Fotos von Maklern oder Verkäufern werden sofort verworfen und nirgends gespeichert. Die Exposé-Datei wird nicht hochgeladen; an ImmoAdv wird dabei nichts übertragen.</p>
   </article>
+  </details>
+  <div id="ox_metrics" class="ox-metrics" aria-live="polite"></div>
 </section>`;
-}
-
-function updateSearch() {
-  const land = val('s_land'), price = num('s_price');
-  const links = portalLinks({ land, kreis: val('s_kreis'), ort: val('s_ort'), art: val('s_art'), minPrice: num('s_pmin'), maxPrice: price, minArea: num('s_area'), minRooms: num('s_rooms') });
-  $('s_links').innerHTML = links.map((l) => `<a class="is-portal" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer nofollow"><strong>Treffer bei ${l.name} öffnen ↗</strong><small>Übergeben: ${esc(l.filters)}</small></a>`).join('');
-  const nk = price > 0 ? kaufnebenkosten({ price, land, brokerPct: num('s_broker') }) : null;
-  const eq = num('s_eq');
-  const rows = [];
-  if (nk) {
-    rows.push(['Kaufnebenkosten beim Höchstpreis', `${E(nk.total)} (${P(nk.totalPct)})`]);
-    rows.push(['<strong>Mindestkapital</strong> (Nebenkosten – werden selten finanziert)', `<strong>${E(nk.total)}</strong> ${eq >= nk.total ? '<span class="st ok">gedeckt</span>' : '<span class="st bad">nicht gedeckt</span>'}`]);
-    rows.push(['Empfohlen: Nebenkosten + 10 % des Kaufpreises', `${E(nk.total + price * 0.1)} ${eq >= nk.total + price * 0.1 ? '<span class="st ok">gedeckt</span>' : '<span class="st warn">nicht gedeckt</span>'}`]);
-    const loan = Math.max(0, nk.allIn - eq), r = (loan * (num('s_z') + num('s_t')) / 100) / 12;
-    rows.push(['Darlehen und Monatsrate beim Höchstpreis', `${E(loan)} · ${E2(r)} / Monat`]);
-  }
-  if (num('s_net') > 0) {
-    const b = budget({ netIncome: num('s_net'), expenses: num('s_out'), equity: eq, ratePa: num('s_z') / 100, repaymentPa: num('s_t') / 100, land, brokerPct: num('s_broker') });
-    if (b) rows.push(['Preisrahmen laut Haushalt (20 % Puffer)', `bis ${E(b.price)} · Rate ${E2(b.rate)}`]);
-  }
-  $('s_out_box').innerHTML = rows.length ? table(rows) : '<p class="form-note">Höchstpreis eintragen, um Mindestkapital und Rate zu sehen.</p>';
 }
 
 // ---------- Objekt-Analyse ----------
@@ -100,7 +70,7 @@ function renderAnalyse() {
   <article class="dash-card"><h3>Kernfakten</h3><div class="obj-grid">
     ${F('a_price', 'Kaufpreis (€)', '', '1000')}${F('a_area', 'Wohnfläche (m²)', '', '0.5')}${F('a_rooms', 'Zimmer', '', '0.5')}${F('a_year', 'Baujahr', '', '1')}
     <label>Effizienzklasse<select id="a_ec"><option value="">unbekannt</option>${['A+', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((c) => `<option>${c}</option>`).join('')}</select></label>
-    ${F('a_broker', 'Makler, Käuferanteil (%)', 3.57, '0.01')}
+    ${F('a_broker', 'Makler, Käuferanteil (%)', 3.57, '0.01')}${F('a_hg', 'Hausgeld gesamt (€/Monat)', '', '1')}${F('a_rl', 'davon Instandhaltungsrücklage (€/Monat)', '', '1')}${F('a_kwh', 'Energiekennwert (kWh/m²·a)', '', '1')}
   </div></article>
   <article class="dash-card"><h3>Miete und Mietspiegel</h3><div class="obj-grid">
     ${F('a_rent', 'Ist-Nettokaltmiete (€/Monat, leer bei Leerstand)', '')}${F('a_vq', 'Ortsübliche Vergleichsmiete laut Mietspiegel (€/m²)', '', '0.01')}
@@ -116,7 +86,7 @@ function renderAnalyse() {
   </div><p class="form-note">Bodenwert: Bodenrichtwert × Grundstücksanteil (BORIS des Landes). Liegenschaftszins und Restnutzungsdauer: Grundstücksmarktbericht des Gutachterausschusses.</p></article>
   </div>
   <div class="an-out" id="a_out"></div>
-  <p class="an-actions" id="a_actions" hidden><button class="btn btn-dark" id="a_keep" type="button">In Trefferliste</button> <button class="btn btn-outline" id="a_pdf" type="button">Analyse als PDF</button> <button class="btn btn-outline" id="a_mail" type="button">Per E-Mail</button> <button class="btn btn-outline" id="a_save" type="button">Als Objekt im Konto speichern</button> <button class="btn btn-ghost" id="a_print" type="button">Drucken</button> <span class="form-note" id="a_msg" role="status"></span></p>
+  <p class="an-actions" id="a_actions" hidden><button class="btn btn-dark" id="a_keep" type="button">In Objektliste</button> <button class="btn btn-outline" id="a_pdf" type="button">Analyse als PDF</button> <button class="btn btn-outline" id="a_mail" type="button">Per E-Mail</button> <button class="btn btn-outline" id="a_save" type="button">Als Objekt im Konto speichern</button> <button class="btn btn-ghost" id="a_print" type="button">Drucken</button> <span class="form-note" id="a_msg" role="status"></span></p>
 </section>`;
 }
 
@@ -132,7 +102,7 @@ function updateAnalyse() {
     buildingSharePct: num('a_bs'), afaPct: Number(val('a_afa')), taxPct: num('a_tax'), landValue: num('a_lv'), capRatePct: num('a_lz'), remainingLife: num('a_rnd'), yearBuilt: num('a_year'), energyClass: val('a_ec') });
   const url = val('a_url').trim();
   const okUrl = /^https:\/\/[^\s]+$/i.test(url);
-  if (!a) { $('a_bar').innerHTML = '<p class="form-note">Kaufpreis eintragen – die Leiste füllt sich sofort.</p>'; $('a_out').innerHTML = ''; $('a_actions').hidden = true; last = null; return; }
+  if (!a) { $('a_bar').innerHTML = '<p class="form-note">Kaufpreis eintragen – die Leiste füllt sich sofort.</p>'; $('a_out').innerHTML = ''; $('a_actions').hidden = true; last = null; renderMetrics(); return; }
   const chip = (label, v, cls = '') => `<div class="an-chip ${cls}"><small>${label}</small><strong>${v}</strong></div>`;
   $('a_bar').innerHTML = `<div class="an-head"><div><strong>${esc(ort || 'Objekt ohne Adresse')}</strong><span>${esc(val('a_art'))}${num('a_area') ? ` · ${D(num('a_area'), 0)} m²` : ''}${num('a_rooms') ? ` · ${D(num('a_rooms'), 1)} Zi.` : ''}${num('a_year') ? ` · Bj. ${num('a_year')}` : ''}</span></div>${okUrl ? `<a class="btn btn-outline" href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow">Inserat öffnen ↗</a>` : ''}</div>
   <div class="an-chips">${chip('Kaufpreis', E(a.price))}${chip('€/m²', a.pricePerQm ? E(a.pricePerQm) : '–')}${chip('Kaufpreisfaktor', a.factor == null ? '–' : D(a.factor, 1), a.factor == null ? 'na' : a.factor <= 22 ? 'ok' : a.factor <= 28 ? 'warn' : 'bad')}
@@ -160,6 +130,69 @@ function updateAnalyse() {
   ${a.hints.length ? `<article class="dash-card"><h3>Hinweise</h3><ul class="plain-list">${a.hints.map((h) => `<li>${esc(h)}</li>`).join('')}</ul></article>` : ''}
   <p class="faq-disclaimer">Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Kreditvermittlung oder Darlehensberatung (§ 34i GewO, KWG), keine Steuerberatung (StBerG), keine Rechtsdienstleistung (RDG). Alle Werte beruhen auf Ihren Eingaben bzw. den von Ihnen übernommenen Eckdaten eines Inserats – bitte mit dem Exposé abgleichen.</p>`;
   $('a_actions').hidden = false;
+  renderMetrics();
+}
+
+// Dropzone (Ziehen & Ablegen) und Link-Import für den Objekt- & Dokumenten-Import.
+function bindImport() {
+  const drop = $('ox_drop'), input = $('imp_pdf'), msg = () => $('imp_msg');
+  if (drop && input) {
+    ['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('on'); }));
+    ['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove('on'); }));
+    drop.addEventListener('drop', (e) => {
+      const f = [...(e.dataTransfer?.files || [])].find((x) => x.type === 'application/pdf' || /\.pdf$/i.test(x.name));
+      if (!f) { msg().className = 'imp-msg bad'; msg().textContent = 'Bitte ein Exposé als PDF ablegen.'; return; }
+      const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; input.dispatchEvent(new Event('change'));
+    });
+    drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+  }
+  $('ox_link')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const url = $('ox_url').value.trim(), m = msg();
+    if (!/^https:\/\/\S+$/i.test(url)) { m.className = 'imp-msg bad'; m.textContent = 'Bitte einen vollständigen Link mit https:// eintragen.'; return; }
+    if (/(^|\.)(immobilienscout24|immowelt|immonet)\.|kleinanzeigen\.de/i.test(new URL(url).hostname)) {
+      m.className = 'imp-msg'; m.innerHTML = 'Dieses Portal erlaubt keinen automatischen Abruf. So geht es trotzdem schnell: im Inserat „Exposé drucken/als PDF speichern“ wählen und die Datei oben ablegen – oder die <strong>Ein-Klick-Übernahme</strong> unter „Weitere Wege“ nutzen.';
+      const d = root.querySelector('.ox-more'); if (d) d.open = true; return;
+    }
+    if (!token()) { m.className = 'imp-msg bad'; m.innerHTML = 'Für den Link-Import bitte <a class="ck-link" href="/auth/login">anmelden</a> – oder das Exposé als PDF hochladen.'; return; }
+    const w = work('Link wird ausgewertet', ['Link abrufen', 'Text erkennen', 'Eckdaten übernehmen', 'Kennzahlen berechnen']);
+    try {
+      await w.step(0);
+      const r = await fetch('/api/expose-link', { method: 'POST', headers: { Authorization: 'Bearer ' + token(), 'content-type': 'application/json' }, body: JSON.stringify({ url }) });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw Error(j.error || 'Der Link konnte nicht ausgewertet werden.'); }
+      await w.step(1);
+      let listing;
+      if ((r.headers.get('content-type') || '').includes('application/pdf')) {
+        const t = await exposeText(await r.blob());
+        if (t.replace(/\s+/g, '').length < 150) throw Error('Das verlinkte PDF enthält keinen lesbaren Text (vermutlich ein Scan).');
+        listing = { u: url, t, ti: '' };
+      } else { const j = await r.json(); listing = { u: j.u || url, t: j.t, ti: j.ti, j: j.j }; }
+      await w.step(2);
+      const ok = importListing(listing);
+      await w.step(3);
+      if (ok) { $('ox_url').value = ''; await w.done('Kennzahlen berechnet'); } else w.close();
+    } catch (err) { w.close(); m.className = 'imp-msg bad'; m.textContent = err.message; }
+  });
+}
+
+// Metrics Engine: typisiertes Ergebnis (ExposeMetricsResult) aus den aktuellen Eckdaten.
+function renderMetrics() {
+  const box = $('ox_metrics'); if (!box) return;
+  const hg = num('a_hg'), rl = num('a_rl'), ec = val('a_ec');
+  const r = exposeMetrics({
+    title: val('a_addr') || 'Objekt', address: { zip: (val('a_addr').match(/\b\d{5}\b/) || [''])[0], city: val('a_addr').replace(/\b\d{5}\b/, '').trim(), state: val('a_land') },
+    purchasePrice: num('a_price'), livingAreaSqm: num('a_area'), monthlyColdRent: num('a_rent'), monthlyHausgeld: hg, monthlyMaintenanceReserve: rl,
+    nonAllocatableCosts: num('a_nonrec'), constructionYear: num('a_year'), energyClass: ec, energyValueKwh: num('a_kwh'),
+  }, { equity: num('a_eq'), ratePct: num('a_z'), repaymentPct: num('a_t'), fixedYears: num('a_fix'), brokerPct: num('a_broker') });
+  if (!r) { box.innerHTML = ''; return; }
+  const m = r.metrics, ic = m.incidentalCosts, fq = m.financingQuickCheck, sr = m.sanitationRisk;
+  const k = (l, v, cls = '') => `<div class="an-chip ${cls}"><small>${l}</small><strong>${v}</strong></div>`;
+  const risk = { LOW: ['ok', 'niedrig'], MEDIUM: ['warn', 'mittel'], HIGH: ['bad', 'hoch'] }[sr.riskLevel];
+  box.innerHTML = `<h3>Kennzahlen aus dem Exposé</h3>
+    <div class="an-chips">${k('Kaufpreis je m²', m.pricePerSqm ? E(m.pricePerSqm) : '–')}${k('Miete je m²', m.rentPerSqm ? E2(m.rentPerSqm) : '–')}${k('Kaufpreisfaktor', m.purchaseMultiplier ? D(m.purchaseMultiplier, 1) : '–')}${k('Bruttomietrendite', m.grossRentalYieldPercent ? P(m.grossRentalYieldPercent) : '–')}${k('Nettomietrendite', m.netRentalYieldPercent ? P(m.netRentalYieldPercent) : '–')}
+    ${k('Monatsrate', E2(fq.calculatedMonthlyRate))}${k('Cashflow vor Steuern', E2(fq.monthlyPreTaxCashflow), num('a_rent') ? (fq.monthlyPreTaxCashflow >= 0 ? 'ok' : 'bad') : 'na')}${k('DSCR (Soll ≥ 1,20)', fq.dscrValue ? D(fq.dscrValue) : '–', tone(fq.dscrValue || null, 1.2, 1))}${k('Beleihungsauslauf', fq.ltvPercent ? P(fq.ltvPercent, 1) : '–', fq.ltvPercent > 100 ? 'warn' : '')}${k('Rate bei +2 % Zins', fq.stressTestRateDelta ? '+ ' + E2(fq.stressTestRateDelta) : '–', 'warn')}</div>
+    ${hg && !num('a_nonrec') ? '<p class="form-note">Hausgeld erkannt: Den nicht umlagefähigen Teil (z. B. Verwaltung) bitte unter „Nicht umlagefähige Kosten“ eintragen – erst dann ist der Cashflow vollständig.</p>' : ''}<div class="ox-two">${table([['Grunderwerbsteuer (' + esc(GREST[val('a_land')]?.name || '') + ')', E(ic.propertyTransferTax)], ['Notar und Grundbuch (ca. 2,0 %)', E(ic.notaryAndRegistry)], ['Makler (Käuferanteil)', E(ic.brokerCommission)], ['<strong>Nebenkosten gesamt</strong>', `<strong>${E(ic.totalIncidentalCosts)}</strong>`], ['<strong>Gesamtinvestition</strong>', `<strong>${E(ic.totalInvestment)}</strong>`]])}
+    <div class="ox-risk ${risk[0]}"><small>Sanierungsrisiko</small><strong>${risk[1]}</strong><span>${ec ? `Effizienzklasse ${esc(ec)}` : 'Effizienzklasse unbekannt'}${num('a_year') ? ` · Baujahr ${num('a_year')}` : ''}</span>${sr.recommendedSanitationBuffer ? `<span>Empfohlener Puffer: <b>${E(sr.recommendedSanitationBuffer)}</b> (Annahme je m² bei Klasse E–H, kein Gutachten)</span>` : '<span>Kein Sanierungspuffer nötig laut Effizienzklasse.</span>'}</div></div>`;
 }
 
 // RenditeRadar-PDF erzeugen: liefert { blob, filename } bzw. bei E-Mail { sentTo }.
@@ -243,7 +276,7 @@ function keepCurrent(meta = {}) {
 }
 
 // Inserat übernehmen: nur objektbezogene Felder werden ersetzt, Finanzierung und Steuer bleiben wie eingestellt.
-const OBJ_FIELDS = ['a_url', 'a_addr', 'a_price', 'a_area', 'a_rooms', 'a_year', 'a_ec', 'a_rent', 'a_vq', 'a_nonrec', 'a_lv', 'a_lz', 'a_rnd'];
+const OBJ_FIELDS = ['a_url', 'a_addr', 'a_hg', 'a_rl', 'a_kwh', 'a_price', 'a_area', 'a_rooms', 'a_year', 'a_ec', 'a_rent', 'a_vq', 'a_nonrec', 'a_lv', 'a_lz', 'a_rnd'];
 function importListing(d) {
   const msg = $('imp_msg');
   const r = parseListing(d);
@@ -257,7 +290,7 @@ function importListing(d) {
   const set = (id, v) => { if (v != null && v !== '' && $(id)) $(id).value = v; };
   set('a_url', r.url); set('a_addr', [r.plz, r.city].filter(Boolean).join(' ') || r.title); set('a_price', r.price); set('a_area', r.area); set('a_rooms', r.rooms);
   set('a_year', r.year); set('a_ec', r.energyClass); set('a_rent', r.rent); set('a_broker', r.brokerPct); set('a_art', r.art);
-  if ($('s_land') && $('a_land')) $('a_land').value = $('s_land').value;
+  set('a_hg', r.hausgeld);
   updateAnalyse();
   keepCurrent({ name: r.name, portal: r.portal, title: r.title, missing: r.missing });
   msg.className = 'imp-msg ok';
@@ -363,7 +396,7 @@ function renderList() {
 export function mountObjekt(container, opts = {}) {
   root = container;
   PROF = opts.profile || {};
-  root.insertAdjacentHTML('beforeend', `<h2 class="is-h">Immobiliensuche</h2>${renderSearch()}${renderAnalyse()}<section class="dash-card ml-card"><div class="ml-head"><h2>Trefferliste</h2><span class="form-note" id="m_count"></span></div><div id="m_list"></div></section>`);
+  root.insertAdjacentHTML('beforeend', `<h2 class="is-h">Objekt- &amp; Dokumenten-Import</h2>${renderImport()}${renderAnalyse()}<section class="dash-card ml-card"><div class="ml-head"><h2>Importierte Objekte</h2><span class="form-note" id="m_count"></span></div><div id="m_list"></div></section>`);
   const bm = $('imp_bm');
   if (bm) {
     bm.href = bookmarklet(location.origin);
@@ -396,12 +429,11 @@ export function mountObjekt(container, opts = {}) {
   window.addEventListener('hashchange', window.__iaImport);
   if (!opts.pdf) { $('a_pdf')?.remove(); $('a_mail')?.remove(); }
   const KEY = 'ia-objekt-v1';
-  const ids = [...root.querySelectorAll('.is-search input, .is-search select, .an input, .an select')].map((e) => e.id).filter(Boolean);
+  const ids = [...root.querySelectorAll('.an input, .an select')].map((e) => e.id).filter(Boolean);
   try { const s = JSON.parse(localStorage.getItem(KEY) || '{}'); ids.forEach((id) => { if (s[id] !== undefined) { const el = $(id); if (el.type === 'checkbox') el.checked = s[id]; else el.value = s[id]; } }); } catch { /* ohne Speicher */ }
   const save = () => { try { const o = {}; ids.forEach((id) => { const el = $(id); o[id] = el.type === 'checkbox' ? el.checked : el.value; }); localStorage.setItem(KEY, JSON.stringify(o)); } catch { /* ohne Speicher */ } };
   const q = new URLSearchParams(location.search);
-  [['ort', 's_ort'], ['land', 's_land'], ['art', 's_art'], ['preisab', 's_pmin'], ['preis', 's_price'], ['flaeche', 's_area'], ['zimmer', 's_rooms']].forEach(([k, id]) => { if (q.get(k) && $(id)) $(id).value = q.get(k); });
-  root.addEventListener('input', (e) => { if (!e.target.id) return; if (e.target.id.startsWith('s_')) updateSearch(); else if (e.target.id.startsWith('a_')) updateAnalyse(); save(); });
-  root.addEventListener('change', (e) => { if (e.target.tagName !== 'SELECT' && e.target.type !== 'checkbox') return; if (e.target.id.startsWith('s_')) updateSearch(); else updateAnalyse(); save(); });
-  bindActions(); updateSearch(); updateAnalyse(); renderList(); checkImport(); checkAnalyseLoad();
+  root.addEventListener('input', (e) => { if (!e.target.id) return; if (e.target.id.startsWith('a_')) updateAnalyse(); save(); });
+  root.addEventListener('change', (e) => { if (e.target.tagName !== 'SELECT' && e.target.type !== 'checkbox') return; updateAnalyse(); save(); });
+  bindActions(); bindImport(); updateAnalyse(); renderList(); checkImport(); checkAnalyseLoad();
 }
