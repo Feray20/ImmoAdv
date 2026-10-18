@@ -140,8 +140,42 @@ export type Entitlements = {
 
 const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
+// Freischaltungen = Stripe-Käufe + manuelle Freischaltung durch den Web-Admin (immo_access_grants).
+// Die höhere Stufe gewinnt; Kreditmappen-Guthaben werden addiert. Ohne Stripe gilt nur die manuelle Freischaltung.
+const TIER_RANK = { free: 0, starter: 1, pro: 2 } as const;
+const FREE: Entitlements = { pro: false, proSource: null, proUntil: null, starter: false, starterUntil: null, tier: 'free', creditMaps: 0, hasCustomer: false };
+export type AccessGrant = { tier: 'starter' | 'pro'; credit_maps: number; leitfaden: boolean; valid_until: string | null; note: string | null; granted_by: string; updated_at: string };
+export async function accessGrant(userId: string): Promise<AccessGrant | null> {
+  try {
+    const { adminConfigured, supabaseAdmin } = await import('@/lib/supabase/admin');
+    if (!adminConfigured()) return null;
+    const { data } = await supabaseAdmin().from('immo_access_grants').select('tier, credit_maps, leitfaden, valid_until, note, granted_by, updated_at').eq('user_id', userId).maybeSingle();
+    if (!data) return null;
+    if (data.valid_until && Date.parse(data.valid_until) < Date.now()) return null;
+    return data as AccessGrant;
+  } catch { return null; }
+}
+export async function entitlementsFor(userId: string, email: string): Promise<Entitlements & { grant?: AccessGrant | null }> {
+  const [base, grant] = await Promise.all([
+    process.env.STRIPE_SECRET_KEY ? stripeEntitlements(userId, email) : Promise.resolve(FREE),
+    accessGrant(userId),
+  ]);
+  if (!grant) return base;
+  const tier = TIER_RANK[grant.tier] > TIER_RANK[base.tier] ? grant.tier : base.tier;
+  return {
+    ...base, tier, grant,
+    pro: base.pro || grant.tier === 'pro',
+    proSource: base.pro ? base.proSource : grant.tier === 'pro' ? 'pass' : null,
+    proUntil: base.pro ? base.proUntil : grant.tier === 'pro' ? grant.valid_until : null,
+    starter: base.starter || grant.tier === 'starter',
+    starterUntil: base.starter ? base.starterUntil : grant.tier === 'starter' ? grant.valid_until : null,
+    creditMaps: base.creditMaps + (grant.credit_maps || 0),
+    leitfaden: Boolean(base.leitfaden || grant.leitfaden),
+  };
+}
+
 // Freischaltungen aus Stripe ableiten (bezahlte Checkout-Sessions und aktive Abos).
-export async function entitlementsFor(userId: string, email: string): Promise<Entitlements> {
+async function stripeEntitlements(userId: string, email: string): Promise<Entitlements> {
   const customer = await findCustomer(userId, email);
   if (!customer) return { pro: false, proSource: null, proUntil: null, starter: false, starterUntil: null, tier: 'free', creditMaps: 0, hasCustomer: false };
   const s = stripe();

@@ -908,3 +908,6 @@ body[data-ad-seg=system] .ad-segctl button[aria-pressed=true]{background:#334155
 .trust-l b{color:#0F2C59;font-size:14px}.trust-l span{font-size:13px;color:#475569}
 @media (max-width:700px){.roi-in,.trust-l{grid-template-columns:1fr}}
 .roi-res{display:block;width:100%}
+.acc-f{display:grid;gap:12px;padding:20px}.acc-f h2{margin:0;color:#0F2C59}.acc-t{border:1px solid #E2E8F0;border-radius:12px;padding:10px 12px;display:grid;gap:8px}
+.acc-t .chk{align-items:flex-start;line-height:1.45}.acc-f label{display:grid;gap:4px;font-size:13.5px;font-weight:600;color:#334155}.acc-f .chk{display:flex;gap:8px;font-weight:400}
+.acc-f input[type=number],.acc-f input[type=date],.acc-f textarea{border:1px solid #CBD5E1;border-radius:8px;padding:8px 10px;font:inherit}

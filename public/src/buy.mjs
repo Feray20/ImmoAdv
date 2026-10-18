@@ -40,13 +40,13 @@ function overlay(text) {
 }
 
 // Bezahlseite öffnen (angemeldet). Liefert eine Fehlermeldung oder leitet weiter.
-export async function goCheckout(plan, addon = null) {
+export async function goCheckout(plan, addon = null, reviewOk = false) {
   const t = token();
   if (!t) return 'login';
   const o = overlay('Sichere Bezahlseite wird geöffnet …');
   try { window.iaTrack?.('checkout_start', { plan }); } catch { /* ignore */ }
   try {
-    const r = await fetch('/api/billing/checkout', { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'content-type': 'application/json' }, body: JSON.stringify({ plan, consent: true, ...(addon ? { addon } : {}) }) });
+    const r = await fetch('/api/billing/checkout', { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'content-type': 'application/json' }, body: JSON.stringify({ plan, consent: true, ...(addon ? { addon } : {}), ...(reviewOk ? { reviewOk: true } : {}) }) });
     const j = await r.json().catch(() => ({}));
     if (r.status === 401) { o.remove(); return 'login'; }
     if (!r.ok || !j.url) throw Error(j.error || 'Die Bezahlseite konnte nicht geöffnet werden.');
@@ -94,6 +94,7 @@ export async function openBuy(offer, opts = {}) {
     ${cfg.enabled ? `
     ${/credit-map|buyer-pass/.test(offer.id) ? insights(offer, opts.ctx) : ''}
     ${/credit-map|buyer-pass/.test(offer.id) && ADDON ? `<label class="buy-bump"><input type="checkbox" id="buyAddon"> <span><strong>${esc(ADDON.name)} hinzufügen · + ${eur(ADDON.cents)}</strong><small>${esc(ADDON.beschreibung || '')}</small></span></label>` : ''}
+    <label class="chk buy-rvok"><input type="checkbox" id="buyReview"> <span>Freiwillig: Nach dem Kauf einmal per E-Mail um eine kurze Bewertung bitten (jederzeit widerrufbar).</span></label>
     ${cfg.testMode ? '<p class="buy-test">Testmodus – es wird nichts berechnet. Testkarte 4242 4242 4242 4242, beliebiges Ablaufdatum in der Zukunft, beliebige Prüfziffer.</p>' : ''}
     <label class="consent buy-consent"><input type="checkbox" id="buyOk"> <span>Ich verlange ausdrücklich, dass ImmoAdv vor Ablauf der Widerrufsfrist mit der Leistung beginnt. Mir ist bekannt, dass mein Widerrufsrecht bei digitalen Inhalten damit erlischt und ich bei einem Widerruf eines Abos Wertersatz für bereits erbrachte Leistungen schulde.</span></label>
     <p class="buy-legal">Es gelten die <a href="/nutzungsbedingungen" target="_blank" rel="noopener">Nutzungsbedingungen</a> mit <a href="/nutzungsbedingungen#widerruf" target="_blank" rel="noopener">Widerrufsbelehrung</a>. Den kostenpflichtigen Kauf schließen Sie auf der folgenden Bezahlseite ab.</p>
@@ -111,14 +112,15 @@ export async function openBuy(offer, opts = {}) {
     if (!ok.checked) { ok.closest('label').classList.add('consent-missing'); d.querySelector('#buyMsg').textContent = 'Bitte zuerst der sofortigen Bereitstellung zustimmen.'; ok.focus(); return; }
     go.disabled = true;
     if (!token()) {
-      try { localStorage.setItem(INTENT, JSON.stringify({ plan: offer.id, name: offer.name, addon: d.querySelector('#buyAddon')?.checked ? 'leitfaden' : null, consentAt: new Date().toISOString(), at: Date.now() })); } catch { /* ignore */ }
+      try { localStorage.setItem(INTENT, JSON.stringify({ plan: offer.id, name: offer.name, addon: d.querySelector('#buyAddon')?.checked ? 'leitfaden' : null, reviewOk: Boolean(d.querySelector('#buyReview')?.checked), consentAt: new Date().toISOString(), at: Date.now() })); } catch { /* ignore */ }
       location.href = '/auth/login';
       return;
     }
     const addon = d.querySelector('#buyAddon')?.checked ? 'leitfaden' : null;
+    const reviewOk = Boolean(d.querySelector('#buyReview')?.checked);
     d.close();
-    const err = await goCheckout(offer.id, addon);
-    if (err === 'login') { try { localStorage.setItem(INTENT, JSON.stringify({ plan: offer.id, name: offer.name, addon: d.querySelector('#buyAddon')?.checked ? 'leitfaden' : null, consentAt: new Date().toISOString(), at: Date.now() })); } catch { /* ignore */ } location.href = '/auth/login'; return; }
+    const err = await goCheckout(offer.id, addon, reviewOk);
+    if (err === 'login') { try { localStorage.setItem(INTENT, JSON.stringify({ plan: offer.id, name: offer.name, addon: d.querySelector('#buyAddon')?.checked ? 'leitfaden' : null, reviewOk: Boolean(d.querySelector('#buyReview')?.checked), consentAt: new Date().toISOString(), at: Date.now() })); } catch { /* ignore */ } location.href = '/auth/login'; return; }
     if (err) { (opts.onError || alert)(err); }
   };
   d.querySelector('#buyAddon')?.addEventListener('change', (e) => { const t = d.querySelector('#buyTotal'); if (t) t.textContent = eur(offer.cents + (e.target.checked ? ADDON.cents : 0)); });
@@ -134,7 +136,7 @@ export async function resumeIntent(onError) {
   const cfg = await config();
   if (!cfg.enabled) { takeIntent(); return false; }
   takeIntent();
-  const err = await goCheckout(x.plan, x.addon || null);
+  const err = await goCheckout(x.plan, x.addon || null, Boolean(x.reviewOk));
   if (err && err !== 'login') (onError || alert)(err);
   return !err;
 }

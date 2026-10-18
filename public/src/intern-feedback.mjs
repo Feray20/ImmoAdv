@@ -67,3 +67,38 @@ export async function reviewsAdmin(v) {
     box.querySelector('#rvMsg').textContent = x.ok ? 'Gespeichert.' : x.data?.error || 'Fehler';
   };
 }
+
+// Nutzer (B2C) → „Zugriff freischalten“: Werkzeuge unabhängig vom bezahlten Tarif freigeben, befristet oder dauerhaft.
+export async function accessDialog(userId, mail, msg = () => {}) {
+  const r = await api('/api/admin/access?user=' + encodeURIComponent(userId));
+  if (!r.ok) { msg(r.data?.error || 'Nicht verfügbar.', true); return; }
+  const g = r.data.grant;
+  let d = document.getElementById('accDlg');
+  if (!d) { d = document.createElement('dialog'); d.id = 'accDlg'; d.className = 'ad-dlg'; document.body.append(d); }
+  const until = g?.valid_until ? String(g.valid_until).slice(0, 10) : '';
+  d.innerHTML = `<form method="dialog" class="acc-f">
+    <h2>Zugriff freischalten</h2><p class="form-note">${esc(mail)} · ${g ? `aktuell: <b>${g.tier === 'pro' ? 'Alle Werkzeuge (wie Investor Pro)' : 'Kauf-Werkzeuge (wie Käufer-Pass)'}</b>, seit ${dtt(g.updated_at)} von ${esc(g.granted_by)}` : 'bisher nur der bezahlte Tarif'}</p>
+    <fieldset class="acc-t"><legend>Freigeschaltete Werkzeuge</legend>
+      <label class="chk"><input type="radio" name="tier" value="starter"${g?.tier !== 'pro' ? ' checked' : ''}> <span><b>Kauf-Werkzeuge</b> – wie Käufer-Pass: Objekte unbegrenzt, Bankangebote vergleichen, Bankgespräch, Druck/PDF</span></label>
+      <label class="chk"><input type="radio" name="tier" value="pro"${g?.tier === 'pro' ? ' checked' : ''}> <span><b>Alle Werkzeuge</b> – wie Investor Pro: zusätzlich Portfolio, Anschluss & Forward, Betriebskosten, Kreditmappen unbegrenzt</span></label></fieldset>
+    <div class="ad-grid2"><label>Zusätzliche Kreditmappen<input name="creditMaps" type="number" min="0" max="1000" value="${Number(g?.credit_maps || 0)}"></label>
+      <label>Gültig bis (leer = unbefristet)<input name="validUntil" type="date" value="${esc(until)}"></label></div>
+    <label class="chk"><input type="checkbox" name="leitfaden"${g?.leitfaden ? ' checked' : ''}> Notar-Checkliste & Verhandlungsleitfaden freischalten</label>
+    <label>Interne Notiz (z. B. Grund)<textarea name="note" rows="2" maxlength="500">${esc(g?.note || '')}</textarea></label>
+    <p class="form-note">Der Kunde sieht die Werkzeuge nach dem nächsten Neuladen. Bezahlte Tarife bleiben unberührt; es gilt die höhere Stufe. Jede Änderung wird protokolliert.</p>
+    <div class="pt-row"><button class="btn btn-dark" type="button" id="accSave">Speichern</button>${g ? '<button class="btn btn-outline" type="button" id="accDel">Freischaltung entfernen</button>' : ''}<button class="btn btn-ghost" value="x">Abbrechen</button></div>
+    <p class="form-note" id="accMsg" role="status"></p></form>`;
+  const f = d.querySelector('form');
+  d.querySelector('#accSave').onclick = async () => {
+    const fd = new FormData(f);
+    const body = { user: userId, tier: fd.get('tier'), creditMaps: Number(fd.get('creditMaps') || 0), leitfaden: fd.get('leitfaden') === 'on', validUntil: fd.get('validUntil') || null, note: String(fd.get('note') || '') };
+    const x = await api('/api/admin/access', { method: 'POST', body: JSON.stringify(body) });
+    if (x.ok) { d.close(); msg(`Zugriff für ${mail} gespeichert.`); } else d.querySelector('#accMsg').textContent = x.data?.error || 'Fehler';
+  };
+  d.querySelector('#accDel')?.addEventListener('click', async () => {
+    if (!confirm('Manuelle Freischaltung entfernen? Es gilt dann nur noch der bezahlte Tarif.')) return;
+    const x = await api('/api/admin/access?user=' + encodeURIComponent(userId), { method: 'DELETE' });
+    if (x.ok) { d.close(); msg(`Freischaltung für ${mail} entfernt.`); } else d.querySelector('#accMsg').textContent = x.data?.error || 'Fehler';
+  });
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}

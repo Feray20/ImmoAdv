@@ -18,9 +18,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Zu viele Anfragen. Bitte kurz warten.' }, { status: 429 });
   }
 
-  let body: { plan?: unknown; consent?: unknown; addon?: unknown };
+  let body: { plan?: unknown; consent?: unknown; addon?: unknown; reviewOk?: unknown };
   try {
-    body = (await req.json()) as { plan?: unknown; consent?: unknown; addon?: unknown };
+    body = (await req.json()) as { plan?: unknown; consent?: unknown; addon?: unknown; reviewOk?: unknown };
   } catch {
     return NextResponse.json({ error: 'Ungültige Anfrage.' }, { status: 400 });
   }
@@ -45,6 +45,7 @@ export async function POST(req: Request) {
     const metadata: Record<string, string> = {
       plan,
       ...(addonPrice ? { addon: 'leitfaden' } : {}),
+      ...(body.reviewOk === true ? { review_ok: '1' } : {}),
       supabase_user_id: user.id,
       consent_immediate_start: new Date().toISOString(),
     };
