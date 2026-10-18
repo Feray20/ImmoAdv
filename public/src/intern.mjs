@@ -171,7 +171,8 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
   const us = r.data.users || [];
   const ago = (x) => (x ? dtt(x) : 'nie');
-  v.innerHTML = `<section class="pt-card"><h2>Nutzer</h2>
+  const mk = seg === 'b2c' ? '<button type="button" class="btn btn-dark ad-mk-one" id="usMk">+ Privatkunde anlegen</button>' : seg === 'b2b' ? '<button type="button" class="btn btn-dark ad-mk-one" id="usMk">+ Unternehmen anlegen</button>' : '';
+  v.innerHTML = `<section class="pt-card"><div class="ad-h-row"><h2>Nutzer</h2>${mk}</div>
     <div class="seg us-seg" role="tablist" aria-label="Bereich">${[['b2c', 'Privatkunden (B2C)'], ['b2b', 'Unternehmen (B2B)'], ['admin', 'Administratoren']].filter(([k]) => k === (getSeg() === 'system' ? 'admin' : getSeg())).map(([k, l]) => `<button type="button" data-seg="${k}" aria-selected="${k === seg}">${l}</button>`).join('')}</div>
     <form class="ad-search" id="usF"><input id="usQ" type="search" placeholder="E-Mail suchen" value="${esc(q)}" aria-label="E-Mail suchen" autocomplete="off"><button class="btn btn-dark" type="submit">Suchen</button></form>
     <p class="form-note">${us.length} Konten auf dieser Seite. Angezeigt werden nur Kontodaten – keine Inhalte. Jede Aktion wird protokolliert.</p>
@@ -182,6 +183,7 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
       <div class="us-act">${seg === 'b2c' && !u.admin && !u.company ? `<button type="button" class="btn btn-dark" data-acc="${esc(u.id)}" data-mail="${esc(u.email)}">Zugriff freischalten</button>` : ''}${u.confirmed ? '' : `<button type="button" class="btn btn-dark" data-us="confirm" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Bestätigung erneut senden</button>`}<button type="button" class="btn btn-outline" data-us="reset" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Passwort-Reset senden</button>${u.admin ? '' : `<button type="button" class="btn ${u.banned ? 'btn-outline' : 'btn-danger'}" data-us="${u.banned ? 'unban' : 'ban'}" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">${u.banned ? 'Entsperren' : 'Sperren'}</button><button type="button" class="btn btn-danger" data-us="delete" data-id="${esc(u.id)}" data-mail="${esc(u.email)}" data-co="${u.company ? esc(u.company.role) : ''}">Konto löschen</button>`}</div>
     </article>`).join('') || '<p class="form-note">Keine Konten gefunden.</p>'}</div>
     <div class="pt-row">${page > 1 ? '<button class="btn btn-ghost" id="usPrev" type="button">← Zurück</button>' : ''}${r.data.more ? '<button class="btn btn-ghost" id="usNext" type="button">Weiter →</button>' : ''}</div></section>`;
+  $('#usMk')?.addEventListener('click', () => (seg === 'b2c' ? openCreatePrivate(() => nutzer(v, 1, '', seg)) : openCreateAccount(null, () => nutzer(v, 1, '', seg))));
   $('#usF').onsubmit = (e) => { e.preventDefault(); nutzer(v, 1, $('#usQ').value.trim(), seg); };
   v.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => { if (b.dataset.seg !== 'admin') { setSeg(b.dataset.seg); paintSeg(); } nutzer(v, 1, '', b.dataset.seg); });
   $('#usPrev')?.addEventListener('click', () => nutzer(v, page - 1, q, seg));
@@ -681,7 +683,7 @@ async function partner(v) {
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
   const list = r.data.accounts;
   const pend = list.filter((a) => a.verification_status === 'eingereicht').length;
-  v.innerHTML = `<div class="ad-mk-tiles"><button class="ad-mk" type="button" id="mkPriv"><b>+ Privatkonto anlegen</b><span>B2C · Privatkunde mit Startpasswort</span></button><button class="ad-mk b2b" type="button" id="mkNew"><b>+ Unternehmen anlegen</b><span>B2B · Firmenzugang zum Unternehmensportal</span></button></div>${pend ? `<p class="auth-message" style="margin-bottom:10px"><strong>${pend} Unternehmen</strong> ${pend === 1 ? 'wartet' : 'warten'} auf Prüfung und Freischaltung. Filter „Zur Prüfung eingereicht“ wählen und „Prüfen“ öffnen.</p>` : ''}<div class="pt-row" style="margin-bottom:10px"><input id="pq" aria-label="Unternehmen suchen" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-ghost" id="pCsv" type="button">CSV</button></div>
+  v.innerHTML = `<div class="ad-mk-tiles"><button class="ad-mk b2b" type="button" id="mkNew"><b>+ Unternehmen anlegen</b><span>B2B · Firmenzugang zum Unternehmensportal</span></button></div>${pend ? `<p class="auth-message" style="margin-bottom:10px"><strong>${pend} Unternehmen</strong> ${pend === 1 ? 'wartet' : 'warten'} auf Prüfung und Freischaltung. Filter „Zur Prüfung eingereicht“ wählen und „Prüfen“ öffnen.</p>` : ''}<div class="pt-row" style="margin-bottom:10px"><input id="pq" aria-label="Unternehmen suchen" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-ghost" id="pCsv" type="button">CSV</button></div>
     <div class="pc-bar"><div class="pc-chips" role="group" aria-label="Status">${[['', 'Alle'], ['pruefen', 'Wartet auf Prüfung'], ['active', 'Aktiv'], ['locked', 'Gesperrt']].map(([k, l]) => `<button type="button" data-pf="${k}" aria-pressed="${k === '' ? 'true' : 'false'}">${l} <b>${k === '' ? list.length : list.filter((a) => (a.status + (a.verified_at ? '' : ' unverified') + (a.verification_status === 'eingereicht' ? ' pruefen' : '')).split(' ').includes(k)).length}</b></button>`).join('')}</div>
       <div class="pc-batch" id="pcBatch" hidden><span id="pcN">0 ausgewählt</span><button type="button" class="btn btn-outline btn-sm" id="pcAll">Alle sichtbaren</button><button type="button" class="btn btn-sm pc-del" id="pcDel">Ausgewählte löschen</button></div></div>
     ${list.length ? `<div class="pc-list">${list.map((a) => { const st = a.status === 'locked' ? ['bad', 'Gesperrt'] : a.verification_status === 'eingereicht' ? ['warn', 'Wartet auf Prüfung'] : !a.verified_at ? ['warn', a.verification_status === 'abgelehnt' ? 'Abgelehnt' : 'Ungeprüft'] : ['ok', 'Aktiv']; return `<article class="pc" data-row="${a.id}" data-s="${a.status}${a.verified_at ? '' : ' unverified'}${a.verification_status === 'eingereicht' ? ' pruefen' : ''}" data-q="${esc((a.company_name + ' ' + a.city + ' ' + a.customer_number + ' ' + a.email + ' ' + (a.register_number || '') + ' ' + (a.tax_id || '')).toLowerCase())}">
@@ -692,6 +694,7 @@ async function partner(v) {
         <details class="pc-menu"><summary class="btn btn-outline btn-sm">Aktionen ▾</summary><div class="pc-menu-in">
           ${a.verified_at ? `<button data-a="verify" data-on="false" data-id="${a.id}" type="button">Freischaltung zurücknehmen</button>` : ''}
           <button data-a="plan" data-id="${a.id}" type="button">Tarif zuweisen</button>
+          <button data-a="modules" data-id="${a.id}" data-name="${esc(a.company_name)}" data-mod="${esc(JSON.stringify(a.modules || {}))}" type="button">Module freischalten</button>
           <button data-a="whitelabel" data-on="${!a.has_whitelabel}" data-id="${a.id}" type="button">${a.has_whitelabel ? 'White-Label entziehen' : 'White-Label aktivieren'}</button>
           <button data-a="invoicePayment" data-on="${!a.allow_invoice_payment}" data-id="${a.id}" type="button">${a.allow_invoice_payment ? 'Rechnungskauf aus' : 'Rechnungskauf an'}</button>
           <button data-a="credits" data-id="${a.id}" type="button">Kontingent +</button>
@@ -737,6 +740,7 @@ async function partner(v) {
     let body = { action: a, id };
     if (a === 'invoice') return invoiceForm(id, b.dataset.name);
     if (a === 'details') return details(id);
+    if (a === 'modules') return modulesDialog(id, b.dataset.name, JSON.parse(b.dataset.mod || '{}'), () => partner(v));
     if (a === 'verify' || a === 'whitelabel') body.on = b.dataset.on === 'true';
     if (a === 'lock') { const reason = prompt('Grund der Sperre (wird dem Unternehmen angezeigt):'); if (!reason) return; body.reason = reason; }
     if (a === 'unlock' && !confirm('Konto entsperren?')) return;
@@ -758,6 +762,28 @@ async function partner(v) {
 }
 
 // Nur lesende Detailansicht eines Unternehmens (kein Einloggen als Partner).
+// Modulrechte je Unternehmenskonto: laut Tarif, zusätzlich freigeschaltet oder gesperrt. Wirkt sofort im Portal und in den Schnittstellen.
+const MODS = [['schnellrechner', 'Schnellrechner & Fall-Analysen', 'Schnell-Checks von Unterlagen-Paketen, Präsentationen'], ['kreditmappe', 'BankReady Kreditmappe', 'Kreditmappen ohne Monatskontingent, wenn freigeschaltet'], ['stresstest', 'Stresstest-Generator', 'Zins-, Leerstands- und Kostenszenarien'], ['whitelabel', 'White-Label-Export', 'Unterlagen und Einladungen im eigenen Erscheinungsbild'], ['crm', 'CRM & Mandantenverwaltung', 'Kunden einladen, Fortschritt und Bestandskunden-Radar']];
+function modulesDialog(id, name, cur, done) {
+  let d = document.getElementById('modDlg');
+  if (!d) { d = document.createElement('dialog'); d.id = 'modDlg'; d.className = 'ad-dlg'; document.body.append(d); }
+  const opt = (k, val, label) => `<label class="mod-opt"><input type="radio" name="m-${k}" value="${val}"${(cur[k] || 'auto') === val ? ' checked' : ''}><span>${label}</span></label>`;
+  d.innerHTML = `<form class="ad-dlg-in" id="modF"><div class="ad-dlg-h"><h2>Module freischalten</h2><button type="button" class="stage-x" data-x aria-label="Schließen">×</button></div>
+    <p class="form-note"><strong>${esc(name)}</strong> · „Laut Tarif“ folgt dem gebuchten Tarif. „Frei“ schaltet unabhängig vom Tarif frei, „Gesperrt“ sperrt das Modul.</p>
+    <div class="mod-list">${MODS.map(([k, t, x]) => `<fieldset class="mod-row"><legend><strong>${t}</strong><small>${x}</small></legend><div class="mod-seg">${opt(k, 'auto', 'Laut Tarif')}${opt(k, 'on', 'Frei')}${opt(k, 'off', 'Gesperrt')}</div></fieldset>`).join('')}</div>
+    <p class="form-note" id="modMsg" role="status"></p>
+    <div class="wiz-nav"><button type="button" class="btn btn-outline" data-x>Abbrechen</button><button type="submit" class="btn btn-dark">Speichern</button></div></form>`;
+  d.querySelectorAll('[data-x]').forEach((b) => { b.onclick = () => d.close(); });
+  d.querySelector('#modF').onsubmit = async (e) => {
+    e.preventDefault();
+    const modules = Object.fromEntries(MODS.map(([k]) => [k, d.querySelector(`input[name="m-${k}"]:checked`)?.value || 'auto']));
+    const r = await api('/api/admin/b2b', { method: 'POST', body: JSON.stringify({ action: 'modules', id, modules }) });
+    if (!r.ok) { d.querySelector('#modMsg').textContent = r.data?.error || 'Speichern fehlgeschlagen.'; return; }
+    d.close(); msg('Module gespeichert.'); done?.();
+  };
+  d.showModal ? d.showModal() : d.setAttribute('open', '');
+}
+
 async function details(id) {
   const box = $('#invForm');
   box.innerHTML = logoLoader();

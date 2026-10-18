@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { effectiveTier, TIER_LIMITS, TRIAL_LIMITS, type B2BAccount } from '@/lib/b2b/core';
+import { effectiveTier, moduleState, TIER_LIMITS, TRIAL_LIMITS, type B2BAccount } from '@/lib/b2b/core';
 import { json, requireMember } from '@/lib/b2b/http';
 
 export const runtime = 'nodejs';
@@ -13,12 +13,15 @@ const monthKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berl
 function limitsFor(a: B2BAccount) {
   const t = effectiveTier(a);
   const l = t ? TIER_LIMITS[t] : null;
+  const sr = moduleState(a, 'schnellrechner'), wl = moduleState(a, 'whitelabel');
   return {
     tier: t,
-    fall: l ? l.fall : TRIAL_LIMITS.fall,
-    praes: l ? l.praes : TRIAL_LIMITS.praes,
+    blocked: sr === 'off',
+    fall: sr === 'on' ? null : l ? l.fall : TRIAL_LIMITS.fall,
+    praes: sr === 'on' ? null : l ? l.praes : TRIAL_LIMITS.praes,
     // immoadv = ImmoAdv-Logo · eigen = eigenes Logo und Farben mit dezentem ImmoAdv-Hinweis · whitelabel = komplett eigenes Erscheinungsbild
-    branding: a.has_whitelabel || (l && l.whitelabel) ? 'whitelabel' : l && l.cobranding ? 'eigen' : 'immoadv',
+    // Web-Admin-Freischaltung „White-Label-Export“ geht dem Tarif vor.
+    branding: wl === 'on' ? 'whitelabel' : wl === 'off' ? 'immoadv' : a.has_whitelabel || (l && l.whitelabel) ? 'whitelabel' : l && l.cobranding ? 'eigen' : 'immoadv',
   };
 }
 
@@ -42,7 +45,7 @@ export async function GET(req: Request) {
   return json({
     verified: Boolean(a.verified_at),
     usage: { fall: used.fall ?? 0, praes: used.praesentation ?? 0 },
-    limits: { fall: L.fall, praes: L.praes }, tier: L.tier,
+    limits: { fall: L.fall, praes: L.praes }, tier: L.tier, blocked: L.blocked,
     branding: {
       mode: L.branding,
       company: a.company_name, advisor: a.advisor_name, city: a.city,
@@ -62,6 +65,7 @@ export async function POST(req: Request) {
   const a = ctx.account as B2BAccount;
   if (!a.verified_at) return json({ error: 'Ihr Unternehmenskonto ist noch nicht freigeschaltet.' }, 403);
   const L = limitsFor(a);
+  if (L.blocked) return json({ error: 'Schnellrechner und Fall-Analysen sind für Ihr Unternehmenskonto nicht freigeschaltet. Bitte wenden Sie sich an support@immoadv.de.' }, 403);
   const lim = p.data.kind === 'fall' ? L.fall : L.praes;
   const { data, error } = await supabaseAdmin().rpc('b2b_usage_take', { acc: a.id, mon: monthKey(), k: p.data.kind, lim });
   if (error) return json({ error: 'Kontingent konnte nicht geprüft werden.' }, 502);

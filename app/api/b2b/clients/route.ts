@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { canCobrand, effectiveTier, hashToken, newToken, TIER_LIMITS, type B2BAccount } from '@/lib/b2b/core';
+import { canCobrand, effectiveTier, hashToken, moduleState, newToken, TIER_LIMITS, type B2BAccount } from '@/lib/b2b/core';
 import { json, requireMember } from '@/lib/b2b/http';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
 
@@ -16,6 +16,7 @@ type Summary = { stage?: number; level?: number; best?: number; objects?: number
 export async function GET(req: Request) {
   const ctx = await requireMember(req, { bucket: 'b2b-clients' });
   if (ctx instanceof Response) return ctx;
+  if (moduleState(ctx.account, 'crm') === 'off') return json({ error: 'Die Mandantenverwaltung ist für Ihr Unternehmenskonto nicht freigeschaltet. Bitte wenden Sie sich an support@immoadv.de.' }, 403);
   const db = supabaseAdmin();
   const { data: rows } = await db.from('immo_b2b_clients').select('id, client_name, client_email, status, client_user_id, consent_at, expires_at, created_at, ended_at, last_request_at, radar_consent_at')
     .eq('account_id', ctx.account.id).neq('status', 'getrennt').order('created_at', { ascending: false }).limit(500);
@@ -43,6 +44,7 @@ const Invite = z.object({ email: z.string().trim().toLowerCase().email().max(200
 export async function POST(req: Request) {
   const ctx = await requireMember(req, { bucket: 'b2b-client-invite', limit: 20 });
   if (ctx instanceof Response) return ctx;
+  if (moduleState(ctx.account, 'crm') === 'off') return json({ error: 'Die Mandantenverwaltung ist für Ihr Unternehmenskonto nicht freigeschaltet. Bitte wenden Sie sich an support@immoadv.de.' }, 403);
   if (!ctx.account.verified_at) return json({ error: 'Kunden einladen ist nach der Verifizierung Ihres Unternehmenskontos möglich.' }, 403);
   const p = Invite.safeParse(await req.json().catch(() => null));
   if (!p.success) return json({ error: p.error.issues.some((i) => i.path[0] === 'consent') ? 'Bitte bestätigen Sie, dass die Einwilligung des Kunden für die Einladung vorliegt.' : 'Bitte eine gültige E-Mail-Adresse angeben.' }, 400);
@@ -70,6 +72,7 @@ const End = z.object({ id: z.string().uuid() });
 export async function DELETE(req: Request) {
   const ctx = await requireMember(req, { bucket: 'b2b-clients' });
   if (ctx instanceof Response) return ctx;
+  if (moduleState(ctx.account, 'crm') === 'off') return json({ error: 'Die Mandantenverwaltung ist für Ihr Unternehmenskonto nicht freigeschaltet. Bitte wenden Sie sich an support@immoadv.de.' }, 403);
   const p = End.safeParse(await req.json().catch(() => null));
   if (!p.success) return json({ error: 'Ungültig.' }, 400);
   const { error } = await supabaseAdmin().from('immo_b2b_clients').update({ status: 'getrennt', ended_at: new Date().toISOString(), ended_by: 'berater', token_hash: null })

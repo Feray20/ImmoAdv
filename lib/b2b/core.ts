@@ -68,6 +68,7 @@ export type B2BAccount = {
   lead_retention_months?: number;
   webhook_url?: string | null;
   webhook_secret?: string | null;
+  modules?: ModuleOverrides | null;
   created_at: string;
 };
 
@@ -79,6 +80,26 @@ export const TIER_LIMITS: Record<Tier, { seats: number; dossiersPerMonth: number
   PRO: { seats: 3, dossiersPerMonth: null, cobranding: true, merger: true, landing: true, fall: null, praes: null, whitelabel: false, radar: true },
   ENTERPRISE: { seats: 10, dossiersPerMonth: null, cobranding: true, merger: true, landing: true, fall: null, praes: null, whitelabel: true, radar: true },
 };
+// Module, die ImmoAdv im Web-Admin je Unternehmenskonto zusätzlich freischalten ("on") oder sperren ("off") kann.
+// Ohne Eintrag gilt der gebuchte Tarif. Nur der Web-Admin ändert diese Werte (Spalte immo_b2b_accounts.modules).
+export const MODULES = {
+  schnellrechner: 'Schnellrechner & Fall-Analysen',
+  kreditmappe: 'BankReady Kreditmappe',
+  stresstest: 'Stresstest-Generator',
+  whitelabel: 'White-Label-Export',
+  crm: 'CRM & Mandantenverwaltung',
+} as const;
+export type ModuleKey = keyof typeof MODULES;
+export const MODULE_KEYS = Object.keys(MODULES) as ModuleKey[];
+export type ModuleOverrides = Partial<Record<ModuleKey, 'on' | 'off'>>;
+export function moduleOverrides(a: { modules?: unknown } | null | undefined): ModuleOverrides {
+  const m = (a?.modules && typeof a.modules === 'object' ? a.modules : {}) as Record<string, unknown>;
+  const out: ModuleOverrides = {};
+  for (const k of MODULE_KEYS) if (m[k] === 'on' || m[k] === 'off') out[k] = m[k] as 'on' | 'off';
+  return out;
+}
+export const moduleState = (a: { modules?: unknown } | null | undefined, k: ModuleKey): 'on' | 'off' | null => moduleOverrides(a)[k] ?? null;
+
 // Ohne gebuchten Tarif (nach Freischaltung): zum Ausprobieren je Monat.
 export const TRIAL_LIMITS = { fall: 2, praes: 1 };
 
@@ -96,6 +117,8 @@ export function effectiveTier(a: Pick<B2BAccount, 'status' | 'plan_tier' | 'plan
 }
 
 export function canCobrand(a: B2BAccount): boolean {
+  const wl = moduleState(a, 'whitelabel');
+  if (wl) return wl === 'on';
   const t = effectiveTier(a);
   return Boolean(a.has_whitelabel || (t && TIER_LIMITS[t].cobranding));
 }
@@ -137,6 +160,9 @@ export async function b2bDossierAllowance(userId: string, objectRef?: string): P
   const a = m.account;
   if (a.status === 'locked') return { allowed: false, accountId: a.id, reason: 'Das Unternehmenskonto ist gesperrt.' };
   if (!isVerified(a)) return { allowed: false, accountId: a.id, reason: VERIFY_MSG };
+  const km = moduleState(a, 'kreditmappe');
+  if (km === 'off') return { allowed: false, accountId: a.id, reason: 'Die Kreditmappe ist für Ihr Unternehmenskonto nicht freigeschaltet. Bitte wenden Sie sich an support@immoadv.de.' };
+  if (km === 'on') return { allowed: true, accountId: a.id, limit: null };
   const tier = effectiveTier(a);
   if (!tier) return null;
   const limit = TIER_LIMITS[tier].dossiersPerMonth;

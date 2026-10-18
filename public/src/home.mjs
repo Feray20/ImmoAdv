@@ -107,3 +107,17 @@ document.querySelectorAll('.km-go').forEach((a) => a.addEventListener('click', a
   } catch { /* weiter mit Link */ }
   location.href = a.href;
 }));
+
+// Kreditmappe: 3D-Neigung bei Mausbewegung (nur Maus/Trackpad, nicht bei reduzierter Bewegung).
+(() => {
+  const m = document.querySelector('.km-mock');
+  if (!m || !matchMedia('(hover:hover) and (pointer:fine)').matches || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  let raf = 0;
+  m.addEventListener('pointermove', (e) => {
+    const r = m.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => { m.classList.add('is-tilting'); m.style.setProperty('--ry', `${(x * 14).toFixed(2)}deg`); m.style.setProperty('--rx', `${(-y * 10).toFixed(2)}deg`); m.style.setProperty('--px', `${(-x * 18).toFixed(1)}px`); m.style.setProperty('--py', `${(-y * 14).toFixed(1)}px`); });
+  });
+  m.addEventListener('pointerleave', () => { cancelAnimationFrame(raf); m.classList.remove('is-tilting'); m.style.setProperty('--ry', '0deg'); m.style.setProperty('--rx', '0deg'); m.style.setProperty('--px', '0px'); m.style.setProperty('--py', '0px'); });
+})();
