@@ -2,6 +2,19 @@
 // Steuer-Export, Anfragen und Codes, Protokoll und Betreiber-Kennzahlen.
 import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs';
 
+// Zwei-Faktor-Code: Autofill aus der Tastatur (iOS/Android), Eingabe säubern und mit 6 Ziffern automatisch absenden.
+if (!window.__iaOtp) {
+  window.__iaOtp = true;
+  document.addEventListener('input', (e) => {
+    const el = e.target;
+    if (!(el instanceof HTMLInputElement) || el.autocomplete !== 'one-time-code') return;
+    const d = el.value.replace(/\D/g, '').slice(0, 6);
+    if (d !== el.value) el.value = d;
+    if (d.length === 6 && el.form && !el.form.dataset.otpSent) { el.form.dataset.otpSent = '1'; setTimeout(() => { delete el.form.dataset.otpSent; }, 4000); el.form.requestSubmit(); }
+  });
+}
+
+
 const root = document.getElementById('intern');
 const $ = (s, el = document) => el.querySelector(s);
 const TIER = { BASIC: 'Basic', PRO: 'Pro', ENTERPRISE: 'Enterprise' };
@@ -52,7 +65,7 @@ async function mfa() {
       <p class="form-note">Oder Schlüssel manuell eingeben: <code>${esc(ej.totp.secret)}</code></p><p>2. Den 6-stelligen Code aus der App eingeben:</p>`;
   }
   root.innerHTML = `<div class="ad-mfa pt-card"><h1>Zweiter Faktor</h1>${enrollHtml || '<p>Bitte den 6-stelligen Code aus Ihrer Authenticator-App eingeben.</p>'}
-    <form id="mfaF" class="pt-row"><input id="mfaC" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required aria-label="Code" style="font-size:22px;letter-spacing:.2em;width:9ch;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px"><button class="btn btn-dark" type="submit">Bestätigen</button></form>
+    <form id="mfaF" class="pt-row"><input id="mfaC" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus enterkeyhint="done" aria-label="Code" style="font-size:22px;letter-spacing:.2em;width:9ch;padding:8px 10px;border:1px solid #CBD5E1;border-radius:6px"><button class="btn btn-dark" type="submit">Bestätigen</button></form>
     <p class="form-note" id="mfaMsg" role="status"></p></div>`;
   $('#mfaF').onsubmit = async (ev) => {
     ev.preventDefault();
@@ -72,40 +85,64 @@ async function mfa() {
 const SEGS = { b2c: 'Privatkunden (B2C)', b2b: 'Unternehmen (B2B)' };
 const getSeg = () => { try { return localStorage.getItem('ia-admin-seg') === 'b2b' ? 'b2b' : 'b2c'; } catch { return 'b2c'; } };
 const setSeg = (x) => { try { localStorage.setItem('ia-admin-seg', x); } catch { /* nur Komfort */ } };
-const TABS = [['uebersicht', 'Übersicht'], ['einrichtung', 'Einrichtung'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'Rechnungen-ZIP'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
+const TABS = [['uebersicht', 'Übersicht'], ['einrichtung', 'Einrichtung'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'GoBD-Export (ZIP, DATEV)'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen']];
+// Vier Hauptbereiche (Handy: untere Leiste + Unterreiter; Desktop: Seitenleiste mit Gruppen).
+const GROUPS = [
+  ['ops', 'Operations & CRM', 'CRM', '<path d="M16 11a4 4 0 1 0-8 0"/><circle cx="12" cy="7" r="3"/><path d="M4 21v-2a6 6 0 0 1 16 0v2"/>', ['uebersicht', 'partner', 'nutzer', 'anfragen', 'akquise', 'werbung']],
+  ['fin', 'Finanzen & Compliance', 'Finanzen', '<path d="M4 7h16v12H4z"/><path d="M4 11h16M8 15h3"/>', ['cockpit', 'rechnungen', 'steuer']],
+  ['ana', 'Analytics & Monitoring', 'Analyse', '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', ['analyse', 'kennzahlen', 'protokoll', 'sicherheit']],
+  ['sys', 'System & Setup', 'System', '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', ['einrichtung', 'system', 'testkauf']],
+];
+const groupOf = (t) => GROUPS.find((g) => g[4].includes(t)) || GROUPS[0];
+const tabLabel = (t) => TABS.find(([k]) => k === t)?.[1] || t;
 
 function paintSeg() {
-  const chip = $('#adSeg'); if (!chip) return;
   const g = getSeg();
-  chip.innerHTML = `${g === 'b2b' ? 'B2B · Unternehmen' : 'B2C · Privatkunden'} <span aria-hidden="true">⇄</span>`;
-  chip.dataset.seg = g; document.body.dataset.adSeg = g;
+  document.querySelectorAll('[data-segset]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.segset === g)));
+  document.body.dataset.adSeg = g;
 }
 
 function frame() {
-  root.innerHTML = `<div class="ad-head"><h1>Admin-Zentrale</h1><div class="ad-head-act"><button type="button" class="mode-chip ad-seg-chip" id="adSeg" aria-label="Bereich wechseln: Privatkunden oder Unternehmen"></button><button type="button" class="btn btn-outline" id="adLogout">Abmelden</button></div></div><p class="form-note">Nur für Administratoren · angemeldet mit zweitem Faktor · alle Aktionen werden protokolliert · automatische Abmeldung nach 15 Minuten ohne Aktivität.</p>
-    <div class="ad-shell"><div class="ad-tabs" role="tablist" aria-label="Bereiche">${TABS.map(([k, l]) => `<button type="button" role="tab" data-t="${k}">${l}</button>`).join('')}</div>
-    <div class="ad-main"><p id="adMsg" class="form-note" role="status"></p><div id="adView"></div></div></div>`;
+  const ic = (d) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  root.innerHTML = `<header class="ad-head ad-sticky"><h1>Admin</h1>
+      <div class="ad-segctl" role="group" aria-label="Bereich: Privatkunden oder Unternehmen"><button type="button" data-segset="b2c">B2C · Privat</button><button type="button" data-segset="b2b">B2B · Unternehmen</button></div>
+      <button type="button" class="btn btn-outline ad-out" id="adLogout">Abmelden</button></header>
+    <p class="form-note ad-note">Nur für Administratoren · zweiter Faktor · alle Aktionen werden protokolliert · Abmeldung nach 15 Minuten ohne Aktivität.</p>
+    <div class="ad-shell"><nav class="ad-tabs" aria-label="Bereiche">${GROUPS.map(([g, l, , , ts]) => `<div class="ad-grp"><span class="ad-grp-h">${l}</span>${ts.map((k) => `<button type="button" data-t="${k}">${tabLabel(k)}</button>`).join('')}</div>`).join('')}</nav>
+    <div class="ad-main"><div class="ad-subtabs" id="adSub" role="tablist"></div><p id="adMsg" class="form-note" role="status"></p><div id="adView"></div></div></div>
+    <nav class="ad-bottom" aria-label="Hauptbereiche">${GROUPS.map(([g, , sh, d]) => `<button type="button" data-g="${g}">${ic(d)}<span>${sh}</span></button>`).join('')}</nav>`;
   root.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { location.hash = b.dataset.t; });
+  root.querySelectorAll('[data-g]').forEach((b) => b.onclick = () => {
+    const g = GROUPS.find((x) => x[0] === b.dataset.g);
+    let last = null; try { last = sessionStorage.getItem('ia-admin-last-' + g[0]); } catch { /* ignore */ }
+    location.hash = g[4].includes(last) ? last : g[4][0];
+  });
   $('#adLogout').onclick = logout;
-  const chip = $('#adSeg');
   paintSeg();
-  chip.onclick = () => {
-    setSeg(getSeg() === 'b2b' ? 'b2c' : 'b2b'); paintSeg();
-    // Weicher Wechsel wie beim Modus-Umschalter: kurz ausblenden, neu laden, einblenden.
+  root.querySelectorAll('[data-segset]').forEach((b) => b.onclick = () => {
+    if (b.dataset.segset === getSeg()) return;
+    setSeg(b.dataset.segset); paintSeg();
+    // Weicher Wechsel ohne Seitenneuladen: Ansicht kurz ausblenden, mit neuem Bereich neu laden.
     const v = $('#adView'); v.classList.add('ad-switching');
     setTimeout(() => { show(); requestAnimationFrame(() => v.classList.remove('ad-switching')); }, 140);
-  };
+  });
 }
 
 function show() {
   const h = location.hash.slice(1).split('-')[0];
   const t = TABS.find(([k]) => k === h)?.[0] || 'uebersicht';
+  if (show.last !== t) { window.scrollTo(0, 0); show.last = t; }
+  const g = groupOf(t);
+  try { sessionStorage.setItem('ia-admin-last-' + g[0], t); } catch { /* ignore */ }
+  $('#adSub').innerHTML = `<span class="ad-sub-h">${g[1]}</span>${g[4].map((k) => `<button type="button" role="tab" data-t="${k}">${tabLabel(k)}</button>`).join('')}`;
+  $('#adSub').querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { location.hash = b.dataset.t; });
   root.querySelectorAll('[data-t]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.t === t)));
-  root.querySelector(`[data-t="${t}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  root.querySelectorAll('[data-g]').forEach((b) => b.setAttribute('aria-current', b.dataset.g === g[0] ? 'page' : 'false'));
+  $('#adSub').querySelector(`[data-t="${t}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center' });
   const v = $('#adView');
   v.innerHTML = '<p class="form-note">Wird geladen …</p>';
   msg('');
-  ({ uebersicht, einrichtung, analyse, testkauf, cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)) })[t](v);
+  ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')), nutzer: (x) => nutzer(x, 1, '', getSeg()), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)) })[t](v);
 }
 
 // ---------- Nutzer: Konten im Überblick, sperren/entsperren, Passwort-Reset, löschen ----------
@@ -551,14 +588,17 @@ async function sicherheit(v) {
     const inc = v.querySelector('#secInc'); if (inc) inc.after(box); else v.prepend(box);
   }).catch(() => {});
   const p = r.data?.panic || { active: false };
+  const lv = p.active ? (p.level === 1 ? 1 : 2) : 0;
   v.innerHTML = `<section class="pt-card"><h2>Not-Aus</h2>
-    ${p.active ? `<div class="pt-alert bad"><strong>Aktiv seit ${dtt(p.since)}</strong> (${esc(p.by || '')}${p.reason ? ': ' + esc(p.reason) : ''}). Alle Nutzer außer Administratoren sind abgemeldet; Partnerseiten, Widget und Anfragen sind abgeschaltet.</div><button class="btn btn-dark" id="pOff" type="button">Not-Aus beenden</button>`
-      : `<p>Schaltet sofort alle angemeldeten Zugänge außer Administratoren ab (Anfragen an die Schnittstellen werden abgewiesen, Sitzungen wirken beendet) und stoppt Partnerseiten, Widget und Anfrage-Eingang. Für den Fall eines Sicherheitsvorfalls.</p><button class="btn btn-dark" id="pOn" type="button" style="background:#991B1B;border-color:#991B1B">Not-Aus auslösen</button>`}
-    <p class="form-note">Die Anmelde-Tokens selbst laufen nach spätestens einer Stunde ab. Für einen vollständigen Schlüsseltausch zusätzlich in Supabase den JWT-Schlüssel rotieren.</p></section>
+    ${lv ? `<div class="pt-alert bad"><strong>Stufe ${lv} aktiv seit ${dtt(p.since)}</strong> (${esc(p.by || '')}${p.reason ? ': ' + esc(p.reason) : ''}). ${lv === 1 ? 'Keine Neuanmeldungen, Käufe, Anfragen und B2B-Schnittstellen; angemeldete Nutzer können nur lesen.' : `Alle Nutzer außer Administratoren sind abgewiesen${p.revoked != null ? ` (${p.revoked} Sitzungen beendet)` : ''}; täglicher Lauf pausiert.`}</div>
+      <div class="panic-act">${lv === 1 ? '<button class="btn btn-dark panic-2" id="p2" type="button">Auf Stufe 2 verschärfen</button>' : ''}<button class="btn btn-dark" id="pOff" type="button">Not-Aus beenden</button></div>`
+      : `<div class="panic-grid"><div class="panic-card"><strong>Stufe 1 · Soft Lock</strong><p>Neuanmeldungen, Käufe, Anfragen, Partnerseiten, Widget und B2B-Schnittstellen aus. Angemeldete Nutzer können weiter lesen, aber nichts ändern. Admins arbeiten normal.</p><button class="btn btn-dark panic-1" id="p1" type="button">Stufe 1 auslösen</button></div>
+        <div class="panic-card hard"><strong>Stufe 2 · Hard Lock</strong><p>Zusätzlich: alle Sitzungen außer Admins werden beendet, alle Schnittstellen weisen Nicht-Admins ab, der tägliche Lauf pausiert.</p><button class="btn btn-dark panic-2" id="p2" type="button">Stufe 2 auslösen</button></div></div>`}
+    <p class="form-note">Wirkt binnen 15 Sekunden überall. Beim Auslösen erhalten Sie eine Sofort-Meldung (Telegram/Slack, falls eingerichtet). Für einen vollständigen Schlüsseltausch zusätzlich in Supabase den JWT-Schlüssel rotieren.</p></section>
     <section class="pt-card"><h2>Zugangsschutz Admin</h2><ul class="plain-list">
       <li>Zweiter Faktor: ${r.data?.mfaRequired ? '<span class="st ok">Pflicht</span>' : '<span class="st bad">abgeschaltet (ADMIN_MFA=off)</span>'}</li>
       <li>Keine IP-Sperre für den Admin: Sie können von überall (auch mobil) zugreifen. Schutz durch Anmeldung, Admin-Liste, Zwei-Faktor, Zeitlimit und Not-Aus.</li>
-      <li>Anmeldeversuche: Supabase begrenzt fehlgeschlagene Anmeldungen automatisch; zusätzlich sind alle Schnittstellen je Nutzer und IP gedrosselt.</li>
+      <li>Anmeldeversuche: Supabase begrenzt fehlgeschlagene Anmeldungen; zusätzlich sperrt ImmoAdv eine Quelle automatisch für 24 Stunden nach 10 Fehlversuchen in 15 Minuten (ebenso bei wiederholten Admin-Zugriffsversuchen; Scanner für 7 Tage).</li>
       <li>Alle Admin-Aktionen stehen im Reiter Protokoll.</li></ul></section>
     <section class="pt-card"><h2>Sicherheitsprotokoll</h2><p class="form-note">Gedrosselte Zugriffe (zu viele Anfragen je Nutzer oder IP) und abgewiesene Zugriffe auf den Admin-Bereich. Gespeichert werden nur Bereich und ein gekürzter Hash, keine IP-Adressen; Löschung nach 30 Tagen. Die Zählung erfolgt je Serverinstanz, Spitzen können sich verteilen.</p><div id="secLog"><p class="form-note">Wird geladen …</p></div><button class="btn btn-ghost" id="secRe" type="button">Aktualisieren</button></section>`;
   // Vorfälle: Angriffe und Bot-Wellen der letzten 7 Tage mit Sperren / Erledigt.
@@ -589,14 +629,15 @@ async function sicherheit(v) {
   };
   loadLog();
   $('#secRe').onclick = loadLog;
-  const go = async (on) => {
+  const go = async (on, level = 2) => {
     const reason = on ? prompt('Grund (für das Protokoll):', 'Sicherheitsvorfall') : '';
     if (on && reason === null) return;
-    if (!confirm(on ? 'Not-Aus jetzt auslösen?' : 'Not-Aus beenden?')) return;
-    const x = await api('/api/admin/support', { method: 'POST', body: JSON.stringify({ panic: on, reason }) });
-    if (x.ok) { msg(on ? 'Not-Aus aktiv (wirkt binnen 15 Sekunden überall).' : 'Not-Aus beendet.'); sicherheit(v); } else msg(x.data?.error || 'Fehler', true);
+    if (!confirm(on ? `Not-Aus Stufe ${level} jetzt auslösen?${level === 2 ? ' Alle Nutzer außer Administratoren werden abgemeldet.' : ''}` : 'Not-Aus beenden?')) return;
+    const x = await api('/api/admin/support', { method: 'POST', body: JSON.stringify({ panic: on, reason, level }) });
+    if (x.ok) { msg(on ? `Not-Aus Stufe ${level} aktiv (wirkt binnen 15 Sekunden überall).${level === 2 ? (x.data.revoked != null ? ` ${x.data.revoked} Sitzungen beendet.` : ' Hinweis: Sitzungen konnten nicht beendet werden – Datenbankfunktion immo_revoke_sessions fehlt.') : ''}` : 'Not-Aus beendet.'); sicherheit(v); } else msg(x.data?.error || 'Fehler', true);
   };
-  if ($('#pOn')) $('#pOn').onclick = () => go(true);
+  if ($('#p1')) $('#p1').onclick = () => go(true, 1);
+  if ($('#p2')) $('#p2').onclick = () => go(true, 2);
   if ($('#pOff')) $('#pOff').onclick = () => go(false);
 }
 
@@ -606,30 +647,50 @@ async function partner(v) {
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
   const list = r.data.accounts;
   const pend = list.filter((a) => a.verification_status === 'eingereicht').length;
-  v.innerHTML = `<div class="ad-mk-tiles"><button class="ad-mk" type="button" id="mkPriv"><b>+ Privatkonto anlegen</b><span>B2C · Privatkunde mit Startpasswort</span></button><button class="ad-mk b2b" type="button" id="mkNew"><b>+ Unternehmen anlegen</b><span>B2B · Firmenzugang zum Unternehmensportal</span></button></div>${pend ? `<p class="auth-message" style="margin-bottom:10px"><strong>${pend} Unternehmen</strong> ${pend === 1 ? 'wartet' : 'warten'} auf Prüfung und Freischaltung. Filter „Zur Prüfung eingereicht“ wählen und „Prüfen“ öffnen.</p>` : ''}<div class="pt-row" style="margin-bottom:10px"><input id="pq" aria-label="Unternehmen suchen" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><select id="ps" aria-label="Status filtern" style="border:1px solid #CBD5E1;border-radius:6px;padding:8px"><option value="">Alle</option><option value="active">Aktiv</option><option value="locked">Gesperrt</option><option value="unverified">Ungeprüft</option><option value="pruefen">Zur Prüfung eingereicht</option></select><button class="btn btn-ghost" id="pCsv" type="button">CSV</button></div>
-    ${list.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Unternehmen</th><th>Art</th><th>Register / Steuer</th><th>Tarif</th><th>Status</th><th>Anfragen</th><th>Aktionen</th></tr></thead><tbody>
-    ${list.map((a) => `<tr data-row="${a.id}" data-s="${a.status}${a.verified_at ? '' : ' unverified'}${a.verification_status === 'eingereicht' ? ' pruefen' : ''}" data-q="${esc((a.company_name + ' ' + a.city + ' ' + a.customer_number + ' ' + a.email).toLowerCase())}">
-      <td><strong>${esc(a.company_name)}</strong> ${esc(a.legal_form)}<br><small>${esc(a.customer_number)} · ${esc(a.postal_code)} ${esc(a.city)} · ${esc(a.email)}</small></td>
-      <td>${esc(a.institution_type)}</td><td><small>${esc(a.register_number || '–')}<br>${esc(a.tax_id || '–')}</small></td>
-      <td>${a.tier ? TIER[a.tier] : '–'}${a.plan_source === 'manual' ? ' (manuell)' : ''}${a.plan_until ? `<br><small>bis ${dt(a.plan_until)}</small>` : ''}${a.dossier_bonus ? `<br><small>+${a.dossier_bonus} Mappen</small>` : ''}</td>
-      <td>${a.status === 'locked' ? `<span class="st bad">gesperrt</span><br><small>${esc(a.lock_reason)}</small>` : '<span class="st ok">aktiv</span>'}<br>${a.verified_at ? '<small>geprüft</small>' : a.verification_status === 'eingereicht' ? '<small class="st warn">zur Prüfung eingereicht</small>' : a.verification_status === 'abgelehnt' ? '<small class="st bad">abgelehnt – wartet auf Unterlagen</small>' : '<small class="st warn">noch keine Unterlagen</small>'}${a.has_whitelabel ? '<br><small>Whitelabel frei</small>' : ''}${a.allow_invoice_payment ? '<br><small>Kauf auf Rechnung</small>' : ''}</td>
-      <td>${a.leads}</td>
-      <td class="ad-actions">
-        ${a.verified_at ? `<button data-a="verify" data-on="false" data-id="${a.id}" type="button">Freischaltung zurücknehmen</button>` : `<button data-a="details" data-id="${a.id}" type="button"${a.verification_status === 'eingereicht' ? ' class="ad-primary"' : ''}>Prüfen</button>`}
-        ${a.status === 'locked' ? `<button data-a="unlock" data-id="${a.id}" type="button">Entsperren</button>` : `<button data-a="lock" data-id="${a.id}" type="button">Sperren</button>`}
-        <button data-a="plan" data-id="${a.id}" type="button">Tarif setzen</button>
-        <button data-a="whitelabel" data-on="${!a.has_whitelabel}" data-id="${a.id}" type="button">${a.has_whitelabel ? 'Whitelabel entziehen' : 'Whitelabel freischalten'}</button>
-        <button data-a="invoicePayment" data-on="${!a.allow_invoice_payment}" data-id="${a.id}" type="button">${a.allow_invoice_payment ? 'Rechnungskauf aus' : 'Rechnungskauf an'}</button>
-        <button data-a="credits" data-id="${a.id}" type="button">Kontingent +</button>
-        <button data-a="invoice" data-id="${a.id}" data-name="${esc(a.company_name)}" type="button">Rechnung</button>
-        <button data-a="details" data-id="${a.id}" type="button">Details</button>
-      </td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine Unternehmenskonten.</p>'}
+  v.innerHTML = `<div class="ad-mk-tiles"><button class="ad-mk" type="button" id="mkPriv"><b>+ Privatkonto anlegen</b><span>B2C · Privatkunde mit Startpasswort</span></button><button class="ad-mk b2b" type="button" id="mkNew"><b>+ Unternehmen anlegen</b><span>B2B · Firmenzugang zum Unternehmensportal</span></button></div>${pend ? `<p class="auth-message" style="margin-bottom:10px"><strong>${pend} Unternehmen</strong> ${pend === 1 ? 'wartet' : 'warten'} auf Prüfung und Freischaltung. Filter „Zur Prüfung eingereicht“ wählen und „Prüfen“ öffnen.</p>` : ''}<div class="pt-row" style="margin-bottom:10px"><input id="pq" aria-label="Unternehmen suchen" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-ghost" id="pCsv" type="button">CSV</button></div>
+    <div class="pc-bar"><div class="pc-chips" role="group" aria-label="Status">${[['', 'Alle'], ['pruefen', 'Wartet auf Prüfung'], ['active', 'Aktiv'], ['locked', 'Gesperrt']].map(([k, l]) => `<button type="button" data-pf="${k}" aria-pressed="${k === '' ? 'true' : 'false'}">${l} <b>${k === '' ? list.length : list.filter((a) => (a.status + (a.verified_at ? '' : ' unverified') + (a.verification_status === 'eingereicht' ? ' pruefen' : '')).split(' ').includes(k)).length}</b></button>`).join('')}</div>
+      <div class="pc-batch" id="pcBatch" hidden><span id="pcN">0 ausgewählt</span><button type="button" class="btn btn-outline btn-sm" id="pcAll">Alle sichtbaren</button><button type="button" class="btn btn-sm pc-del" id="pcDel">Ausgewählte löschen</button></div></div>
+    ${list.length ? `<div class="pc-list">${list.map((a) => { const st = a.status === 'locked' ? ['bad', 'Gesperrt'] : a.verification_status === 'eingereicht' ? ['warn', 'Wartet auf Prüfung'] : !a.verified_at ? ['warn', a.verification_status === 'abgelehnt' ? 'Abgelehnt' : 'Ungeprüft'] : ['ok', 'Aktiv']; return `<article class="pc" data-row="${a.id}" data-s="${a.status}${a.verified_at ? '' : ' unverified'}${a.verification_status === 'eingereicht' ? ' pruefen' : ''}" data-q="${esc((a.company_name + ' ' + a.city + ' ' + a.customer_number + ' ' + a.email + ' ' + (a.register_number || '') + ' ' + (a.tax_id || '')).toLowerCase())}">
+      <header class="pc-h"><label class="pc-sel"><input type="checkbox" data-sel="${a.id}" data-owner="${esc(a.owner_id || '')}" data-mail="${esc(a.email)}" aria-label="${esc(a.company_name)} auswählen"></label><div><strong>${esc(a.company_name)}</strong><small>${esc(a.customer_number)} · ${esc(a.postal_code)} ${esc(a.city)}</small></div><span class="st ${st[0]}">${st[1]}</span></header>
+      <dl class="pc-meta"><div><dt>Rechtsform</dt><dd>${esc(a.legal_form)} · ${esc(a.institution_type)}</dd></div><div><dt>Register</dt><dd>${esc(a.register_number || '–')}</dd></div><div><dt>Steuer / USt-IdNr.</dt><dd>${esc(a.tax_id || '–')}</dd></div><div><dt>Berater</dt><dd>${esc(a.advisor_name || '–')}<br><small>${esc(a.email)}</small></dd></div><div><dt>Tarif</dt><dd>${a.tier ? TIER[a.tier] : '–'}${a.plan_source === 'manual' ? ' (manuell)' : ''}${a.plan_until ? ` · bis ${dt(a.plan_until)}` : ''}${a.dossier_bonus ? ` · +${a.dossier_bonus} Mappen` : ''}</dd></div><div><dt>Anfragen</dt><dd>${a.leads}${a.has_whitelabel ? ' · White-Label' : ''}${a.allow_invoice_payment ? ' · Rechnungskauf' : ''}</dd></div></dl>
+      ${a.status === 'locked' && a.lock_reason ? `<p class="pc-lock">Gesperrt: ${esc(a.lock_reason)}</p>` : ''}
+      <footer class="pc-act">${a.verified_at ? `<button class="btn btn-outline btn-sm" data-a="details" data-id="${a.id}" type="button">Details</button>` : `<button class="btn btn-dark btn-sm" data-a="details" data-id="${a.id}" type="button">Prüfen &amp; freischalten</button>`}
+        <details class="pc-menu"><summary class="btn btn-outline btn-sm">Aktionen ▾</summary><div class="pc-menu-in">
+          ${a.verified_at ? `<button data-a="verify" data-on="false" data-id="${a.id}" type="button">Freischaltung zurücknehmen</button>` : ''}
+          <button data-a="plan" data-id="${a.id}" type="button">Tarif zuweisen</button>
+          <button data-a="whitelabel" data-on="${!a.has_whitelabel}" data-id="${a.id}" type="button">${a.has_whitelabel ? 'White-Label entziehen' : 'White-Label aktivieren'}</button>
+          <button data-a="invoicePayment" data-on="${!a.allow_invoice_payment}" data-id="${a.id}" type="button">${a.allow_invoice_payment ? 'Rechnungskauf aus' : 'Rechnungskauf an'}</button>
+          <button data-a="credits" data-id="${a.id}" type="button">Kontingent +</button>
+          <button data-a="invoice" data-id="${a.id}" data-name="${esc(a.company_name)}" type="button">Rechnung schreiben</button>
+          ${a.status === 'locked' ? `<button data-a="unlock" data-id="${a.id}" type="button">Entsperren</button>` : `<button data-a="lock" data-id="${a.id}" type="button" class="pc-danger">Sperren</button>`}
+        </div></details></footer></article>`; }).join('')}</div>` : '<p class="form-note">Noch keine Unternehmenskonten.</p>'}
     <div id="invForm"></div>`;
+  let pf = '';
   const filter = () => {
-    const q = $('#pq').value.toLowerCase(), s = $('#ps').value;
-    v.querySelectorAll('[data-row]').forEach((tr) => { tr.hidden = (q && !tr.dataset.q.includes(q)) || (s && !tr.dataset.s.split(' ').includes(s)); });
+    const q = $('#pq').value.toLowerCase();
+    v.querySelectorAll('[data-row]').forEach((tr) => { tr.hidden = (q && !tr.dataset.q.includes(q)) || (pf && !tr.dataset.s.split(' ').includes(pf)); });
   };
-  $('#pq').oninput = filter; $('#ps').onchange = filter;
+  $('#pq').oninput = filter;
+  if ($('#ps')) $('#ps').onchange = () => { pf = $('#ps').value; filter(); };
+  v.querySelectorAll('[data-pf]').forEach((b) => b.onclick = () => { pf = b.dataset.pf; v.querySelectorAll('[data-pf]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); filter(); });
+  // Mehrfachauswahl: QA- und Testkonten gesammelt löschen (Bestätigung durch Eingabe von LÖSCHEN).
+  const sel = () => [...v.querySelectorAll('[data-sel]:checked')];
+  const syncSel = () => { const n = sel().length; $('#pcBatch').hidden = !n; $('#pcN').textContent = `${n} ausgewählt`; v.querySelectorAll('.pc').forEach((c) => c.classList.toggle('on', Boolean(c.querySelector('[data-sel]:checked')))); };
+  v.querySelectorAll('[data-sel]').forEach((c) => c.onchange = syncSel);
+  $('#pcAll').onclick = () => { v.querySelectorAll('.pc:not([hidden]) [data-sel]').forEach((c) => { c.checked = true; }); syncSel(); };
+  $('#pcDel').onclick = async () => {
+    const xs = sel(); if (!xs.length) return;
+    const t = prompt(`${xs.length} Unternehmenskonto/-konten endgültig löschen (inkl. Inhaber-Zugang)? Laufende Abos müssen vorher gekündigt sein; Rechnungen bleiben archiviert.\n\nZur Bestätigung LÖSCHEN eingeben:`);
+    if (t !== 'LÖSCHEN') return;
+    let ok = 0; const err = [];
+    for (const c of xs) {
+      if (!c.dataset.owner) { err.push(`${c.dataset.mail}: kein Inhaber`); continue; }
+      const r = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ action: 'delete', id: c.dataset.owner, confirmEmail: c.dataset.mail }) });
+      if (r.ok) ok++; else err.push(`${c.dataset.mail}: ${r.data?.error || 'Fehler'}`);
+    }
+    msg(`${ok} gelöscht.${err.length ? ' Nicht gelöscht: ' + err.join(' · ') : ''}`, err.length > 0);
+    partner(v);
+  };
   $('#pCsv').onclick = () => {
     const cell = (v) => `"${String(v ?? '').replace(/"/g, '""').replace(/^[=+\-@]/, "'$&")}"`;
     const head = ['Kundennummer', 'Firma', 'Rechtsform', 'Art', 'Registernummer', 'Steuernummer', 'Ansprechpartner', 'E-Mail', 'PLZ', 'Ort', 'Tarif', 'Quelle', 'Status', 'Geprüft', 'Anfragen', 'Angelegt'];
@@ -799,12 +860,34 @@ async function anfragen(v) {
   };
 }
 
+// Protokoll lesbar: Zeit | Akteur | Ereignis | Ziel | Details – statt roher Schlüssel und Kennungen.
+const AUD = {
+  b2b_verify: 'Freischaltung geändert', b2b_approve: 'Unternehmen freigeschaltet', b2b_reject: 'Prüfung abgelehnt', b2b_lock: 'Unternehmen gesperrt', b2b_unlock: 'Unternehmen entsperrt',
+  b2b_whitelabel: 'White-Label geändert', b2b_invoicePayment: 'Rechnungskauf geändert', b2b_credits: 'Kontingent angepasst', b2b_plan: 'Tarif zugewiesen', b2b_request_proof_view: 'Nachweis angesehen',
+  user_create: 'Konto angelegt', user_delete: 'Konto gelöscht', user_ban: 'Konto gesperrt', user_unban: 'Konto entsperrt', user_lookup: 'Konto nachgeschlagen', users_list: 'Kontenliste geöffnet',
+  user_reset_password: 'Passwort-Reset gesendet', user_resend_confirmation: 'Bestätigung erneut gesendet',
+  invoice_create: 'Rechnung erstellt', invoice_paid: 'Rechnung als bezahlt markiert', invoice_remind: 'Zahlungserinnerung gesendet', invoice_storno: 'Rechnung storniert', invoice_verify: 'Rechnung geprüft (SHA-256)',
+  datev_export: 'DATEV-/ZIP-Export', panic_on: 'Not-Aus ausgelöst', panic_off: 'Not-Aus beendet', sec_block: 'Quelle gesperrt', sec_unblock: 'Quelle entsperrt', sec_ack: 'Vorfälle erledigt', security_overview: 'Sicherheitslage geöffnet',
+  support_view: 'Support-Einsicht', setup_mark: 'Einrichtung abgehakt', setup_livecheck: 'Live-Prüfung', testkauf_start: 'Testkauf gestartet', testkauf_selftest: 'Test-Transaktion',
+  testmail: 'Testmail gesendet', testmail_auth: 'Test Konto-E-Mail', audit_reveal: 'Klartext im Protokoll angezeigt',
+  campaign_create: 'Kampagne angelegt', newsletter_send: 'Newsletter versendet', newsletter_unsub: 'Newsletter abgemeldet', crm_create: 'Akquise-Kontakt angelegt', crm_delete: 'Akquise-Kontakt gelöscht', crm_import: 'Akquise-Import', crm_letters: 'Akquise-Briefe erstellt',
+};
+const AUD_CAT = (a) => /^panic|^sec_|security/.test(a) ? 'sec' : /^invoice|datev/.test(a) ? 'fin' : /^b2b_/.test(a) ? 'b2b' : /^user|users_list/.test(a) ? 'user' : 'sys';
 async function protokoll(v, reveal = false) {
-  const r = await api('/api/admin/misc' + (reveal ? '?reveal=1' : ''));
+  const [r, pr] = await Promise.all([api('/api/admin/misc' + (reveal ? '?reveal=1' : '')), api('/api/admin/b2b')]);
   if (!r.ok) { v.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
-  const head = `<p class="form-note">Personen-Kennungen sind pseudonymisiert (SHA-256 mit geheimem Salz). Einträge werden nach 90 Tagen automatisch gelöscht – ausgenommen Rechnungs- und Vertragsvorgänge (Aufbewahrungspflicht). ${r.data.pseudonymized ? '<button type="button" class="btn btn-outline btn-sm" id="pvReveal">Klartext anzeigen (wird protokolliert)</button>' : '<strong>Klartext angezeigt – dieser Abruf wurde protokolliert.</strong>'}</p>`;
-  v.innerHTML = head + (r.data.audit.length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Zeit</th><th>Wer</th><th>Aktion</th><th>Ziel</th><th>Details</th></tr></thead><tbody>${r.data.audit.map((a) => `<tr><td>${dtt(a.created_at)}</td><td>${esc(a.actor_email)}</td><td>${esc(a.action)}</td><td><small>${esc(a.target || '')}</small></td><td><small>${esc(JSON.stringify(a.meta))}</small></td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine Einträge.</p>');
+  const firms = new Map((pr.ok ? pr.data.accounts : []).map((a) => [a.id, a.company_name]));
+  const who = (x) => { const t = String(x || ''); if (!t || t === 'system') return ['Sys', 'System']; if (/@/.test(t)) return ['Admin', t]; return ['Admin', 'Admin ' + t.replace(/^ps:/, '').slice(0, 6)]; };
+  const target = (a) => { const t = String(a.target || ''); if (!t) return '–'; if (firms.has(t)) return `Unternehmen · ${esc(firms.get(t))}`; if (/@/.test(t)) return esc(t); if (/^[0-9a-f-]{36}$/.test(t)) return `${/^invoice/.test(a.action) ? 'Rechnung' : /^user/.test(a.action) ? 'Konto' : 'Datensatz'} · ${t.slice(0, 8)}`; return esc(t.replace(/^ps:/, 'Person ').slice(0, 24)); };
+  const det = (m) => { if (!m || typeof m !== 'object') return ''; return Object.entries(m).filter(([, x]) => x != null && x !== '' && !(Array.isArray(x) && !x.length)).slice(0, 6).map(([k, x]) => `<span class="aud-kv"><b>${esc(k)}</b> ${esc(typeof x === 'object' ? JSON.stringify(x) : String(x)).slice(0, 80)}</span>`).join(''); };
+  const rows = r.data.audit;
+  const cats = [['', 'Alle'], ['sec', 'Sicherheit'], ['b2b', 'Unternehmen'], ['user', 'Konten'], ['fin', 'Finanzen'], ['sys', 'System']];
+  v.innerHTML = `<section class="pt-card"><div class="aud-h"><h2>Audit-Protokoll</h2>${r.data.pseudonymized ? '<button type="button" class="btn btn-outline btn-sm" id="pvReveal">Klartext anzeigen (wird protokolliert)</button>' : '<strong class="st warn">Klartext – dieser Abruf wurde protokolliert</strong>'}</div>
+    <p class="form-note">Personen-Kennungen sind pseudonymisiert. Einträge werden nach 90 Tagen gelöscht – außer Rechnungs- und Vertragsvorgänge (Aufbewahrungspflicht).</p>
+    <div class="pc-chips" role="group" aria-label="Kategorie">${cats.map(([k, l]) => `<button type="button" data-ac="${k}" aria-pressed="${k === '' ? 'true' : 'false'}">${l} <b>${k ? rows.filter((a) => AUD_CAT(a.action) === k).length : rows.length}</b></button>`).join('')}</div>
+    ${rows.length ? `<ol class="aud-list">${rows.map((a) => { const [kind, name] = who(a.actor_email); return `<li data-cat="${AUD_CAT(a.action)}" class="aud-${AUD_CAT(a.action)}"><time>${dtt(a.created_at)}</time><div class="aud-main"><strong>${esc(AUD[a.action] || a.action.replace(/_/g, ' '))}</strong><span class="aud-who"><i>${kind}</i>${esc(name)}</span><span class="aud-tgt">${target(a)}</span>${det(a.meta) ? `<div class="aud-det">${det(a.meta)}</div>` : ''}</div></li>`; }).join('')}</ol>` : '<p class="form-note">Noch keine Einträge.</p>'}</section>`;
   $('#pvReveal')?.addEventListener('click', () => protokoll(v, true));
+  v.querySelectorAll('[data-ac]').forEach((b) => b.onclick = () => { v.querySelectorAll('[data-ac]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); v.querySelectorAll('.aud-list li').forEach((li) => { li.hidden = Boolean(b.dataset.ac) && li.dataset.cat !== b.dataset.ac; }); });
 }
 
 async function kennzahlen(v) {
@@ -818,6 +901,35 @@ async function kennzahlen(v) {
     <p class="form-note">Einstellungen: Bezahlung ${on(j.config.billing)} · E-Mail-Versand ${on(j.config.mail)} · Täglicher Lauf ${on(j.config.cron)} · Aktive Co-Branding-Partner (alt): ${n(j.partners)}</p>`;
 }
 
+
+// ---------- Einrichtung: Live-Prüfung (Stripe, Webhook-Selbsttest, Resend, Datenbank) ----------
+const LIVE_ST = { ok: ['ok', 'OK'], warn: ['warn', 'Hinweis'], fail: ['bad', 'Fehler'] };
+function mountLive(v) {
+  if (!v.isConnected || v.querySelector('#liveBox')) return;
+  v.insertAdjacentHTML('afterbegin', `<section class="pt-card live-box" id="liveBox"><div class="live-h"><div><h2>Live-Prüfung</h2><p class="form-note">Fragt Stripe, den Webhook (mit signiertem Test-Ereignis), Resend und die Datenbank direkt ab.</p></div><button type="button" class="btn btn-dark" id="liveGo">Jetzt prüfen</button></div><ul class="live-list" id="liveList"></ul></section>`);
+  $('#liveGo').onclick = async (e) => {
+    const b = e.currentTarget; b.disabled = true; b.textContent = 'Prüfe …';
+    $('#liveList').innerHTML = '<li class="form-note">Läuft (bis zu 15 Sekunden) …</li>';
+    const r = await api('/api/admin/setup?live=1');
+    b.disabled = false; b.textContent = 'Erneut prüfen';
+    if (!r.ok) { $('#liveList').innerHTML = `<li class="form-note">${esc(r.data?.error || 'Fehler')}</li>`; return; }
+    $('#liveList').innerHTML = r.data.checks.map((c) => `<li><span class="st ${LIVE_ST[c.state][0]}">${LIVE_ST[c.state][1]}</span><div><strong>${esc(c.label)}</strong><small>${esc(c.info)}</small></div></li>`).join('');
+  };
+}
+
+// ---------- Testkauf: 1-Klick-Test-Transaktion über die Webhook-Pipeline ----------
+function mountSelftest(v) {
+  if (!v.isConnected || v.querySelector('#stBox')) return;
+  v.insertAdjacentHTML('afterbegin', `<section class="pt-card live-box" id="stBox"><div class="live-h"><div><h2>Test-Transaktion</h2><p class="form-note">Erzeugt ein fiktives, als Test markiertes <code>checkout.session.completed</code>, signiert es mit Ihrem Webhook-Geheimnis und schickt es durch die echte Verarbeitung. Es wird nichts freigeschaltet und kein Umsatz gezählt.</p></div><button type="button" class="btn btn-pay" id="stGo">Test-Transaktion auslösen</button></div><p class="st-res" id="stRes" role="status"></p>
+    <p class="form-note">Tarif-Freischaltungen von Privatkunden liest ImmoAdv direkt aus Stripe; für einen vollständigen Durchlauf bis zur Rechnung nutzen Sie unten den Testkauf mit Testkarte.</p></section>`);
+  $('#stGo').onclick = async (e) => {
+    const b = e.currentTarget; b.disabled = true;
+    const r = await api('/api/admin/testkauf', { method: 'POST', body: JSON.stringify({ selftest: true }) });
+    b.disabled = false;
+    $('#stRes').className = 'st-res ' + (r.ok ? 'ok' : 'bad');
+    $('#stRes').textContent = (r.ok ? '✓ Erfolg: ' : '✗ Fehlgeschlagen: ') + (r.data?.info || r.data?.error || 'Fehler');
+  };
+}
 
 (async () => {
   if (!(await gate())) return;

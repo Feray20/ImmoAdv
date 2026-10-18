@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { adminAudit } from '@/lib/b2b/core';
 import { fromAddress } from '@/lib/notify/mail';
+import { liveChecks } from '@/lib/admin/livecheck';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -222,6 +223,12 @@ export async function GET(req: Request) {
   const auth = await requireAdmin(req);
   if (auth instanceof NextResponse) return auth;
   if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
+  // Live-Prüfung: Stripe, Webhook (inkl. Selbsttest), Resend, Datenbank – direkt abgefragt.
+  if (new URL(req.url).searchParams.get('live') === '1') {
+    const checks = await liveChecks(new URL(req.url).origin);
+    await adminAudit(auth.user.email, 'setup_livecheck', null, { fail: checks.filter((c) => c.state === 'fail').map((c) => c.id) });
+    return j({ checks, at: new Date().toISOString() });
+  }
   const { data } = await supabaseAdmin().from('immo_settings').select('value').eq('key', KEY).maybeSingle();
   const manual = (data?.value as Record<string, string>) || {};
   const list = await items(manual);

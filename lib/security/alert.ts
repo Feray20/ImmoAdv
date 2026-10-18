@@ -1,6 +1,7 @@
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { adminList } from '@/lib/security/admin';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
+import { pushAlert, pushConfigured } from '@/lib/security/push';
 
 // Sicherheitsalarm per E-Mail an alle Administratoren. Gedrosselt: je Art höchstens eine E-Mail pro 15 Minuten.
 // Schwere Ereignisse (Admin-Zugriffsversuche, Scanner, gesperrte Quellen) melden sofort; Bots und Drosselungen erst als Welle.
@@ -17,7 +18,7 @@ const RULES: Record<string, Rule> = {
   honeypot: { level: 'mittel', title: 'Bot-Welle auf Formularen', minCount: 15, windowMin: 10, action: 'Formular-Abwehr greift (Anfragen verworfen). Bei Dauerbeschuss Quelle sperren.' },
   too_fast: { level: 'mittel', title: 'Bot-Welle auf Formularen (zu schnelle Absendungen)', minCount: 15, windowMin: 10, action: 'Formular-Abwehr greift. Bei Dauerbeschuss Quelle sperren.' },
   content_flagged: { level: 'mittel', title: 'Viele verdächtige Formular-Inhalte (Spam)', minCount: 10, windowMin: 30, action: 'Anfragen im Web-Admin prüfen, Spam löschen.' },
-  login_flood: { level: 'hoch', title: 'Viele fehlgeschlagene Anmeldungen', minCount: 1, windowMin: 15, action: 'Möglicher Passwort-Rateangriff. Quelle sperren; betroffene Konten informieren.' },
+  login_flood: { level: 'hoch', title: 'Viele fehlgeschlagene Anmeldungen', minCount: 10, windowMin: 15, action: 'Möglicher Passwort-Rateangriff. Quelle sperren; betroffene Konten informieren.' },
   upload_rejected: { level: 'mittel', title: 'Abgewiesene Datei-Uploads (falsches Format/Schadcode-Verdacht)', minCount: 5, windowMin: 30, action: 'Uploads wurden abgewiesen. Bei Häufung Quelle sperren.' },
 };
 const THROTTLE_MS = 15 * 60_000;
@@ -25,7 +26,7 @@ const lastLocal = new Map<string, number>();
 
 export async function maybeAlert(kind: string, area: string): Promise<void> {
   const rule = RULES[kind];
-  if (!rule || !adminConfigured() || !mailConfigured()) return;
+  if (!rule || !adminConfigured() || (!mailConfigured() && !pushConfigured())) return;
   const now = Date.now();
   if (now - (lastLocal.get(kind) || 0) < 60_000) return; // pro Instanz entprellen
   lastLocal.set(kind, now);
@@ -42,6 +43,8 @@ export async function maybeAlert(kind: string, area: string): Promise<void> {
   const sources = [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => `${k === '–' ? 'unbekannt' : 'Quelle ' + k.slice(0, 8)}: ${n}×`).join(', ');
   const areas = [...new Set((top ?? []).map((r) => r.detail || r.bucket).filter(Boolean))].slice(0, 5).join(', ');
   const text = `${rule.level === 'hoch' ? 'Sicherheitsalarm' : 'Sicherheitshinweis'}: ${rule.title}\n\n${count} Ereignis(se) in den letzten ${rule.windowMin} Minuten.\nBereich: ${areas || area}\nHäufigste Quellen: ${sources || '–'}\n\nWas zu tun ist: ${rule.action}\n\nIm Web-Admin unter „Sicherheit“ sehen Sie alle Vorfälle und können Quellen mit einem Klick sperren oder den Not-Aus auslösen. Es werden keine IP-Adressen gespeichert, nur gekürzte Kennungen.`;
+  await pushAlert(`${rule.level === 'hoch' ? '⚠ ' : ''}ImmoAdv: ${rule.title}\n${count} Ereignis(se) in ${rule.windowMin} Min. · ${areas || area}\nQuellen: ${sources || '–'}\nhttps://immoadv.de/intern/web-admin#sicherheit`).catch(() => null);
+  if (!mailConfigured()) return;
   for (const to of adminList()) {
     await sendMail(to, `${rule.level === 'hoch' ? '⚠ Sicherheitsalarm' : 'Sicherheitshinweis'}: ${rule.title}`, text, [], { title: rule.title, button: { label: 'Im Web-Admin ansehen', url: 'https://immoadv.de/intern/web-admin#sicherheit' }, note: 'Diese E-Mail wird automatisch gesendet, höchstens alle 15 Minuten je Art.' });
   }

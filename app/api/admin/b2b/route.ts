@@ -40,7 +40,7 @@ export async function GET(req: Request) {
   }
   const { data, error } = await db
     .from('immo_b2b_accounts')
-    .select('id, customer_number, company_name, legal_form, institution_type, register_number, tax_id, advisor_name, email, postal_code, city, plan_tier, plan_source, plan_until, billing_interval, status, lock_reason, verified_at, verification_status, verification_submitted_at, dossier_bonus, has_whitelabel, allow_invoice_payment, invoice_limit_cents, payment_terms_days, referral, slug, created_at')
+    .select('id, owner_id, customer_number, company_name, legal_form, institution_type, register_number, tax_id, advisor_name, email, postal_code, city, plan_tier, plan_source, plan_until, billing_interval, status, lock_reason, verified_at, verification_status, verification_submitted_at, dossier_bonus, has_whitelabel, allow_invoice_payment, invoice_limit_cents, payment_terms_days, referral, slug, created_at')
     .order('created_at', { ascending: false })
     .limit(1000);
   if (error) return j({ error: error.message }, 500);

@@ -3,10 +3,12 @@ import { allowRequest } from '@/lib/security/rate-limit';
 import { userFromRequest } from '@/lib/billing/auth';
 import { checkoutParams } from '@/lib/billing/checkout-params';
 import { billingEnabled, ensureCustomer, ensurePrice, ensureTaxRate, isPlan, stripe } from '@/lib/billing/stripe';
+import { intakeClosed } from '@/lib/security/panic';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  if (await intakeClosed()) return NextResponse.json({ error: 'Vorübergehend nicht möglich (Wartung). Bitte später erneut versuchen.' }, { status: 503 });
   if (!billingEnabled()) {
     return NextResponse.json({ error: 'Kostenpflichtige Angebote sind noch nicht buchbar.' }, { status: 503 });
   }

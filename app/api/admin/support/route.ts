@@ -3,6 +3,8 @@ import { requireAdmin } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { adminAudit, effectiveTier, type B2BAccount } from '@/lib/b2b/core';
 import { setPanic } from '@/lib/security/panic';
+import { adminList } from '@/lib/security/admin';
+import { pushAlert } from '@/lib/security/push';
 import { logSecurity } from '@/lib/security/seclog';
 
 export const runtime = 'nodejs';
@@ -43,15 +45,17 @@ export async function GET(req: Request) {
   return j({ account: { company: a.company_name, tier: effectiveTier(a), slug: a.slug, widgetActive: a.widget_active, allowedDomains: a.allowed_domains, until: a.support_access_until }, leads: leads ?? [] });
 }
 
-// Not-Aus ein/aus.
+// Not-Aus ein/aus – Stufe 1 (nur lesen, keine Neuanmeldungen/Käufe/Anfragen) oder Stufe 2 (alle außer Admins abgemeldet).
 export async function POST(req: Request) {
   const auth = await requireAdmin(req);
   if (auth instanceof NextResponse) return auth;
-  const b = (await req.json().catch(() => null)) as { panic?: unknown; reason?: unknown } | null;
+  const b = (await req.json().catch(() => null)) as { panic?: unknown; reason?: unknown; level?: unknown } | null;
   if (typeof b?.panic !== 'boolean') return j({ error: 'Ungültig.' }, 400);
   const reason = typeof b.reason === 'string' ? b.reason.slice(0, 300) : '';
-  await setPanic(b.panic, auth.user.email, reason);
-  logSecurity('panic', `panic:${b.panic ? 'on' : 'off'}`);
-  await adminAudit(auth.user.email, b.panic ? 'panic_on' : 'panic_off', null, { reason });
-  return j({ ok: true });
+  const level = b.level === 1 ? 1 : 2;
+  const v = await setPanic(b.panic, auth.user.email, reason, level, adminList());
+  logSecurity('panic', `panic:${b.panic ? 'on' + level : 'off'}`);
+  await adminAudit(auth.user.email, b.panic ? 'panic_on' : 'panic_off', null, { reason, stufe: b.panic ? level : undefined, beendeteSitzungen: v.revoked ?? undefined });
+  await pushAlert(b.panic ? `⚠ ImmoAdv Not-Aus Stufe ${level} eingeschaltet${reason ? ` – ${reason}` : ''}.${level === 2 ? (v.revoked != null ? ` ${v.revoked} Sitzungen beendet.` : ' Sitzungen konnten nicht beendet werden (Datenbankfunktion fehlt).') : ''}` : 'ImmoAdv Not-Aus ausgeschaltet – normaler Betrieb.').catch(() => null);
+  return j({ ok: true, level: b.panic ? level : 0, revoked: v.revoked ?? null });
 }

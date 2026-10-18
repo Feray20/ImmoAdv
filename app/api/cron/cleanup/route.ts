@@ -6,6 +6,7 @@ import { runReminders } from '@/lib/reminders/run';
 import { effectiveTier, TIER_LIMITS, type B2BAccount } from '@/lib/b2b/core';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
 import { cleanupExports } from '@/lib/storage/exports';
+import { panicLevel, panicState } from '@/lib/security/panic';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   if (!adminConfigured()) return NextResponse.json({ error: 'not_configured' }, { status: 503 });
+  // Not-Aus Stufe 2: täglicher Lauf pausiert (keine E-Mails, keine Änderungen).
+  if (panicLevel(await panicState().catch(() => ({ active: false }))) === 2) return NextResponse.json({ skipped: 'panic' });
   const cleanup = await cleanupAllIncoming().catch((e) => ({ error: String(e instanceof Error ? e.message : e) }));
   const origin = process.env.PUBLIC_SITE_URL || 'https://immoadv.de';
   const reminders = await runReminders(origin).catch((e) => ({ error: String(e instanceof Error ? e.message : e) }));

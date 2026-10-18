@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { panicState } from '@/lib/security/panic';
+import { panicLevel, panicState } from '@/lib/security/panic';
 
 // Prüft das Supabase-Zugriffstoken serverseitig und liefert den angemeldeten Nutzer.
 export type AuthUser = { id: string; email: string };
@@ -23,10 +23,11 @@ export async function userFromRequest(req: Request, opts: { allowAal1?: boolean 
   const user = await verifiedUser(req, Boolean(opts.allowAal1));
   if (!user) return null;
   // Not-Aus: nur Administratoren bleiben angemeldet.
-  const panic = await panicState().catch(() => ({ active: false }));
-  if (panic.active) {
+  // Stufe 1: Nicht-Administratoren nur lesend; Stufe 2: Nicht-Administratoren abgewiesen.
+  const lvl = panicLevel(await panicState().catch(() => ({ active: false })));
+  if (lvl) {
     const admins = (process.env.ADMIN_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-    if (!admins.includes(user.email)) return null;
+    if (!admins.includes(user.email) && (lvl === 2 || !['GET', 'HEAD'].includes(req.method.toUpperCase()))) return null;
   }
   return user;
 }

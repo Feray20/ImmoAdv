@@ -1,8 +1,14 @@
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 
-// Not-Aus: Solange aktiv, weisen alle angemeldeten Schnittstellen Nicht-Administratoren ab (Sitzungen wirken wie beendet),
-// Partnerseiten, Widget und Anfragen sind abgeschaltet. Gespeichert in immo_settings, 15 s zwischengespeichert.
-export type Panic = { active: boolean; since?: string; by?: string; reason?: string };
+// Not-Aus in zwei Stufen. Gespeichert in immo_settings, 15 s zwischengespeichert.
+// Stufe 1 (Soft Lock): Neuanmeldungen, Käufe, Anfragen, Partnerseiten, Widget und B2B-Schnittstellen aus;
+//   angemeldete Nutzer können nur noch lesen (keine Änderungen), Administratoren arbeiten normal.
+// Stufe 2 (Hard Lock): zusätzlich weisen alle Schnittstellen Nicht-Administratoren ab, ihre Sitzungen werden beendet
+//   (Datenbankfunktion immo_revoke_sessions, siehe docs/sql) und der tägliche Lauf pausiert.
+// Ältere Einträge ohne Stufe gelten als Stufe 2 (bisheriges Verhalten).
+export type PanicLevel = 0 | 1 | 2;
+export type Panic = { active: boolean; level?: 1 | 2; since?: string; by?: string; reason?: string; revoked?: number | null };
+export const panicLevel = (p: Panic | null | undefined): PanicLevel => (p?.active ? (p.level === 1 ? 1 : 2) : 0);
 
 let cache: { v: Panic; until: number } | null = null;
 
@@ -18,10 +24,17 @@ export async function panicState(): Promise<Panic> {
   return v;
 }
 
-export async function setPanic(active: boolean, by: string, reason = ''): Promise<void> {
-  const value: Panic = active ? { active: true, since: new Date().toISOString(), by, reason } : { active: false };
+export async function setPanic(active: boolean, by: string, reason = '', level: 1 | 2 = 2, keepEmails: string[] = []): Promise<Panic> {
+  let revoked: number | null = null;
+  // Stufe 2: alle Sitzungen außer denen der Administratoren beenden (falls die Datenbankfunktion eingerichtet ist).
+  if (active && level === 2) {
+    const r = await supabaseAdmin().rpc('immo_revoke_sessions', { keep_emails: keepEmails }).then((x) => x, () => null);
+    revoked = r && !r.error && typeof r.data === 'number' ? r.data : null;
+  }
+  const value: Panic = active ? { active: true, level, since: new Date().toISOString(), by, reason, revoked } : { active: false };
   await supabaseAdmin().from('immo_settings').upsert({ key: 'panic', value, updated_at: new Date().toISOString(), updated_by: by });
   cache = { v: value, until: Date.now() + 15_000 };
+  return value;
 }
 
 // IP-Freigabeliste für den Admin-Bereich: auf Wunsch des Betreibers abgeschaltet (Zugriff unterwegs per Handy
@@ -29,4 +42,9 @@ export async function setPanic(active: boolean, by: string, reason = ''): Promis
 // Eine gesetzte Variable ADMIN_IP_ALLOWLIST wird bewusst ignoriert.
 export function ipAllowed(_req: Request): boolean {
   return true;
+}
+
+// Not-Aus (jede Stufe): keine Neuanmeldungen, Käufe und Anfragen. Antwort für die betroffenen Schnittstellen.
+export async function intakeClosed(): Promise<boolean> {
+  return panicLevel(await panicState().catch(() => ({ active: false }))) > 0;
 }

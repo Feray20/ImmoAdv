@@ -21,6 +21,7 @@ export function logSecurity(kind: SecKind, key: string, extra: { ipHash?: string
   const work = async () => {
     await supabaseAdmin().from('immo_security_log').insert({ kind, bucket: bucket.slice(0, 40), subject, ip_hash: ip, detail: extra.detail ? extra.detail.slice(0, 160) : null });
     await (await import('@/lib/security/alert')).maybeAlert(kind, bucket);
+    await (await import('@/lib/security/autoblock')).maybeAutoBlock(kind, ip);
   };
   // Nach der Antwort weiterarbeiten (Serverless), außerhalb einer Anfrage direkt.
   try { after(() => work().catch(() => null)); } catch { work().catch(() => null); }

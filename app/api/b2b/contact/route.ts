@@ -8,6 +8,7 @@ import { json } from '@/lib/b2b/http';
 import { adminList } from '@/lib/security/admin';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
 import { guardSubmission } from '@/lib/security/antispam';
+import { intakeClosed } from '@/lib/security/panic';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,7 @@ const Schema = z.object({
 
 // Anfrage für ein Unternehmenskonto (Zugang vergibt ImmoAdv im Web-Admin), Demo, Enterprise-Angebot oder Kooperation.
 export async function POST(req: Request) {
+  if (await intakeClosed()) return json({ error: 'Vorübergehend nicht möglich (Wartung). Bitte später erneut versuchen.' }, 503);
   if (!adminConfigured()) return json({ error: 'Nicht verfügbar.' }, 503);
   const ip = anonymizedIpHash(req) ?? 'x';
   if (!allowRequest(`b2b-contact:${ip}`, 3, 10 * 60_000)) return json({ error: 'Zu viele Anfragen. Bitte später erneut versuchen.' }, 429);

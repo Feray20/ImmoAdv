@@ -1,5 +1,18 @@
 // Zwei-Faktor-Schutz (Supabase MFA): Authenticator-App (TOTP, kostenlos) oder SMS-Code an die Handynummer.
 // Gemeinsam genutzt von Anmeldung, Konto und Admin-Zentrale.
+
+// Zwei-Faktor-Code: Autofill aus der Tastatur (iOS/Android), Eingabe säubern und mit 6 Ziffern automatisch absenden.
+if (!window.__iaOtp) {
+  window.__iaOtp = true;
+  document.addEventListener('input', (e) => {
+    const el = e.target;
+    if (!(el instanceof HTMLInputElement) || el.autocomplete !== 'one-time-code') return;
+    const d = el.value.replace(/\D/g, '').slice(0, 6);
+    if (d !== el.value) el.value = d;
+    if (d.length === 6 && el.form && !el.form.dataset.otpSent) { el.form.dataset.otpSent = '1'; setTimeout(() => { delete el.form.dataset.otpSent; }, 4000); el.form.requestSubmit(); }
+  });
+}
+
 const AREA = location.pathname.startsWith('/intern') ? 'admin' : location.pathname.startsWith('/b2b-portal') ? 'b2b' : 'app';
 const KEY = AREA === 'app' ? 'immoadv-auth-session-v1' : `immoadv-${AREA}-session-v1`;
 const ACT = AREA === 'app' ? 'ia-last-active' : `ia-last-active-${AREA}`;
@@ -56,7 +69,7 @@ export async function challengeUI(box, session, onDone) {
     box.innerHTML = `<div class="mfa-box"><h2>Bestätigung in zwei Schritten</h2>
       <p class="form-note">${f.factor_type === 'phone' ? `Wir senden einen 6-stelligen Code per SMS an ${esc(maskPhone(f.phone))}.` : 'Bitte den aktuellen 6-stelligen Code für ImmoAdv aus Google Authenticator (bzw. Ihrer Authenticator-App) eingeben. Der Code wechselt alle 30 Sekunden.'}</p>
       ${f.factor_type === 'phone' ? '<button type="button" class="btn btn-outline mfa-send" id="mfaSend">SMS-Code senden</button>' : ''}
-      <form id="mfaForm" class="mfa-form"><input id="mfaCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required aria-label="Code" placeholder="123456"><button class="btn btn-dark" type="submit">Bestätigen</button></form>
+      <form id="mfaForm" class="mfa-form"><input id="mfaCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus enterkeyhint="done" aria-label="Code" placeholder="123456"><button class="btn btn-dark" type="submit">Bestätigen</button></form>
       ${other ? `<button type="button" class="link-btn" id="mfaSwitch">${other.factor_type === 'phone' ? 'Stattdessen Code per SMS' : 'Stattdessen Authenticator-App'}</button>` : ''}
       <p class="form-note" id="mfaMsg" role="status"></p></div>`;
     let challengeId = null;
@@ -100,7 +113,7 @@ export async function manageUI(box) {
   const flow = box.querySelector('#mfaFlow');
   const msg = (t, bad) => { const m = box.querySelector('#mfaMsg2'); m.textContent = t; m.className = 'form-note ' + (bad ? 'st bad' : 'st ok'); };
   const verifyStep = (factorId, intro, preChallenge = null) => {
-    flow.insertAdjacentHTML('beforeend', `<form class="mfa-form" id="mfaEnrollForm"><input id="mfaEnrollCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required placeholder="123456" aria-label="Code"><button class="btn btn-dark" type="submit">Bestätigen</button></form>`);
+    flow.insertAdjacentHTML('beforeend', `<form class="mfa-form" id="mfaEnrollForm"><input id="mfaEnrollCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus enterkeyhint="done" placeholder="123456" aria-label="Code"><button class="btn btn-dark" type="submit">Bestätigen</button></form>`);
     if (intro) msg(intro);
     box.querySelector('#mfaEnrollForm').onsubmit = async (e) => {
       e.preventDefault();

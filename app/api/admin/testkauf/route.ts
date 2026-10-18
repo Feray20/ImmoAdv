@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/security/admin';
 import { PLANS, ensurePrice, ensureTaxRate, isPlan, testKeyMode, testStripe } from '@/lib/billing/stripe';
 import { checkoutParams } from '@/lib/billing/checkout-params';
 import { adminAudit } from '@/lib/b2b/core';
+import { webhookSelfTest } from '@/lib/admin/livecheck';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -78,6 +79,13 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const auth = await requireAdmin(req);
   if (auth instanceof NextResponse) return auth;
+  // 1-Klick-Test: fiktives checkout.session.completed signiert an den eigenen Webhook – prüft Signatur und Verarbeitung.
+  const raw = await req.clone().json().catch(() => null) as { selftest?: unknown } | null;
+  if (raw?.selftest === true) {
+    const c = await webhookSelfTest(new URL(req.url).origin);
+    await adminAudit(auth.user.email, 'testkauf_selftest', null, { ok: c.state === 'ok' });
+    return j({ ok: c.state === 'ok', info: c.info }, c.state === 'ok' ? 200 : 502);
+  }
   if (!testKeyMode()) return j({ error: 'Kein Stripe-Testschlüssel hinterlegt (STRIPE_TEST_SECRET_KEY).' }, 503);
   const p = z.object({ plan: z.string() }).safeParse(await req.json().catch(() => null));
   if (!p.success || !isPlan(p.data.plan)) return j({ error: 'Unbekanntes Angebot.' }, 400);

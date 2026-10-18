@@ -125,6 +125,8 @@ export function loginForm(root, opts) {
         }
         const r = await supa('/auth/v1/token?grant_type=password', { method: 'POST', body: JSON.stringify({ email, password }) });
         const d = await r.json().catch(() => ({}));
+        // Fehlversuch melden (nur anonymisierte IP; ab 10 Versuchen in 15 Min. wird die Quelle gesperrt).
+        if (r.status === 400 || r.status === 401) fetch('/api/sec/login-fail?area=' + (AREA === 'b2b' ? 'b2b' : AREA === 'admin' ? 'admin' : 'app'), { method: 'POST', keepalive: true }).catch(() => {});
         if (!r.ok) throw Error(authError(d));
         if (AREA === 'b2b') try { window.iaTrack?.('b2b_login'); } catch { /* ignore */ }
         if (opts.check) { const why = await opts.check(d); if (why) { show(why); return; } }

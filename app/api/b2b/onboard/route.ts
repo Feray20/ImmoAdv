@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { AVV_VERSION, adminAudit } from '@/lib/b2b/core';
 import { avvEvidence } from '@/lib/b2b/avv-evidence';
 import { json, requireMember } from '@/lib/b2b/http';
+import { intakeClosed } from '@/lib/security/panic';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,7 @@ export const dynamic = 'force-dynamic';
 const Body = z.object({ passwordChanged: z.literal(true), unternehmer: z.boolean().optional(), avv: z.boolean().optional(), agb: z.boolean().optional() });
 
 export async function POST(req: Request) {
+  if (await intakeClosed()) return json({ error: 'Vorübergehend nicht möglich (Wartung). Bitte später erneut versuchen.' }, 503);
   const ctx = await requireMember(req, { allowLocked: true, onboarding: true, bucket: 'b2b-onboard', limit: 10 });
   if (ctx instanceof Response) return ctx;
   const p = Body.safeParse(await req.json().catch(() => null));

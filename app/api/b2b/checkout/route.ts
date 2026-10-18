@@ -4,6 +4,7 @@ import { B2B_PLANS, VERIFY_MSG } from '@/lib/b2b/core';
 import { json, requireMember } from '@/lib/b2b/http';
 import { ensureB2BCustomer, ensureB2BPaymentConfig, ensureB2BPrice, ensureTaxRateExclusive } from '@/lib/b2b/stripe-b2b';
 import { NO_MANAGED_PAYMENTS } from '@/lib/billing/checkout-params';
+import { intakeClosed } from '@/lib/security/panic';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,7 @@ const Body = z.object({ plan: z.string(), terms: z.literal(true) });
 
 // Tarif für das Unternehmenskonto buchen (Kontoinhaber). Netto zzgl. USt, kein Widerrufsrecht (B2B).
 export async function POST(req: Request) {
+  if (await intakeClosed()) return json({ error: 'Vorübergehend nicht möglich (Wartung). Bitte später erneut versuchen.' }, 503);
   if (!billingEnabled()) return json({ error: 'Tarife sind noch nicht buchbar. Für einen Testzugang bitte an support@immoadv.de schreiben.' }, 503);
   const ctx = await requireMember(req, { owner: true, bucket: 'b2b-checkout', limit: 10 });
   if (ctx instanceof Response) return ctx;
