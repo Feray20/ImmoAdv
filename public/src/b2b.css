@@ -935,3 +935,9 @@ body[data-ad-seg=system] .ad-segctl button[aria-pressed=true]{background:#334155
 .mod-opt input:checked+span{background:#fff;color:#0F2C59;box-shadow:0 1px 3px rgba(15,23,42,.14)}
 .mod-opt input[value=off]:checked+span{color:#991B1B}.mod-opt input[value=on]:checked+span{color:#166534}
 .mod-opt input:focus-visible+span{outline:2px solid #0284C7;outline-offset:1px}
+/* Web-Admin: nur eine Kopfzeile – die Website-Kopfzeile verschwindet, sobald der Admin-Kopf steht */
+body.intern:has(.ad-head)>header.site-header{display:none}
+body.intern:has(.ad-head) main{padding-top:0}
+.ad-brand{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:800;font-size:17px;color:#0F2C59}
+.ad-brand span span{color:#0284C7}
+@media (max-width:520px){.ad-brand span{display:none}}
