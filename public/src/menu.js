@@ -82,15 +82,10 @@ if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/aut
     // Kein Link in die Privatkunden-Anwendung auf den Unternehmensseiten.
     document.querySelectorAll('.nav-actions a[href="/app/dashboard"], .mobile-nav a[href="/app/dashboard"]').forEach((a) => { a.hidden = true; });
   };
-  // Privatkunden-Seiten: im Handy-Menü zusätzlich ein Login für Unternehmen.
-  const addB2bMenu = () => {
-    const m = document.querySelector('.mobile-nav');
-    if (!m || m.querySelector('a.b2b-login')) return;
-    const a = document.createElement('a'); a.href = '/b2b-portal'; a.className = 'b2b-login'; a.textContent = 'Login für Unternehmen'; m.append(a);
-  };
   const relabel = () => {
     if (B2B_PAGE) { b2bLogin(); return; }
-    addB2bMenu();
+    // Login für Unternehmen nur auf den Unternehmensseiten (/b2b), nicht im Privatkunden-Menü.
+    document.querySelectorAll('.mobile-nav a.b2b-login').forEach((a) => a.remove());
     document.querySelectorAll('.nav-actions a[href="/auth/login"], .mobile-nav a[href="/auth/login"], a.nav-acc').forEach((a) => {
       const acc = state.user && !state.paid;
       if (!a.dataset.orig) a.dataset.orig = a.textContent;

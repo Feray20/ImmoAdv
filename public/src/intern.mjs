@@ -117,7 +117,7 @@ function paintSeg() {
 
 function frame() {
   const ic = (d) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-  root.innerHTML = `<header class="ad-head ad-sticky"><a class="ad-brand" href="#uebersicht" aria-label="Web-Admin – Übersicht"><img src="/logo-icon.svg" alt="" width="28" height="24"></a><div class="ad-title"><small class="ad-kicker" id="adKicker">Web-Admin</small><h1 id="adTitle">Admin</h1></div>
+  root.innerHTML = `<header class="ad-head ad-sticky"><a class="ad-brand" href="#uebersicht" aria-label="ImmoAdv Web-Admin – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="ad-title"><small class="ad-kicker" id="adKicker">Web-Admin</small><h1 id="adTitle">Admin</h1></div>
       <div class="ad-segctl ad-segctl3" role="group" aria-label="Datenbereich"><button type="button" data-segset="b2c">B2C<span> · Privat</span></button><button type="button" data-segset="b2b">B2B<span> · Unternehmen</span></button><button type="button" data-segset="system">System</button></div>
       <button type="button" class="btn btn-outline ad-out" id="adLogout">Abmelden</button></header>
     <p class="form-note ad-note">Nur für Administratoren · zweiter Faktor · alle Aktionen werden protokolliert · Abmeldung nach 15 Minuten ohne Aktivität.</p>
@@ -172,8 +172,8 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
   const us = r.data.users || [];
   const ago = (x) => (x ? dtt(x) : 'nie');
   const mk = seg === 'b2c' ? '<button type="button" class="btn btn-dark ad-mk-one" id="usMk">+ Privatkunde anlegen</button>' : seg === 'b2b' ? '<button type="button" class="btn btn-dark ad-mk-one" id="usMk">+ Unternehmen anlegen</button>' : '';
-  v.innerHTML = `<section class="pt-card"><div class="ad-h-row"><h2>Nutzer</h2>${mk}</div>
-    <div class="seg us-seg" role="tablist" aria-label="Bereich">${[['b2c', 'Privatkunden (B2C)'], ['b2b', 'Unternehmen (B2B)'], ['admin', 'Administratoren']].filter(([k]) => k === (getSeg() === 'system' ? 'admin' : getSeg())).map(([k, l]) => `<button type="button" data-seg="${k}" aria-selected="${k === seg}">${l}</button>`).join('')}</div>
+  const segLabel = { b2c: 'Privatkunden', b2b: 'Unternehmen', admin: 'Administratoren' }[seg] || '';
+  v.innerHTML = `<section class="pt-card"><div class="ad-h-row"><h2>${segLabel}</h2>${mk}</div>
     <form class="ad-search" id="usF"><input id="usQ" type="search" placeholder="E-Mail suchen" value="${esc(q)}" aria-label="E-Mail suchen" autocomplete="off"><button class="btn btn-dark" type="submit">Suchen</button></form>
     <p class="form-note">${us.length} Konten auf dieser Seite. Angezeigt werden nur Kontodaten – keine Inhalte. Jede Aktion wird protokolliert.</p>
     <div class="us-list">${us.map((u) => `<article class="us-card${u.banned ? ' banned' : ''}">
