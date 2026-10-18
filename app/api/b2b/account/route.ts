@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createElement } from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { z } from 'zod';
+import { addressError, confirmedFlag } from '@/lib/address';
 import { userFromRequest } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase/admin';
@@ -38,6 +39,7 @@ const RegisterSchema = z.object({
   agb: z.literal(true),
   partnerCode: z.string().transform((s) => s.trim().toUpperCase()).optional().default(''),
   referral: z.string().max(40).optional().default(''),
+  addressConfirmed: z.unknown().optional(),
 });
 
 const PatchSchema = z.object({
@@ -46,6 +48,7 @@ const PatchSchema = z.object({
   street: z.string().transform(clean).pipe(z.string().min(3).max(160)).optional(),
   postalCode: z.string().regex(/^[0-9]{5}$/).optional(),
   city: z.string().transform(clean).pipe(z.string().min(2).max(80)).optional(),
+  addressConfirmed: z.unknown().optional(),
   bookingUrl: z.union([z.literal(''), z.string().url().max(300).refine((u) => u.startsWith('https://'), 'https erforderlich')]).optional(),
   brandColor: z.union([z.literal(''), z.string().regex(/^#[0-9A-Fa-f]{6}$/)]).optional(),
   slug: z.string().regex(/^[a-z0-9-]{3,40}$/).optional(),
@@ -135,6 +138,7 @@ export async function POST(req: Request) {
     return json({ error: msg[String(f)] ?? `Bitte die Angabe „${String(f ?? 'Formular')}“ prüfen.` }, 400);
   }
   const b = parsed.data;
+  { const err = await addressError({ postalCode: b.postalCode, city: b.city, street: b.street }, confirmedFlag(b.addressConfirmed)); if (err) return json({ error: err }, 400); }
   const reg = b.registerNumber.toUpperCase();
   if (!reg && !b.taxId) return json({ error: 'Bitte Vermittler-Registernummer oder Steuernummer/USt-IdNr. angeben.' }, 400);
   if (reg && !REGISTER_RE.test(reg)) return json({ error: 'Registernummer im Format D-XXXX-XXXX-XX angeben (Vermittlerregister).' }, 400);
@@ -223,6 +227,10 @@ export async function PATCH(req: Request) {
   const parsed = PatchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return json({ error: `Bitte die Angabe „${String(parsed.error.issues[0]?.path[0] ?? '')}“ prüfen.` }, 400);
   const p = parsed.data;
+  if (p.street !== undefined && p.postalCode !== undefined && p.city !== undefined) {
+    const err = await addressError({ postalCode: p.postalCode, city: p.city, street: p.street }, confirmedFlag(p.addressConfirmed));
+    if (err) return json({ error: err }, 400);
+  }
   const up: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (p.advisorName !== undefined) up.advisor_name = p.advisorName;
   if (p.phone !== undefined) up.phone = p.phone || null;

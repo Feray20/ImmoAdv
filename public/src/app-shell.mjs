@@ -330,6 +330,13 @@ export function setupApp({ u, d, saveData, reload }) {
   // Verbesserungsvorschläge (Konto): gehen an den Web-Admin, Bereich Privatkunden.
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide fb-card-b2c" data-view="konto" id="fbCardB2C"><h3>Verbesserungsvorschläge</h3><div id="fbBodyB2C"></div></article>`);
   import('/src/feedback-ui.mjs').then((m) => m.mountFeedback($('fbBodyB2C'), { area: 'b2c' })).catch(() => {});
+  // Bitte um eine echte Google-Bewertung (an alle Kunden gleich, ohne Anreiz); nach einem Kauf zusätzlich auf der Startseite.
+  import('/src/reviews.mjs').then(async (m) => {
+    const h = await m.askHtml('b2c'); if (!h) return;
+    grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="konto" id="rvCard">${h}</article>`);
+    if (CHECKOUT === 'success') grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="start" id="rvCardStart">${h}</article>`);
+    window.__iaApplyView?.();
+  }).catch(() => {});
   // Gekaufter Leitfaden (Zusatzprodukt): nur sichtbar, wenn erworben.
   fetch('/api/me/leitfaden', { headers: { Authorization: 'Bearer ' + sessToken() }, cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((L) => {
     if (!L?.owned) return;
@@ -1094,6 +1101,7 @@ async function personalCard(grid) {
       <p class="form-note full" id="persMsg" role="status"></p>
       <div class="sess-act full"><button class="btn btn-dark" type="submit">Speichern</button>${x ? '<button class="btn btn-ghost" type="button" id="persCancel">Abbrechen</button>' : ''}</div></form>`;
     $('persCancel')?.addEventListener('click', () => show(x));
+    import('/src/address-check.mjs').then((m) => m.attachAddress($('persF'))).catch(() => {});
     $('persF').onsubmit = async (e) => {
       e.preventDefault();
       const m = $('persMsg'), sb = e.target.querySelector('button[type=submit]');

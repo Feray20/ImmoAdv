@@ -1,4 +1,4 @@
-import { billingEnabled, entitlementsFor } from '@/lib/billing/stripe';
+import { accessGrant, billingEnabled, entitlementsFor } from '@/lib/billing/stripe';
 import { adminConfigured } from '@/lib/supabase/admin';
 import { effectiveTier, membershipFor } from '@/lib/b2b/core';
 
@@ -8,8 +8,11 @@ import { effectiveTier, membershipFor } from '@/lib/b2b/core';
 export async function paidAccess(user: { id: string; email: string }): Promise<{ paid: boolean; b2b: boolean; tier: string }> {
   let tier = 'free';
   let b2b = false;
+  // Stripe-Käufe (nur bei aktiver Abrechnung) und manuelle Freischaltung durch den Web-Admin.
   if (billingEnabled()) {
     try { tier = (await entitlementsFor(user.id, user.email)).tier || 'free'; } catch { tier = 'free'; }
+  } else {
+    tier = (await accessGrant(user.id))?.tier || 'free';
   }
   if (adminConfigured()) {
     try { const m = await membershipFor(user.id); b2b = Boolean(m && effectiveTier(m.account)); } catch { b2b = false; }

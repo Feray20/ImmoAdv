@@ -17,7 +17,7 @@ async function removeFolder(bucket: string, prefix: string): Promise<void> {
   }
 }
 
-export async function purgeUser(userId: string, b2bAccountId: string | null): Promise<void> {
+export async function purgeUser(userId: string, b2bAccountId: string | null, email?: string | null): Promise<void> {
   const db = supabaseAdmin();
   if (b2bAccountId) {
     await removeFolder('b2b-logos', b2bAccountId);
@@ -33,6 +33,9 @@ export async function purgeUser(userId: string, b2bAccountId: string | null): Pr
   await db.from('immo_kreditmappe_credits').delete().eq('owner_id', userId);
   await db.from('immo_audit_log').delete().eq('actor_user_id', userId);
   await db.from('immo_feedback').delete().eq('user_id', userId);
+  await db.from('immo_review_requests').delete().eq('user_id', userId);
+  await db.from('immo_access_grants').delete().eq('user_id', userId);
+  if (email) await db.from('immo_newsletter').delete().eq('email', email.toLowerCase());
 
   // Ältere Bank-Pakete (falls vorhanden) haben RESTRICT-Abhängigkeiten.
   const { data: pk } = await db.from('immo_bank_packages').select('id').eq('owner_id', userId);
