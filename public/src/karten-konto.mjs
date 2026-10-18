@@ -50,7 +50,7 @@ function demoState() {
 const card = () => S.cards[S.cur] || null;
 const isDemo = () => S.mode === 'demo';
 function cardVisual(c) {
-  const label = c.type === 'charge' ? 'Charge' : 'Debit';
+  const label = c.type === 'charge' ? 'Charge' : c.type === 'business' ? 'Business' : 'Debit';
   return `<div class="k-stage"><div class="k-card ${esc(c.design)}${c.status === 'FROZEN' ? ' frozen' : ''}" data-tilt role="img" aria-label="ImmoAdv ${label} Card, ${DESIGN[c.design] || ''}, endet auf ${esc(c.last4 || '––––')}"><div class="k-c-top"><span class="k-c-brand">ImmoAdv <b>Card</b></span><span class="k-c-type">${label}</span></div>${c.isDemo ? '<span class="k-c-demo">DEMO</span>' : ''}<span class="k-chipcard" aria-hidden="true"></span><div><div class="k-c-num">•••• •••• •••• ${esc(c.last4 || '––––')}</div><div class="k-c-foot"><span>${c.status === 'FROZEN' ? 'Gesperrt' : 'Karteninhaber'}</span><span>${DESIGN[c.design] || ''}</span></div></div></div></div>`;
 }
 const chip = ([k, l]) => `<span class="k-chip ${k}">${l}</span>`;
@@ -83,7 +83,7 @@ const VIEWS = {
     <div class="k-dash">
       <div class="c4"><div class="k-panel"><div class="k-kv"><small>${c.type === 'charge' ? 'Verfügbar diesen Monat' : 'Verfügbares Guthaben'}</small><strong>${l ? eur(l.available) : '–'}</strong><span>${l ? `von ${eur(l.monthly)} · Reset ${dt(l.resetAt)}` : 'Kein Limit eingerichtet'}</span></div></div></div>
       <div class="c4"><div class="k-panel"><div class="k-kv"><small>Ausgegeben diesen Monat</small><strong>${l ? eur(l.settled + l.reserved) : '–'}</strong><span>${l && l.reserved ? `davon vorgemerkt ${eur(l.reserved)}` : 'alle Zahlungen abgeschlossen'}</span></div></div></div>
-      <div class="c4"><div class="k-panel"><div class="k-kv"><small>Karte</small><strong style="font-size:22px">•••• ${esc(c.last4 || '––––')}</strong><span>${st[1]} · ${c.type === 'charge' ? 'Charge' : 'Debit'}</span></div><p style="margin:12px 0 0"><a class="k-btn ghost" href="#karte">Karte verwalten</a></p></div></div>
+      <div class="c4"><div class="k-panel"><div class="k-kv"><small>Karte</small><strong style="font-size:22px">•••• ${esc(c.last4 || '––––')}</strong><span>${st[1]} · ${c.type === 'charge' ? 'Charge' : c.type === 'business' ? 'Firmenkarte' : 'Debit'}</span></div><p style="margin:12px 0 0"><a class="k-btn ghost" href="#karte">Karte verwalten</a></p></div></div>
       <div class="c8"><div class="k-panel"><h3>Letzte Zahlungen</h3>${txList(S.tx, 5)}<p style="margin:10px 0 0"><a href="#zahlungen">Alle Zahlungen</a></p></div></div>
       <div class="c4" style="display:grid;gap:16px">${limitPanel(c)}${stmtPanel(c, true)}${benefitPanel(true)}</div>
     </div>`;
@@ -93,7 +93,7 @@ const VIEWS = {
     const frozen = c.status === 'FROZEN';
     return `<div class="k-page-h"><h1>Meine Karten</h1>${chip(ST[c.status] || ['', c.status])}</div>
     <div class="k-dash"><div class="c6">${cardVisual(c)}</div>
-    <div class="c6"><div class="k-panel"><h3>Kartendetails</h3><div class="k-rows"><div><span>Kartennummer</span><b class="k-mask">•••• ${esc(c.last4 || '––––')}</b></div><div><span>Typ</span><b>${c.type === 'charge' ? 'Charge' : 'Debit'}</b></div><div><span>Design</span><b>${DESIGN[c.design] || '–'}</b></div></div>
+    <div class="c6"><div class="k-panel"><h3>Kartendetails</h3><div class="k-rows"><div><span>Kartennummer</span><b class="k-mask">•••• ${esc(c.last4 || '––––')}</b></div><div><span>Typ</span><b>${c.type === 'charge' ? 'Charge' : c.type === 'business' ? 'Firmenkarte' : 'Debit'}</b></div><div><span>Design</span><b>${DESIGN[c.design] || '–'}</b></div></div>
       <button class="k-btn ghost" type="button" id="kDetails" style="margin-top:12px">Details anzeigen</button><p class="k-msg" id="kDetMsg" role="status"></p>
       <div class="k-toggle"><span><strong>Karte sperren</strong><br><small style="color:var(--k-text2)">${frozen ? 'Die Karte ist gesperrt. Neue Zahlungen werden abgelehnt.' : 'Vorübergehend sperren, z. B. wenn Sie die Karte verlegt haben.'}</small></span><button type="button" class="k-switch" role="switch" aria-checked="${frozen}" aria-label="Karte sperren" id="kFreeze"${c.status === 'BLOCKED' ? ' disabled' : ''}></button></div>
       <p class="k-msg" id="kFrMsg" role="status" aria-live="polite"></p></div></div></div>`;
@@ -109,6 +109,7 @@ const VIEWS = {
   },
   limit() {
     const c = card(); if (!c) return emptyAccount();
+    if (c.type === 'business') return `<div class="k-page-h"><h1>Limit</h1></div><div class="k-dash"><div class="c6">${limitPanel(c, false)}</div><div class="c6"><div class="k-panel"><h3>Limit ändern</h3><p>Das Monatslimit Ihrer Firmenkarte legt Ihr Unternehmen fest.</p></div></div></div>`;
     const l = c.limit;
     const steps = [50000, 75000, 100000];
     return `<div class="k-page-h"><h1>Limit</h1></div><div class="k-dash"><div class="c6">${limitPanel(c, false)}</div>
@@ -146,6 +147,7 @@ const VIEWS = {
 };
 
 function stmtPanel(c, compact) {
+  if (c.type === 'business') return compact ? '' : '<div class="k-panel"><h3>Monatsübersicht</h3><p>Firmenkarten zahlen aus dem Kartenguthaben Ihres Unternehmens. Die Abrechnung erhält Ihr Unternehmen.</p></div>';
   if (c.type !== 'charge') return compact ? '' : '<div class="k-panel"><h3>Monatsübersicht</h3><p>Bei der Debit Card werden Zahlungen direkt vom Guthaben abgezogen; eine gesammelte Abbuchung gibt es nicht.</p></div>';
   const settled = S.tx.filter((t) => t.status === 'SETTLED' && t.kind !== 'refund').reduce((s, t) => s + t.amount_cents, 0);
   const refunds = S.tx.filter((t) => t.kind === 'refund').reduce((s, t) => s + t.amount_cents, 0);

@@ -18,16 +18,21 @@ create index if not exists immo_card_applications_user on public.immo_card_appli
 create table if not exists public.immo_cards (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  type text not null check (type in ('debit','charge')),
+  type text not null check (type in ('debit','charge','business')),
   design text not null check (design in ('classic-black','platinum','minimal-white')),
   status text not null default 'PENDING' check (status in ('ACTIVE','PENDING','FROZEN','BLOCKED')),
   last4 text null check (last4 is null or last4 ~ '^[0-9]{4}$'),
-  provider_ref text null,
+  provider text null check (provider is null or provider in ('stripe')),
+  provider_ref text null unique,
+  cardholder_ref text null,
+  stripe_account text null check (stripe_account is null or stripe_account ~ '^acct_[A-Za-z0-9]+$'),
+  b2b_account_id uuid null references public.immo_b2b_accounts(id) on delete cascade,
   is_demo boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 create index if not exists immo_cards_user on public.immo_cards (user_id);
+create index if not exists immo_cards_b2b on public.immo_cards (b2b_account_id) where b2b_account_id is not null;
 
 create table if not exists public.immo_card_limits (
   card_id uuid primary key references public.immo_cards(id) on delete cascade,

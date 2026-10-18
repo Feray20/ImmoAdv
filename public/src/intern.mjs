@@ -726,6 +726,7 @@ async function partner(v) {
         <details class="pc-menu"><summary class="btn btn-outline btn-sm">Aktionen ▾</summary><div class="pc-menu-in">
           ${a.verified_at ? `<button data-a="verify" data-on="false" data-id="${a.id}" type="button">Freischaltung zurücknehmen</button>` : ''}
           <button data-a="plan" data-id="${a.id}" type="button">Tarif zuweisen</button>
+          <button data-a="karten" data-id="${a.id}" data-name="${esc(a.company_name)}" type="button">Firmenkarten (ImmoAdv Card)</button>
           <button data-a="modules" data-id="${a.id}" data-name="${esc(a.company_name)}" data-mod="${esc(JSON.stringify(a.modules || {}))}" type="button">Module freischalten</button>
           <button data-a="whitelabel" data-on="${!a.has_whitelabel}" data-id="${a.id}" type="button">${a.has_whitelabel ? 'White-Label entziehen' : 'White-Label aktivieren'}</button>
           <button data-a="invoicePayment" data-on="${!a.allow_invoice_payment}" data-id="${a.id}" type="button">${a.allow_invoice_payment ? 'Rechnungskauf aus' : 'Rechnungskauf an'}</button>
@@ -772,6 +773,7 @@ async function partner(v) {
     let body = { action: a, id };
     if (a === 'invoice') return invoiceForm(id, b.dataset.name);
     if (a === 'details') return details(id);
+    if (a === 'karten') return cardsDialog(id, b.dataset.name);
     if (a === 'modules') return modulesDialog(id, b.dataset.name, JSON.parse(b.dataset.mod || '{}'), () => partner(v));
     if (a === 'verify' || a === 'whitelabel') body.on = b.dataset.on === 'true';
     if (a === 'lock') { const reason = prompt('Grund der Sperre (wird dem Unternehmen angezeigt):'); if (!reason) return; body.reason = reason; }
@@ -814,6 +816,49 @@ function modulesDialog(id, name, cur, done) {
     d.close(); msg('Module gespeichert.'); done?.();
   };
   d.showModal ? d.showModal() : d.setAttribute('open', '');
+}
+
+// Firmenkarten (Stripe Issuing) je Unternehmenskonto: ansehen, ausgeben, Monatslimit ändern.
+async function cardsDialog(id, name) {
+  let d = document.getElementById('cardDlg');
+  if (!d) { d = document.createElement('dialog'); d.id = 'cardDlg'; d.className = 'ad-dlg'; document.body.append(d); }
+  const e2 = (c) => (c == null ? '–' : (c / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }));
+  d.innerHTML = `<div class="ad-dlg-in"><div class="ad-dlg-h"><h2>Firmenkarten · ${esc(name)}</h2><button type="button" class="stage-x" data-x aria-label="Schließen">×</button></div><div id="cdBody">${skel()}</div></div>`;
+  d.querySelector('[data-x]').onclick = () => d.close();
+  d.showModal ? d.showModal() : d.setAttribute('open', '');
+  const r = await api(`/api/admin/karten?account=${encodeURIComponent(id)}`);
+  const box = d.querySelector('#cdBody');
+  if (!r.ok) { box.innerHTML = emptyState('Nicht verfügbar', esc(r.data?.error || '')); return; }
+  const x = r.data, live = ['LIVE', 'SANDBOX'].includes(x.program);
+  const stat = live ? `<span class="st ${x.program === 'LIVE' ? 'ok' : 'warn'}">${x.program === 'LIVE' ? 'Live' : 'Testbetrieb (Stripe-Testmodus)'}</span>` : '<span class="st">Nicht eingerichtet</span>';
+  box.innerHTML = `<p class="form-note">Kartenpartner: <strong>${x.provider === 'stripe' ? 'Stripe Issuing' : 'keiner'}</strong> · ${stat}. Firmenkarten nur für geschäftliche Ausgaben; jede Zahlung wird vorab gegen das Monatslimit geprüft.</p>
+    ${x.tablesReady === false ? '<p class="auth-message">Die Karten-Tabellen sind in der Datenbank noch nicht eingerichtet (docs/sql/2026-10-18_cards.sql).</p>' : ''}
+    ${(x.cards || []).length ? `<div class="ad-wrap"><table class="ad-table"><thead><tr><th>Karte</th><th>Status</th><th>Limit</th><th>Verbraucht</th><th></th></tr></thead><tbody>${x.cards.map((c) => { const l = (c.immo_card_limits && (c.immo_card_limits[0] || c.immo_card_limits)) || {}; const used = (l.settled_cents || 0) + (l.reserved_cents || 0) - (l.refunded_cents || 0); return `<tr><td>•••• ${esc(c.last4 || '––––')}</td><td>${esc(c.status)}</td><td>${e2(l.monthly_limit_cents)}</td><td>${e2(Math.max(0, used))}</td><td><button type="button" class="btn btn-outline btn-sm" data-lim="${c.id}">Limit ändern</button></td></tr>`; }).join('')}</tbody></table></div>` : emptyState('Noch keine Firmenkarten', 'Geben Sie unten die erste Karte für ein Mitglied dieses Unternehmens aus.')}
+    <form id="cdForm" class="mod-list" style="margin-top:14px"${live ? '' : ' hidden'}><h3 style="margin:0">Neue Firmenkarte</h3>
+      <label>E-Mail des Mitglieds<input name="memberEmail" type="email" required></label>
+      <label>Name auf der Karte (max. 24 Zeichen)<input name="holderName" maxlength="24" required></label>
+      <label>Straße und Hausnummer (Rechnungsadresse)<input name="line1" required></label>
+      <div class="pt-row"><label>PLZ<input name="postalCode" inputmode="numeric" pattern="[0-9]{5}" required></label><label>Ort<input name="city" required></label></div>
+      <label>Monatslimit in €<input name="limit" inputmode="decimal" required placeholder="z. B. 1000"></label>
+      <label>Stripe-Konto des Unternehmens (optional, acct_…)<input name="stripeAccount" pattern="acct_[A-Za-z0-9]+"></label>
+      <p class="form-note" id="cdMsg" role="status"></p><button class="btn btn-dark" type="submit">Karte ausgeben</button></form>
+    ${live ? '' : '<p class="form-note">Zum Ausgeben in Vercel setzen: CARD_PROVIDER=stripe, CARD_PROGRAM_STATUS=SANDBOX (Testmodus) bzw. LIVE mit CARD_COMPLIANCE_APPROVED=true, STRIPE_ISSUING_WEBHOOK_SECRET; Stripe Issuing muss freigeschaltet sein.</p>'}`;
+  box.querySelectorAll('[data-lim]').forEach((b) => b.onclick = async () => {
+    const v = prompt('Neues Monatslimit in Euro:'); if (v == null) return;
+    const c = Math.round(Number(v.replace(/\./g, '').replace(',', '.')) * 100); if (!Number.isFinite(c) || c < 0) return;
+    const rr = await api('/api/admin/karten', { method: 'POST', body: JSON.stringify({ action: 'limit', account: id, cardId: b.dataset.lim, limitCents: c }) });
+    if (rr.ok) cardsDialog(id, name); else alert(rr.data?.error || 'Fehler');
+  });
+  const f = box.querySelector('#cdForm');
+  if (f) f.onsubmit = async (ev) => {
+    ev.preventDefault(); if (!f.checkValidity()) { f.reportValidity(); return; }
+    const fd = Object.fromEntries(new FormData(f));
+    const lc = Math.round(Number(String(fd.limit).replace(/\./g, '').replace(',', '.')) * 100);
+    const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+    const rr = await api('/api/admin/karten', { method: 'POST', body: JSON.stringify({ action: 'issue', account: id, memberEmail: fd.memberEmail, holderName: fd.holderName, line1: fd.line1, postalCode: fd.postalCode, city: fd.city, limitCents: lc, stripeAccount: fd.stripeAccount || '' }) });
+    btn.disabled = false;
+    if (rr.ok) cardsDialog(id, name); else f.querySelector('#cdMsg').textContent = rr.data?.error || 'Die Karte konnte nicht ausgegeben werden.';
+  };
 }
 
 async function details(id) {

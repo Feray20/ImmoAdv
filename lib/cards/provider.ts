@@ -11,7 +11,10 @@ export const notConfiguredCard: CardProvider = { issueCard: async () => NOT, fre
 export const notConfiguredIdentity: IdentityProvider = { start: async () => NOT };
 export const notConfiguredPayment: PaymentProvider = { createMandate: async () => NOT };
 
-// Hier wird später der echte Adapter eingesetzt (z. B. anhand CARD_PROVIDER_API_URL).
-export function cardProvider(): CardProvider { return notConfiguredCard; }
+// Adapter-Auswahl: CARD_PROVIDER=stripe → Stripe Issuing (Firmenkarten); sonst „nicht eingerichtet“.
+export async function cardProvider(): Promise<CardProvider> {
+  if ((process.env.CARD_PROVIDER || '').toLowerCase() === 'stripe') { const m = await import('./stripe-issuing'); if (m.issuingClient()) return m.stripeCardProvider; }
+  return notConfiguredCard;
+}
 export function identityProvider(): IdentityProvider { return notConfiguredIdentity; }
 export function paymentProvider(): PaymentProvider { return notConfiguredPayment; }
