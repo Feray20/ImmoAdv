@@ -549,9 +549,10 @@ function vProfil(box) {
     <section class="pt-card"><h2>Support-Zugriff</h2>
       <p class="form-note">Für Rückfragen kann der ImmoAdv-Support Ihr Portal 7 Tage lang <strong>nur lesend</strong> einsehen, einschließlich der Anfragen. Ohne Ihre Freigabe ist das nicht möglich; jeder Zugriff wird protokolliert (Weisung nach Art. 28 DSGVO).</p>
       <p>${a.supportAccessUntil && new Date(a.supportAccessUntil) > new Date() ? `Freigegeben bis ${dtt(a.supportAccessUntil)}. <button class="text-btn del" id="supOff" type="button">Jetzt beenden</button>` : '<button class="btn btn-ghost" id="supOn" type="button">Support-Zugriff für 7 Tage freigeben</button>'}</p></section>`;
+  import('./address-check.mjs').then((m) => m.attachAddress($('#prof'))).catch(() => {});
   $('#prof').onsubmit = (e) => { e.preventDefault(); busy(e.submitter || $('#prof button'), async () => {
     const f = Object.fromEntries(new FormData(e.target));
-    const body = { advisorName: f.advisorName, phone: f.phone, street: f.street, postalCode: f.postalCode, city: f.city, bookingUrl: f.bookingUrl, slug: f.slug };
+    const body = { advisorName: f.advisorName, phone: f.phone, street: f.street, postalCode: f.postalCode, city: f.city, addressConfirmed: f.addressConfirmed === 'on', bookingUrl: f.bookingUrl, slug: f.slug };
     const r = await api('/api/b2b/account', { method: 'PATCH', body: JSON.stringify(body) });
     if (!r.ok) throw Error(r.data?.error);
     me.account = { ...me.account, ...r.data.account }; toast('Gespeichert.');
@@ -712,6 +713,7 @@ async function onboarding(avvVersion) {
       <button class="btn btn-dark" type="submit">Unternehmenskonto anlegen</button>
       <p class="form-note">ImmoAdv ist ein technisches Analyse- und Vorbereitungsinstrument. Keine Kreditvermittlung, keine Kreditzusage, keine Steuer- oder Rechtsberatung.</p>
     </form></div>`;
+  import('./address-check.mjs').then((m) => m.attachAddress($('#reg'))).catch(() => {});
   $('#reg').onsubmit = (e) => {
     e.preventDefault();
     busy(e.target.querySelector('button[type=submit]'), async () => {

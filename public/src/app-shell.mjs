@@ -1101,6 +1101,7 @@ async function personalCard(grid) {
       <p class="form-note full" id="persMsg" role="status"></p>
       <div class="sess-act full"><button class="btn btn-dark" type="submit">Speichern</button>${x ? '<button class="btn btn-ghost" type="button" id="persCancel">Abbrechen</button>' : ''}</div></form>`;
     $('persCancel')?.addEventListener('click', () => show(x));
+    import('/src/address-check.mjs').then((m) => m.attachAddress($('persF'))).catch(() => {});
     $('persF').onsubmit = async (e) => {
       e.preventDefault();
       const m = $('persMsg'), sb = e.target.querySelector('button[type=submit]');

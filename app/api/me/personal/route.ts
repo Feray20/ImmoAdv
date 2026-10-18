@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { addressError, confirmedFlag } from '@/lib/address';
 import { z } from 'zod';
 import { userFromRequest } from '@/lib/billing/auth';
 import { billingEnabled, findCustomer, stripe } from '@/lib/billing/stripe';
@@ -25,6 +26,7 @@ const Body = z.object({
   city: z.string().trim().min(2, 'Bitte Ort angeben.').max(80),
   country: z.string().trim().regex(/^[A-Z]{2}$/).optional().default('DE'),
   phone: z.string().trim().regex(/^[+0-9 ()/-]{0,30}$/, 'Telefonnummer prüfen.').optional().default(''),
+  addressConfirmed: z.unknown().optional(),
 });
 export type Personal = z.infer<typeof Body> & { updatedAt?: string };
 
@@ -43,7 +45,13 @@ export async function PUT(req: Request) {
   if (!allowRequest(`me-personal-put:${user.id}`, 10, 60_000)) return j({ error: 'Zu viele Änderungen – bitte kurz warten.' }, 429);
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return j({ error: p.error.issues[0]?.message || 'Angaben prüfen.' }, 400);
-  const personal: Personal = { ...p.data, updatedAt: new Date().toISOString() };
+  // Adressprüfung (Deutschland): PLZ, Ort, Straße und Hausnummer müssen zusammenpassen.
+  if (p.data.country === 'DE') {
+    const err = await addressError({ postalCode: p.data.postalCode, city: p.data.city, street: p.data.street }, confirmedFlag(p.data.addressConfirmed));
+    if (err) return j({ error: err }, 400);
+  }
+  const { addressConfirmed: _ac, ...clean } = p.data; void _ac;
+  const personal: Personal = { ...clean, updatedAt: new Date().toISOString() };
   const admin = supabaseAdmin();
   const { data: cur, error: e1 } = await admin.auth.admin.getUserById(user.id);
   if (e1 || !cur.user) return j({ error: 'Konto nicht gefunden.' }, 404);
