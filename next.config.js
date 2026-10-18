@@ -94,6 +94,11 @@ module.exports = {
         { source: '/verify/:id', destination: '/pruefen/index.html' },
         { source: '/p/:slug', destination: '/partner/index.html' },
         { source: '/b2b', destination: '/b2b/index.html' },
+        // ImmoAdv Card (in Vorbereitung): nicht im Menü, nicht in der Sitemap, noindex.
+        { source: '/karten', destination: '/karten/index.html' },
+        { source: '/karten/preise', destination: '/karten/preise/index.html' },
+        { source: '/karten/preise.pdf', destination: '/api/karten/preise-pdf' },
+        { source: '/karten/konto', destination: '/karten/konto/index.html' },
         { source: '/b2b-portal', destination: '/b2b-portal/index.html' },
         { source: '/auth/login', destination: '/auth-login.html' },
         { source: '/auth/callback', destination: '/auth-login.html' },
@@ -113,6 +118,8 @@ module.exports = {
       { source: '/(.*)', headers: securityHeaders },
       // Admin-Zentrale: nie indexieren, nie zwischenspeichern.
       { source: '/intern/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }, { key: 'Cache-Control', value: 'no-store' }] },
+      { source: '/karten', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
+      { source: '/karten/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
       // Next.js-Seiten (Cockpit) brauchen Inline-Skripte für die Hydrierung; alle übrigen Seiten laufen ohne.
       { source: '/cockpit', headers: [{ key: 'Content-Security-Policy', value: cspValue.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'") }] },
       // Partnerseite darf als Widget auf fremden Websites eingebettet werden (Freigabe je Domain prüft die Schnittstelle).

@@ -10,5 +10,6 @@ Disallow: /p/
 Disallow: /partner
 Disallow: /intern
 Disallow: /b2b-portal
+Disallow: /karten
 
 Sitemap: https://immoadv.de/sitemap.xml
