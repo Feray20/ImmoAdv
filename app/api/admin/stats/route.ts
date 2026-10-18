@@ -53,7 +53,7 @@ export async function GET(req: Request) {
   ]);
   // Objekte: Summe der Objektlisten (nur Anzahl)
   const { data: od } = await notBiz('user_id')(db.from('immo_user_data').select('objects')).limit(5000);
-  const objects = (od ?? []).reduce((s, r) => s + (Array.isArray(r.objects) ? r.objects.length : 0), 0);
+  const objects = ((od ?? []) as { objects?: unknown }[]).reduce((s: number, r) => s + (Array.isArray(r.objects) ? r.objects.length : 0), 0);
   return NextResponse.json({ scope, users, users7, objects, docs, shares, sharesActive, versions, reminders, requestsOpen, config },
     { headers: { 'Cache-Control': 'no-store' } });
 }

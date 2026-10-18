@@ -21,9 +21,3 @@ export function customerScope(req: Request): 'b2c' | 'b2b' | null {
 }
 
 export const scopeError = { error: 'Bitte oben einen Bereich wählen (B2C oder B2B). Diese Ansicht zeigt nie beide Bereiche gemischt.' };
-
-// Rechnungen: B2B-Rechnungen tragen ein Unternehmenskonto (account_id), Privatkunden-Rechnungen nicht.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function invoiceScope<Q extends { is: (c: string, v: null) => Q; not: (c: string, op: string, v: null) => Q }>(q: Q, s: 'b2c' | 'b2b'): Q {
-  return s === 'b2b' ? q.not('account_id', 'is', null) : q.is('account_id', null);
-}
