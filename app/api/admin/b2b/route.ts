@@ -40,7 +40,7 @@ export async function GET(req: Request) {
   }
   const { data, error } = await db
     .from('immo_b2b_accounts')
-    .select('id, owner_id, customer_number, company_name, legal_form, institution_type, register_number, tax_id, advisor_name, email, postal_code, city, plan_tier, plan_source, plan_until, billing_interval, status, lock_reason, verified_at, verification_status, verification_submitted_at, dossier_bonus, has_whitelabel, allow_invoice_payment, invoice_limit_cents, payment_terms_days, referral, slug, created_at')
+    .select('id, owner_id, customer_number, company_name, legal_form, institution_type, register_number, tax_id, advisor_name, email, postal_code, city, plan_tier, plan_source, plan_until, billing_interval, status, lock_reason, verified_at, verification_status, verification_submitted_at, dossier_bonus, has_whitelabel, modules, allow_invoice_payment, invoice_limit_cents, payment_terms_days, referral, slug, created_at')
     .order('created_at', { ascending: false })
     .limit(1000);
   if (error) return j({ error: error.message }, 500);
@@ -57,6 +57,7 @@ const Action = z.discriminatedUnion('action', [
   z.object({ action: z.literal('lock'), id: z.string().uuid(), reason: z.string().trim().min(3).max(300) }),
   z.object({ action: z.literal('unlock'), id: z.string().uuid() }),
   z.object({ action: z.literal('whitelabel'), id: z.string().uuid(), on: z.boolean() }),
+  z.object({ action: z.literal('modules'), id: z.string().uuid(), modules: z.record(z.enum(['schnellrechner', 'kreditmappe', 'stresstest', 'whitelabel', 'crm']), z.enum(['auto', 'on', 'off'])) }),
   z.object({ action: z.literal('invoicePayment'), id: z.string().uuid(), on: z.boolean(), limitCents: z.number().int().min(0).max(100_000_00).nullable().optional(), termsDays: z.number().int().min(0).max(90).optional() }),
   z.object({ action: z.literal('credits'), id: z.string().uuid(), add: z.number().int().min(-500).max(500) }),
   z.object({ action: z.literal('plan'), id: z.string().uuid(), tier: z.enum(['BASIC', 'PRO', 'ENTERPRISE']).nullable(), until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional() }),
@@ -83,6 +84,8 @@ export async function POST(req: Request) {
     case 'lock': up = { status: 'locked', lock_reason: a.reason }; break;
     case 'unlock': up = { status: 'active', lock_reason: null }; break;
     case 'whitelabel': up = { has_whitelabel: a.on }; break;
+    // Modulrechte: „auto“ = laut Tarif (Eintrag entfernen), „on“ = zusätzlich freigeschaltet, „off“ = gesperrt.
+    case 'modules': { const m: Record<string, string> = { ...((cur.modules as Record<string, string>) || {}) }; for (const [k, v] of Object.entries(a.modules)) { if (v === 'auto') delete m[k]; else m[k] = v; } up = { modules: m }; break; }
     case 'invoicePayment': up = { allow_invoice_payment: a.on, invoice_limit_cents: a.limitCents ?? null, ...(a.termsDays !== undefined ? { payment_terms_days: a.termsDays } : {}) }; break;
     case 'credits': up = { dossier_bonus: Math.max(0, (cur.dossier_bonus ?? 0) + a.add) }; break;
     case 'plan':

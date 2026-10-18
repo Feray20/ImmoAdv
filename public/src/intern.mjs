@@ -694,6 +694,7 @@ async function partner(v) {
         <details class="pc-menu"><summary class="btn btn-outline btn-sm">Aktionen ▾</summary><div class="pc-menu-in">
           ${a.verified_at ? `<button data-a="verify" data-on="false" data-id="${a.id}" type="button">Freischaltung zurücknehmen</button>` : ''}
           <button data-a="plan" data-id="${a.id}" type="button">Tarif zuweisen</button>
+          <button data-a="modules" data-id="${a.id}" data-name="${esc(a.company_name)}" data-mod="${esc(JSON.stringify(a.modules || {}))}" type="button">Module freischalten</button>
           <button data-a="whitelabel" data-on="${!a.has_whitelabel}" data-id="${a.id}" type="button">${a.has_whitelabel ? 'White-Label entziehen' : 'White-Label aktivieren'}</button>
           <button data-a="invoicePayment" data-on="${!a.allow_invoice_payment}" data-id="${a.id}" type="button">${a.allow_invoice_payment ? 'Rechnungskauf aus' : 'Rechnungskauf an'}</button>
           <button data-a="credits" data-id="${a.id}" type="button">Kontingent +</button>
@@ -739,6 +740,7 @@ async function partner(v) {
     let body = { action: a, id };
     if (a === 'invoice') return invoiceForm(id, b.dataset.name);
     if (a === 'details') return details(id);
+    if (a === 'modules') return modulesDialog(id, b.dataset.name, JSON.parse(b.dataset.mod || '{}'), () => partner(v));
     if (a === 'verify' || a === 'whitelabel') body.on = b.dataset.on === 'true';
     if (a === 'lock') { const reason = prompt('Grund der Sperre (wird dem Unternehmen angezeigt):'); if (!reason) return; body.reason = reason; }
     if (a === 'unlock' && !confirm('Konto entsperren?')) return;
@@ -760,6 +762,28 @@ async function partner(v) {
 }
 
 // Nur lesende Detailansicht eines Unternehmens (kein Einloggen als Partner).
+// Modulrechte je Unternehmenskonto: laut Tarif, zusätzlich freigeschaltet oder gesperrt. Wirkt sofort im Portal und in den Schnittstellen.
+const MODS = [['schnellrechner', 'Schnellrechner & Fall-Analysen', 'Schnell-Checks von Unterlagen-Paketen, Präsentationen'], ['kreditmappe', 'BankReady Kreditmappe', 'Kreditmappen ohne Monatskontingent, wenn freigeschaltet'], ['stresstest', 'Stresstest-Generator', 'Zins-, Leerstands- und Kostenszenarien'], ['whitelabel', 'White-Label-Export', 'Unterlagen und Einladungen im eigenen Erscheinungsbild'], ['crm', 'CRM & Mandantenverwaltung', 'Kunden einladen, Fortschritt und Bestandskunden-Radar']];
+function modulesDialog(id, name, cur, done) {
+  let d = document.getElementById('modDlg');
+  if (!d) { d = document.createElement('dialog'); d.id = 'modDlg'; d.className = 'ad-dlg'; document.body.append(d); }
+  const opt = (k, val, label) => `<label class="mod-opt"><input type="radio" name="m-${k}" value="${val}"${(cur[k] || 'auto') === val ? ' checked' : ''}><span>${label}</span></label>`;
+  d.innerHTML = `<form class="ad-dlg-in" id="modF"><div class="ad-dlg-h"><h2>Module freischalten</h2><button type="button" class="stage-x" data-x aria-label="Schließen">×</button></div>
+    <p class="form-note"><strong>${esc(name)}</strong> · „Laut Tarif“ folgt dem gebuchten Tarif. „Frei“ schaltet unabhängig vom Tarif frei, „Gesperrt“ sperrt das Modul.</p>
+    <div class="mod-list">${MODS.map(([k, t, x]) => `<fieldset class="mod-row"><legend><strong>${t}</strong><small>${x}</small></legend><div class="mod-seg">${opt(k, 'auto', 'Laut Tarif')}${opt(k, 'on', 'Frei')}${opt(k, 'off', 'Gesperrt')}</div></fieldset>`).join('')}</div>
+    <p class="form-note" id="modMsg" role="status"></p>
+    <div class="wiz-nav"><button type="button" class="btn btn-outline" data-x>Abbrechen</button><button type="submit" class="btn btn-dark">Speichern</button></div></form>`;
+  d.querySelectorAll('[data-x]').forEach((b) => { b.onclick = () => d.close(); });
+  d.querySelector('#modF').onsubmit = async (e) => {
+    e.preventDefault();
+    const modules = Object.fromEntries(MODS.map(([k]) => [k, d.querySelector(`input[name="m-${k}"]:checked`)?.value || 'auto']));
+    const r = await api('/api/admin/b2b', { method: 'POST', body: JSON.stringify({ action: 'modules', id, modules }) });
+    if (!r.ok) { d.querySelector('#modMsg').textContent = r.data?.error || 'Speichern fehlgeschlagen.'; return; }
+    d.close(); msg('Module gespeichert.'); done?.();
+  };
+  d.showModal ? d.showModal() : d.setAttribute('open', '');
+}
+
 async function details(id) {
   const box = $('#invForm');
   box.innerHTML = logoLoader();

@@ -8,7 +8,7 @@ import { allowRequest } from '@/lib/security/rate-limit';
 import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase/admin';
 import { RegistrationProofDocument, proofText, typeLabel, type RegistrationProof } from '@/lib/b2b/registration-proof';
 import { avvEvidence } from '@/lib/b2b/avv-evidence';
-import { AVV_VERSION, TIER_LIMITS, adminAudit, dossiersThisMonth, effectiveTier, membershipFor, newWidgetKey, slugify, type B2BAccount } from '@/lib/b2b/core';
+import { AVV_VERSION, MODULE_KEYS, TIER_LIMITS, adminAudit, moduleOverrides, type ModuleKey, dossiersThisMonth, effectiveTier, membershipFor, newWidgetKey, slugify, type B2BAccount } from '@/lib/b2b/core';
 import { json, requireMember } from '@/lib/b2b/http';
 import { adminList } from '@/lib/security/admin';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
@@ -71,10 +71,18 @@ const PatchSchema = z.object({
 
 function view(a: B2BAccount, role: string) {
   const tier = effectiveTier(a);
+  const ov = moduleOverrides(a);
+  const base = tier ? { ...TIER_LIMITS[tier] } : null;
+  // Web-Admin-Freischaltung „White-Label-Export“ geht dem Tarif vor.
+  if (base && ov.whitelabel) { base.cobranding = ov.whitelabel === 'on'; base.whitelabel = ov.whitelabel === 'on'; }
+  const def: Record<ModuleKey, boolean> = { schnellrechner: true, kreditmappe: true, stresstest: true, crm: true, whitelabel: Boolean(a.has_whitelabel || (tier && TIER_LIMITS[tier].cobranding)) };
+  const modules = Object.fromEntries(MODULE_KEYS.map((k) => [k, ov[k] ? ov[k] === 'on' : def[k]])) as Record<ModuleKey, boolean>;
   return {
     role,
     tier,
-    limits: tier ? TIER_LIMITS[tier] : null,
+    modules,
+    moduleOverrides: ov,
+    limits: base,
     account: {
       customerNumber: a.customer_number, companyName: a.company_name, legalForm: a.legal_form, institutionType: a.institution_type,
       registerNumber: a.register_number, taxId: a.tax_id, advisorName: a.advisor_name, email: a.email, phone: a.phone,

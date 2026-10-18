@@ -107,6 +107,7 @@ const PH = ['Orientieren', 'Objekte prüfen', 'Bankgespräch', 'Bestand'];
 let KD_LAST = null; // zuletzt erstellte Einladung (Link bleibt nach dem Neuladen sichtbar)
 const kdLinkHtml = (x) => `<div class="pt-alert ok"><strong>${x.mailed ? 'Einladung per E-Mail gesendet.' : 'Einladung erstellt.'}</strong> ${x.mailed ? 'Zusätzlich können Sie den Link selbst weitergeben:' : 'Bitte den Link an Ihren Kunden senden (E-Mail-Versand ist noch nicht eingerichtet):'}<div class="pt-row kd-copy"><input readonly value="${esc(x.link)}" aria-label="Einladungslink"><button type="button" class="btn btn-outline" id="kdCopy">Kopieren</button></div><small>Gültig 14 Tage, nur einmal verwendbar.</small></div>`;
 async function vKunden(box) {
+  if (me.modules?.crm === false) { box.innerHTML = '<div class="pt-alert warn"><strong>Die Mandantenverwaltung ist für Ihr Unternehmenskonto nicht freigeschaltet.</strong> Bitte wenden Sie sich an support@immoadv.de.</div>'; return; }
   const r = await api('/api/b2b/clients');
   if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
   const all = r.data.clients || [];

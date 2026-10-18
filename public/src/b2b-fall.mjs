@@ -82,6 +82,8 @@ export async function renderFall(box, { api, toast, me }) {
   const r = await api('/api/b2b/fall');
   if (!r.ok) { box.innerHTML = `<div class="pt-alert warn">${esc(r.data?.error || 'Nicht verfügbar.')}</div>`; return; }
   const info = r.data;
+  if (info.blocked) { box.innerHTML = '<div class="pt-alert warn"><strong>Schnellrechner und Fall-Analysen sind für Ihr Unternehmenskonto nicht freigeschaltet.</strong> Bitte wenden Sie sich an support@immoadv.de.</div>'; return; }
+  info.noStress = me?.modules?.stresstest === false;
   const lim = (n) => (n == null ? 'unbegrenzt' : n);
   box.innerHTML = `<div class="fa">
     <section class="pt-card fa-hero"><div><span class="bw-kick">Fall-Analyse</span><h2>Unterlagen hochladen – Analyse in Sekunden</h2>
@@ -116,7 +118,7 @@ async function run(files, box, ctx) {
   }
   const f = caseFacts(docs);
   S = {
-    docs, facts: f, info: ctx.info, tab: 'berater', slides: ['titel', 'ueberblick', 'varianten', 'stress', 'unterlagen', 'schritte'],
+    docs, facts: f, info: ctx.info, tab: 'berater', slides: ['titel', 'ueberblick', 'varianten', 'stress', 'unterlagen', 'schritte'].filter((k) => !(ctx.info?.noStress && k === 'stress')),
     inputs: {
       kunde: '', objekt: '', flaeche: f.flaeche || 0, baujahr: f.baujahr || 0, energie: f.klasse || '', kaufpreis: f.kaufpreis || 0, nkPct: 0.105, modern: 0, eigenkapital: f.eigenkapital || 0, abschlag: 0.1,
       netto: f.nettoMonat || 0, miete: f.kaltmiete || 0, hausgeld: f.hausgeld || 0, sonst: 0, personen: 2, lebens1: 1000, lebensWeitere: 350,
@@ -217,7 +219,7 @@ function praesUI() {
   const b = S.info.branding;
   return `<section class="pt-card"><h2>Präsentation für den Kunden</h2>
     <p class="form-note">Erscheinungsbild: <strong>${({ immoadv: 'ImmoAdv', eigen: 'Ihr Logo und Ihre Farben', whitelabel: 'komplett im Erscheinungsbild Ihres Hauses' })[b.mode]}</strong>${b.mode === 'immoadv' ? ' · Eigenes Logo ab Pro, vollständiges White-Label mit Enterprise.' : ''} <a href="#profil">Anpassen</a></p>
-    <fieldset class="fa-slides"><legend>Folien auswählen</legend>${SLIDES.map(([k, l]) => `<label class="chk"><input type="checkbox" data-sl="${k}"${S.slides.includes(k) ? ' checked' : ''}> ${l}</label>`).join('')}</fieldset>
+    <fieldset class="fa-slides"><legend>Folien auswählen</legend>${SLIDES.filter(([k]) => !(S.info?.noStress && k === 'stress')).map(([k, l]) => `<label class="chk"><input type="checkbox" data-sl="${k}"${S.slides.includes(k) ? ' checked' : ''}> ${l}</label>`).join('')}</fieldset>
     <div class="pt-row"><button class="btn btn-dark" type="button" id="faShow">Präsentation starten</button><button class="btn btn-outline" type="button" id="faPrint">Als PDF speichern / drucken</button></div>
     <div class="fa-dual"><h3>Download-Paket für den Kundentermin</h3>
       <div class="fa-dual-g"><button type="button" class="fa-dl" id="faPptx"><b>PowerPoint (.pptx)</b><span>6 Folien: Deckblatt, Objekt, Haushalt, Finanzierung, Stresstest, nächste Schritte${b.mode === 'immoadv' ? '' : ' – im Erscheinungsbild Ihres Hauses'}</span></button>
@@ -377,12 +379,14 @@ export async function exportPptx() {
     { x: 0.6, y: 3.8, w: 12.1, colW: [2.2, 1.7, 1.7, 1.9, 2.1, 2.5], fontFace: F, fontSize: 14, color: '0F172A', border: { type: 'solid', color: 'E2E8F0', pt: 1 }, rowH: 0.5 });
 
   // 5 Stresstest & Sicherheit
+  if (!S.info?.noStress) {
   const s5 = pres.addSlide({ masterName: 'IA' });
   H(s5, 'Stresstest & Sicherheit', 'Rate für die Restschuld, wenn der Zins nach der Zinsbindung um 2 Prozentpunkte höher liegt');
   s5.addChart(pres.ChartType.bar, [{ name: 'Rate heute', labels: v.map((x) => x.name), values: v.map((x) => Math.round(x.rate)) }, { name: 'Rate danach (+2 %)', labels: v.map((x) => x.name), values: v.map((x) => Math.round(x.stress)) }],
     { x: 0.6, y: 1.7, w: 7.6, h: 4.9, barGrouping: 'clustered', chartColors: [C1, 'F59E0B'], showLegend: true, legendPos: 'b', legendFontFace: F, catAxisLabelFontFace: F, valAxisLabelFontFace: F, showValue: true, dataLabelFormatCode: '#,##0 "€"', valAxisLabelFormatCode: '#,##0 "€"' });
   v.forEach((x, k) => card(s5, 8.6, 1.7 + k * 1.65, 4.1, 1.5, `${x.name}: Mehrbelastung`, `+ ${E(Math.max(0, x.stress - x.rate))}`, x.ueber - Math.max(0, x.stress - x.rate) < 0 ? 'bad' : 'ok'));
 
+  }
   // 6 Nächste Schritte
   const miss = missingDocs(S.docs.map((d) => d.type), S.facts);
   const s6 = pres.addSlide({ masterName: 'IA' });
