@@ -330,6 +330,13 @@ export function setupApp({ u, d, saveData, reload }) {
   // Verbesserungsvorschläge (Konto): gehen an den Web-Admin, Bereich Privatkunden.
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide fb-card-b2c" data-view="konto" id="fbCardB2C"><h3>Verbesserungsvorschläge</h3><div id="fbBodyB2C"></div></article>`);
   import('/src/feedback-ui.mjs').then((m) => m.mountFeedback($('fbBodyB2C'), { area: 'b2c' })).catch(() => {});
+  // Bitte um eine echte Google-Bewertung (an alle Kunden gleich, ohne Anreiz); nach einem Kauf zusätzlich auf der Startseite.
+  import('/src/reviews.mjs').then(async (m) => {
+    const h = await m.askHtml('b2c'); if (!h) return;
+    grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="konto" id="rvCard">${h}</article>`);
+    if (CHECKOUT === 'success') grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="start" id="rvCardStart">${h}</article>`);
+    window.__iaApplyView?.();
+  }).catch(() => {});
   // Gekaufter Leitfaden (Zusatzprodukt): nur sichtbar, wenn erworben.
   fetch('/api/me/leitfaden', { headers: { Authorization: 'Bearer ' + sessToken() }, cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((L) => {
     if (!L?.owned) return;
