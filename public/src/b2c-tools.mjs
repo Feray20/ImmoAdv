@@ -498,6 +498,26 @@ const TICON = {
 const RANK = { free: 0, pass: 1, pro: 2 };
 const TIER_RANK = { free: 0, starter: 1, pro: 2 };
 
+// Einsteiger: „So würde ein Profi das ausfüllen“ – nur auf Knopfdruck, klar als Beispiel gekennzeichnet;
+// die eigenen Eingaben werden vorher gesichert und lassen sich mit einem Tipp wiederherstellen.
+const PROFI_EX = {
+  nk: { v: { price: 300000, land: 'hessen', broker: 3.57, equity: 66000 }, tips: [
+    'Kaufpreis aus dem Exposé – aber erst nach dem Kaufpreis-Check als Obergrenze verwenden.',
+    'Bundesland immer wählen: Die Grunderwerbsteuer liegt je nach Land zwischen 3,5 und 6,5 %.',
+    'Makler: Käuferanteil laut Exposé (in Hessen meist 3,57 %); provisionsfrei = 0.',
+    'Eigenkapital: mindestens die Kaufnebenkosten (hier rund 36.000 €) plus etwa 10 % des Kaufpreises – das senkt den Zins spürbar.'] },
+  price: { v: { asking: 300000, rent: 1000, costPct: 20, equity: 66000, rate: 3.8, repay: 2, land: 'hessen', broker: 3.57, targetCf: 0, targetYield: '' }, tips: [
+    'Angebotspreis aus dem Exposé, Kaltmiete aus Mietvertrag bzw. Mietspiegel – nie die „mögliche“ Miete aus der Werbung.',
+    'Kosten großzügig mit 20 % der Miete ansetzen (nicht umlagefähige Kosten, Instandhaltung, Leerstand).',
+    'Zins aus einem aktuellen Bankangebot plus Puffer – lieber 0,3 Prozentpunkte zu hoch als zu niedrig.',
+    'Ziel „0 € übrig“: Die Miete trägt die Rate. Alles darüber ist Ihr Verhandlungsspielraum.'] },
+  special: { v: { loan: 240000, rate: 3.8, repay: 2, special: 4800, years: 10, vermietet: false, tax: '', alt: '' }, tips: [
+    'Darlehen und Zins genau aus dem Darlehensvertrag übernehmen.',
+    'Sondertilgung: höchstens das, was kostenlos erlaubt ist (oft 5 % pro Jahr) – hier 2 % des Darlehens.',
+    'Erst Notgroschen (3–6 Monatsausgaben) aufbauen, dann sondertilgen – getilgtes Geld bekommen Sie nicht zurück.',
+    'Bei vermieteten Objekten ist der Zins steuerlich absetzbar; dort lohnt Sondertilgung oft weniger.'] },
+};
+
 export async function mountTools(view, { d, tier = 'free', b2b = false, mode = 'einsteiger' }) {
   const m = mode === 'profi' ? 'profi' : 'einsteiger';
   const t = b2b ? 'pro' : ['starter', 'pro'].includes(tier) ? tier : 'free';
@@ -527,7 +547,25 @@ export async function mountTools(view, { d, tier = 'free', b2b = false, mode = '
     ${[...mainIds, ...o.more].map(sec).join('')}
     <p class="form-note tl-foot">Ihre Eingaben bleiben nur in diesem Browser. <button type="button" class="text-btn" id="tlClear">Eingaben zurücksetzen</button></p>`;
   const q = (id) => view.querySelector('#t-' + id);
-  const mount = (id) => { const b = q(id); if (!b) return; if (!has(id)) { b.innerHTML = lockCard(id); return; } TOOLS[id][3](b, d); };
+  const mount = (id) => {
+    const b = q(id); if (!b) return; if (!has(id)) { b.innerHTML = lockCard(id); return; }
+    TOOLS[id][3](b, d);
+    const ex = PROFI_EX[id];
+    if (m !== 'einsteiger' || !ex) return;
+    const bak = 'ia-tool2-bak-' + id;
+    let shown = false; try { shown = !!sessionStorage.getItem(bak); } catch { /* ohne Speicher */ }
+    b.querySelector('h3')?.insertAdjacentHTML('afterend', shown
+      ? `<div class="tl-ex on"><p><strong>Beispiel eines Profis</strong> – nicht Ihre Zahlen. So geht ein erfahrener Käufer vor:</p><ul>${ex.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul><button type="button" class="btn btn-outline" data-ex-back>Meine eigenen Werte wiederherstellen</button></div>`
+      : '<div class="tl-ex"><button type="button" class="btn btn-outline" data-ex-go><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"/></svg>So würde ein Profi das ausfüllen</button></div>');
+    b.querySelector('[data-ex-go]')?.addEventListener('click', () => {
+      try { sessionStorage.setItem(bak, localStorage.getItem(KEY(id)) ?? '__leer__'); localStorage.setItem(KEY(id), JSON.stringify(ex.v)); } catch { /* ohne Speicher */ }
+      mount(id);
+    });
+    b.querySelector('[data-ex-back]')?.addEventListener('click', () => {
+      try { const v = sessionStorage.getItem(bak); sessionStorage.removeItem(bak); if (v === '__leer__' || v == null) localStorage.removeItem(KEY(id)); else localStorage.setItem(KEY(id), v); } catch { /* ohne Speicher */ }
+      mount(id);
+    });
+  };
   // Tools erst beim Antippen öffnen: vorher ist nur die Auswahl sichtbar, danach genau ein Tool.
   const mounted = new Set();
   const open = (id, scroll) => {

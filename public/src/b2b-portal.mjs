@@ -70,6 +70,7 @@ function shell() {
   more.onclick = () => openSheet(sheet.hidden);
   sheet.addEventListener('click', (e) => { if (e.target.closest('[data-close]') || e.target.closest('a')) openSheet(false); });
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheet.hidden) openSheet(false); });
+  addEventListener('hashchange', () => openSheet(false)); addEventListener('pageshow', () => openSheet(false));
 }
 
 // Präsentationsmodus: Beratungskompass und Tools ablenkungsfrei im Vollbild (Tablet im Kundentermin).
@@ -101,6 +102,54 @@ function route() {
   { const pb = $('#ptPres'); if (pb) pb.hidden = !['wissen', 'tools'].includes(view); if (!['wissen', 'tools'].includes(view)) presentation(false); }
   ({ start: vStart, tools: (b) => import('./b2b-tools.mjs').then((m) => m.renderPrograms(b, { tier: me.tier, branche: br(), toast, brand: { color: me.limits?.cobranding && me.account.brandColor ? me.account.brandColor : '#0F2C59', logo: me.limits?.cobranding && me.account.hasLogo && me.account.slug ? `/api/b2b/logo?slug=${encodeURIComponent(me.account.slug)}` : '', sender: [me.account.companyName, me.account.advisorName].filter(Boolean).join(' · ') } })).catch(() => { b.innerHTML = '<p class="form-note">Programme konnten nicht geladen werden.</p>'; }), fall: (b) => import('./b2b-fall.mjs').then((m) => m.renderFall(b, { api, toast, me })).catch(() => { b.innerHTML = '<p class="form-note">Fall-Analyse konnte nicht geladen werden.</p>'; }), kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs').then((m) => m.renderWissen(b, br())).catch(() => { b.innerHTML = '<p class="form-note">Fachwissen konnte nicht geladen werden.</p>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: (b) => vTeam(b).then(() => addPw(b)), profil: (b) => { vProfil(b); addPw(b); }, tarif: vTarif, vorschlaege: (b) => { b.innerHTML = '<section class="pt-card" id="rvBox" hidden></section><section class="pt-card" id="fbBox"></section>'; import('./reviews.mjs').then(async (m) => { const h = await m.askHtml('b2b'); const x = b.querySelector('#rvBox'); if (h && x) { x.innerHTML = h; x.hidden = false; } }).catch(() => {}); import('./feedback-ui.mjs').then((m) => m.mountFeedback(b.querySelector('#fbBox'), { area: 'b2b' })).catch(() => { b.innerHTML = '<p class="form-note">Konnte nicht geladen werden.</p>'; }); } })[view](box);
 }
+
+// ---------- Kachel-Auswahl: Arbeitsbereiche öffnen erst beim Antippen ----------
+// In jedem Bereich mit mehreren Arbeitskarten steht oben eine Kachel je Karte; geöffnet ist immer nur eine.
+// Ausgenommen: Übersicht, Software-Tools und Beratungskompass (eigene Struktur) sowie reine Info-/Marketing-Karten
+// ohne Bedienelemente (bleiben normal sichtbar). In der Fall-Analyse bleibt die Upload-Karte immer offen.
+const TILE_SKIP = new Set(['start', 'tools', 'wissen']);
+const TILE_IC = '<path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/>';
+const tileState = { view: null, sel: null };
+function tileView() {
+  const box = $('#ptView'); if (!box) return;
+  const view = route.last;
+  if (tileState.view !== view) { tileState.view = view; tileState.sel = null; }
+  box.querySelector(':scope>.pt-tiles')?.remove();
+  box.querySelectorAll(':scope>.pt-card.tl-off').forEach((c) => c.classList.remove('tl-off'));
+  if (TILE_SKIP.has(view)) return;
+  let cards = [...box.querySelectorAll(':scope>.pt-card:not(.pt-tiles)')].filter((c) => c.querySelector('h2') && c.querySelector('input,select,textarea,button:not(.ia-kl-btn),table,form,a.btn'));
+  if (view === 'fall') cards = cards.slice(1);
+  if (cards.length < 2) return;
+  cards.forEach((c, i) => { if (!c.dataset.tile) c.dataset.tile = view + '-' + i + '-' + (c.querySelector('h2').textContent || '').trim().slice(0, 30); });
+  if (!cards.some((c) => c.dataset.tile === tileState.sel)) tileState.sel = null;
+  const desc = (c) => { const n = c.querySelector(':scope>p.form-note, :scope>p'); return (n?.textContent || '').replace(/\s+/g, ' ').trim().replace(/^(.{0,90}\S*).*$/, (m, a) => (a.length < m.length ? a + ' …' : a)); };
+  const nav = document.createElement('div');
+  nav.className = 'obj-pick pt-tiles'; nav.setAttribute('role', 'group'); nav.setAttribute('aria-label', 'Bereich wählen');
+  nav.innerHTML = cards.map((c) => `<button type="button" class="obj-op${c.dataset.tile === tileState.sel ? ' on' : ''}" data-tile="${esc(c.dataset.tile)}" aria-expanded="${c.dataset.tile === tileState.sel}"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TILE_IC}</svg><span><strong>${esc(c.querySelector('h2').textContent.trim())}</strong>${desc(c) ? `<small>${esc(desc(c))}</small>` : ''}</span><svg class="obj-op-c" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`).join('');
+  cards[0].before(nav);
+  cards.forEach((c) => c.classList.toggle('tl-off', c.dataset.tile !== tileState.sel));
+  nav.onclick = (e) => {
+    const b = e.target.closest('[data-tile]'); if (!b) return;
+    tileState.sel = tileState.sel === b.dataset.tile ? null : b.dataset.tile;
+    tileView();
+    const c = box.querySelector(`:scope>.pt-card[data-tile="${CSS.escape(tileState.sel || '')}"]`);
+    if (c) requestAnimationFrame(() => window.scrollTo({ top: c.getBoundingClientRect().top + window.scrollY - ($('.pt-top')?.offsetHeight || 0) - 10, behavior: 'smooth' }));
+  };
+}
+// Springt anderer Code zu einem Element in einer zugeklappten Karte, diese Karte öffnen.
+if (!window.__iaPtReveal) {
+  window.__iaPtReveal = true;
+  const reveal = (el) => { const c = el.closest?.('#ptView>.pt-card.tl-off'); if (c) { tileState.sel = c.dataset.tile; tileView(); } };
+  const siv = Element.prototype.scrollIntoView, foc = HTMLElement.prototype.focus;
+  Element.prototype.scrollIntoView = function (...a) { try { reveal(this); } catch { /* ignore */ } return siv.apply(this, a); };
+  HTMLElement.prototype.focus = function (...a) { try { reveal(this); } catch { /* ignore */ } return foc.apply(this, a); };
+}
+let tileT = 0;
+const tileWatch = () => {
+  const box = $('#ptView'); if (!box || box.dataset.tileWatch) return;
+  box.dataset.tileWatch = '1';
+  new MutationObserver((ms) => { if (ms.every((m) => [...m.addedNodes, ...m.removedNodes].every((n) => n.classList?.contains('pt-tiles')))) return; clearTimeout(tileT); tileT = setTimeout(tileView, 60); }).observe(box, { childList: true });
+};
 
 // ---------- Kunden: einladen und Fortschritt sehen (nur mit Einwilligung des Kunden) ----------
 const PH = ['Orientieren', 'Objekte prüfen', 'Bankgespräch', 'Bestand'];
@@ -864,6 +913,7 @@ async function start() {
   const askBranche = !BRANCHEN[me.branche];
   if (new URLSearchParams(location.search).get('checkout') === 'success') toast('Danke! Der Tarif wird aktiviert, sobald die Zahlung bestätigt ist.');
   shell();
+  tileWatch();
   route();
   if (askBranche) chooseBranche(true);
 }

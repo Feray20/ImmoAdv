@@ -1649,3 +1649,9 @@ details.an-sec>.form-note{margin-bottom:16px}
 .tl-pickgrid{order:0;margin:12px 0 6px}
 .obj-op.off{background:#F8FAFC}.obj-op.off>svg:first-child{color:#94A3B8}
 .tl-links{margin:6px 0 0;font-size:14px;color:#64748B}.tl-links a{color:#0284C7;font-weight:600}
+/* Profi-Beispiel in den Einsteiger-Tools */
+.tl-ex{margin:6px 0 12px}
+.tl-ex .btn{display:inline-flex;align-items:center;gap:8px;min-height:42px;font-size:14px}
+.tl-ex.on{border:1px solid #FDE68A;background:#FFFBEB;border-radius:12px;padding:12px 14px;color:#78350F;font-size:14px}
+.tl-ex.on p{margin:0 0 6px}.tl-ex.on ul{margin:0 0 10px;padding-left:18px;display:grid;gap:4px}
+.tl-ex.on li{font-size:13.5px;line-height:1.45}.tl-ex.on .btn{width:100%;justify-content:center;font-size:14px}

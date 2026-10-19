@@ -46,6 +46,10 @@ if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/aut
       document.querySelector('.mobile-menu')?.focus();
     }
   });
+  // Zurück-Taste (Seite aus dem Browser-Zwischenspeicher) und Tab-Wechsel: Menü nie offen „hängen“ lassen.
+  addEventListener('pageshow', () => setOpen(false));
+  addEventListener('pagehide', () => setOpen(false));
+  addEventListener('hashchange', () => setOpen(false));
   // Beim Wechsel auf Desktopbreite Menü schließen.
   matchMedia('(min-width: 901px)').addEventListener?.('change', (m) => m.matches && setOpen(false));
   // Seiten, die ihren Kopf erst per Skript schreiben: nach dem Aufbau markieren.

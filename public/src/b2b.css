@@ -1049,3 +1049,13 @@ body.intern .area-login>.pt-brand{display:none}
 .pg-tile.on::after{border-color:#0284C7;transform:translateY(-70%) rotate(135deg)}
 .pg-tile strong{font-size:15.5px;line-height:1.25}.pg-tile span{font-size:12.5px;line-height:1.35;color:#64748B}
 @media (max-width:900px){.pg-list{grid-template-columns:1fr;gap:8px}}
+/* Kachel-Auswahl in den Portal-Bereichen (b2b-portal.mjs tileView) */
+#ptView>.pt-card.tl-off{display:none!important}
+#ptView>.pt-tiles{margin:0 0 14px}
+/* Beratungskompass: Inhalte in aufgeklappten Abschnitten mit Innenabstand (alle Branchen-Layouts) */
+.bw-acc>:not(summary):not(ul){margin-left:16px;margin-right:16px}
+.bw-acc[open]>:last-child{margin-bottom:16px}
+.bw-acc[open]>summary{border-bottom:1px solid #E2E8F0;margin-bottom:12px}
+.bw-sf{padding:12px 0}.bw-sf strong{font-size:16px}.bw-sf p{font-size:14px}
+.bw-sf-a{font-size:14px!important;font-weight:600!important}
+.bw-acc .bw-table{width:auto}
