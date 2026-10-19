@@ -25,7 +25,7 @@ const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" 
 
 const VIEWS = {
   einsteiger: [['start', 'Übersicht'], ['suche', 'Objekt analysieren'], ['objekte', 'Objekte & Kreditmappe'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
-  profi: [['start', 'Cockpit'], ['suche', 'Import & Analyse'], ['objekte', 'Objekte & Kreditmappe'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer & AfA'], ['lernen', 'Fachwissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
+  profi: [['start', 'Übersicht'], ['suche', 'Import & Analyse'], ['objekte', 'Objekte & Kreditmappe'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer & AfA'], ['lernen', 'Fachwissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
 };
 const TABS = ['start', 'suche', 'objekte', 'werkzeuge', 'lernen', 'konto'];
 
@@ -72,10 +72,10 @@ export const PHASES_PRO = [
     actions: [['/rechner/mieterhoehung', 'Mieterhöhung', 'Kappungsgrenze und Briefentwurf'], ['#steuer', 'Anlage V & AfA', '15-%-Grenze, Erhaltungsaufwand'], ['/szenarien', 'Exit-Szenario', 'Verkauf, Restschuld, Steuer']] },
 ];
 const STAGE_EFFECT_PRO = [
-  'Cockpit: Scorecard, Exposé-Analyse, Cashflow nach Steuern · Fachwissen: Beleihung, ETW-Prüfung · Steuer: Kaufpreisaufteilung',
-  'Cockpit: Angebotsvergleich, Anschluss & Forward, Kreditmappe · Fachwissen: Beleihungswert, Unterlagen · Steuer: Kaufphase',
-  'Cockpit: Portfolio-Stresstest und Kennzahlen je Objekt · Fachwissen: Steuern, Fristen · Steuer: Bestand',
-  'Cockpit: Mieterhöhung, Anlage V, Exit · Fachwissen: Mietrecht, Mahnverfahren · Steuer: Bestand und Verkauf',
+  'Übersicht: Scorecard, Exposé-Analyse, Cashflow nach Steuern · Fachwissen: Beleihung, ETW-Prüfung · Steuer: Kaufpreisaufteilung',
+  'Übersicht: Angebotsvergleich, Anschluss & Forward, Kreditmappe · Fachwissen: Beleihungswert, Unterlagen · Steuer: Kaufphase',
+  'Übersicht: Portfolio-Stresstest und Kennzahlen je Objekt · Fachwissen: Steuern, Fristen · Steuer: Bestand',
+  'Übersicht: Mieterhöhung, Anlage V, Exit · Fachwissen: Mietrecht, Mahnverfahren · Steuer: Bestand und Verkauf',
 ];
 // Stufen passend zur Ansicht (Einsteiger oder Profi).
 const isPro = () => document.body?.dataset?.mode === 'profi';
@@ -87,10 +87,10 @@ export function phaseOf(d) {
 }
 // „Ihre Stufe“ als Einstellung: eine Zeile mit der aktuellen Stufe, Knopf öffnet die Auswahl (siehe openStage).
 const STAGE_EFFECT = [
-  'Cockpit zeigt Budget und Grundlagen · Lernplan: Geld, Eigenkapital, Zins und Tilgung · Steuern: Kaufphase',
-  'Cockpit zeigt Objektanalyse und Vergleich · Lernplan: Exposé lesen, Cashflow, Beleihung · Steuern: Kaufphase',
-  'Cockpit zeigt Kreditmappe und Unterlagen · Lernplan: Unterlagen, Beruf, Beleihungswert · Steuern: Kaufphase',
-  'Cockpit zeigt Fristen und Steuern · Lernplan: Steuern, Mietrecht, Mahnung, Fristen · Steuern: Bestand halten',
+  'Übersicht zeigt Budget und Grundlagen · Lernplan: Geld, Eigenkapital, Zins und Tilgung · Steuern: Kaufphase',
+  'Übersicht zeigt Objektanalyse und Vergleich · Lernplan: Exposé lesen, Cashflow, Beleihung · Steuern: Kaufphase',
+  'Übersicht zeigt Kreditmappe und Unterlagen · Lernplan: Unterlagen, Beruf, Beleihungswert · Steuern: Kaufphase',
+  'Übersicht zeigt Fristen und Steuern · Lernplan: Steuern, Mietrecht, Mahnung, Fristen · Steuern: Bestand halten',
 ];
 const phasePicker = (idx, chosen) => `<div class="stage-row" role="group" aria-label="Ihre Stufe"><div class="stage-cur"><span class="stage-k">Ihre Stufe${chosen ? '' : ' · automatisch erkannt'}</span><strong><b class="stage-n">${idx + 1}</b>${PH()[idx].name}</strong><small>${PH()[idx].plan}</small></div><button type="button" class="btn btn-outline stage-open">Stufe ändern</button></div>`;
 let STAGE_D = null;
@@ -105,7 +105,7 @@ function openStage() {
   let dlg = document.getElementById('stageDlg');
   if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'stageDlg'; dlg.className = 'stage-dlg'; document.body.append(dlg); }
   dlg.innerHTML = `<form method="dialog" class="stage-in"><div class="stage-head"><div><span class="stage-k">Einstellung</span><h2>${isPro() ? 'Ihr Schwerpunkt' : 'Ihre Stufe'}</h2></div><button class="stage-x" value="x" aria-label="Schließen">×</button></div>
-    <p class="form-note">${isPro() ? 'Profi-Ansicht: Wählen Sie Ihren aktuellen Investitions-Schwerpunkt. Cockpit-Werkzeuge, Fachwissen und Steuer-Bereich werden danach priorisiert.' : 'Wählen Sie, wo Sie gerade stehen. Die ganze Anwendung stellt sich darauf ein: Startseite, Lernplan, Reihenfolge im Wissen und der Steuer-Bereich. Sie können jederzeit wechseln.'}</p>
+    <p class="form-note">${isPro() ? 'Profi-Ansicht: Wählen Sie Ihren aktuellen Investitions-Schwerpunkt. Werkzeuge der Übersicht, Fachwissen und Steuer-Bereich werden danach priorisiert.' : 'Wählen Sie, wo Sie gerade stehen. Die ganze Anwendung stellt sich darauf ein: Startseite, Lernplan, Reihenfolge im Wissen und der Steuer-Bereich. Sie können jederzeit wechseln.'}</p>
     <div class="stage-opts${isPro() ? ' pro' : ''}">${PH().map((p, i) => `<button type="button" class="stage-opt${cur.chosen && cur.idx === i ? ' on' : ''}" data-stage="${i}"><b class="stage-n">${i + 1}</b><span><strong>${p.name}</strong><small>${p.plan}</small><em>${(isPro() ? STAGE_EFFECT_PRO : STAGE_EFFECT)[i]}</em>${isPro() ? `<span class="stage-tools">${p.actions.map(([, t]) => `<i>${t}</i>`).join('')}</span>` : ''}</span></button>`).join('')}
     <button type="button" class="stage-opt stage-auto${cur.chosen ? '' : ' on'}" data-stage="auto"><b class="stage-n">A</b><span><strong>Automatisch</strong><small>${isPro() ? 'ImmoAdv leitet den Schwerpunkt aus Ihrem Bestand ab (Objekte, Finanzierungen, Fristen).' : 'ImmoAdv erkennt die Stufe aus Ihren Daten (Finanzprofil, Objekte, Bankreife) und stellt sie selbst um.'}</small></span></button></div>
     <p class="form-note wiz-again">Ziel geändert? <button type="button" class="link-btn wiz-open">Einrichtung neu starten</button> – Ziel, Stufe und Ansicht in drei Fragen.</p></form>`;
