@@ -1042,3 +1042,10 @@ body .b2b-x h1.b2b-h1{font-family:inherit;font-size:12.5px;font-weight:800;line-
 @media (min-width:361px){.pt-top .pt-top-k{text-transform:uppercase;color:#0284C7;letter-spacing:.06em;font-size:10.5px;font-weight:700}}
 /* Anmeldung Web-Admin: Logo steht schon in der Kopfzeile – nicht doppelt in der Karte */
 body.intern .area-login>.pt-brand{display:none}
+/* Software-Tools im Portal: gleicher Kachel-Stil wie im Privatbereich (Auswahl, Tool öffnet erst beim Antippen) */
+.pg-tile{position:relative;padding:14px 40px 14px 16px;min-height:64px;align-content:center;box-shadow:0 1px 2px rgba(15,23,42,.04);-webkit-tap-highlight-color:transparent}
+.pg-tile::after{content:"";position:absolute;right:18px;top:50%;width:8px;height:8px;border-right:2px solid #94A3B8;border-top:2px solid #94A3B8;transform:translateY(-50%) rotate(45deg);transition:transform .15s}
+.pg-tile.on{background:#F0F9FF;border-color:#0284C7;box-shadow:0 0 0 2px rgba(2,132,199,.15)}
+.pg-tile.on::after{border-color:#0284C7;transform:translateY(-70%) rotate(135deg)}
+.pg-tile strong{font-size:15.5px;line-height:1.25}.pg-tile span{font-size:12.5px;line-height:1.35;color:#64748B}
+@media (max-width:900px){.pg-list{grid-template-columns:1fr;gap:8px}}

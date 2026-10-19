@@ -62,30 +62,30 @@ function renderAnalyse() {
   <h2>Objekt-Analyse</h2>
   <div class="an-bar" id="a_bar" aria-live="polite"></div>
   <div class="an-grid">
-  <article class="dash-card"><h3>Inserat und Lage</h3><div class="obj-grid">
+  <details class="dash-card an-sec"><summary><h3>Inserat und Lage</h3></summary><div class="obj-grid">
     ${F('a_url', 'Link zum Inserat (wird nur verlinkt)', '', 'any', 'url')}${F('a_addr', 'Adresse oder Lagebezeichnung', '', 'any', 'text')}
     <label>Bundesland<select id="a_land">${landOpts()}</select></label>
     <label>Objektart<select id="a_art"><option value="ETW">Eigentumswohnung</option><option value="EFH">Einfamilienhaus</option><option value="MFH">Mehrfamilienhaus</option></select></label>
-  </div></article>
-  <article class="dash-card"><h3>Kernfakten</h3><div class="obj-grid">
+  </div></details>
+  <details class="dash-card an-sec"><summary><h3>Kernfakten</h3></summary><div class="obj-grid">
     ${F('a_price', 'Kaufpreis (€)', '', '1000')}${F('a_area', 'Wohnfläche (m²)', '', '0.5')}${F('a_rooms', 'Zimmer', '', '0.5')}${F('a_year', 'Baujahr', '', '1')}
     <label>Effizienzklasse<select id="a_ec"><option value="">unbekannt</option>${['A+', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((c) => `<option>${c}</option>`).join('')}</select></label>
-    ${F('a_broker', 'Makler, Käuferanteil (%)', 3.57, '0.01')}${F('a_hg', 'Hausgeld gesamt (€/Monat)', '', '1')}${F('a_rl', 'davon Instandhaltungsrücklage (€/Monat)', '', '1')}${F('a_kwh', 'Energiekennwert (kWh/m²·a)', '', '1')}
-  </div></article>
-  <article class="dash-card"><h3>Miete und Mietspiegel</h3><div class="obj-grid">
+    ${F('a_broker', 'Makler, Käuferanteil (%)', 3.57, '0.01')}<div class="an-etw">${F('a_hg', 'Hausgeld gesamt (€/Monat)', '', '1')}${F('a_rl', 'davon Instandhaltungsrücklage (€/Monat)', '', '1')}</div>${F('a_kwh', 'Energiekennwert (kWh/m²·a)', '', '1')}
+  </div></details>
+  <details class="dash-card an-sec"><summary><h3>Miete und Mietspiegel</h3></summary><div class="obj-grid">
     ${F('a_rent', 'Ist-Nettokaltmiete (€/Monat, leer bei Leerstand)', '')}${F('a_vq', 'Ortsübliche Vergleichsmiete laut Mietspiegel (€/m²)', '', '0.01')}
     <label class="consent"><input type="checkbox" id="a_mpb"> Gebiet mit Mietpreisbremse</label>
     ${F('a_vac', 'Mietausfall (%)', 2, '0.5')}${F('a_nonrec', 'Nicht umlagefähige Kosten (€/Monat, z. B. Verwaltung)', '', '1')}${F('a_mqm', 'Instandhaltung (€/m² und Monat)', 1, '0.05')}
-  </div><p class="form-note" id="a_mslink"></p></article>
-  <article class="dash-card"><h3>Finanzierung</h3><div class="obj-grid">
+  </div><p class="form-note" id="a_mslink"></p></details>
+  <details class="dash-card an-sec"><summary><h3>Finanzierung</h3></summary><div class="obj-grid">
     ${F('a_eq', 'Eigenkapital (€)', pv(PROF.equity))}${F('a_z', 'Sollzins p. a. (%)', 3.5, '0.01')}${F('a_t', 'Anfängliche Tilgung p. a. (%)', 2, '0.1')}${F('a_fix', 'Zinsbindung (Jahre)', 10, '1')}
-  </div></article>
-  <article class="dash-card"><h3>Steuer und Wert (für Spezialisten)</h3><div class="obj-grid">
+  </div></details>
+  <details class="dash-card an-sec"><summary><h3>Steuer und Wert (für Spezialisten)</h3></summary><div class="obj-grid">
     ${F('a_bs', 'Gebäudeanteil (%)', 75, '1')}<label>AfA-Satz<select id="a_afa"><option value="2">2 % (1925–2022)</option><option value="2.5">2,5 % (vor 1925)</option><option value="3">3 % (ab 2023)</option></select></label>${F('a_tax', 'Grenzsteuersatz (%)', pv(PROF.marginalTaxPct), '1')}
     ${F('a_lv', 'Bodenwert (€, für Ertragswert)', '')}${F('a_lz', 'Liegenschaftszins (%)', '', '0.1')}${F('a_rnd', 'Restnutzungsdauer (Jahre)', '', '1')}
-  </div><p class="form-note">Bodenwert: Bodenrichtwert × Grundstücksanteil (BORIS des Landes). Liegenschaftszins und Restnutzungsdauer: Grundstücksmarktbericht des Gutachterausschusses.</p></article>
+  </div><p class="form-note">Bodenwert: Bodenrichtwert × Grundstücksanteil (BORIS des Landes). Liegenschaftszins und Restnutzungsdauer: Grundstücksmarktbericht des Gutachterausschusses.</p></details>
   </div>
-  <div class="an-jump" id="a_jump" hidden><span id="a_jump_t"></span><button class="btn btn-dark" type="button" id="a_jump_b">Analyse ansehen ↓</button></div>
+  <div class="an-jump" id="a_jump" hidden><span id="a_jump_t"></div><button class="btn btn-dark" type="button" id="a_jump_b">Analyse ansehen ↓</button></div>
   <div class="an-out" id="a_out"></div>
   <p class="an-actions" id="a_actions" hidden><button class="btn btn-dark" id="a_keep" type="button"${APPMODE ? ' hidden' : ''}>In Objektliste</button> <button class="btn btn-outline" id="a_pdf" type="button">Analyse als PDF</button> <button class="btn btn-outline" id="a_mail" type="button">Per E-Mail</button> <button class="btn ${APPMODE ? 'btn-dark' : 'btn-outline'}" id="a_save" type="button">${APPMODE ? 'Unter „Meine Objekte“ speichern' : 'Als Objekt im Konto speichern'}</button> <button class="btn btn-ghost" id="a_print" type="button">Drucken</button> <span class="form-note" id="a_msg" role="status"></span></p>
 </section>`;
@@ -417,6 +417,15 @@ export function mountObjekt(container, opts = {}) {
   PROF = opts.profile || {};
   APPMODE = Boolean(opts.app); ONSAVE = opts.onSave || null;
   root.insertAdjacentHTML('beforeend', APPMODE ? `${renderImport()}${renderAnalyse()}` : `<h2 class="is-h">Objekt- &amp; Dokumenten-Import</h2>${renderImport()}${renderAnalyse()}<section class="dash-card ml-card"><div class="ml-head"><h2>Importierte Objekte</h2><span class="form-note" id="m_count"></span></div><div id="m_list"></div></section>`);
+  // Abschnitte der Objekt-Analyse: erst beim Antippen öffnen, immer nur einer offen.
+  root.querySelectorAll('details.an-sec').forEach((dt) => dt.addEventListener('toggle', () => {
+    if (!dt.open) return;
+    root.querySelectorAll('details.an-sec[open]').forEach((o) => { if (o !== dt) o.open = false; });
+    requestAnimationFrame(() => { const top = dt.getBoundingClientRect().top + window.scrollY - (document.querySelector('.app-top,.site-header')?.offsetHeight || 0) - 10; if (dt.getBoundingClientRect().top < 0 || dt.getBoundingClientRect().top > innerHeight * 0.6) window.scrollTo({ top, behavior: 'smooth' }); });
+  }));
+  // Felder passend zur Objektart: Hausgeld und Rücklage gibt es nur bei Eigentumswohnungen.
+  const artFit = () => { const etw = ($('a_art')?.value || 'ETW') === 'ETW'; root.querySelectorAll('.an-etw').forEach((x) => { x.hidden = !etw; }); if (!etw) ['a_hg', 'a_rl'].forEach((id) => { const f = $(id); if (f && f.value) { f.value = ''; f.dispatchEvent(new Event('input', { bubbles: true })); } }); };
+  $('a_art')?.addEventListener('change', artFit); artFit();
   const bm = $('imp_bm');
   if (bm) {
     bm.href = bookmarklet(location.origin);

@@ -383,7 +383,7 @@ export function setupApp({ u, d, saveData, reload }) {
   };
   grid.querySelector('.obj-pick').onclick = (e) => { const b = e.target.closest('.obj-op'); if (b) openOp(objSel === b.dataset.op ? null : b.dataset.op, true); };
   // Springt anderer Code zu einem Element in einem zugeklappten Bereich (z. B. „Zu Neues Objekt prüfen“), diesen Bereich öffnen.
-  window.__iaObjReveal = (el) => { const c = el.closest?.('.dashboard-grid>.op-hide'); if (c && document.body.dataset.cur === 'objekte') openOp(opOf(c), false); };
+  window.__iaObjReveal = (el) => { const c = el.closest?.('.dashboard-grid>.op-hide'); if (c && document.body.dataset.cur === 'objekte') openOp(opOf(c), false); const dt = el.closest?.('details.an-sec:not([open])'); if (dt) dt.open = true; };
   if (!window.__iaSivPatched) {
     window.__iaSivPatched = true;
     const siv = Element.prototype.scrollIntoView, foc = HTMLElement.prototype.focus;

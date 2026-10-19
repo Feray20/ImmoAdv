@@ -485,6 +485,16 @@ const PLAN_LINE = {
   starter: () => 'Käufer-Pass aktiv: alle Kauf-Tools inklusive Druck und Angebotsschreiben. Portfolio, Anschluss und Betriebskosten mit Investor Pro.',
   pro: () => 'Investor Pro aktiv: alle Software-Tools ohne Einschränkung.',
 };
+const TICON = {
+  nk: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M8 18h8"/>',
+  price: '<path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  special: '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>',
+  offers: '<path d="M3 21h18M5 21V10M10 21V10M14 21V10M19 21V10M2 10l10-6 10 6z"/>',
+  bank: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  portfolio: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  fwd: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+  bk: '<path d="M7 3h10v18l-3-2-2 2-2-2-3 2z"/><path d="M10 8h4M10 12h4"/>',
+};
 const RANK = { free: 0, pass: 1, pro: 2 };
 const TIER_RANK = { free: 0, starter: 1, pro: 2 };
 
@@ -511,8 +521,9 @@ export async function mountTools(view, { d, tier = 'free', b2b = false, mode = '
   view.innerHTML = `<div class="tl-top"><div><h2 class="tl-h">Software-Tools</h2><p class="form-note">${m === 'profi' ? 'Kennzahlen und Fachlogik: Beleihungsauslauf, normierter Angebotsvergleich, Steuerwirkung, Portfolio-Stresstest.' : 'Schritt für Schritt durch Ihren Kauf – jedes Tool rechnet mit Ihren eigenen Zahlen und erklärt das Ergebnis.'}</p></div><span class="tl-plan tl-plan-${t}">${t === 'pro' ? 'Investor Pro' : t === 'starter' ? 'Käufer-Pass' : 'Kostenlos'}</span></div>
     <p class="tl-planline">${esc(PLAN_LINE[t](m))}</p>
     <div class="tl-base"><label>Rechnen mit<select id="tlObj"><option value="eigen"${sel ? '' : ' selected'}>Eigenen Werten (leer starten)</option>${objs.map((x) => `<option value="${esc(String(x.id))}"${x === sel ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>${objs.length ? '<small>Werte aus Objekt und Finanzprofil werden übernommen und lassen sich je Tool anpassen.</small>' : '<small>Noch kein Objekt angelegt – <a href="#objekte">Objekt anlegen</a>, dann rechnen die Tools mit Ihren Zahlen.</small>'}</div>
-    <nav class="tl-nav" aria-label="Software-Tools">${mainIds.map((id, i) => `<a href="#t-${id}" data-tl="${id}" aria-expanded="false"${has(id) ? '' : ' class="off"'}>${m === 'einsteiger' && has(id) ? `<b>${i + 1}</b> ` : ''}${esc(TOOLS[id][0])}</a>`).join('')}${o.more.map((id) => `<a href="#t-${id}" data-tl="${id}" aria-expanded="false" class="more${has(id) ? '' : ' off'}">${esc(TOOLS[id][0])}</a>`).join('')}<a href="#steuer">Steuer</a><a href="/rechner">Alle Rechner</a></nav>
-    <p class="tl-pick" id="tlPick">Tippen Sie auf ein Tool – es öffnet sich hier.</p>
+    <div class="obj-pick tl-pickgrid" role="group" aria-label="Software-Tools">${[...mainIds, ...o.more].map((id, i) => `<button type="button" class="obj-op${has(id) ? '' : ' off'}" data-tl="${id}" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TICON[id] || TICON.nk}</svg><span><strong>${m === 'einsteiger' && i < mainIds.length && has(id) ? `${i + 1}. ` : ''}${esc(TOOLS[id][0])}</strong><small>${has(id) ? esc(TOOLS[id][2]) : `${esc(TOOLS[id][2])} · ${TOOLS[id][1] === 'pro' ? 'Investor Pro' : 'Käufer-Pass'}`}</small></span><svg class="obj-op-c" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`).join('')}</div>
+    <p class="tl-links"><a href="#steuer">Steuer &amp; AfA</a> · <a href="/rechner">Alle Rechner</a></p>
+    
     ${[...mainIds, ...o.more].map(sec).join('')}
     <p class="form-note tl-foot">Ihre Eingaben bleiben nur in diesem Browser. <button type="button" class="text-btn" id="tlClear">Eingaben zurücksetzen</button></p>`;
   const q = (id) => view.querySelector('#t-' + id);
@@ -522,9 +533,8 @@ export async function mountTools(view, { d, tier = 'free', b2b = false, mode = '
   const open = (id, scroll) => {
     CTX.open = id || null;
     view.querySelectorAll('.tl-card').forEach((c) => { c.hidden = c.id !== 't-' + id; });
-    view.querySelectorAll('.tl-nav a[data-tl]').forEach((a) => { const on = a.dataset.tl === id; a.classList.toggle('on', on); a.setAttribute('aria-expanded', String(on)); });
-    const pk = view.querySelector('#tlPick'); if (pk) pk.hidden = !!id;
-    if (!id) return;
+    view.querySelectorAll('[data-tl]').forEach((a) => { const on = a.dataset.tl === id; a.classList.toggle('on', on); a.setAttribute('aria-expanded', String(on)); });
+        if (!id) return;
     if (!mounted.has(id)) { mounted.add(id); mount(id); }
     const c = q(id);
     if (scroll && c) requestAnimationFrame(() => { const top = c.getBoundingClientRect().top + window.scrollY - (document.querySelector('.app-top')?.offsetHeight || 0) - 12; window.scrollTo({ top, behavior: 'smooth' }); });
@@ -533,5 +543,5 @@ export async function mountTools(view, { d, tier = 'free', b2b = false, mode = '
   view.querySelector('#tlObj')?.addEventListener('change', (e) => { try { sessionStorage.setItem('ia-tool2-obj', e.target.value); } catch { /* ohne Speicher */ } mountTools(view, { d, tier, b2b, mode }); });
   view.querySelector('#tlClear')?.addEventListener('click', () => { if (!confirm('Eingaben in den Software-Tools zurücksetzen? Die Werte werden danach wieder aus Objekt und Finanzprofil übernommen.')) return; try { Object.keys(localStorage).filter((k) => k.startsWith('ia-tool2-')).forEach((k) => localStorage.removeItem(k)); } catch { /* ohne Speicher */ } mountTools(view, { d, tier, b2b, mode }); });
   view.onclick = (e) => { const b = e.target.closest('[data-print]'); if (b) printBox(b.closest('.tl-card'), TOOLS[b.dataset.print]?.[0] || 'ImmoAdv'); };
-  view.querySelectorAll('.tl-nav a[data-tl]').forEach((a) => a.onclick = (e) => { e.preventDefault(); open(CTX.open === a.dataset.tl ? null : a.dataset.tl, true); });
+  view.querySelectorAll('button[data-tl]').forEach((a) => a.onclick = (e) => { e.preventDefault(); open(CTX.open === a.dataset.tl ? null : a.dataset.tl, true); });
 }
