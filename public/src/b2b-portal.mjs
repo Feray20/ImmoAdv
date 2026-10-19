@@ -742,7 +742,7 @@ function portalGate() {
   root.querySelectorAll('[data-gt]').forEach((b) => b.onclick = () => { history.replaceState(null, '', location.pathname + (b.dataset.gt === 'anfrage' ? '#anfrage' : '')); portalGate(); });
   const box = $('#ptGate');
   if (tab === 'login') {
-    loginForm(box, { title: 'Unternehmensportal', lead: 'Anmeldung mit den Zugangsdaten, die Sie von ImmoAdv erhalten haben.', noteHtml: 'Noch kein Zugang? <a class="ck-link" href="#anfrage" id="toReq">Unternehmenskonto anfragen</a>' });
+    loginForm(box, { title: 'Unternehmensportal', lead: 'Anmeldung mit den Zugangsdaten, die Sie von ImmoAdv erhalten haben.', noteHtml: 'Noch kein Zugang? <a class="ck-link" href="#anfrage" id="toReq">Unternehmenskonto anfragen</a>', onUnknown: (v) => { history.replaceState(null, '', location.pathname + '#anfrage'); portalGate(); const f = root.querySelector('#reqF [name=email]'); if (f) f.value = v; } });
     box.querySelector('#toReq')?.addEventListener('click', (e) => { e.preventDefault(); history.replaceState(null, '', location.pathname + '#anfrage'); portalGate(); });
     return;
   }
