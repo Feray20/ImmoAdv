@@ -405,6 +405,15 @@ export function setupApp({ u, d, saveData, reload }) {
   if (!window.__iaTopBound) { window.__iaTopBound = true; document.addEventListener('click', (e) => { const a = e.target.closest?.('a[data-go], .app-tab, .app-nav'); if (a && a.getAttribute('href') === location.hash) toTop(); }); }
   window.__iaApplyView = apply;
   new MutationObserver(() => schedule()).observe(grid, { childList: true });
+  // Nach Anmeldung / erstem Laden immer mit der Übersicht beginnen – kein Rücksprung in den zuletzt
+  // offenen Bereich (z. B. Konto). Ausnahmen nur für ausdrückliche Absichten: Kauf (?buy/?want → #angebot),
+  // Inserat-Übernahme (#objekte mit Import) und Rückkehr aus der Bezahlung.
+  if (!window.__iaBooted) {
+    const h0 = (location.hash.slice(1) || '').split('?')[0];
+    let imp = false; try { imp = !!sessionStorage.getItem('ia-import'); } catch { /* ohne Speicher */ }
+    const keep = (h0 === 'angebot' && (q.get('buy') || q.get('want'))) || (h0 === 'objekte' && imp) || q.get('checkout');
+    if (h0 && h0 !== 'start' && !keep) history.replaceState(null, '', location.pathname + location.search + '#start');
+  }
   apply();
   // Erster Aufbau nach Login/Neuladen: immer ganz oben beginnen (kein vom Browser wiederhergestellter Scrollstand,
   // kein Herunterscrollen durch Fokus auf Eingabefelder weiter unten, z. B. im Bereich Konto).

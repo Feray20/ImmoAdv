@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   try {
     const customer = await findCustomer(user.id, user.email);
     if (!customer) return NextResponse.json({ error: 'Noch keine Käufe vorhanden.' }, { status: 404 });
-    const base: Stripe.BillingPortal.SessionCreateParams = { customer: customer.id, return_url: `${new URL(req.url).origin}/app/dashboard#konto`, locale: 'de' };
+    const base: Stripe.BillingPortal.SessionCreateParams = { customer: customer.id, return_url: `${new URL(req.url).origin}/app/dashboard`, locale: 'de' };
     let flowData: Stripe.BillingPortal.SessionCreateParams.FlowData | undefined;
     if (flow === 'payment') flowData = { type: 'payment_method_update' };
     if (flow === 'update' || flow === 'cancel') {

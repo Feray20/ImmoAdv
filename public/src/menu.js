@@ -91,7 +91,7 @@ if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/aut
       if (!a.dataset.orig) a.dataset.orig = a.textContent;
       a.textContent = acc ? 'Mein Konto' : a.dataset.orig;
       a.classList.toggle('nav-acc', acc);
-      a.setAttribute('href', acc ? '/app/dashboard#konto' : '/auth/login');
+      a.setAttribute('href', acc ? '/app/dashboard' : '/auth/login');
     });
   };
   const apply = (st) => {
