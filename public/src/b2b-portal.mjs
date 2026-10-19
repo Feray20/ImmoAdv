@@ -54,9 +54,9 @@ function shell() {
     <aside class="pt-side"><a class="pt-brand" href="/"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a>
       <small class="pt-tag">Unternehmensportal</small>
       <nav>${navGroups((v) => true)}</nav>
-      <div class="pt-foot"><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><button type="button" class="pt-br-side" id="ptBr" title="Branche wechseln – das Portal passt sich an"><span aria-hidden="true">${B().icon}</span> ${esc(B().short)} · wechseln</button><button type="button" class="pt-logout" id="ptLogout">Abmelden</button></div>
+      <div class="pt-foot"><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><button type="button" class="pt-logout" id="ptLogout">Abmelden</button></div>
     </aside>
-    <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#start" aria-label="ImmoAdv Unternehmensportal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Unternehmensportal</small><h1 id="ptTitle"></h1></div><button type="button" class="pt-pres-btn" id="ptPres" hidden title="Vollbild für das Kundengespräch am Tablet"><span aria-hidden="true">⛶</span> Präsentieren</button><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
+    <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#start" aria-label="ImmoAdv Unternehmensportal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Unternehmensportal</small><h1 id="ptTitle"></h1></div><button type="button" class="pt-pres-btn" id="ptPres" hidden title="Vollbild für das Kundengespräch am Tablet"><span aria-hidden="true">⛶</span> Präsentieren</button><button type="button" class="pt-brh" id="ptBr" aria-haspopup="dialog" title="Ihre Ansicht – zum Wechseln tippen"><span class="pt-brh-i" aria-hidden="true">${B().icon}</span><span class="pt-brh-t"><small>Ansicht</small><b>${esc(B().short)}</b></span><svg class="pt-brh-l" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M7 10l5 5 5-5"/></svg></button><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM">Abmelden</button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
       ${a.status === 'locked' ? `<div class="pt-alert bad"><strong>Konto gesperrt.</strong> ${esc(a.lockReason || '')} Rechnungen und AVV bleiben abrufbar. Fragen an support@immoadv.de.</div>` : ''}
       <div id="ptView"></div><p class="pt-liab">ImmoAdv stellt rein technische Analyse- und Erfassungsinstrumente bereit und trifft keine Votierungs-, Bonitäts- oder Kreditentscheidung. Die aufsichtsrechtliche Pflicht zur Prüfung nach MaRisk, KWG oder § 34i GewO verbleibt vollumfänglich beim beratenden bzw. finanzierenden Institut. <a href="/nutzungsbedingungen#hinweise">Rechtliche Hinweise</a> · <a href="/datenschutz">Datenschutz</a></p></section>
     <nav class="pt-tabs" aria-label="Bereiche">${MAIN.map(([v, l, ic]) => `<a href="#${v}" data-v="${v}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${v === 'kunden' ? B().kunden : l}</span>${v === 'anfragen' && me.usage.leadsNew ? `<b class="pt-dot">${me.usage.leadsNew}</b>` : ''}</a>`).join('')}<button type="button" id="ptMore" aria-expanded="false" aria-controls="ptSheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>Mehr</span></button></nav>
@@ -227,8 +227,6 @@ function vStart(box) {
       <div class="pt-kpi"><small>Einrichtung</small><strong>${done} / 5</strong><a href="#profil">${me.role === 'owner' ? 'Im Profil' : 'Beim Inhaber'}</a></div>
     </div>
     <div class="pt-grid2">
-      <section class="pt-card pt-focus"><div class="pt-focus-h"><span aria-hidden="true">${B().icon}</span><div><small>Ihre Ansicht</small><strong>${esc(B().label)}</strong></div><button type="button" class="btn btn-outline btn-sm" data-brsw>Branche wechseln</button></div>
-        <div class="pt-focus-g">${B().focus.map(([t, x, h]) => `<a href="${h}"><strong>${esc(t)}</strong><span>${esc(x)}</span></a>`).join('')}</div></section>
       <section class="pt-card wl-card"><h2>So sieht Ihr Kunde die Einladung</h2>
         <div class="wl-prev" style="--wl:${esc(col)}"><div class="wl-mail"><small>Von: <b>${esc(a.companyName)} über ImmoAdv</b></small><small>Antwort an: ${esc(a.email || 'Ihre E-Mail-Adresse')}</small></div>
         <div class="wl-page"><h4>Einladung von <span>${esc(a.companyName)}</span></h4><p class="wl-txt">Bereiten Sie Finanzprofil, Objekt und Unterlagen Schritt für Schritt vor – Ihr Berater sieht nur den Fortschritt.</p><span class="wl-btn">Einladung ansehen</span></div></div>
@@ -889,22 +887,31 @@ function chooseBranche(first = false) {
   if (!d) { d = document.createElement('dialog'); d.id = 'brDlg'; d.className = 'ad-dlg br-dlg'; document.body.append(d); }
   let pre = null; if (first) { try { pre = localStorage.getItem('ia-b2b-branche'); } catch { /* ohne Speicher */ } }
   const cur = BRANCHEN[pre] ? pre : br();
-  d.innerHTML = `<div class="ad-dlg-in"><div class="ad-dlg-h"><h2>${first ? 'In welcher Branche arbeiten Sie?' : 'Branche wechseln'}</h2>${first ? '' : '<button type="button" class="stage-x" data-x aria-label="Schließen">×</button>'}</div>
-    <p class="form-note">Startseite, Bezeichnungen und der Beratungskompass passen sich an Ihre Branche an. Sie können jederzeit wechseln – auf der Übersicht unter „Ihre Ansicht“.</p>
-    <div class="br-tiles">${BRANCHE_KEYS.map((k) => `<button type="button" class="br-tile${k === cur ? ' on' : ''}" data-br="${k}"><span aria-hidden="true">${BRANCHEN[k].icon}</span><strong>${esc(BRANCHEN[k].label)}</strong><small>${esc(BRANCHEN[k].desc)}</small></button>`).join('')}</div>
-    <p class="form-note" id="brMsg" role="status"></p></div>`;
+  let pick = cur;
+  const tile = (k) => { const x = BRANCHEN[k]; return `<button type="button" class="br-opt${k === pick ? ' on' : ''}" data-pick="${k}" role="radio" aria-checked="${k === pick}">
+      <span class="br-opt-h"><span class="br-opt-i" aria-hidden="true">${x.icon}</span><span><strong>${esc(x.label)}</strong><small>${esc(x.desc)}</small></span>${k === cur && !first ? '<em>Aktiv</em>' : ''}</span>
+      <ul>${x.focus.map(([t, tx]) => `<li><b>${esc(t)}</b> – ${esc(tx)}</li>`).join('')}</ul>
+      ${x.recht ? `<span class="br-opt-r">${x.recht.map((r) => `<i>${esc(r)}</i>`).join('')}</span>` : ''}</button>`; };
+  d.innerHTML = `<div class="ad-dlg-in"><div class="ad-dlg-h"><h2>${first ? 'In welcher Branche arbeiten Sie?' : 'Ihre Ansicht'}</h2>${first ? '' : '<button type="button" class="stage-x" data-x aria-label="Schließen">×</button>'}</div>
+    <p class="form-note">Startseite, Bezeichnungen und der Beratungskompass passen sich an Ihre Branche an. Wählen Sie eine Ansicht und bestätigen Sie unten.</p>
+    <div class="br-opts" role="radiogroup" aria-label="Branche">${[cur, ...BRANCHE_KEYS.filter((k) => k !== cur)].map(tile).join('')}</div>
+    <div class="br-foot"><p class="form-note" id="brMsg" role="status"></p><button type="button" class="btn btn-dark" id="brOk"${pick === cur && !first ? ' disabled' : ''}>${first ? 'Ansicht übernehmen' : 'Ansicht wechseln'}</button></div></div>`;
   d.querySelector('[data-x]')?.addEventListener('click', () => d.close());
   if (first) d.addEventListener('cancel', (e) => e.preventDefault(), { once: true });
-  d.querySelectorAll('[data-br]').forEach((b) => b.onclick = async () => {
-    const k = b.dataset.br;
-    d.querySelectorAll('[data-br]').forEach((x) => { x.disabled = true; });
+  d.querySelectorAll('[data-pick]').forEach((b) => b.onclick = () => {
+    pick = b.dataset.pick;
+    d.querySelectorAll('[data-pick]').forEach((x) => { const on = x.dataset.pick === pick; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); });
+    d.querySelector('#brOk').disabled = pick === cur && !first;
+  });
+  d.querySelector('#brOk').onclick = async (e) => {
+    const k = pick, ok = e.currentTarget; ok.disabled = true;
     const { supa, token } = await import('./sess.mjs');
     const r = await supa('/auth/v1/user', { method: 'PUT', headers: { Authorization: 'Bearer ' + token() }, body: JSON.stringify({ data: { b2b_branche: k } }) }).catch(() => null);
-    if (!r?.ok) { d.querySelector('#brMsg').textContent = 'Speichern fehlgeschlagen – bitte erneut versuchen.'; d.querySelectorAll('[data-br]').forEach((x) => { x.disabled = false; }); return; }
+    if (!r?.ok) { d.querySelector('#brMsg').textContent = 'Speichern fehlgeschlagen – bitte erneut versuchen.'; ok.disabled = false; return; }
     me.branche = k; d.close();
     shell(); route();
     toast(`Ansicht: ${BRANCHEN[k].label}`);
-  });
+  };
   d.showModal ? d.showModal() : d.setAttribute('open', '');
 }
 start();

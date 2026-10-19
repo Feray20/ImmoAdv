@@ -847,6 +847,40 @@ function paths(mode, done) {
     <section class="path b"><div class="path-h"><span aria-hidden="true">📚</span><div><strong>${mode === 'profi' ? 'Werkzeuge & Fachwissen' : 'Wissen & Werkzeuge'}</strong><small>${mode === 'profi' ? 'Steuer, Recht, Bestand' : 'Nachschlagen und nachrechnen'}</small></div></div>${list(B, false)}</section></div>`;
 }
 
+// Übersicht wie im Unternehmensportal: zuerst „Heute zu tun“, dann vier Kennzahlen – nur aus echten Kontodaten.
+function todayB2C(d) {
+  const pr = d.profile || {}, L = d.progress?.lern || {};
+  const objs = (Array.isArray(d.objects) ? d.objects : []).filter((o) => o && o.id);
+  const priced = objs.filter((o) => Number(o.price) > 0);
+  const prof = Number(pr.netIncome) > 0 && pr.equity !== undefined && pr.equity !== '' && Boolean(pr.employment);
+  const fmt = (x) => new Date(x).toLocaleDateString('de-DE');
+  let best = null;
+  for (const o of priced) {
+    try {
+      const g = readiness(o, []).groups.filter((x) => x.key !== 'unterlagen');
+      const done = g.reduce((a, x) => a + x.done, 0), total = g.reduce((a, x) => a + x.total, 0);
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      if (!best || pct > best.pct) best = { o, pct, missing: g.flatMap((x) => x.missing) };
+    } catch { /* Objekt unvollständig */ }
+  }
+  let next = null; try { next = priced.length ? upcoming(priced.map((o) => ({ ...o, price: Number(o.price), fixedYears: Number(o.fixedYears) || 0 })), { limit: 1 }).items[0] || null : null; } catch { /* ohne Fristen */ }
+  const nextTopic = LERN.find(([id]) => !L[id]);
+  const learned = LERN.filter(([id]) => L[id]).length;
+  const items = [];
+  if (!prof) items.push(['warn', 'Finanzprofil vervollständigen', 'Einkommen, Eigenkapital und Erwerbsstatus – daraus rechnet ImmoAdv Ihr Budget.', '#konto']);
+  if (!priced.length) items.push(['hot', 'Erstes Objekt analysieren', 'Exposé hochladen, Link eintragen oder Kaufpreis eingeben.', '#suche']);
+  if (best && best.pct < 100) items.push(['warn', `${esc(best.o.name || 'Objekt')}: ${best.missing.length} Angabe${best.missing.length === 1 ? '' : 'n'} fehlen`, 'Für eine bankfertige Kreditmappe ergänzen.', '#objekte']);
+  if (best && best.pct >= 90) items.push(['ok', 'Kreditmappe erstellen', `${esc(best.o.name || 'Objekt')} ist zu ${best.pct} % vorbereitet.`, '#objekte']);
+  if (next) { const days = Math.round((new Date(next.date) - Date.now()) / 864e5); if (days <= 365) items.push(['hot', `Frist am ${fmt(next.date)}`, `${esc(next.title || next.label || 'Frist')} · ${esc(next.object || '')}`, '/fristen']); }
+  if (nextTopic) items.push(['', `Lernen: ${nextTopic[1]}`, nextTopic[2], '#lernen']);
+  const list = items.length
+    ? items.map(([c, t, x, h]) => `<li class="${c}"><a href="${h}"><span class="todo-dot" aria-hidden="true"></span><span><strong>${t}</strong><small>${x}</small></span><em aria-hidden="true">›</em></a></li>`).join('')
+    : '<li class="empty">Alles erledigt – gut vorbereitet.</li>';
+  const kpi = (l, v, a, h) => `<a class="ia-kpi" href="${h}"><small>${l}</small><strong>${v}</strong><span>${a}</span></a>`;
+  return `<section class="ia-today"><div class="todo-h"><h3>Heute zu tun</h3><span class="form-note">${items.length ? `${items.length} Punkt${items.length === 1 ? '' : 'e'}` : 'Alles erledigt'}</span></div><ul class="todo-list">${list}</ul></section>
+  <div class="ia-kpis">${kpi('Objekte', priced.length, priced.length ? 'Ansehen' : 'Anlegen', priced.length ? '#objekte' : '#suche')}${kpi('Bankreife', best ? best.pct + ' %' : '–', 'Kreditmappe', '#objekte')}${kpi('Nächste Frist', next ? fmt(next.date) : '–', 'Fristen', '/fristen')}${kpi('Lernplan', `${learned} / ${LERN.length}`, 'Wissen', '#lernen')}</div>`;
+}
+
 function startCard(mode, d) {
   const done = Object.values(d.progress?.lern || {}).filter(Boolean).length;
   if (!d.profile?.mode && !new URLSearchParams(location.search).get('modus')) {
@@ -858,6 +892,7 @@ function startCard(mode, d) {
   if (mode === 'profi') {
     // Profi: Kennzahlen des eigenen Bestands statt Erklärtexte – danach Werkzeuge.
     return `<article class="dash-card wide start-card start-pro" data-view="start">
+      ${todayB2C(d)}
       <div class="stage-mini"><span class="stage-k">Stufe</span><strong><b class="stage-n">${ph.idx + 1}</b>${PH()[ph.idx].name}</strong><button type="button" class="link-btn stage-open">ändern</button><div id="rankSlot" class="rank-slot mini"></div></div>
       ${proKpis(d)}
       <div id="cmMode"></div>
@@ -865,7 +900,7 @@ function startCard(mode, d) {
   }
   const tasks = fahrplan(ph.idx, d);
   const nextI = tasks.findIndex((x) => x[3] === false);
-  return `<article class="dash-card wide start-card" data-view="start">${phasePicker(ph.idx, ph.chosen)}
+  return `<article class="dash-card wide start-card" data-view="start">${todayB2C(d)}${phasePicker(ph.idx, ph.chosen)}
     <div id="rankSlot" class="rank-slot"></div>
     <div id="cmMode"></div>
     <h4 class="sc-h">Ihr Fahrplan für Stufe ${ph.idx + 1}</h4>
