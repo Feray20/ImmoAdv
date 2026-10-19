@@ -985,7 +985,7 @@ body .b2b-x h1.b2b-h1{font-family:inherit;font-size:12.5px;font-weight:800;line-
   .rb-chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:2px 14px 4px;scroll-padding:0 14px}
   .rb-chips::-webkit-scrollbar{display:none}
   .rb-chips button{flex:none;min-height:40px;font-size:13.5px;padding:0 14px}
-  .b2b-x h2{font-size:clamp(26px,7.2vw,31px);line-height:1.15;letter-spacing:-.012em;margin:18px 0 12px}
+  .b2b-x h2,.b2b-x h2#rbH{font-size:clamp(26px,7.2vw,31px);line-height:1.15;letter-spacing:-.01em;margin:18px 0 12px}
   .b2b-x .b2b-exec-txt>p{font-size:16px}
   .b2b-x .b2b-cta-main{width:100%;justify-content:center;font-size:16px}
   .b2b-cta-link,.b2b-login-hint{font-size:15px}
