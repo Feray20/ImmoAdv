@@ -24,8 +24,8 @@ const ICON = {
 const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
 const VIEWS = {
-  einsteiger: [['start', 'Übersicht'], ['suche', 'Objekt prüfen'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
-  profi: [['start', 'Cockpit'], ['suche', 'Import & Analyse'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer & AfA'], ['lernen', 'Fachwissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
+  einsteiger: [['start', 'Übersicht'], ['suche', 'Objekt analysieren'], ['objekte', 'Objekte & Kreditmappe'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
+  profi: [['start', 'Cockpit'], ['suche', 'Import & Analyse'], ['objekte', 'Objekte & Kreditmappe'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer & AfA'], ['lernen', 'Fachwissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
 };
 const TABS = ['start', 'suche', 'objekte', 'werkzeuge', 'lernen', 'konto'];
 
@@ -260,7 +260,7 @@ export function setupApp({ u, d, saveData, reload }) {
   main.insertAdjacentHTML('afterbegin', `<div class="app-top"><a class="brand app-top-brand" href="/"><img class="brand-logo" src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="app-top-t"><small class="app-top-k">Privatbereich</small><h1 id="appTitle"></h1></div>
     <button class="mode-chip" id="modeChip" type="button" aria-label="Modus wechseln (aktuell ${mode === 'profi' ? 'Profi' : 'Einsteiger'})"><b>${mode === 'profi' ? 'Profi' : 'Einsteiger'}</b> <span aria-hidden="true">⇄</span></button><button class="app-logout-m" id="appLogoutM" type="button">Abmelden</button></div>`);
   import('./legal-foot.mjs').then((m) => { if (!main.querySelector('.ia-legal')) main.insertAdjacentHTML('beforeend', m.legalFoot('b2c')); }).catch(() => {});
-  app.insertAdjacentHTML('beforeend', `<nav class="app-tabs" aria-label="Schnellnavigation">${TABS.map((k) => `<a class="app-tab" data-go="${k}" href="#${k}">${svg(k)}<span>${k === 'werkzeuge' ? 'Tools' : views.find((v) => v[0] === k)[1].split(' ')[0]}</span></a>`).join('')}</nav>`);
+  app.insertAdjacentHTML('beforeend', `<nav class="app-tabs" aria-label="Schnellnavigation">${TABS.map((k) => `<a class="app-tab" data-go="${k}" href="#${k}">${svg(k)}<span>${k === 'werkzeuge' ? 'Tools' : k === 'suche' ? 'Analyse' : views.find((v) => v[0] === k)[1].split(' ')[0]}</span></a>`).join('')}</nav>`);
   $('appLogout').onclick = () => document.getElementById('logout')?.click();
   $('appLogoutM').onclick = () => document.getElementById('logout')?.click();
   $('modeChip').onclick = async () => {
@@ -415,7 +415,7 @@ export function setupApp({ u, d, saveData, reload }) {
   }
 }
 
-// ImmoAdv Studio (Bereich Objekte): Produkt wählen – BankReady (Kreditmappe) oder RenditeRadar (Objekt-Analyse) –
+// Kreditmappe (Bereich Objekte): BankReady. Die Objekt-Analyse liegt nur noch unter „Objekt prüfen“ (ein Ort fürs Durchrechnen) –
 // und wie die Daten kommen: AutoPilot (Exposé-PDF hochladen, Link eintragen oder gespeichertes Objekt – ImmoAdv
 // rechnet alles automatisch) oder Manuell (online eintragen oder PDF-Formular herunterladen, ausfüllen, wieder hochladen).
 // Das Ergebnis erscheint zuerst als PDF auf dem Bildschirm und kann dann heruntergeladen werden.
@@ -474,8 +474,7 @@ const fileName = (r, fallback) => { const m = /filename\*=UTF-8''([^;]+)|filenam
 
 function kmCard() {
   return `<article class="dash-card wide km-card" data-view="objekte" id="kmCard">
-    <div class="studio-head"><h3>ImmoAdv Studio</h3><p class="form-note">Produkt wählen – und entscheiden, ob ImmoAdv alles automatisch erledigt oder Sie selbst eintragen.</p></div>
-    <div class="studio-prod" role="tablist" aria-label="Produkt">${Object.entries(PROD).map(([k, p]) => `<button type="button" role="tab" data-kmdoc="${k}"><strong>${p.name}</strong><small>${p.sub}</small></button>`).join('')}</div>
+    <div class="studio-head"><h3>BankReady Kreditmappe</h3><p class="form-note">Ihre Unterlagen für die Bank – ImmoAdv erledigt alles automatisch, oder Sie tragen selbst ein. Ein Objekt nur durchrechnen? Das geht unter <a class="ck-link" href="#suche">Analyse</a>.</p></div>
     <div class="seg studio-way" role="tablist" aria-label="Weg"><button type="button" role="tab" data-kmway="auto"><strong>AutoPilot</strong><small>Exposé oder Link – ImmoAdv rechnet</small></button><button type="button" role="tab" data-kmway="man"><strong>Manuell</strong><small>Online oder per PDF-Formular</small></button></div>
     <p class="demo-hint" id="kmDemo" hidden></p><div id="kmBody"></div><p class="km-msg" id="kmMsg" role="status" aria-live="polite"></p><div id="kmRes"></div></article>`;
 }
@@ -802,7 +801,7 @@ function fahrplan(idx, d) {
       ['Budget berechnen', 'Welche Rate und welcher Kaufpreis zu Ihnen passen.', '/rechner/budget', null],
       ['Grundlagen lernen', 'Geld, Eigenkapital, Zins und Tilgung – je wenige Minuten.', '#lernen', learned(['geld', 'eigenkapital', 'annuitaet'])]],
     [['Erstes Objekt anlegen', 'Exposé hochladen oder Eckdaten eintragen.', '#suche', objs.length > 0],
-      ['Kennzahlen prüfen', 'Rendite, Cashflow und Bankreife mit RenditeRadar.', '#objekte', null],
+      ['Kennzahlen prüfen', 'Rendite, Cashflow und Bankreife unter „Analyse“.', '#suche', null],
       ['Exposé lesen lernen', 'Was hinter Cashflow und Beleihung steckt.', '#lernen', learned(['cashflow', 'beleihung'])]],
     [['Finanzprofil vollständig', 'Die Bank prüft Einkommen und Eigenkapital zuerst.', '#konto', prof],
       ['Unterlagen vollständig machen', 'Bankreife Ihres Objekts auf 90 % bringen.', '/checkliste', null],
@@ -837,7 +836,7 @@ function proKpis(d) {
 // Cockpit: zwei klare Hauptpfade statt vieler Einzelkacheln. Einsteiger geführt (nummeriert), Profi kompakt mit Fachbegriffen.
 function paths(mode, done) {
   const A = mode === 'profi'
-    ? [['#objekte', 'Objekte & Analysen', 'RenditeRadar, DSCR, Cashflow nach Steuern'], ['#objekte', 'Kreditmappe (Studio)', 'BankReady für jedes Objekt'], ['/szenarien', 'Anschlusszins & Verkauf', 'Kipp-Zins, Forward, § 23 EStG'], ['/rechner/vergleich', 'Bankangebote vergleichen', 'Effektivzins, Restschuld, Gesamtkosten'], ['/cockpit', 'Stresstest-Cockpit', 'Zinsschock und Mietausfall']]
+    ? [['#suche', 'Import & Analyse', 'Rendite, DSCR, Cashflow nach Steuern'], ['#objekte', 'Kreditmappe', 'BankReady für jedes Objekt'], ['/szenarien', 'Anschlusszins & Verkauf', 'Kipp-Zins, Forward, § 23 EStG'], ['/rechner/vergleich', 'Bankangebote vergleichen', 'Effektivzins, Restschuld, Gesamtkosten'], ['/cockpit', 'Stresstest-Cockpit', 'Zinsschock und Mietausfall']]
     : [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#suche', 'Exposé importieren', 'PDF oder Link – Kennzahlen sofort'], ['#objekte', 'Objekt prüfen', 'Exposé oder Link – Rendite und Risiko'], ['#objekte', 'Kreditmappe erstellen', 'Bankfertig für Ihr Gespräch']];
   const B = mode === 'profi'
     ? [['#werkzeuge', 'Software-Tools', 'Portfolio, Betriebskosten, Fristen'], ['#steuer', 'Steuer & AfA', 'Anlage V, 15-%-Grenze, AfA § 7 Abs. 4 / Sonder-AfA § 7b'], ['/rechner/afa', 'AfA-Plan', 'linear, degressiv, Sonder-AfA'], ['/rechner/mieterhoehung', 'Mieterhöhung', 'Kappungsgrenze, Briefentwurf'], ['/rechner', 'Rechner-Bibliothek', 'Mietrecht und Steuern'], ['#lernen', 'Fachwissen', `${done} von ${LERN.length} Themen`]]
