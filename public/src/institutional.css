@@ -1484,3 +1484,16 @@ body[data-mode="profi"] .app-top .mode-chip{background:#fff;color:#0F2C59;border
   .hero3-kick{font-size:12px;letter-spacing:.03em}
   .hero3 .home-cta .hs-go{font-size:16px;font-weight:700}
 }
+
+/* Express-Login: Hinweis unter dem E-Mail-Feld (Konto vorhanden / neu / Google) */
+.ed-hint{margin:-4px 0 6px;padding:8px 12px;border-radius:8px;font-size:13.5px;line-height:1.5;border:1px solid #BAE6FD;background:#F0F9FF;color:#0C4A6E}
+.ed-hint.ok{border-color:#BBF7D0;background:#F0FDF4;color:#14532D}
+.ed-hint.warn{border-color:#FDE68A;background:#FFFBEB;color:#78350F}
+.ed-hint .link-btn{font-weight:700;text-decoration:underline;padding:0;min-height:0;background:none;border:0;color:inherit;cursor:pointer;font-size:inherit}
+
+/* Pflichtlinks immer sichtbar (nicht im aufklappbaren Fußbereich): Kündigungsbutton § 312k BGB, Widerrufsfunktion § 356a BGB */
+.foot-must{display:flex;flex-wrap:wrap;gap:6px 22px;padding-top:14px;padding-bottom:6px;border-top:1px solid rgba(255,255,255,.12);margin-top:16px}
+.foot-must a{font-weight:700;font-size:14px;min-height:36px;display:inline-flex;align-items:center}
+.wdr-sum{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:12px 0 18px;padding:14px 16px;border:1px solid #E2E8F0;border-radius:10px;background:#F8FAFC}
+.wdr-sum dt{color:#64748B;font-size:14px}.wdr-sum dd{margin:0;font-weight:600;color:#0F2C59;overflow-wrap:anywhere}
+@media (max-width:480px){.wdr-sum{grid-template-columns:1fr}.wdr-sum dd{margin-bottom:6px}}

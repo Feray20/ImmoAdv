@@ -172,6 +172,12 @@ export function loginForm(root, opts) {
       } catch (err) { show(err.message || 'Anmeldung fehlgeschlagen.'); }
       finally { delete f.dataset.busy; btn.disabled = false; }
     };
+    // Express-Login: erkennt beim Eintippen, ob die E-Mail schon ein Konto hat (gemeinsam für Privat- und Unternehmensbereich).
+    if (AREA !== 'admin') import('./email-detect.mjs').then((x) => x.attach(em, { mode: mode === 'signup' ? 'register' : 'login', actions: {
+      ...(signup ? { register: (v) => { draw('signup'); root.querySelector('#aEmail').value = v; root.querySelector('#aPw')?.focus(); }, login: (v) => { draw('login'); root.querySelector('#aEmail').value = v; root.querySelector('#aPw')?.focus(); } } : {}),
+      ...(opts.onUnknown ? { register: (v) => opts.onUnknown(v) } : {}),
+      sso: (p) => root.querySelector(`[data-sso="${p}"]`)?.click(),
+    } })).catch(() => {});
     em.focus();
   };
   draw();

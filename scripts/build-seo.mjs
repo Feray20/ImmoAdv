@@ -31,7 +31,7 @@ const PAGES = [
   { path: '/wissen', title: `Immobilien und Geld verständlich erklärt – ${((f) => (Array.isArray(f) ? f : f.entries).length)(JSON.parse(readFileSync(new URL('../public/data/faq.json', import.meta.url), 'utf8')))} Antworten | ImmoAdv`, desc: 'Wissen in vier Phasen: Leistbarkeit, Objektprüfung, Steuern und Cashflow, Bankgespräch – verständlich erklärt, mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
   { path: '/cockpit', file: null, skip: true, title: '', desc: '' },
   { path: '/suche', file: 'suche/index.html', template: 'wissen/index.html', title: 'Suche | ImmoAdv', noindex: true, desc: 'Rechner, Antworten und Fachbegriffe rund um Immobilienkauf und Finanzierung durchsuchen.', crumbs: ['Suche'] },
-  { path: '/wissen/erwerbsstatus', file: 'wissen/erwerbsstatus/index.html', title: 'Immobilienfinanzierung nach Erwerbsstatus: Angestellt, Beamter, Selbstständig | ImmoAdv', desc: 'Was Banken bei Angestellten, Befristeten, Beamten, Selbstständigen, Berufseinsteigern und Rentnern prüfen – mit typischen Unterlagen je Gruppe.', crumbs: ['Wissen', 'Erwerbsstatus'] },
+  { path: '/wissen/erwerbsstatus', file: 'wissen/erwerbsstatus/index.html', title: 'Finanzierung je Erwerbsstatus: Angestellt bis Selbstständig | ImmoAdv', desc: 'Was Banken bei Angestellten, Befristeten, Beamten, Selbstständigen, Berufseinsteigern und Rentnern prüfen – mit typischen Unterlagen je Gruppe.', crumbs: ['Wissen', 'Erwerbsstatus'] },
   { path: '/wissen/glossar', title: 'Glossar Immobilienfinanzierung: Begriffe von A bis Z | ImmoAdv', desc: 'Annuität, Beleihungswert, Zinsbindung, Kappungsgrenze, Grundschuld und mehr: die wichtigsten Begriffe zu Kauf, Finanzierung, Miete und Steuer kurz erklärt.', crumbs: ['Wissen', 'Glossar'], extra: ['glossar'] },
   { path: '/start', title: 'Meine erste Immobilie durchrechnen – in drei Schritten | ImmoAdv', desc: 'Kaufpreis, Miete, Eigenkapital: Rate, Tilgungshebel, Cashflow, Notgroschen und das Bild nach zehn Jahren – mit Erklärungen aller Fachbegriffe.', crumbs: ['Meine erste Immobilie'], extra: ['app'] },
   { path: '/rechner', title: 'Mietrecht- und Steuerrechner: Mietpreisbremse, AfA, Indexmiete | ImmoAdv', desc: 'Mietpreisbremse, Kappungsgrenze, Index- und Staffelmiete, AfA linear und degressiv, Kaufpreisaufteilung und 15-%-Grenze – mit offengelegter Formel.', crumbs: ['Rechner'], extra: ['app'] },
@@ -52,10 +52,11 @@ const PAGES = [
   { path: '/profiler', title: 'Investor-Profiler: Welche Strategie passt zu Ihnen? | ImmoAdv', desc: 'Sechs Fragen zu Eigenkapital, Cashflow, Steuer und Horizont – mit den Kennzahlen, auf die Sie besonders achten sollten.', crumbs: ['Investor-Profiler'] },
   { path: '/angebote', title: 'Preise und Angebote | ImmoAdv', desc: 'Alle Rechner kostenlos. BankReady Kreditmappe 39 € einmalig, Käufer-Pass 49 € für 90 Tage (kein Abo), Investor Pro 29 €/Monat – Endpreise inkl. USt.', crumbs: ['Angebote'] },
   { path: '/sicherheit', title: 'Sicherheit und Datenschutz | ImmoAdv', desc: 'Speicherung in Frankfurt, Prüfsummen, befristete Freigabelinks und Zugriffsprotokoll – und was noch geplant ist.', crumbs: ['Sicherheit'] },
-  { path: '/impressum', title: 'Impressum | ImmoAdv', desc: 'Anbieterkennzeichnung nach § 5 DDG.', crumbs: ['Impressum'] },
+  { path: '/impressum', title: 'Impressum | ImmoAdv', desc: 'Impressum von ImmoAdv: Anbieterkennzeichnung nach § 5 DDG, Kontakt, Verantwortliche nach § 18 MStV und Hinweise zur Streitbeilegung.', crumbs: ['Impressum'] },
   { path: '/datenschutz', title: 'Datenschutzerklärung | ImmoAdv', desc: 'Welche Daten ImmoAdv verarbeitet, wo sie gespeichert werden und welche Rechte Sie haben.', crumbs: ['Datenschutz'] },
   { path: '/nutzungsbedingungen', title: 'Nutzungsbedingungen und Widerrufsbelehrung | ImmoAdv', desc: 'Nutzungsbedingungen, Preise, Laufzeit, Kündigung und Widerrufsbelehrung von ImmoAdv.', crumbs: ['Nutzungsbedingungen'] },
-  { path: '/kuendigen', title: 'Verträge hier kündigen | ImmoAdv', desc: 'Abo (Einsteiger oder Profi) ohne Anmeldung kündigen – nach § 312k BGB, mit Eingangsbestätigung per E-Mail.', crumbs: ['Verträge kündigen'] },
+  { path: '/widerrufen', title: 'Vertrag widerrufen | ImmoAdv', desc: 'Kauf oder Abo bei ImmoAdv online widerrufen – ohne Anmeldung, in zwei Schritten nach § 356a BGB, mit Eingangsbestätigung per E-Mail.', crumbs: ['Vertrag widerrufen'] },
+  { path: '/kuendigen', title: 'Verträge hier kündigen | ImmoAdv', desc: 'Abo (Investor Pro oder früherer Tarif) ohne Anmeldung kündigen – nach § 312k BGB, mit Eingangsbestätigung per E-Mail.', crumbs: ['Verträge kündigen'] },
   // Nicht indexieren: persönliche oder tokengebundene Seiten
   { path: '/datenraum', title: 'Datenraum | ImmoAdv', desc: 'Freigegebene Unterlagen.', noindex: true },
   { path: '/pruefen', title: 'Kreditmappe prüfen | ImmoAdv', desc: 'Echtheitsprüfung einer ImmoAdv-Kreditmappe.', noindex: true },
@@ -180,7 +181,7 @@ const lastmod = (p) => {
   const file = p.file || (p.path === '/' ? 'index.html' : `${p.path.slice(1)}/index.html`);
   try { const d = execSync(`git log -1 --format=%cs -- "public/${file}"`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : today; } catch { return today; }
 };
-const prio = (p) => (p.path === '/' ? '1.0' : p.path.split('/').length > 3 ? '0.6' : ['/impressum', '/datenschutz', '/nutzungsbedingungen', '/kuendigen'].includes(p.path) ? '0.3' : '0.8');
+const prio = (p) => (p.path === '/' ? '1.0' : p.path.split('/').length > 3 ? '0.6' : ['/impressum', '/datenschutz', '/nutzungsbedingungen', '/kuendigen', '/widerrufen'].includes(p.path) ? '0.3' : '0.8');
 write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${indexable.map((p) => `  <url><loc>${ORIGIN}${p.path === '/' ? '/' : p.path}</loc><lastmod>${lastmod(p)}</lastmod><priority>${prio(p)}</priority></url>`).join('\n')}\n</urlset>\n`);
 write('robots.txt', `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app/\nDisallow: /auth/\nDisallow: /datenraum\nDisallow: /pruefen\nDisallow: /verify/\nDisallow: /p/\nDisallow: /partner\nDisallow: /intern\nDisallow: /b2b-portal\nDisallow: /karten\n\nSitemap: ${ORIGIN}/sitemap.xml\n`);
 console.log(`SEO: ${results.length} Seiten, ${indexable.length} in der Sitemap`);

@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://immoadv.de/</loc><lastmod>2026-10-18</lastmod><priority>1.0</priority></url>
   <url><loc>https://immoadv.de/wissen</loc><lastmod>2026-10-18</lastmod><priority>0.8</priority></url>
-  <url><loc>https://immoadv.de/cockpit</loc><lastmod>2026-10-18</lastmod><priority>0.8</priority></url>
+  <url><loc>https://immoadv.de/cockpit</loc><lastmod>2026-10-19</lastmod><priority>0.8</priority></url>
   <url><loc>https://immoadv.de/wissen/erwerbsstatus</loc><lastmod>2026-10-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://immoadv.de/wissen/glossar</loc><lastmod>2026-10-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://immoadv.de/start</loc><lastmod>2026-10-18</lastmod><priority>0.8</priority></url>
@@ -27,6 +27,7 @@
   <url><loc>https://immoadv.de/impressum</loc><lastmod>2026-10-18</lastmod><priority>0.3</priority></url>
   <url><loc>https://immoadv.de/datenschutz</loc><lastmod>2026-10-18</lastmod><priority>0.3</priority></url>
   <url><loc>https://immoadv.de/nutzungsbedingungen</loc><lastmod>2026-10-18</lastmod><priority>0.3</priority></url>
+  <url><loc>https://immoadv.de/widerrufen</loc><lastmod>2026-10-19</lastmod><priority>0.3</priority></url>
   <url><loc>https://immoadv.de/kuendigen</loc><lastmod>2026-10-18</lastmod><priority>0.3</priority></url>
   <url><loc>https://immoadv.de/b2b</loc><lastmod>2026-10-18</lastmod><priority>0.8</priority></url>
   <url><loc>https://immoadv.de/rechner/kaufnebenkosten/baden-wuerttemberg</loc><lastmod>2026-10-18</lastmod><priority>0.6</priority></url>
