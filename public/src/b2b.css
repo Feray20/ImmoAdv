@@ -990,3 +990,29 @@ body .b2b-x h1.b2b-h1{font-family:inherit;font-size:12.5px;font-weight:800;line-
   .b2b-x .b2b-cta-main{width:100%;justify-content:center;font-size:16px}
   .b2b-cta-link,.b2b-login-hint{font-size:15px}
 }
+
+/* Kopfzeile: Branchen-Knopf („Ansicht“) neben Abmelden – öffnet das Auswahlmenü */
+.pt-brh{display:inline-flex;align-items:center;gap:8px;flex:none;min-height:44px;padding:4px 10px 4px 8px;border:1px solid #CBD5E1;border-radius:10px;background:#fff;color:#0F2C59;font:inherit;cursor:pointer;margin-left:auto}
+.pt-brh:hover{background:#F0F9FF;border-color:#0284C7}
+.pt-brh-i{font-size:20px;line-height:1}
+.pt-brh-t{display:grid;text-align:left;line-height:1.15}
+.pt-brh-t small{font-size:10.5px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em}
+.pt-brh-t b{font-size:13.5px;font-weight:800;color:#0F2C59;white-space:nowrap}
+.pt-brh-l{color:#64748B}
+.pt-top .pt-brh~.pt-logout-m{margin-left:0}
+@media (max-width:360px){.pt-brh-t{display:none}.pt-brh{padding:4px 8px;gap:4px}}
+/* Auswahlmenü */
+.br-dlg .ad-dlg-in{max-width:760px}
+.br-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:10px;margin:12px 0;max-height:min(62vh,640px);overflow:auto;padding:2px}
+.br-opt{display:grid;gap:8px;text-align:left;padding:14px;border:1.5px solid #E2E8F0;border-radius:14px;background:#fff;cursor:pointer;font:inherit;color:#0F2C59}
+.br-opt:hover{border-color:#7DD3FC}
+.br-opt.on{border-color:#0284C7;box-shadow:0 0 0 3px #E0F2FE;background:#F8FCFF}
+.br-opt-h{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start}
+.br-opt-i{font-size:26px;line-height:1}
+.br-opt-h strong{display:block;font-size:16px}.br-opt-h small{display:block;font-size:13px;color:#64748B;text-transform:none;letter-spacing:0}
+.br-opt-h em{font-style:normal;font-size:11.5px;font-weight:800;color:#047857;background:#DCFCE7;border-radius:999px;padding:3px 8px}
+.br-opt ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:13.5px;color:#334155;line-height:1.45}
+.br-opt ul b{color:#0F2C59}
+.br-opt-r{display:flex;flex-wrap:wrap;gap:4px}.br-opt-r i{font-style:normal;font-size:11.5px;color:#475569;background:#F1F5F9;border-radius:6px;padding:2px 6px}
+.br-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;bottom:0;background:#fff;padding-top:8px}
+.br-foot .btn{min-height:46px}

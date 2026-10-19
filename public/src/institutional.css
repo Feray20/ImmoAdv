@@ -1468,7 +1468,7 @@ body[data-mode="profi"] .app-top .mode-chip{background:#fff;color:#0F2C59;border
   .app-logout-m{display:inline-flex;align-items:center;flex:none;min-height:44px;padding:6px 12px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;color:#0F2C59;font:inherit;font-size:13px;cursor:pointer}
   .app-logout-m:hover{background:#F8FAFC}
 }
-@media (max-width:420px){.app-top .mode-chip b{display:none}.app-top .mode-chip{min-width:44px;justify-content:center;font-size:18px;padding:6px 10px}}
+@media (max-width:360px){.app-top .mode-chip b{display:none}.app-top .mode-chip{min-width:44px;justify-content:center;font-size:18px;padding:6px 10px}}
 
 /* Handy-Schrift der öffentlichen Seiten: Inter (selbst gehostet, keine externen Server). Wird nur auf schmalen Bildschirmen geladen. */
 @font-face{font-family:"IA Inter";src:url("/fonts/Inter-Regular.woff") format("woff");font-weight:400;font-style:normal;font-display:swap}
@@ -1504,3 +1504,25 @@ body[data-mode="profi"] .app-top .mode-chip{background:#fff;color:#0F2C59;border
 .an-jump .btn{background:#fff!important;color:#0F2C59!important;border-color:#fff!important;min-height:44px;flex:none;white-space:nowrap;padding:0 14px}
 .an-res-h{font-size:20px;color:#0F2C59;margin:18px 0 8px;scroll-margin-top:84px}
 @media (max-width:900px){.an-jump{bottom:calc(84px + env(safe-area-inset-bottom))}}
+
+/* Privatbereich-Übersicht wie im Unternehmensportal: „Heute zu tun“ und Kennzahlen */
+.ia-today{margin:0 0 14px}
+.ia-today .todo-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ia-today .todo-h h3{margin:0;font-size:20px;color:#0F2C59}
+.ia-today .todo-list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.ia-today .todo-list li{min-width:0;background:none!important;border:0!important;padding:0!important;box-shadow:none!important}
+.ia-today .todo-list a{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:56px;padding:10px 14px;border-radius:12px;border:1px solid #E2E8F0;background:#fff;text-decoration:none;color:#0F2C59}
+.ia-today .todo-list a:hover{border-color:#0284C7;background:#F0F9FF}
+.ia-today .todo-list strong{display:block;font-size:15px;overflow-wrap:break-word}
+.ia-today .todo-list small{display:block;font-size:13px;color:#64748B;text-transform:none;letter-spacing:0;overflow-wrap:break-word}
+.ia-today .todo-list em{font-style:normal;color:#94A3B8;font-size:20px}
+.ia-today .todo-dot{width:10px;height:10px;border-radius:50%;background:#94A3B8;box-shadow:0 0 0 4px #F1F5F9}
+.ia-today li.hot .todo-dot{background:#0284C7;box-shadow:0 0 0 4px #E0F2FE}.ia-today li.warn .todo-dot{background:#F59E0B;box-shadow:0 0 0 4px #FEF3C7}.ia-today li.ok .todo-dot{background:#22C55E;box-shadow:0 0 0 4px #DCFCE7}
+.ia-today li.empty{padding:12px;color:#475569;font-size:14px}
+.ia-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 18px}
+.ia-kpi{display:grid;gap:3px;padding:12px 14px;border:1px solid #E2E8F0;border-radius:12px;background:#fff;text-decoration:none;min-width:0}
+.ia-kpi small{font-size:12.5px;color:#64748B;text-transform:none;letter-spacing:0}
+.ia-kpi strong{font-size:20px;color:#0F2C59;font-variant-numeric:tabular-nums}
+.ia-kpi span{font-size:13px;font-weight:700;color:#0284C7}
+.ia-kpi:hover{border-color:#0284C7}
+@media (max-width:760px){.ia-kpis{grid-template-columns:1fr 1fr}}
