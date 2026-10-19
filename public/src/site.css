@@ -1512,3 +1512,10 @@ label>select{min-width:0;width:100%;text-overflow:ellipsis}
 @media (max-width:900px){body:has(.app-tabs) .ia-priv,body:has(.pt-tabs) .ia-priv,body:has(.ad-bottom) .ia-priv{bottom:calc(78px + env(safe-area-inset-bottom))}}
 @media (max-width:420px){.ia-priv{flex-direction:column;align-items:stretch}.ia-priv-ok{width:100%}}
 @media print{.ia-priv{display:none!important}}
+@media (max-width:900px){
+html:not(.ia-paid) .nav-actions a[href="/auth/login"],html.ia-user:not(.ia-paid) .nav-actions a.nav-acc{display:inline-flex!important;align-items:center;justify-content:center;min-height:44px;height:44px;padding:0 14px;border-radius:10px;font-size:14.5px;font-weight:700;white-space:nowrap;margin:0}
+.site-header .nav-wrap>.nav-actions{display:flex!important;align-items:center;gap:8px;margin-left:auto;margin-right:8px}
+.site-header .nav-actions~.mobile-menu{margin-left:0!important;flex:none}
+.site-header .nav-actions .btn-dark{min-height:44px;height:44px;padding:0 12px;border-radius:10px;font-size:14px;white-space:nowrap}
+}
+@media (max-width:359px){.site-header .nav-actions~.mobile-menu .mm-text{display:none}.site-header .nav-actions~.mobile-menu{width:44px;justify-content:center;padding:0}html:not(.ia-paid) .nav-actions a[href="/auth/login"],html.ia-user:not(.ia-paid) .nav-actions a.nav-acc{padding:0 10px;font-size:13px}}
