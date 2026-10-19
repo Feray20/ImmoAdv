@@ -61,6 +61,7 @@
     scan();
     new MutationObserver(later).observe(document.body, { childList: true, subtree: true });
     addEventListener('hashchange', later);
+    document.addEventListener('click', later); // aufgeklappte Bereiche (z. B. Tool geöffnet) nachträglich prüfen
     addEventListener('resize', later);
     addEventListener('load', later);
   };

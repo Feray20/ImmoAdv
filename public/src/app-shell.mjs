@@ -362,6 +362,35 @@ export function setupApp({ u, d, saveData, reload }) {
   import('/src/field-help.mjs').then((m) => m.watchHelp(grid)).catch(() => {});
   import('/src/retention.mjs').then(async (m) => { const ac = await getAccess(); m.mountRetention(grid, { mode, d, u, saveData, paid: ac.tier === 'pro' || ac.b2b }); if (typeof window.__iaApplyView === 'function') window.__iaApplyView(); }).catch(() => {});
 
+  // Objekte: oben eine Auswahl; der jeweilige Bereich öffnet sich erst beim Antippen (vorher nichts darunter).
+  const OBJ_OPS = [
+    ['pruefen', 'Neues Objekt prüfen', 'Exposé hochladen, Link eintragen oder selbst eingeben', '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M12 17v-6M9.5 13.5 12 11l2.5 2.5"/>'],
+    ['meine', 'Meine Objekte', 'Gespeicherte Objekte, Unterlagen und Fristen', '<path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/>'],
+    ['mappe', 'Kreditmappe', 'BankReady-Mappe für die Bank erstellen', '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'],
+  ];
+  const opOf = (el) => (el.id === 'sucheView' ? 'pruefen' : el.id === 'kmCard' ? 'mappe' : 'meine');
+  let objSel = null, lastCur = null;
+  if (!grid.querySelector('.obj-pick')) grid.insertAdjacentHTML('afterbegin', `<div class="obj-pick" data-view="objekte" role="group" aria-label="Bereich wählen">${OBJ_OPS.map(([k, t, s2, ic]) => `<button type="button" class="obj-op" data-op="${k}" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ic}</svg><span><strong>${t}</strong><small>${s2}</small></span><svg class="obj-op-c" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`).join('')}</div>`);
+  const paintOps = () => {
+    grid.querySelectorAll(':scope>[data-view~="objekte"]:not(.obj-pick)').forEach((el) => el.classList.toggle('op-hide', opOf(el) !== objSel));
+    grid.querySelectorAll('.obj-op').forEach((b) => { const on = b.dataset.op === objSel; b.classList.toggle('on', on); b.setAttribute('aria-expanded', String(on)); });
+  };
+  const openOp = (k, scroll) => {
+    objSel = k || null; paintOps();
+    if (!scroll || !objSel) return;
+    const first = [...grid.querySelectorAll(':scope>[data-view~="objekte"]:not(.obj-pick)')].find((el) => opOf(el) === objSel);
+    if (first) requestAnimationFrame(() => window.scrollTo({ top: first.getBoundingClientRect().top + window.scrollY - (document.querySelector('.app-top')?.offsetHeight || 0) - 10, behavior: 'smooth' }));
+  };
+  grid.querySelector('.obj-pick').onclick = (e) => { const b = e.target.closest('.obj-op'); if (b) openOp(objSel === b.dataset.op ? null : b.dataset.op, true); };
+  // Springt anderer Code zu einem Element in einem zugeklappten Bereich (z. B. „Zu Neues Objekt prüfen“), diesen Bereich öffnen.
+  window.__iaObjReveal = (el) => { const c = el.closest?.('.dashboard-grid>.op-hide'); if (c && document.body.dataset.cur === 'objekte') openOp(opOf(c), false); };
+  if (!window.__iaSivPatched) {
+    window.__iaSivPatched = true;
+    const siv = Element.prototype.scrollIntoView, foc = HTMLElement.prototype.focus;
+    Element.prototype.scrollIntoView = function (...a) { try { window.__iaObjReveal?.(this); } catch { /* ignore */ } return siv.apply(this, a); };
+    HTMLElement.prototype.focus = function (...a) { try { window.__iaObjReveal?.(this); } catch { /* ignore */ } return foc.apply(this, a); };
+  }
+
   const CLASSIFIED = new WeakSet();
   const apply = () => {
     if ((location.hash.slice(1) || '').split('?')[0] === 'suche') { history.replaceState(null, '', location.pathname + location.search + location.hash.replace(/^#suche/, '#objekte')); window.__iaToAnalyse = true; }
@@ -372,6 +401,13 @@ export function setupApp({ u, d, saveData, reload }) {
     [...grid.children].forEach((el) => { if (!CLASSIFIED.has(el)) { el.dataset.view = classify(el); CLASSIFIED.add(el); } el.classList.toggle('v-show', el.dataset.view.split(' ').includes(cur)); });
     document.querySelectorAll('[data-go]').forEach((a) => a.classList.toggle('on', a.dataset.go === cur));
     $('appTitle').textContent = views.find((x) => x[0] === cur)[1];
+    document.body.dataset.cur = cur;
+    if (cur === 'objekte' && lastCur !== 'objekte') {
+      let imp = false; try { imp = !!sessionStorage.getItem('ia-import'); } catch { /* ohne Speicher */ }
+      objSel = window.__iaToAnalyse || imp ? 'pruefen' : null;
+    }
+    lastCur = cur;
+    paintOps();
     if (cur === 'objekte') objektModule().then(() => { if (window.__iaToAnalyse) { window.__iaToAnalyse = false; $('sucheView')?.scrollIntoView({ block: 'start' }); } }).catch(() => { const x = $('sucheMount'); if (x) x.innerHTML = '<p class="auth-message error">Import konnte nicht geladen werden.</p>'; });
     if (cur === 'steuer' && !$('steuerView').dataset.ready) {
       $('steuerView').dataset.ready = '1';
@@ -495,7 +531,7 @@ const fileName = (r, fallback) => { const m = /filename\*=UTF-8''([^;]+)|filenam
 function kmCard() {
   return `<article class="dash-card wide km-card" data-view="objekte" id="kmCard">
     <div class="studio-head"><h3>BankReady Kreditmappe</h3><p class="form-note">Ihre Unterlagen für die Bank – erstellt aus einem gespeicherten Objekt und Ihrem Finanzprofil.</p></div>
-    <p class="demo-hint" id="kmDemo" hidden></p><div id="kmBody"></div><p class="km-msg" id="kmMsg" role="status" aria-live="polite"></p><div id="kmRes"></div></article>`;
+    <div class="demo-hint" id="kmDemo" hidden></div><div id="kmBody"></div><p class="km-msg" id="kmMsg" role="status" aria-live="polite"></p><div id="kmRes"></div></article>`;
 }
 
 function kmBody(d) {
@@ -754,7 +790,7 @@ function bindKm(d, u, saveData, reload) {
       finally { busy(false); }
     });
   };
-  getAccess().then((a) => { const h = $('kmDemo'); if (h && !a.paid) { h.hidden = false; h.innerHTML = `${DEMO_NOTE} ${UNLOCK} <a class="ck-link" href="#angebot">Alle Tarife</a>`; } });
+  getAccess().then((a) => { const h = $('kmDemo'); if (h && !a.paid) { h.hidden = false; h.innerHTML = `<p class="km-demo-t">${DEMO_NOTE}</p><div class="km-demo-a">${UNLOCK}<a class="ck-link" href="#angebot">Alle Tarife</a></div>`; } });
   box.querySelectorAll('[data-kmdoc]').forEach((b) => b.onclick = () => { KM.doc = b.dataset.kmdoc; draw(); });
   box.querySelectorAll('[data-kmway]').forEach((b) => b.onclick = () => { KM.way = b.dataset.kmway; draw(); });
   draw();

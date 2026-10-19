@@ -506,22 +506,32 @@ export async function mountTools(view, { d, tier = 'free', b2b = false, mode = '
   const has = (id) => TIER_RANK[t] >= RANK[TOOLS[id][1]];
   const o = ORDER[m];
   const lockCard = (id) => { const [title, nd, desc] = TOOLS[id]; return `<h3>${esc(title)} <span class="tl-badge">${nd === 'pro' ? 'Investor Pro' : 'Käufer-Pass'}</span></h3><p class="form-note">${esc(desc)}</p><p class="tl-hint">${LOCK_SVG} Enthalten in ${nd === 'pro' ? `Investor Pro (${esc(CTX.prices.pro)})` : `Käufer-Pass (${esc(CTX.prices.pass)}) und Investor Pro`} · <a href="#angebot">Tarife ansehen</a></p>`; };
-  const sec = (id) => `<section class="tl-card${has(id) ? '' : ' tl-locked'}" id="t-${id}"></section>`;
+  const sec = (id) => `<section class="tl-card${has(id) ? '' : ' tl-locked'}" id="t-${id}" hidden></section>`;
   const mainIds = [...o.main.filter(has), ...o.main.filter((id) => !has(id))];
   view.innerHTML = `<div class="tl-top"><div><h2 class="tl-h">Software-Tools</h2><p class="form-note">${m === 'profi' ? 'Kennzahlen und Fachlogik: Beleihungsauslauf, normierter Angebotsvergleich, Steuerwirkung, Portfolio-Stresstest.' : 'Schritt für Schritt durch Ihren Kauf – jedes Tool rechnet mit Ihren eigenen Zahlen und erklärt das Ergebnis.'}</p></div><span class="tl-plan tl-plan-${t}">${t === 'pro' ? 'Investor Pro' : t === 'starter' ? 'Käufer-Pass' : 'Kostenlos'}</span></div>
     <p class="tl-planline">${esc(PLAN_LINE[t](m))}</p>
     <div class="tl-base"><label>Rechnen mit<select id="tlObj"><option value="eigen"${sel ? '' : ' selected'}>Eigenen Werten (leer starten)</option>${objs.map((x) => `<option value="${esc(String(x.id))}"${x === sel ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>${objs.length ? '<small>Werte aus Objekt und Finanzprofil werden übernommen und lassen sich je Tool anpassen.</small>' : '<small>Noch kein Objekt angelegt – <a href="#objekte">Objekt anlegen</a>, dann rechnen die Tools mit Ihren Zahlen.</small>'}</div>
-    <nav class="tl-nav" aria-label="Software-Tools">${mainIds.map((id, i) => `<a href="#t-${id}"${has(id) ? '' : ' class="off"'}>${m === 'einsteiger' && has(id) ? `<b>${i + 1}</b> ` : ''}${esc(TOOLS[id][0])}</a>`).join('')}<a href="#steuer">Steuer</a><a href="/rechner">Alle Rechner</a></nav>
-    ${mainIds.map(sec).join('')}
-    <details class="tl-more"><summary>Weitere Tools <span>${o.more.map((id) => esc(TOOLS[id][0])).join(' · ')}</span></summary>${o.more.map(sec).join('')}</details>
+    <nav class="tl-nav" aria-label="Software-Tools">${mainIds.map((id, i) => `<a href="#t-${id}" data-tl="${id}" aria-expanded="false"${has(id) ? '' : ' class="off"'}>${m === 'einsteiger' && has(id) ? `<b>${i + 1}</b> ` : ''}${esc(TOOLS[id][0])}</a>`).join('')}${o.more.map((id) => `<a href="#t-${id}" data-tl="${id}" aria-expanded="false" class="more${has(id) ? '' : ' off'}">${esc(TOOLS[id][0])}</a>`).join('')}<a href="#steuer">Steuer</a><a href="/rechner">Alle Rechner</a></nav>
+    <p class="tl-pick" id="tlPick">Tippen Sie auf ein Tool – es öffnet sich hier.</p>
+    ${[...mainIds, ...o.more].map(sec).join('')}
     <p class="form-note tl-foot">Ihre Eingaben bleiben nur in diesem Browser. <button type="button" class="text-btn" id="tlClear">Eingaben zurücksetzen</button></p>`;
   const q = (id) => view.querySelector('#t-' + id);
   const mount = (id) => { const b = q(id); if (!b) return; if (!has(id)) { b.innerHTML = lockCard(id); return; } TOOLS[id][3](b, d); };
-  mainIds.forEach(mount);
-  let moreDone = false;
-  view.querySelector('.tl-more')?.addEventListener('toggle', (e) => { if (e.target.open && !moreDone) { moreDone = true; o.more.forEach(mount); } });
+  // Tools erst beim Antippen öffnen: vorher ist nur die Auswahl sichtbar, danach genau ein Tool.
+  const mounted = new Set();
+  const open = (id, scroll) => {
+    CTX.open = id || null;
+    view.querySelectorAll('.tl-card').forEach((c) => { c.hidden = c.id !== 't-' + id; });
+    view.querySelectorAll('.tl-nav a[data-tl]').forEach((a) => { const on = a.dataset.tl === id; a.classList.toggle('on', on); a.setAttribute('aria-expanded', String(on)); });
+    const pk = view.querySelector('#tlPick'); if (pk) pk.hidden = !!id;
+    if (!id) return;
+    if (!mounted.has(id)) { mounted.add(id); mount(id); }
+    const c = q(id);
+    if (scroll && c) requestAnimationFrame(() => { const top = c.getBoundingClientRect().top + window.scrollY - (document.querySelector('.app-top')?.offsetHeight || 0) - 12; window.scrollTo({ top, behavior: 'smooth' }); });
+  };
+  if (CTX.open && TOOLS[CTX.open]) open(CTX.open, false);
   view.querySelector('#tlObj')?.addEventListener('change', (e) => { try { sessionStorage.setItem('ia-tool2-obj', e.target.value); } catch { /* ohne Speicher */ } mountTools(view, { d, tier, b2b, mode }); });
   view.querySelector('#tlClear')?.addEventListener('click', () => { if (!confirm('Eingaben in den Software-Tools zurücksetzen? Die Werte werden danach wieder aus Objekt und Finanzprofil übernommen.')) return; try { Object.keys(localStorage).filter((k) => k.startsWith('ia-tool2-')).forEach((k) => localStorage.removeItem(k)); } catch { /* ohne Speicher */ } mountTools(view, { d, tier, b2b, mode }); });
   view.onclick = (e) => { const b = e.target.closest('[data-print]'); if (b) printBox(b.closest('.tl-card'), TOOLS[b.dataset.print]?.[0] || 'ImmoAdv'); };
-  view.querySelectorAll('.tl-nav a[href^="#t-"]').forEach((a) => a.onclick = (e) => { e.preventDefault(); const target = view.querySelector(a.getAttribute('href')); if (target && target.closest('details')) target.closest('details').open = true; target?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  view.querySelectorAll('.tl-nav a[data-tl]').forEach((a) => a.onclick = (e) => { e.preventDefault(); open(CTX.open === a.dataset.tl ? null : a.dataset.tl, true); });
 }
