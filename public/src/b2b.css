@@ -971,3 +971,22 @@ label.consent.b2b-terms>input[type="checkbox"]{position:static;width:20px;height
 /* Portal-Hintergrund ohne Kartenrahmen (Klasse .is-portal wird auch für Karten genutzt) – Fußzeile über die volle Breite */
 body.is-portal{padding:0;border:0;border-radius:0;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
 body.is-portal>#portal{flex:1 0 auto}
+
+/* /b2b: ein einziger Hero (dunkel) – Seitentitel als kleine Überzeile, Branchenwahl, eine Hauptaussage */
+.b2b-x h2#rbH{font-family:inherit;font-weight:800;letter-spacing:-.02em}
+body .b2b-x h1.b2b-h1{font-family:inherit;font-size:12.5px;font-weight:800;line-height:1.45;letter-spacing:.08em;text-transform:uppercase;color:#7DD3FC;margin:0 0 14px;max-width:none}
+.b2b-x .b2b-cta-main{background:#fff;color:#0F2C59;box-shadow:0 10px 30px rgba(2,6,23,.25)}
+.b2b-x .b2b-cta-main:hover{background:#E0F2FE;color:#0F2C59}
+.b2b-login-hint a{text-decoration-thickness:1px}
+.b2b-cta-link{text-decoration-thickness:1px}
+@media (max-width:760px){
+  .b2b-x{padding-top:24px}
+  .b2b-x .b2b-exec-txt,.b2b-x .b2b-exec-grid>*{min-width:0}
+  .rb-chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:2px 14px 4px;scroll-padding:0 14px}
+  .rb-chips::-webkit-scrollbar{display:none}
+  .rb-chips button{flex:none;min-height:40px;font-size:13.5px;padding:0 14px}
+  .b2b-x h2{font-size:clamp(26px,7.2vw,31px);line-height:1.15;letter-spacing:-.012em;margin:18px 0 12px}
+  .b2b-x .b2b-exec-txt>p{font-size:16px}
+  .b2b-x .b2b-cta-main{width:100%;justify-content:center;font-size:16px}
+  .b2b-cta-link,.b2b-login-hint{font-size:15px}
+}

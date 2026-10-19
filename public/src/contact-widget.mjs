@@ -1,7 +1,7 @@
 // Schwebendes Kontaktformular (unten rechts) auf den öffentlichen Seiten.
 // Privatkunden → /api/kontakt, Unternehmen → /api/b2b/contact (erscheint im Web-Admin unter Anfragen).
 // Kein Tracking, keine Cookies; das Formular lädt erst beim ersten Öffnen.
-const SKIP = /^\/(app|b2b-portal|intern|auth|partner|datenraum|p|verify|pruefen|kuendigen|widerrufen)(\/|$)/;
+const SKIP = /^\/(app|b2b-portal|intern|auth|partner|datenraum|p|verify|pruefen|kuendigen|widerrufen|b2b)(\/|$)/;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 function mount() {
