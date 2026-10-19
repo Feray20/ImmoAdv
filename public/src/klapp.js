@@ -13,7 +13,7 @@
 
   const MIN = 140; // ab dieser Textlänge einklappen
   const BLOCK = new Set(['P', 'DIV', 'UL', 'OL', 'DL', 'TABLE', 'FORM', 'INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'DETAILS', 'SECTION', 'ARTICLE', 'ASIDE', 'NAV', 'HEADER', 'FOOTER', 'LABEL', 'FIGURE', 'IMG', 'SVG', 'CANVAS', 'IFRAME', 'PRE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'FIELDSET', 'VIDEO', 'A']);
-  const SKIP = 'nav,header,footer,summary,label,button,table,form,dialog form,pre,code,[contenteditable],[role=alert],[role=status],[aria-live],.toast,.auth-message,.ia-legal,.mobile-nav,[class*=hero],[data-noklapp],.ia-kl-btn,.ia-kl';
+  const SKIP = 'nav,header,footer,summary,label,button,table,form,dialog form,pre,code,[contenteditable],[role=alert],[role=status],[aria-live],.toast,.auth-message,.ia-legal,.mobile-nav,[class*=hero],.wl-prev,.wl-mail,.sim,[data-noklapp],.ia-kl-btn,.ia-kl';
   const leaf = (el) => { for (const c of el.children) { if (BLOCK.has(c.tagName) && !(c.tagName === 'A' && c.textContent.length < 80)) return false; } return true; };
   const toggle = (el, btn, open) => {
     el.classList.toggle('ia-kl-open', open);
