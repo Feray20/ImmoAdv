@@ -959,7 +959,7 @@ function chooseBranche(first = false) {
     const r = await supa('/auth/v1/user', { method: 'PUT', headers: { Authorization: 'Bearer ' + token() }, body: JSON.stringify({ data: { b2b_branche: k } }) }).catch(() => null);
     if (!r?.ok) { d.querySelector('#brMsg').textContent = 'Speichern fehlgeschlagen – bitte erneut versuchen.'; ok.disabled = false; return; }
     me.branche = k; d.close();
-    shell(); route();
+    shell(); tileWatch(); route();
     toast(`Ansicht: ${BRANCHEN[k].label}`);
   };
   d.showModal ? d.showModal() : d.setAttribute('open', '');

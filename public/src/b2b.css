@@ -1059,3 +1059,7 @@ body.intern .area-login>.pt-brand{display:none}
 .bw-sf{padding:12px 0}.bw-sf strong{font-size:16px}.bw-sf p{font-size:14px}
 .bw-sf-a{font-size:14px!important;font-weight:600!important}
 .bw-acc .bw-table{width:auto}
+/* Hinweis-Meldung darf die Tab-Leiste nie blockieren (unsichtbar = nicht antippbar) und sitzt am Handy über der Leiste */
+.pt-toast{pointer-events:none;max-width:calc(100vw - 32px)}
+.pt-toast.on{pointer-events:auto}
+@media (max-width:900px){.pt-toast{bottom:calc(84px + env(safe-area-inset-bottom))}}
