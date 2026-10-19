@@ -12,7 +12,7 @@ const cmpTable = (v, hl = -1) => (v?.zeilen?.length ? `<details class="cmp" open
 
 
 const ICON = {
-  start: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  start: '<rect x="3" y="3" width="7.5" height="9" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="5" rx="1.5"/><rect x="13.5" y="11" width="7.5" height="10" rx="1.5"/><rect x="3" y="15" width="7.5" height="6" rx="1.5"/>',
   suche: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M12 17v-6M9.5 13.5 12 11l2.5 2.5"/>',
   objekte: '<path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/>',
   lernen: '<path d="M2 8l10-5 10 5-10 5z"/><path d="M6 10v5c0 2 3 4 6 4s6-2 6-4v-5"/>',
@@ -258,7 +258,7 @@ export function setupApp({ u, d, saveData, reload }) {
     <div class="app-side-foot"><span class="app-user">${esc(u.email)}</span><button class="text-btn" id="appLogout" type="button">Abmelden</button></div></nav>`);
   const main = app.querySelector('main');
   main.insertAdjacentHTML('afterbegin', `<div class="app-top"><a class="brand app-top-brand" href="/"><img class="brand-logo" src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="app-top-t"><small class="app-top-k">Privatbereich</small><h1 id="appTitle"></h1></div>
-    <button class="mode-chip" id="modeChip" type="button" aria-label="Modus wechseln (aktuell ${mode === 'profi' ? 'Profi' : 'Einsteiger'})"><b>${mode === 'profi' ? 'Profi' : 'Einsteiger'}</b> <span aria-hidden="true">⇄</span></button><button class="app-logout-m" id="appLogoutM" type="button">Abmelden</button></div>`);
+    <button class="mode-chip" id="modeChip" type="button" aria-label="Modus wechseln (aktuell ${mode === 'profi' ? 'Profi' : 'Einsteiger'})"><b>${mode === 'profi' ? 'Profi' : 'Einsteiger'}</b> <span aria-hidden="true">⇄</span></button><button class="app-logout-m" id="appLogoutM" type="button" aria-label="Abmelden" title="Abmelden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Abmelden</span></button></div>`);
   import('./legal-foot.mjs').then((m) => { if (!main.querySelector('.ia-legal')) main.insertAdjacentHTML('beforeend', m.legalFoot('b2c')); }).catch(() => {});
   app.insertAdjacentHTML('beforeend', `<nav class="app-tabs" aria-label="Schnellnavigation">${TABS.map((k) => `<a class="app-tab" data-go="${k}" href="#${k}">${svg(k)}<span>${k === 'werkzeuge' ? 'Tools' : views.find((v) => v[0] === k)[1].split(' ')[0]}</span></a>`).join('')}</nav>`);
   $('appLogout').onclick = () => document.getElementById('logout')?.click();

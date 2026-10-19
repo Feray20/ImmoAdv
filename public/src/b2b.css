@@ -1016,3 +1016,27 @@ body .b2b-x h1.b2b-h1{font-family:inherit;font-size:12.5px;font-weight:800;line-
 .br-opt-r{display:flex;flex-wrap:wrap;gap:4px}.br-opt-r i{font-style:normal;font-size:11.5px;color:#475569;background:#F1F5F9;border-radius:6px;padding:2px 6px}
 .br-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;bottom:0;background:#fff;padding-top:8px}
 .br-foot .btn{min-height:46px}
+
+/* ---------- Kopfleiste und Tab-Leisten (Korrektur Okt. 2026) ---------- */
+@media (max-width:900px){
+  /* Ansicht-Knopf und Abmelden gleich hoch, gleicher Stil */
+  .pt-top .pt-brh{min-height:40px;height:40px;padding:0 10px 0 8px}
+  .pt-top .pt-logout-m{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;min-height:40px;border-radius:10px;border:1px solid #CBD5E1;background:#fff;color:#0F2C59;font-size:13px;font-weight:700;padding:0 12px;margin:0;flex:none}
+  .pt-top .pt-logout-m svg{display:none}
+  .pt-top-k{white-space:nowrap}
+  /* Admin: Tab-Leiste passt sich der Zahl der Bereiche an */
+  .ad-bottom{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}
+  .ad-out svg{display:none}
+}
+@media (max-width:480px){
+  .pt-top .pt-logout-m,.ad-out{width:40px;padding:0;justify-content:center}
+  .pt-top .pt-logout-m svg,.ad-out svg{display:block}
+  .pt-top .pt-logout-m span,.ad-out span{display:none}
+  .ad-out{display:inline-flex;align-items:center}
+}
+@media (min-width:481px){.ad-out svg{display:none}}
+/* Kennzahl-Kacheln: lange Werte („unbegrenzt“) umbrechen statt überlaufen */
+.pt-kpi strong{overflow-wrap:anywhere;font-size:clamp(17px,5vw,22px)}
+.pt-gate-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pt-gate-tabs button{white-space:normal;line-height:1.2;min-width:0}
+@media (min-width:361px){.pt-top .pt-top-k{text-transform:uppercase;color:#0284C7;letter-spacing:.06em;font-size:10.5px;font-weight:700}}
