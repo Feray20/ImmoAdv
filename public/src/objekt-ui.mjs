@@ -85,6 +85,7 @@ function renderAnalyse() {
     ${F('a_lv', 'Bodenwert (€, für Ertragswert)', '')}${F('a_lz', 'Liegenschaftszins (%)', '', '0.1')}${F('a_rnd', 'Restnutzungsdauer (Jahre)', '', '1')}
   </div><p class="form-note">Bodenwert: Bodenrichtwert × Grundstücksanteil (BORIS des Landes). Liegenschaftszins und Restnutzungsdauer: Grundstücksmarktbericht des Gutachterausschusses.</p></article>
   </div>
+  <div class="an-jump" id="a_jump" hidden><span id="a_jump_t"></span><button class="btn btn-dark" type="button" id="a_jump_b">Analyse ansehen ↓</button></div>
   <div class="an-out" id="a_out"></div>
   <p class="an-actions" id="a_actions" hidden><button class="btn btn-dark" id="a_keep" type="button">In Objektliste</button> <button class="btn btn-outline" id="a_pdf" type="button">Analyse als PDF</button> <button class="btn btn-outline" id="a_mail" type="button">Per E-Mail</button> <button class="btn btn-outline" id="a_save" type="button">Als Objekt im Konto speichern</button> <button class="btn btn-ghost" id="a_print" type="button">Drucken</button> <span class="form-note" id="a_msg" role="status"></span></p>
 </section>`;
@@ -102,7 +103,7 @@ function updateAnalyse() {
     buildingSharePct: num('a_bs'), afaPct: Number(val('a_afa')), taxPct: num('a_tax'), landValue: num('a_lv'), capRatePct: num('a_lz'), remainingLife: num('a_rnd'), yearBuilt: num('a_year'), energyClass: val('a_ec') });
   const url = val('a_url').trim();
   const okUrl = /^https:\/\/[^\s]+$/i.test(url);
-  if (!a) { $('a_bar').innerHTML = '<p class="form-note">Kaufpreis eintragen – die Leiste füllt sich sofort.</p>'; $('a_out').innerHTML = ''; $('a_actions').hidden = true; last = null; renderMetrics(); return; }
+  if (!a) { $('a_bar').innerHTML = '<p class="form-note">Kaufpreis eintragen – die Leiste füllt sich sofort.</p>'; $('a_out').innerHTML = ''; $('a_actions').hidden = true; last = null; jumpUpd(null); renderMetrics(); return; }
   const chip = (label, v, cls = '') => `<div class="an-chip ${cls}"><small>${label}</small><strong>${v}</strong></div>`;
   $('a_bar').innerHTML = `<div class="an-head"><div><strong>${esc(ort || 'Objekt ohne Adresse')}</strong><span>${esc(val('a_art'))}${num('a_area') ? ` · ${D(num('a_area'), 0)} m²` : ''}${num('a_rooms') ? ` · ${D(num('a_rooms'), 1)} Zi.` : ''}${num('a_year') ? ` · Bj. ${num('a_year')}` : ''}</span></div>${okUrl ? `<a class="btn btn-outline" href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow">Inserat öffnen ↗</a>` : ''}</div>
   <div class="an-chips">${chip('Kaufpreis', E(a.price))}${chip('€/m²', a.pricePerQm ? E(a.pricePerQm) : '–')}${chip('Kaufpreisfaktor', a.factor == null ? '–' : D(a.factor, 1), a.factor == null ? 'na' : a.factor <= 22 ? 'ok' : a.factor <= 28 ? 'warn' : 'bad')}
@@ -126,11 +127,27 @@ function updateAnalyse() {
     chips: [['Kaufpreis', E(a.price)], ['€/m²', a.pricePerQm ? E(a.pricePerQm) : '–'], ['Kaufpreisfaktor', a.factor == null ? '–' : D(a.factor, 1)], ['Bruttorendite', P(a.grossYield)],
       ['Cashflow v. St.', E2(a.cashflow)], ['Cashflow n. St.', E2(a.cashflowAfterTax)], ['DSCR', a.dscr == null ? '–' : D(a.dscr)], ['Mindestkapital', E(a.nebenkosten)]],
     subtitle: `${val('a_art')}${num('a_area') ? ` · ${D(num('a_area'), 0)} m²` : ''}${num('a_rooms') ? ` · ${D(num('a_rooms'), 1)} Zimmer` : ''}${num('a_year') ? ` · Baujahr ${num('a_year')}` : ''} · ${GREST[val('a_land')].name}` };
-  $('a_out').innerHTML = `<div class="an-grid">${SECTIONS.map((x) => `<article class="dash-card"><h3>${x.title}</h3>${table(x.rows.map((r) => [esc(r[0]), esc(r[1])]))}</article>`).join('')}</div>
+  $('a_out').innerHTML = `<h3 class="an-res-h" id="a_res">Ergebnis der Analyse</h3><div class="an-grid">${SECTIONS.map((x) => `<article class="dash-card"><h3>${x.title}</h3>${table(x.rows.map((r) => [esc(r[0]), esc(r[1])]))}</article>`).join('')}</div>
   ${a.hints.length ? `<article class="dash-card"><h3>Hinweise</h3><ul class="plain-list">${a.hints.map((h) => `<li>${esc(h)}</li>`).join('')}</ul></article>` : ''}
   <p class="faq-disclaimer">Reines technisches Analyse-, Informations- und Vorbereitungsinstrument. Keine Kreditvermittlung oder Darlehensberatung (§ 34i GewO, KWG), keine Steuerberatung (StBerG), keine Rechtsdienstleistung (RDG). Alle Werte beruhen auf Ihren Eingaben bzw. den von Ihnen übernommenen Eckdaten eines Inserats – bitte mit dem Exposé abgleichen.</p>`;
   $('a_actions').hidden = false;
+  jumpUpd(a);
   renderMetrics();
+}
+
+// Schnellzugriff: Sobald ein Kaufpreis eingetragen ist, zeigt eine Leiste am unteren Rand die wichtigsten Werte
+// und springt mit „Analyse ansehen“ direkt zum Ergebnis (das unter den Eingaben steht).
+let jumpObs = null, outVisible = false;
+function jumpUpd(a) {
+  const j = $('a_jump'); if (!j) return;
+  if (!jumpObs && 'IntersectionObserver' in window) {
+    jumpObs = new IntersectionObserver((es) => { outVisible = es.some((e) => e.isIntersecting); j.hidden = !last || outVisible; }, { rootMargin: '0px 0px -30% 0px' });
+    jumpObs.observe($('a_out')); jumpObs.observe($('a_actions'));
+    $('a_jump_b').onclick = () => $('a_res')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }
+  if (!a) { j.hidden = true; return; }
+  $('a_jump_t').innerHTML = `<b>${a.rent ? 'Cashflow ' + E2(a.cashflow) : 'Kaufpreis ' + E(a.price)}</b><small>${a.grossYield == null ? 'Miete eintragen für Rendite' : 'Bruttorendite ' + P(a.grossYield)}</small>`;
+  j.hidden = outVisible;
 }
 
 // Dropzone (Ziehen & Ablegen) und Link-Import für den Objekt- & Dokumenten-Import.

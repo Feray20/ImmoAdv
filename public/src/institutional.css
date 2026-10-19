@@ -1497,3 +1497,10 @@ body[data-mode="profi"] .app-top .mode-chip{background:#fff;color:#0F2C59;border
 .wdr-sum{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:12px 0 18px;padding:14px 16px;border:1px solid #E2E8F0;border-radius:10px;background:#F8FAFC}
 .wdr-sum dt{color:#64748B;font-size:14px}.wdr-sum dd{margin:0;font-weight:600;color:#0F2C59;overflow-wrap:anywhere}
 @media (max-width:480px){.wdr-sum{grid-template-columns:1fr}.wdr-sum dd{margin-bottom:6px}}
+
+/* Objekt-Analyse: Leiste „Analyse ansehen“ – springt zum Ergebnis unter den Eingaben */
+.an-jump{position:sticky;bottom:12px;z-index:25;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0;padding:10px 12px 10px 16px;border-radius:14px;background:#0F2C59;color:#fff;box-shadow:0 10px 30px rgba(15,44,89,.28)}
+.an-jump span{display:grid;gap:1px;min-width:0}.an-jump b{font-size:14.5px;color:#fff;line-height:1.25}.an-jump small{font-size:12.5px;color:#BAE6FD;text-transform:none;letter-spacing:0}
+.an-jump .btn{background:#fff!important;color:#0F2C59!important;border-color:#fff!important;min-height:44px;flex:none;white-space:nowrap;padding:0 14px}
+.an-res-h{font-size:20px;color:#0F2C59;margin:18px 0 8px;scroll-margin-top:84px}
+@media (max-width:900px){.an-jump{bottom:calc(84px + env(safe-area-inset-bottom))}}
