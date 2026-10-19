@@ -87,11 +87,12 @@ function renderAnalyse() {
   </div>
   <div class="an-jump" id="a_jump" hidden><span id="a_jump_t"></span><button class="btn btn-dark" type="button" id="a_jump_b">Analyse ansehen ↓</button></div>
   <div class="an-out" id="a_out"></div>
-  <p class="an-actions" id="a_actions" hidden><button class="btn btn-dark" id="a_keep" type="button">In Objektliste</button> <button class="btn btn-outline" id="a_pdf" type="button">Analyse als PDF</button> <button class="btn btn-outline" id="a_mail" type="button">Per E-Mail</button> <button class="btn btn-outline" id="a_save" type="button">Als Objekt im Konto speichern</button> <button class="btn btn-ghost" id="a_print" type="button">Drucken</button> <span class="form-note" id="a_msg" role="status"></span></p>
+  <p class="an-actions" id="a_actions" hidden><button class="btn btn-dark" id="a_keep" type="button"${APPMODE ? ' hidden' : ''}>In Objektliste</button> <button class="btn btn-outline" id="a_pdf" type="button">Analyse als PDF</button> <button class="btn btn-outline" id="a_mail" type="button">Per E-Mail</button> <button class="btn ${APPMODE ? 'btn-dark' : 'btn-outline'}" id="a_save" type="button">${APPMODE ? 'Unter „Meine Objekte“ speichern' : 'Als Objekt im Konto speichern'}</button> <button class="btn btn-ghost" id="a_print" type="button">Drucken</button> <span class="form-note" id="a_msg" role="status"></span></p>
 </section>`;
 }
 
 const PENDING = 'ia-pending-object';
+let APPMODE = false, ONSAVE = null; // Privatbereich: keine eigene Trefferliste, Speichern direkt unter „Meine Objekte“
 const LIST = 'ia-intern-list-v1';
 let last = null;
 const token = () => { try { return JSON.parse(localStorage.getItem(SESSION) || 'null')?.access_token || ''; } catch { return ''; } };
@@ -275,6 +276,7 @@ function bindActions() {
       fixedYears: num('a_fix'), loan: Math.round(a.loan), nonRecoverable: num('a_nonrec'), maintenance: Math.round(num('a_mqm') * num('a_area') * 100) / 100, vacancyPct: num('a_vac'),
       purchaseCostPct: nk.totalPct, grestPct: GREST[val('a_land')].pct, notaryPct: 2, brokerPct: num('a_broker'), buildingSharePct: num('a_bs'), marginalTaxPct: num('a_tax'),
       vergleichsmieteQm: num('a_vq'), mietpreisbremse: $('a_mpb').checked, efficiencyClass: val('a_ec'), liegenschaftszinsPct: num('a_lz'), restnutzungsdauer: num('a_rnd') };
+    if (ONSAVE) { const b = $('a_save'); b.disabled = true; $('a_msg').textContent = ' Wird gespeichert …'; Promise.resolve(ONSAVE({ ...o, source: last.url || '' })).then((ok) => { $('a_msg').textContent = ok ? ' Gespeichert – unten unter „Meine Objekte“.' : ' Speichern fehlgeschlagen.'; }).catch(() => { $('a_msg').textContent = ' Speichern fehlgeschlagen – bitte erneut versuchen.'; }).finally(() => { b.disabled = false; }); return; }
     try { localStorage.setItem(PENDING, JSON.stringify({ ...o, source: '/intern/web-admin', at: Date.now() })); location.href = '/app/dashboard'; } catch { alert('Speichern im Browser nicht möglich.'); }
   };
 }
@@ -316,7 +318,7 @@ function importListing(d) {
     (r.hausgeld ? ` Hausgeld ${E(r.hausgeld)}/Monat: Den nicht umlagefähigen Teil (meist Verwaltung und Rücklage) bitte unter „Nicht umlagefähige Kosten“ eintragen.` : '') +
     ` Bundesland für die Grunderwerbsteuer: ${esc(GREST[val('a_land')]?.name || '')} – bitte prüfen.` +
     (r.warnings.length ? ` <strong>${esc(r.warnings.join(' '))}</strong>` : '');
-  $('m_list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  ($('m_list') || $('a_bar'))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   return r;
 }
 
@@ -366,7 +368,7 @@ function checkAnalyseLoad() {
 const IMPORT_KEY = 'ia-import';
 function checkImport() {
   const m = location.hash.match(/[?&]import=([^&]*)/);
-  if (m) { try { sessionStorage.setItem(IMPORT_KEY, m[1]); } catch { /* ohne Speicher */ } history.replaceState(null, '', location.pathname + location.search + '#suche'); }
+  if (m) { try { sessionStorage.setItem(IMPORT_KEY, m[1]); } catch { /* ohne Speicher */ } history.replaceState(null, '', location.pathname + location.search + (location.pathname.startsWith('/app/') ? '#objekte' : '#suche')); }
   let raw = m ? m[1] : null;
   try { raw = raw || sessionStorage.getItem(IMPORT_KEY); sessionStorage.removeItem(IMPORT_KEY); } catch { /* ohne Speicher */ }
   if (!raw) return;
@@ -413,7 +415,8 @@ function renderList() {
 export function mountObjekt(container, opts = {}) {
   root = container;
   PROF = opts.profile || {};
-  root.insertAdjacentHTML('beforeend', `<h2 class="is-h">Objekt- &amp; Dokumenten-Import</h2>${renderImport()}${renderAnalyse()}<section class="dash-card ml-card"><div class="ml-head"><h2>Importierte Objekte</h2><span class="form-note" id="m_count"></span></div><div id="m_list"></div></section>`);
+  APPMODE = Boolean(opts.app); ONSAVE = opts.onSave || null;
+  root.insertAdjacentHTML('beforeend', APPMODE ? `${renderImport()}${renderAnalyse()}` : `<h2 class="is-h">Objekt- &amp; Dokumenten-Import</h2>${renderImport()}${renderAnalyse()}<section class="dash-card ml-card"><div class="ml-head"><h2>Importierte Objekte</h2><span class="form-note" id="m_count"></span></div><div id="m_list"></div></section>`);
   const bm = $('imp_bm');
   if (bm) {
     bm.href = bookmarklet(location.origin);
@@ -442,7 +445,7 @@ export function mountObjekt(container, opts = {}) {
     if (importListing({ u, t, ti: '' })) { $('imp_text').value = ''; $('imp_url').value = ''; }
   });
   if (window.__iaImport) window.removeEventListener('hashchange', window.__iaImport);
-  window.__iaImport = () => { if (/[?&]import=/.test(location.hash)) checkImport(); if (location.hash.startsWith('#suche')) setTimeout(checkAnalyseLoad, 0); };
+  window.__iaImport = () => { if (/[?&]import=/.test(location.hash)) checkImport(); if (/^#(suche|objekte)/.test(location.hash)) setTimeout(checkAnalyseLoad, 0); };
   window.addEventListener('hashchange', window.__iaImport);
   if (!opts.pdf) { $('a_pdf')?.remove(); $('a_mail')?.remove(); }
   const KEY = 'ia-objekt-v1';

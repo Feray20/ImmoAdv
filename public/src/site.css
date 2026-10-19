@@ -1462,3 +1462,12 @@ body:not(.is-app):not(.is-portal) :is(h1,h2){font-family:"IA Inter Display","IA 
 .ia-kpi span{font-size:13px;font-weight:700;color:#0284C7}
 .ia-kpi:hover{border-color:#0284C7}
 @media (max-width:760px){.ia-kpis{grid-template-columns:1fr 1fr}}
+body.is-app .dashboard-grid>#sucheView{order:-2}
+body.is-app .dashboard-grid>#objStep2{order:-1}
+body.is-app .dashboard-grid>#kmCard{order:1}
+.obj-step{display:flex;align-items:center;gap:12px;margin:0 0 12px}
+.obj-step>span{flex:none;width:34px;height:34px;border-radius:50%;background:#0F2C59;color:#fff;display:grid;place-items:center;font-weight:800;font-size:16px}
+.obj-step h3{margin:0;font-size:20px;color:#0F2C59}
+.obj-step small{display:block;font-size:13.5px;color:#64748B;text-transform:none;letter-spacing:0;line-height:1.45}
+.obj-step-card{grid-column:1/-1;padding:18px 2px 0}
+.obj-step-card .obj-step{margin:0}

@@ -24,10 +24,10 @@ const ICON = {
 const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
 const VIEWS = {
-  einsteiger: [['start', 'Übersicht'], ['suche', 'Objekt analysieren'], ['objekte', 'Objekte & Kreditmappe'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
-  profi: [['start', 'Übersicht'], ['suche', 'Import & Analyse'], ['objekte', 'Objekte & Kreditmappe'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer & AfA'], ['lernen', 'Fachwissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
+  einsteiger: [['start', 'Übersicht'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer'], ['lernen', 'Wissen'], ['angebot', 'Angebot'], ['konto', 'Konto']],
+  profi: [['start', 'Übersicht'], ['objekte', 'Objekte'], ['werkzeuge', 'Software-Tools'], ['steuer', 'Steuer & AfA'], ['lernen', 'Fachwissen'], ['angebot', 'Tarif'], ['konto', 'Konto']],
 };
-const TABS = ['start', 'suche', 'objekte', 'werkzeuge', 'lernen', 'konto'];
+const TABS = ['start', 'objekte', 'werkzeuge', 'lernen', 'konto'];
 
 // Lernbereich: Themen frei wählbar (keine feste Reihenfolge). Wissen aus /data/faq.json (Kurz- und Detailantwort).
 // [id, Titel, Kurzbeschreibung, FAQ-Indizes, [Werkzeug-Text, Link], Bereich]
@@ -39,7 +39,7 @@ const LERN = [
   ['fristen', 'Wenn die Zinsbindung endet', 'Anschlussfinanzierung, Kipp-Punkt und wichtige Fristen.', [23, 24], ['Fristen-Rechner', '/fristen'], 'Leisten & Finanzieren'],
   ['beruf', 'Was die Bank je nach Beruf prüft', 'Angestellt, selbstständig, verbeamtet – und welche Unterlagen.', [4], ['Erwerbsstatus im Detail', '/wissen/erwerbsstatus'], 'Leisten & Finanzieren'],
   ['beleihung', 'Beleihungswert: wie die Bank rechnet', 'Warum die Bank anders bewertet als der Verkäufer.', [7], ['Deal-Scorecard', '/rechner/scorecard'], 'Leisten & Finanzieren'],
-  ['suche', 'Exposés prüfen und vergleichen', 'Vom Exposé zur Kennzahl – und mehrere Angebote nebeneinander.', [10], ['Import & Analyse', '#suche'], 'Objekt finden & prüfen'],
+  ['suche', 'Exposés prüfen und vergleichen', 'Vom Exposé zur Kennzahl – und mehrere Angebote nebeneinander.', [10], ['Import & Analyse', '#objekte'], 'Objekt finden & prüfen'],
   ['etw', 'Eigentumswohnung richtig prüfen', 'Teilungserklärung, Protokolle, Rücklage.', [8, 9], ['Unterlagen-Checkliste', '/checkliste'], 'Objekt finden & prüfen'],
   ['cashflow', 'Rendite und Cashflow', 'Brutto, netto, vor und nach Steuern.', [12, 13, 14], ['Cashflow-Rechner', '/rechner/cashflow'], 'Rendite, Steuer & Miete'],
   ['steuer', 'Steuern: AfA, 15-%-Grenze, steuerfreier Verkauf', 'Was die Steuer beim Kauf, Vermieten und Verkaufen bedeutet.', [15, 16, 17], ['Steuer-Bereich', '#steuer'], 'Rendite, Steuer & Miete'],
@@ -51,9 +51,9 @@ const LERN = [
 // Die gewählte Phase steuert Startaktionen, Reihenfolge im Steuer-Bereich und empfohlene Wissensthemen.
 export const PHASES = [
   { name: 'Orientieren', plan: 'Erst verstehen, wie Geld, Eigenkapital und Finanzierung funktionieren – dann wissen Sie, was Sie sich leisten können.', steuer: 'kauf', lern: ['geld', 'budget', 'eigenkapital', 'annuitaet', 'beruf'],
-    actions: [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#lernen', 'Grundlagen auffrischen', 'Eigenkapital, Zins, Tilgung'], ['#suche', 'Exposé prüfen', 'PDF oder Link hochladen – Kennzahlen sofort']] },
+    actions: [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#lernen', 'Grundlagen auffrischen', 'Eigenkapital, Zins, Tilgung'], ['#objekte', 'Exposé prüfen', 'PDF oder Link hochladen – Kennzahlen sofort']] },
   { name: 'Objekte prüfen', plan: 'Lernen Sie, Angebote wie ein Profi zu lesen: Rendite, Cashflow, Zustand und was die Bank vom Objekt hält.', steuer: 'kauf', lern: ['suche', 'etw', 'cashflow', 'beleihung'],
-    actions: [['#suche', 'Objekt analysieren', 'Inserat übernehmen, Kennzahlen sehen'], ['#objekte', 'Objekte im Konto', 'Anlegen, vergleichen, Bankreife'], ['#steuer', 'Steuern beim Kauf', 'Kaufkosten, Inventar, AfA']] },
+    actions: [['#objekte', 'Objekt analysieren', 'Inserat übernehmen, Kennzahlen sehen'], ['#objekte', 'Objekte im Konto', 'Anlegen, vergleichen, Bankreife'], ['#steuer', 'Steuern beim Kauf', 'Kaufkosten, Inventar, AfA']] },
   { name: 'Bankgespräch', plan: 'Bereiten Sie sich auf die Bank vor: Unterlagen, Beleihungswert und wie Ihr Beruf bewertet wird.', steuer: 'kauf', lern: ['unterlagen', 'beruf', 'beleihung', 'annuitaet'],
     actions: [['#objekte', 'Kreditmappe erstellen', 'Objekt wählen → Vorschau → PDF'], ['/checkliste', 'Unterlagen vollständig machen', 'Bankreife auf 90 % bringen'], ['#lernen', 'Was die Bank prüft', 'Beleihungswert, Unterlagen']] },
   { name: 'Bestand', plan: 'Ihre Immobilie gut führen: Steuern, Mietrecht, Fristen und was tun, wenn die Miete ausbleibt.', steuer: 'halten', lern: ['steuer', 'miete', 'mahnung', 'fristen'],
@@ -63,7 +63,7 @@ export const PHASES = [
 // für Investoren mit Erfahrung statt Erklärtext für den ersten Kauf.
 export const PHASES_PRO = [
   { name: 'Ankauf prüfen', plan: 'Deal-Screening nach harten Kennzahlen: Kaufpreisfaktor, Nettomietrendite, DSCR, Kipp-Zins und Cashflow nach Steuern – bevor Sie ein Angebot abgeben.', steuer: 'kauf', lern: ['cashflow', 'beleihung', 'etw', 'steuer'],
-    actions: [['/rechner/scorecard', 'Deal-Scorecard', 'Faktor, Rendite, DSCR auf einen Blick'], ['#suche', 'Exposé-Analyse', 'Inserat übernehmen, Kennzahlen rechnen'], ['/rechner/cashflow', 'Cashflow nach Steuern', 'AfA, Grenzsteuersatz, Zinsanteil']] },
+    actions: [['/rechner/scorecard', 'Deal-Scorecard', 'Faktor, Rendite, DSCR auf einen Blick'], ['#objekte', 'Exposé-Analyse', 'Inserat übernehmen, Kennzahlen rechnen'], ['/rechner/cashflow', 'Cashflow nach Steuern', 'AfA, Grenzsteuersatz, Zinsanteil']] },
   { name: 'Finanzierung strukturieren', plan: 'Beleihungsauslauf, Zinsbindung, Tilgungsstrategie und Forward optimieren – Bankangebote auf gleicher Basis vergleichen und verhandeln.', steuer: 'kauf', lern: ['beleihung', 'unterlagen', 'annuitaet', 'beruf'],
     actions: [['/rechner/vergleich', 'Bankangebote vergleichen', 'Effektivzins, Restschuld, Gesamtkosten'], ['/szenarien', 'Anschluss & Forward', 'Kipp-Zins und Zinsszenarien'], ['#objekte', 'Kreditmappe', 'BankReady mit Prüfsumme']] },
   { name: 'Portfolio aufbauen', plan: 'Weitere Objekte hebeln: Eigenkapital-Recycling, Zinsschock auf den Gesamtbestand und die Drei-Objekt-Grenze (gewerblicher Grundstückshandel) im Blick.', steuer: 'halten', lern: ['steuer', 'fristen', 'cashflow', 'beleihung'],
@@ -243,7 +243,7 @@ export function setupApp({ u, d, saveData, reload }) {
   requestAnimationFrame(() => document.body.classList.remove('ia-switching'));
   const app = $('app'), grid = document.querySelector('.dashboard-grid');
   if (!app || !grid) return;
-  try { if (sessionStorage.getItem('ia-import') && !location.hash.startsWith('#suche')) history.replaceState(null, '', location.pathname + location.search + '#suche'); } catch { /* ohne Speicher */ }
+  try { if (sessionStorage.getItem('ia-import') && !location.hash.startsWith('#objekte')) history.replaceState(null, '', location.pathname + location.search + '#objekte'); } catch { /* ohne Speicher */ }
   const q = new URLSearchParams(location.search);
   const qm = q.get('modus');
   let mode = qm === 'profi' || qm === 'einsteiger' ? qm : d.profile?.mode;
@@ -260,7 +260,7 @@ export function setupApp({ u, d, saveData, reload }) {
   main.insertAdjacentHTML('afterbegin', `<div class="app-top"><a class="brand app-top-brand" href="/"><img class="brand-logo" src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="app-top-t"><small class="app-top-k">Privatbereich</small><h1 id="appTitle"></h1></div>
     <button class="mode-chip" id="modeChip" type="button" aria-label="Modus wechseln (aktuell ${mode === 'profi' ? 'Profi' : 'Einsteiger'})"><b>${mode === 'profi' ? 'Profi' : 'Einsteiger'}</b> <span aria-hidden="true">⇄</span></button><button class="app-logout-m" id="appLogoutM" type="button">Abmelden</button></div>`);
   import('./legal-foot.mjs').then((m) => { if (!main.querySelector('.ia-legal')) main.insertAdjacentHTML('beforeend', m.legalFoot('b2c')); }).catch(() => {});
-  app.insertAdjacentHTML('beforeend', `<nav class="app-tabs" aria-label="Schnellnavigation">${TABS.map((k) => `<a class="app-tab" data-go="${k}" href="#${k}">${svg(k)}<span>${k === 'werkzeuge' ? 'Tools' : k === 'suche' ? 'Analyse' : views.find((v) => v[0] === k)[1].split(' ')[0]}</span></a>`).join('')}</nav>`);
+  app.insertAdjacentHTML('beforeend', `<nav class="app-tabs" aria-label="Schnellnavigation">${TABS.map((k) => `<a class="app-tab" data-go="${k}" href="#${k}">${svg(k)}<span>${k === 'werkzeuge' ? 'Tools' : views.find((v) => v[0] === k)[1].split(' ')[0]}</span></a>`).join('')}</nav>`);
   $('appLogout').onclick = () => document.getElementById('logout')?.click();
   $('appLogoutM').onclick = () => document.getElementById('logout')?.click();
   $('modeChip').onclick = async () => {
@@ -348,7 +348,8 @@ export function setupApp({ u, d, saveData, reload }) {
     $('lfPrint').onclick = () => { document.querySelectorAll('#lfCard details').forEach((x) => { x.open = true; }); document.body.classList.add('lf-printing'); addEventListener('afterprint', () => document.body.classList.remove('lf-printing'), { once: true }); window.print(); };
     window.__iaApplyView?.();
   }).catch(() => {});
-  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="suche" id="sucheView"></article>`);
+  grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide obj-new" data-view="objekte" id="sucheView"><div class="obj-step"><span aria-hidden="true">1</span><div><h3>Neues Objekt prüfen</h3><small>Exposé hochladen, Link eintragen oder selbst eingeben – die Analyse rechnet sofort mit.</small></div></div><div id="sucheMount"></div></article>`);
+  grid.insertAdjacentHTML('beforeend', `<article class="obj-step-card" data-view="objekte" id="objStep2"><div class="obj-step"><span aria-hidden="true">2</span><div><h3>Meine Objekte</h3><small>Gespeicherte Objekte, Unterlagen, Fristen – und daraus die Kreditmappe für die Bank.</small></div></div></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="werkzeuge" id="toolsView"><p class="ia-ld" role="status">Software-Tools werden geladen …</p></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);
   Promise.all([import('/src/b2c-tools.mjs'), getAccess()]).then(([m, ac]) => { m.mountTools($('toolsView'), { d, tier: ac.tier || 'free', b2b: Boolean(ac.b2b), mode: mode || 'einsteiger' }); import('/src/field-help.mjs').then((f) => f.attachHelp?.($('toolsView'))).catch(() => {}); }).catch(() => { const v = $('toolsView'); if (v) v.innerHTML = '<p class="form-note">Software-Tools konnten nicht geladen werden.</p>'; });
@@ -363,6 +364,7 @@ export function setupApp({ u, d, saveData, reload }) {
 
   const CLASSIFIED = new WeakSet();
   const apply = () => {
+    if ((location.hash.slice(1) || '').split('?')[0] === 'suche') { history.replaceState(null, '', location.pathname + location.search + location.hash.replace(/^#suche/, '#objekte')); window.__iaToAnalyse = true; }
     const v = (location.hash.slice(1) || 'start').split('?')[0];
     const cur = views.some((x) => x[0] === v) ? v : 'start';
     const sc = grid.querySelector('.start-card'); if (sc && grid.firstElementChild !== sc) grid.prepend(sc);
@@ -370,10 +372,7 @@ export function setupApp({ u, d, saveData, reload }) {
     [...grid.children].forEach((el) => { if (!CLASSIFIED.has(el)) { el.dataset.view = classify(el); CLASSIFIED.add(el); } el.classList.toggle('v-show', el.dataset.view.split(' ').includes(cur)); });
     document.querySelectorAll('[data-go]').forEach((a) => a.classList.toggle('on', a.dataset.go === cur));
     $('appTitle').textContent = views.find((x) => x[0] === cur)[1];
-    if (cur === 'suche' && !$('sucheView').dataset.ready) {
-      $('sucheView').dataset.ready = '1';
-      import('/src/objekt-ui.mjs').then((m) => m.mountObjekt($('sucheView'), { pdf: true, profile: APP?.d?.profile })).catch(() => { $('sucheView').innerHTML = '<p class="auth-message error">Import konnte nicht geladen werden.</p>'; });
-    }
+    if (cur === 'objekte') objektModule().then(() => { if (window.__iaToAnalyse) { window.__iaToAnalyse = false; $('sucheView')?.scrollIntoView({ block: 'start' }); } }).catch(() => { const x = $('sucheMount'); if (x) x.innerHTML = '<p class="auth-message error">Import konnte nicht geladen werden.</p>'; });
     if (cur === 'steuer' && !$('steuerView').dataset.ready) {
       $('steuerView').dataset.ready = '1';
       import('/src/steuer.mjs').then((m) => m.mountSteuer($('steuerView'), { mode, phase: PH()[phaseOf(d).idx].steuer })).catch(() => { $('steuerView').innerHTML = '<p class="auth-message error">Steuer-Bereich konnte nicht geladen werden.</p>'; });
@@ -390,6 +389,7 @@ export function setupApp({ u, d, saveData, reload }) {
   let pend = 0;
   const schedule = () => { if (pend) return; pend = requestAnimationFrame(() => { pend = 0; apply(); }); };
   window.__iaHash = () => {
+    if ((location.hash.slice(1) || '').split('?')[0] === 'suche') { history.replaceState(null, '', location.pathname + location.search + location.hash.replace(/^#suche/, '#objekte')); window.__iaToAnalyse = true; }
     const v = (location.hash.slice(1) || 'start').split('?')[0];
     const isView = v === '' || views.some((x) => x[0] === v);
     if (isView) {
@@ -463,44 +463,48 @@ const sessToken = () => { try { return JSON.parse(localStorage.getItem('immoadv-
 // Darlehen, wenn nicht angegeben: Kaufpreis + Nebenkosten − Eigenkapital (mindestens 0).
 const autoLoan = (o) => Math.max(0, Math.round(Number(o.price) * (1 + (Number(o.purchaseCostPct) || 0) / 100) - (Number(o.equity) || 0)));
 const newObjId = () => { const b = new Uint8Array(6); crypto.getRandomValues(b); return 'o' + [...b].map((x) => x.toString(16).padStart(2, '0')).join(''); };
+// „Unter Meine Objekte speichern“ aus der Analyse: direkt ins Konto, danach zur Liste.
+async function saveFromAnalyse(o) {
+  if (!APP) return false;
+  const { u, d, saveData, reload } = APP;
+  d.objects = Array.isArray(d.objects) ? d.objects : [];
+  d.objects.push({ ...o, id: newObjId(), createdVia: 'analyse' });
+  await saveData(u, d);
+  reload();
+  setTimeout(() => document.getElementById('objStep2')?.scrollIntoView({ block: 'start' }), 400);
+  return true;
+}
 // Analyse-Modul (Suche) bei Bedarf laden – AutoPilot nutzt denselben Rechenweg wie die Analyse.
 async function objektModule() {
-  const v = $('sucheView');
+  const v = $('sucheMount');
   const m = await import('/src/objekt-ui.mjs');
-  if (v && !v.dataset.ready) { v.dataset.ready = '1'; m.mountObjekt(v, { pdf: true, profile: APP?.d?.profile }); }
+  if (v && !v.dataset.ready) { v.dataset.ready = '1'; m.mountObjekt(v, { pdf: true, app: true, profile: APP?.d?.profile, onSave: saveFromAnalyse }); }
   return m;
 }
 const fileName = (r, fallback) => { const m = /filename\*=UTF-8''([^;]+)|filename="([^"]+)"/.exec(r.headers.get('content-disposition') || ''); return m ? decodeURIComponent(m[1] || m[2]) : fallback; };
 
 function kmCard() {
   return `<article class="dash-card wide km-card" data-view="objekte" id="kmCard">
-    <div class="studio-head"><h3>BankReady Kreditmappe</h3><p class="form-note">Ihre Unterlagen für die Bank – ImmoAdv erledigt alles automatisch, oder Sie tragen selbst ein. Ein Objekt nur durchrechnen? Das geht unter <a class="ck-link" href="#suche">Analyse</a>.</p></div>
-    <div class="seg studio-way" role="tablist" aria-label="Weg"><button type="button" role="tab" data-kmway="auto"><strong>AutoPilot</strong><small>Exposé oder Link – ImmoAdv rechnet</small></button><button type="button" role="tab" data-kmway="man"><strong>Manuell</strong><small>Online oder per PDF-Formular</small></button></div>
+    <div class="studio-head"><h3>BankReady Kreditmappe</h3><p class="form-note">Ihre Unterlagen für die Bank – erstellt aus einem gespeicherten Objekt und Ihrem Finanzprofil.</p></div>
     <p class="demo-hint" id="kmDemo" hidden></p><div id="kmBody"></div><p class="km-msg" id="kmMsg" role="status" aria-live="polite"></p><div id="kmRes"></div></article>`;
 }
 
 function kmBody(d) {
+  // Kreditmappe nur aus gespeicherten Objekten (Exposé/Link laufen oben unter „Neues Objekt prüfen“ – nichts doppelt).
   const os = (Array.isArray(d.objects) ? d.objects : []).filter((o) => o && o.id);
-  const km = KM.doc === 'km', P = PROD[KM.doc];
-  if (KM.way === 'man') {
-    return `<div class="km-grid">
-      <div class="km-box"><strong>Online eintragen</strong><span>${km ? 'Alle Angaben direkt auf der Website eintragen (Objekt und „Angaben für die Kreditmappe“). Danach erstellt BankReady die Kreditmappe per AutoPilot aus dem gespeicherten Objekt.' : 'Kaufpreis, Miete, Kosten und Finanzierung im Analyse-Formular eintragen – RenditeRadar rechnet jede Kennzahl sofort mit.'}</span>
-        <div class="km-actions"><button class="btn btn-dark" type="button" id="kmManual">${km ? 'Formular öffnen' : 'Analyse-Formular öffnen'}</button></div></div>
-      <div class="km-box"><strong>PDF-Formular</strong><span>Formular herunterladen, am Handy oder Computer ausfüllen (z. B. Acrobat Reader, Dateien-App, Vorschau), speichern und hier wieder hochladen – ${P.name} übernimmt alle Werte automatisch.</span>
-        <div class="km-actions"><button class="btn btn-dark" type="button" id="kmFormGet">Formular ansehen &amp; herunterladen</button><label class="btn btn-outline km-file">Ausgefülltes PDF hochladen<input type="file" accept="application/pdf,.pdf" id="kmFormUp" hidden></label></div>
-        <small class="form-note">Handschriftlich ausgefüllte Scans können nicht automatisch gelesen werden.</small></div>
-    </div>`;
-  }
   return `<div class="km-grid">
-    <div class="km-box"><strong>Exposé hochladen</strong><span>PDF vom Makler oder Portal – ${P.name} liest Kaufpreis, Miete, Fläche, Baujahr und mehr aus und ${km ? 'erstellt die Kreditmappe' : 'rechnet alle Kennzahlen'} automatisch.</span>
-      <div class="km-actions"><label class="btn btn-dark km-file">Exposé-PDF wählen<input type="file" accept="application/pdf,.pdf" id="kmPdf" hidden></label></div></div>
-    <div class="km-box"><strong>Link eintragen</strong><span>Link zum Exposé-PDF oder zur Seite des Anbieters. Für ImmoScout24, Immowelt und Kleinanzeigen nutzen Sie die <a class="ck-link" href="#suche">Ein-Klick-Übernahme</a> oder das Exposé-PDF.</span>
-      <form class="km-link" id="kmLinkF"><input type="url" id="kmLink" inputmode="url" autocomplete="off" placeholder="https://…" aria-label="Link zum Exposé" required><button class="btn btn-dark" type="submit">Auswerten</button></form></div>
-    ${os.length ? `<div class="km-box"><strong>Aus meinen Objekten</strong><span>Gespeichertes Objekt wählen – ${P.name} erstellt das Dokument aus Ihren Angaben.</span>
+    ${os.length ? `<div class="km-box km-main"><strong>Kreditmappe aus meinem Objekt</strong><span>Objekt wählen – BankReady erstellt die Mappe aus Ihren Angaben und Ihrem Finanzprofil.</span>
       <label class="km-pick">Objekt<select id="kmObj">${os.map((o) => `<option value="${esc(o.id)}">${esc(o.name || 'Objekt')}</option>`).join('')}</select></label>
-      <div class="km-actions"><button class="btn btn-dark" type="button" id="kmGo">${km ? 'Kreditmappe erstellen' : 'Analyse erstellen'}</button></div></div>` : ''}
+      <div class="km-actions"><button class="btn btn-dark" type="button" id="kmGo">Kreditmappe erstellen</button></div></div>`
+    : `<div class="km-box km-main"><strong>Noch kein Objekt gespeichert</strong><span>Prüfen Sie oben ein Objekt und tippen Sie auf „Unter ‚Meine Objekte‘ speichern“ – dann erstellen Sie hier die Kreditmappe.</span>
+      <div class="km-actions"><button class="btn btn-dark" type="button" id="kmToNew">Zu „Neues Objekt prüfen“</button></div></div>`}
+    <div class="km-box"><strong>Selbst eintragen</strong><span>Alle Angaben für die Kreditmappe direkt auf der Website eintragen.</span>
+      <div class="km-actions"><button class="btn btn-outline" type="button" id="kmManual">Formular öffnen</button></div></div>
+    <div class="km-box"><strong>PDF-Formular</strong><span>Herunterladen, am Handy oder Computer ausfüllen und hier wieder hochladen – BankReady übernimmt alle Werte.</span>
+      <div class="km-actions"><button class="btn btn-outline" type="button" id="kmFormGet">Formular herunterladen</button><label class="btn btn-outline km-file">Ausgefülltes PDF hochladen<input type="file" accept="application/pdf,.pdf" id="kmFormUp" hidden></label></div>
+      <small class="form-note">Handschriftlich ausgefüllte Scans können nicht automatisch gelesen werden.</small></div>
   </div>
-  ${km && !(Number(d.profile?.netIncome) > 0) ? '<p class="form-note">Tipp: Für die Haushaltsrechnung der Kreditmappe im Finanzprofil das Nettoeinkommen eintragen.</p>' : ''}`;
+  ${!(Number(d.profile?.netIncome) > 0) ? '<p class="form-note">Tipp: Für die Haushaltsrechnung der Kreditmappe im Finanzprofil das Nettoeinkommen eintragen.</p>' : ''}`;
 }
 
 function bindKm(d, u, saveData, reload) {
@@ -595,11 +599,12 @@ function bindKm(d, u, saveData, reload) {
     const Pc = (x) => (x == null ? '–' : `${Number(x).toLocaleString('de-DE', { maximumFractionDigits: 2 })} %`);
     res(`<div class="km-result"><strong>RenditeRadar: ${esc(sum.name)}</strong>
       <div class="km-kpis"><span><small>Kaufpreis</small>${E0(sum.price)}</span><span><small>Bruttorendite</small>${Pc(sum.grossYield)}</span><span><small>Cashflow / Monat</small>${E0(sum.cashflow)}</span><span><small>DSCR</small>${sum.dscr == null ? '–' : Number(sum.dscr).toLocaleString('de-DE', { maximumFractionDigits: 2 })}</span></div>
-      <div class="km-actions"><a class="btn btn-outline" href="#suche">In der Analyse ansehen &amp; anpassen</a></div></div>`);
+      <div class="km-actions"><a class="btn btn-outline" href="#objekte">In der Analyse oben ansehen &amp; anpassen</a></div></div>`);
   }
 
   const wire = () => {
-    $('kmManual')?.addEventListener('click', () => { if (KM.doc === 'km') openForm(); else location.hash = 'suche'; });
+    $('kmToNew')?.addEventListener('click', () => $('sucheView')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    $('kmManual')?.addEventListener('click', () => { if (KM.doc === 'km') openForm(); else location.hash = 'objekte'; });
 
     // Exposé-PDF (AutoPilot)
     $('kmPdf')?.addEventListener('change', async (e) => {
@@ -631,7 +636,7 @@ function bindKm(d, u, saveData, reload) {
         const r = await fetch('/api/expose-link', { method: 'POST', headers: { Authorization: 'Bearer ' + sessToken(), 'content-type': 'application/json' }, body: JSON.stringify({ url }) });
         if (!r.ok) {
           const j = await r.json().catch(() => ({}));
-          throw Object.assign(Error(j.error || 'Der Link konnte nicht ausgewertet werden.'), { more: j.code === 'portal' ? ' <a class="ck-link" href="#suche">Zur Ein-Klick-Übernahme</a>' : '' });
+          throw Object.assign(Error(j.error || 'Der Link konnte nicht ausgewertet werden.'), { more: j.code === 'portal' ? ' <a class="ck-link" href="#objekte">Zur Ein-Klick-Übernahme</a>' : '' });
         }
         await w.step(1);
         let listing;
@@ -800,8 +805,8 @@ function fahrplan(idx, d) {
     [['Finanzprofil ausfüllen', 'Nettoeinkommen und Eigenkapital – daraus ergibt sich Ihr Budget.', '#konto', prof],
       ['Budget berechnen', 'Welche Rate und welcher Kaufpreis zu Ihnen passen.', '/rechner/budget', null],
       ['Grundlagen lernen', 'Geld, Eigenkapital, Zins und Tilgung – je wenige Minuten.', '#lernen', learned(['geld', 'eigenkapital', 'annuitaet'])]],
-    [['Erstes Objekt anlegen', 'Exposé hochladen oder Eckdaten eintragen.', '#suche', objs.length > 0],
-      ['Kennzahlen prüfen', 'Rendite, Cashflow und Bankreife unter „Analyse“.', '#suche', null],
+    [['Erstes Objekt anlegen', 'Exposé hochladen oder Eckdaten eintragen.', '#objekte', objs.length > 0],
+      ['Kennzahlen prüfen', 'Rendite, Cashflow und Bankreife unter „Objekte“.', '#objekte', null],
       ['Exposé lesen lernen', 'Was hinter Cashflow und Beleihung steckt.', '#lernen', learned(['cashflow', 'beleihung'])]],
     [['Finanzprofil vollständig', 'Die Bank prüft Einkommen und Eigenkapital zuerst.', '#konto', prof],
       ['Unterlagen vollständig machen', 'Bankreife Ihres Objekts auf 90 % bringen.', '/checkliste', null],
@@ -836,8 +841,8 @@ function proKpis(d) {
 // Cockpit: zwei klare Hauptpfade statt vieler Einzelkacheln. Einsteiger geführt (nummeriert), Profi kompakt mit Fachbegriffen.
 function paths(mode, done) {
   const A = mode === 'profi'
-    ? [['#suche', 'Import & Analyse', 'Rendite, DSCR, Cashflow nach Steuern'], ['#objekte', 'Kreditmappe', 'BankReady für jedes Objekt'], ['/szenarien', 'Anschlusszins & Verkauf', 'Kipp-Zins, Forward, § 23 EStG'], ['/rechner/vergleich', 'Bankangebote vergleichen', 'Effektivzins, Restschuld, Gesamtkosten'], ['/cockpit', 'Stresstest-Cockpit', 'Zinsschock und Mietausfall']]
-    : [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#suche', 'Exposé importieren', 'PDF oder Link – Kennzahlen sofort'], ['#objekte', 'Objekt prüfen', 'Exposé oder Link – Rendite und Risiko'], ['#objekte', 'Kreditmappe erstellen', 'Bankfertig für Ihr Gespräch']];
+    ? [['#objekte', 'Import & Analyse', 'Rendite, DSCR, Cashflow nach Steuern'], ['#objekte', 'Kreditmappe', 'BankReady für jedes Objekt'], ['/szenarien', 'Anschlusszins & Verkauf', 'Kipp-Zins, Forward, § 23 EStG'], ['/rechner/vergleich', 'Bankangebote vergleichen', 'Effektivzins, Restschuld, Gesamtkosten'], ['/cockpit', 'Stresstest-Cockpit', 'Zinsschock und Mietausfall']]
+    : [['/rechner/budget', 'Budget berechnen', 'Was kann ich mir leisten?'], ['#objekte', 'Exposé importieren', 'PDF oder Link – Kennzahlen sofort'], ['#objekte', 'Objekt prüfen', 'Exposé oder Link – Rendite und Risiko'], ['#objekte', 'Kreditmappe erstellen', 'Bankfertig für Ihr Gespräch']];
   const B = mode === 'profi'
     ? [['#werkzeuge', 'Software-Tools', 'Portfolio, Betriebskosten, Fristen'], ['#steuer', 'Steuer & AfA', 'Anlage V, 15-%-Grenze, AfA § 7 Abs. 4 / Sonder-AfA § 7b'], ['/rechner/afa', 'AfA-Plan', 'linear, degressiv, Sonder-AfA'], ['/rechner/mieterhoehung', 'Mieterhöhung', 'Kappungsgrenze, Briefentwurf'], ['/rechner', 'Rechner-Bibliothek', 'Mietrecht und Steuern'], ['#lernen', 'Fachwissen', `${done} von ${LERN.length} Themen`]]
     : [['/rechner', 'Rechner-Bibliothek', 'Nebenkosten, Tilgung, Kaufen oder mieten'], ['/wissen/glossar', 'Lexikon', 'Fachbegriffe in einfachen Worten'], ['#steuer', 'Steuer-Grundlagen', 'Was Sie absetzen können'], ['#lernen', 'Lernplan', `${done} von ${LERN.length} Themen verstanden`]];
@@ -868,7 +873,7 @@ function todayB2C(d) {
   const learned = LERN.filter(([id]) => L[id]).length;
   const items = [];
   if (!prof) items.push(['warn', 'Finanzprofil vervollständigen', 'Einkommen, Eigenkapital und Erwerbsstatus – daraus rechnet ImmoAdv Ihr Budget.', '#konto']);
-  if (!priced.length) items.push(['hot', 'Erstes Objekt analysieren', 'Exposé hochladen, Link eintragen oder Kaufpreis eingeben.', '#suche']);
+  if (!priced.length) items.push(['hot', 'Erstes Objekt analysieren', 'Exposé hochladen, Link eintragen oder Kaufpreis eingeben.', '#objekte']);
   if (best && best.pct < 100) items.push(['warn', `${esc(best.o.name || 'Objekt')}: ${best.missing.length} Angabe${best.missing.length === 1 ? '' : 'n'} fehlen`, 'Für eine bankfertige Kreditmappe ergänzen.', '#objekte']);
   if (best && best.pct >= 90) items.push(['ok', 'Kreditmappe erstellen', `${esc(best.o.name || 'Objekt')} ist zu ${best.pct} % vorbereitet.`, '#objekte']);
   if (next) { const days = Math.round((new Date(next.date) - Date.now()) / 864e5); if (days <= 365) items.push(['hot', `Frist am ${fmt(next.date)}`, `${esc(next.title || next.label || 'Frist')} · ${esc(next.object || '')}`, '/fristen']); }
@@ -878,7 +883,7 @@ function todayB2C(d) {
     : '<li class="empty">Alles erledigt – gut vorbereitet.</li>';
   const kpi = (l, v, a, h) => `<a class="ia-kpi" href="${h}"><small>${l}</small><strong>${v}</strong><span>${a}</span></a>`;
   return `<section class="ia-today"><div class="todo-h"><h3>Heute zu tun</h3><span class="form-note">${items.length ? `${items.length} Punkt${items.length === 1 ? '' : 'e'}` : 'Alles erledigt'}</span></div><ul class="todo-list">${list}</ul></section>
-  <div class="ia-kpis">${kpi('Objekte', priced.length, priced.length ? 'Ansehen' : 'Anlegen', priced.length ? '#objekte' : '#suche')}${kpi('Bankreife', best ? best.pct + ' %' : '–', 'Kreditmappe', '#objekte')}${kpi('Nächste Frist', next ? fmt(next.date) : '–', 'Fristen', '/fristen')}${kpi('Lernplan', `${learned} / ${LERN.length}`, 'Wissen', '#lernen')}</div>`;
+  <div class="ia-kpis">${kpi('Objekte', priced.length, priced.length ? 'Ansehen' : 'Anlegen', priced.length ? '#objekte' : '#objekte')}${kpi('Bankreife', best ? best.pct + ' %' : '–', 'Kreditmappe', '#objekte')}${kpi('Nächste Frist', next ? fmt(next.date) : '–', 'Fristen', '/fristen')}${kpi('Lernplan', `${learned} / ${LERN.length}`, 'Wissen', '#lernen')}</div>`;
 }
 
 function startCard(mode, d) {
