@@ -16,7 +16,7 @@ const VIEWS = [
 const GROUPS = [['arbeit', 'Tagesgeschäft'], ['werk', 'Werkzeuge & Wissen'], ['konto', 'Konto']];
 // Handy-Leiste: vier Hauptbereiche plus „Mehr“ (alle übrigen Bereiche als Liste).
 const MAIN = [
-  ['start', 'Start', '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'],
+  ['start', 'Start', '<rect x="3" y="3" width="7.5" height="9" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="5" rx="1.5"/><rect x="13.5" y="11" width="7.5" height="10" rx="1.5"/><rect x="3" y="15" width="7.5" height="6" rx="1.5"/>'],
   ['fall', 'Analyse', '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><circle cx="12" cy="14" r="2.6"/><path d="M14 16l2.5 2.5"/>'],
   ['kunden', 'Kunden', '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2 .7 3.5 2.6 3.5 6"/>'],
   ['anfragen', 'Anfragen', '<path d="M4 5h16v11H8l-4 4z"/>'],
