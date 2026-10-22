@@ -730,31 +730,33 @@ export function exposeMetrics(p, f = {}) {
   };
 }
 
-// ---------- Startseiten-Demo: Beispielimmobilie mit Risiken und Score ----------
-// Nutzt scorecard() für Haushalt, Eigenkapital und Objekt und prüft zusätzlich den Zins-Puffer (+2 Prozentpunkte).
-// Score = Mittel der vier Ampeln (grün 100, gelb 60, rot 20), gedeckelt durch die schlechteste Ampel. Nur zur Veranschaulichung auf öffentlichen Seiten.
-export const DEMO_DEFAULTS = { price: 300000, area: 72, rent: 1100, equity: 60000, ratePct: 3.8, repaymentPct: 2, netIncome: 4200, householdSize: 2, land: 'hessen', brokerPct: 3.57, maintenanceQm: 1 };
+// ---------- Startseiten-Demo: Beispielimmobilie mit Prüfpunkten und Orientierungswert ----------
+// Nutzt scorecard() für Haushalt, Eigenkapital und (bei Vermietung) Objekt und prüft zusätzlich den Zins-Puffer
+// (+2 Prozentpunkte). Orientierungswert = Mittel der gerechneten Ampeln (grün 100, gelb 60, rot 20), gedeckelt durch
+// die schlechteste Ampel. Kein Bank-Score; nur zur Veranschaulichung auf öffentlichen Seiten.
+export const DEMO_DEFAULTS = { price: 389000, area: 82, rent: 0, use: 'owner', equity: 80000, ratePct: 3.6, repaymentPct: 2, netIncome: 5200, householdSize: 2, land: 'niedersachsen', brokerPct: 3.57, maintenanceQm: 1 };
 export function demoAnalyse(input = {}) {
   const i = { ...DEMO_DEFAULTS, ...input };
+  if (i.use !== 'investor') i.rent = 0;
   const sc = scorecard(i);
   const st = scorecard({ ...i, ratePct: i.ratePct + 2 });
   const nk = kaufnebenkosten({ price: i.price, land: i.land, brokerPct: i.brokerPct });
   const loan = sc.loan ?? 0;
   const rate = r2(monthlyRate(loan, i.ratePct / 100, i.repaymentPct / 100));
   const rest10 = r2(balanceAfterMonths(loan, i.ratePct / 100, i.repaymentPct / 100, 120));
-  const pts = { ok: 100, warn: 60, bad: 20, na: 60 };
-  const stress = st.haushalt.status === 'bad' ? 'bad' : st.haushalt.status === 'warn' ? 'warn' : 'ok';
+  const pts = { ok: 100, warn: 60, bad: 20 };
+  const stress = st.haushalt.status === 'bad' ? 'bad' : st.haushalt.status === 'warn' ? 'warn' : st.haushalt.status === 'ok' ? 'ok' : 'na';
   const lamps = [
     { key: 'haushalt', status: sc.haushalt.status, surplus: sc.haushalt.surplus ?? null },
     { key: 'eigenkapital', status: sc.eigenkapital.status, target: sc.eigenkapital.target ?? null },
-    { key: 'objekt', status: sc.objekt.status, yieldPct: sc.objekt.yieldPct ?? null },
+    ...(i.rent > 0 ? [{ key: 'objekt', status: sc.objekt.status, yieldPct: sc.objekt.yieldPct ?? null }] : []),
     { key: 'zinspuffer', status: stress, surplus: st.haushalt.surplus ?? null },
-  ];
-  // Eine rote Ampel begrenzt den Score auf „Kritisch prüfen“, eine gelbe auf „Gut – mit Hinweisen“ (wie scorecard().overall).
+  ].filter((l) => l.status !== 'na');
   const worst = lamps.some((l) => l.status === 'bad') ? 'bad' : lamps.some((l) => l.status === 'warn') ? 'warn' : 'ok';
   const cap = { bad: 59, warn: 84, ok: 100 }[worst];
-  const score = Math.min(cap, Math.round(lamps.reduce((s, l) => s + pts[l.status], 0) / lamps.length));
-  const label = score >= 85 ? 'Solide Entscheidung' : score >= 65 ? 'Gut – mit Hinweisen' : score >= 45 ? 'Kritisch prüfen' : 'Hohes Risiko';
+  const score = lamps.length ? Math.min(cap, Math.round(lamps.reduce((s, l) => s + pts[l.status], 0) / lamps.length)) : null;
+  const label = score == null ? 'Daten unvollständig' : score >= 85 ? 'Wenige Auffälligkeiten' : score >= 65 ? 'Einzelne Punkte prüfen' : score >= 45 ? 'Mehrere Punkte kritisch prüfen' : 'Deutliche Risiken – genau prüfen';
+  const openPoints = lamps.filter((l) => l.status !== 'ok').length;
   return { input: i, nk, loan, rate, rest10, equityQuotePct: nk ? Math.round((i.equity / nk.allIn) * 1000) / 10 : null,
-    burdenPct: i.netIncome > 0 ? Math.round((rate / i.netIncome) * 1000) / 10 : null, lamps, score, label };
+    burdenPct: i.netIncome > 0 ? Math.round((rate / i.netIncome) * 1000) / 10 : null, lamps, score, label, openPoints };
 }

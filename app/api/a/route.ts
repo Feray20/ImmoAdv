@@ -7,7 +7,9 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // Reichweitenmessung (cookielos, siehe lib/analytics/track.ts). Antwortet immer 204.
-const EVENTS = ['pv', 'offer_view', 'checkout_open', 'checkout_start', 'register', 'login', 'b2b_login', 'b2b_request', 'purchase_return'] as const;
+const EVENTS = ['pv', 'offer_view', 'checkout_open', 'checkout_start', 'register', 'login', 'b2b_login', 'b2b_request', 'purchase_return',
+  // Startseite (B2C): Conversion-Schritte ohne personenbezogene Inhalte
+  'qz_result', 'hero_cta_click', 'demo_interaction', 'pricing_view', 'pricing_cta_click', 'faq_open', 'property_check_started'] as const;
 const s = (n: number) => z.string().max(n).optional().nullable();
 const Body = z.object({ ev: z.enum(EVENTS), seg: z.enum(['b2c', 'b2b']), path: s(400), ref: s(400), src: s(120), med: s(80), camp: s(120), plan: s(40) });
 const none = () => new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
