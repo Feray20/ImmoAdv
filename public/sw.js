@@ -1,6 +1,6 @@
 // ImmoAdv Service Worker: statische Dateien zwischenspeichern, Seiten netzwerkbasiert mit Offline-Rückfall.
 // API-Aufrufe, Kontodaten und Dokumente werden nie zwischengespeichert.
-const CACHE = 'immoadv-v105';
+const CACHE = 'immoadv-v106';
 const STATIC = ['/', '/src/site.css', '/logo-icon.svg', '/src/app.js', '/src/content.js', '/src/routes.js', '/icon-192.png?v=4', '/offline.html'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(STATIC)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
