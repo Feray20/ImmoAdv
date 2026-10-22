@@ -6,7 +6,7 @@ export const metadata: Metadata = {
 
 const LINKS: [string, string][] = [
   ['/', 'Startseite'],
-  ['/#werkzeuge', 'Alle Rechner'],
+  ['/rechner', 'Alle Rechner'],
   ['/wissen', 'Wissenszentrale'],
   ['/wissen/glossar', 'Glossar'],
   ['/start', 'Meine erste Immobilie'],

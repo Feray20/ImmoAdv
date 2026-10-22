@@ -27,7 +27,7 @@ const APP = {
 
 // Seitenliste: Pfad, Datei, Titel, Beschreibung, Brotkrumen, Indexierung, Zusatz-JSON-LD.
 const PAGES = [
-  { path: '/', file: 'index.html', title: 'ImmoAdv – Immobilie prüfen, Kosten verstehen & Kaufentscheidung vorbereiten', desc: 'Prüfe Immobilien, Kaufnebenkosten, Finanzierung und wichtige Prüfpunkte mit ImmoAdv – transparent und nachvollziehbar.', crumbs: [], extra: ['website', 'app', 'howto', 'homefaq'] },
+  { path: '/', file: 'index.html', title: 'Immobilie prüfen & Kaufentscheidung vorbereiten | ImmoAdv', desc: 'Prüfe Immobilien, Kaufnebenkosten, Finanzierung und wichtige Prüfpunkte mit ImmoAdv – transparent und nachvollziehbar.', crumbs: [], extra: ['website', 'app', 'howto', 'homefaq'] },
   { path: '/wissen', title: `Immobilien und Geld verständlich erklärt – ${((f) => (Array.isArray(f) ? f : f.entries).length)(JSON.parse(readFileSync(new URL('../public/data/faq.json', import.meta.url), 'utf8')))} Antworten | ImmoAdv`, desc: 'Wissen in vier Phasen: Leistbarkeit, Objektprüfung, Steuern und Cashflow, Bankgespräch – verständlich erklärt, mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
   { path: '/cockpit', file: null, skip: true, title: '', desc: '' },
   { path: '/suche', file: 'suche/index.html', template: 'wissen/index.html', title: 'Suche | ImmoAdv', noindex: true, desc: 'Rechner, Antworten und Fachbegriffe rund um Immobilienkauf und Finanzierung durchsuchen.', crumbs: ['Suche'] },
@@ -45,16 +45,16 @@ const PAGES = [
   { path: '/rechner/scorecard', file: 'rechner/scorecard/index.html', title: 'Deal-Scorecard: Haushalt, Eigenkapital und Objekt prüfen | ImmoAdv', desc: 'Ampel für Ihr Immobilienvorhaben: Haushalt nach Rate, Eigenkapital inkl. Nebenkosten und Reserve, Rendite, Instandhaltung und Mietpreisbremse.', crumbs: ['Rechner', 'Deal-Scorecard'] },
   { path: '/rechner/budget', file: 'rechner/budget/index.html', title: 'Budget-Rechner: Wie viel Immobilie kann ich mir leisten? | ImmoAdv', desc: 'Aus Einkommen, Ausgaben und Eigenkapital zur tragbaren Rate, zum Darlehen und zum Kaufpreis inkl. Nebenkosten je Bundesland – auch für Kapitalanleger.', crumbs: ['Rechner', 'Budget'] },
   { path: '/rechner/tilgungsplan', file: 'rechner/tilgungsplan/index.html', title: 'Tilgungsplan mit Sondertilgung berechnen | ImmoAdv', desc: 'Tilgungsplan für Ihr Annuitätendarlehen: Zinsen, Tilgung und Restschuld je Jahr, Restschuld nach Zinsbindung, Sondertilgung und CSV-Export.', crumbs: ['Rechner', 'Tilgungsplan'] },
-  { path: '/rechner/kaufnebenkosten', file: 'rechner/kaufnebenkosten/index.html', title: 'Kaufnebenkosten nach Bundesland 2026 | ImmoAdv', desc: 'Grunderwerbsteuer von 3,5 % bis 6,5 %: alle 16 Bundesländer im Vergleich, mit Rechner für Notar, Grundbuch und Makler.', crumbs: ['Rechner', 'Kaufnebenkosten'] },
+  { path: '/rechner/kaufnebenkosten', file: 'rechner/kaufnebenkosten/index.html', title: 'Kaufnebenkosten nach Bundesland 2026 | ImmoAdv', desc: 'Grunderwerbsteuer von 3,5 % bis 6,5 %: alle 16 Bundesländer im Vergleich, mit Rechner für Notar, Grundbuch und Makler.', crumbs: ['Rechner', 'Kaufnebenkosten'], extra: ['pagefaq'] },
   { path: '/checkliste', title: 'Unterlagen-Checkliste für die Baufinanzierung | ImmoAdv', desc: '21 Unterlagen, die Banken bei Kapitalanlegern typischerweise sehen wollen – gefiltert nach Erwerbsstatus und Objektart, druckbar.', crumbs: ['Checkliste'] },
   { path: '/mustermappe', title: 'Beispiele: Muster-Kreditmappe und Objekt-Analyse | ImmoAdv', desc: 'Fiktive Beispiele als PDF: Kreditmappe mit Finanzierung, Haushaltsrechnung und Stresstest sowie Objekt-Analyse mit Rendite und Cashflow.', crumbs: ['Beispiele'] },
   { path: '/pro-begleiter', title: '12-Monats-Programm für Kapitalanleger | ImmoAdv', desc: 'Vom Kassensturz bis zum verwalteten Bestand: ein Thema pro Monat mit Aufgaben, Werkzeug und Gesetzestext zum Nachlesen.', crumbs: ['Pro-Begleiter'] },
   { path: '/profiler', title: 'Investor-Profiler: Welche Strategie passt zu Ihnen? | ImmoAdv', desc: 'Sechs Fragen zu Eigenkapital, Cashflow, Steuer und Horizont – mit den Kennzahlen, auf die Sie besonders achten sollten.', crumbs: ['Investor-Profiler'] },
-  { path: '/angebote', title: 'Preise und Angebote | ImmoAdv', desc: 'Alle Rechner kostenlos. BankReady Kreditmappe 39 € einmalig, Käufer-Pass 49 € für 90 Tage (kein Abo), Investor Pro 29 €/Monat – Endpreise inkl. USt.', crumbs: ['Angebote'] },
+  { path: '/angebote', title: 'Preise: Kreditmappe, Käufer-Pass & Investor Pro | ImmoAdv', desc: 'Alle Rechner kostenlos. BankReady Kreditmappe 39 € einmalig, Käufer-Pass 49 € für 90 Tage (kein Abo), Investor Pro 29 €/Monat – Endpreise inkl. USt.', crumbs: ['Angebote'] },
   { path: '/sicherheit', title: 'Sicherheit und Datenschutz | ImmoAdv', desc: 'Speicherung in Frankfurt, Prüfsummen, befristete Freigabelinks und Zugriffsprotokoll – und was noch geplant ist.', crumbs: ['Sicherheit'] },
   { path: '/impressum', title: 'Impressum | ImmoAdv', desc: 'Impressum von ImmoAdv: Anbieterkennzeichnung nach § 5 DDG, Kontakt, Verantwortliche nach § 18 MStV und Hinweise zur Streitbeilegung.', crumbs: ['Impressum'] },
-  { path: '/datenschutz', title: 'Datenschutzerklärung | ImmoAdv', desc: 'Welche Daten ImmoAdv verarbeitet, wo sie gespeichert werden und welche Rechte Sie haben.', crumbs: ['Datenschutz'] },
-  { path: '/nutzungsbedingungen', title: 'Nutzungsbedingungen und Widerrufsbelehrung | ImmoAdv', desc: 'Nutzungsbedingungen, Preise, Laufzeit, Kündigung und Widerrufsbelehrung von ImmoAdv.', crumbs: ['Nutzungsbedingungen'] },
+  { path: '/datenschutz', title: 'Datenschutzerklärung | ImmoAdv', desc: 'Welche Daten ImmoAdv verarbeitet, wo sie gespeichert werden (Frankfurt), wie lange, an wen sie gehen und welche Rechte Sie nach der DSGVO haben.', crumbs: ['Datenschutz'] },
+  { path: '/nutzungsbedingungen', title: 'Nutzungsbedingungen und Widerrufsbelehrung | ImmoAdv', desc: 'Nutzungsbedingungen von ImmoAdv: Leistungen, Preise, Laufzeit und Kündigung, Haftung sowie Widerrufsbelehrung und Muster-Widerrufsformular.', crumbs: ['Nutzungsbedingungen'] },
   { path: '/widerrufen', title: 'Vertrag widerrufen | ImmoAdv', desc: 'Kauf oder Abo bei ImmoAdv online widerrufen – ohne Anmeldung, in zwei Schritten nach § 356a BGB, mit Eingangsbestätigung per E-Mail.', crumbs: ['Vertrag widerrufen'] },
   { path: '/kuendigen', title: 'Verträge hier kündigen | ImmoAdv', desc: 'Abo (Investor Pro oder früherer Tarif) ohne Anmeldung kündigen – nach § 312k BGB, mit Eingangsbestätigung per E-Mail.', crumbs: ['Verträge kündigen'] },
   // Nicht indexieren: persönliche oder tokengebundene Seiten
@@ -141,9 +141,11 @@ function headBlock(p, html) {
     const ex = p.extra || [];
     if (ex.includes('website')) graph.push({ '@type': 'WebSite', '@id': `${ORIGIN}/#site`, url: `${ORIGIN}/`, name: 'ImmoAdv', inLanguage: 'de-DE', publisher: { '@id': `${ORIGIN}/#org` }, potentialAction: { '@type': 'SearchAction', target: { '@type': 'EntryPoint', urlTemplate: `${ORIGIN}/suche?q={search_term_string}` }, 'query-input': 'required name=search_term_string' } });
     if (ex.includes('app')) graph.push(APP);
+    if (ex.includes('tool')) graph.push({ '@type': 'WebApplication', '@id': `${url}#tool`, name: p.title.replace(/ \| ImmoAdv$/, ''), url, description: p.desc, applicationCategory: 'FinanceApplication', operatingSystem: 'Web', inLanguage: 'de-DE', isAccessibleForFree: true, offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' }, publisher: { '@id': `${ORIGIN}/#org` } });
     if (ex.includes('howto')) graph.push(HOWTO);
     if (ex.includes('faq')) graph.push(faqLd());
     if (ex.includes('homefaq')) graph.push(homeFaqLd(html));
+    if (ex.includes('pagefaq')) { const qs = [...html.matchAll(/<h3 class="faq-q">(.*?)<\/h3><p[^>]*>(.*?)<\/p>/g)]; const txt = (x) => x.replace(/<button[\s\S]*?<\/button>/g, '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(); if (qs.length) graph.push({ '@type': 'FAQPage', mainEntity: qs.map((m) => ({ '@type': 'Question', name: txt(m[1]), acceptedAnswer: { '@type': 'Answer', text: txt(m[2]) } })) }); }
     if (ex.includes('glossar')) graph.push(glossarLd());
     if (p.faqItem) graph.push({ '@type': 'FAQPage', mainEntity: [{ '@type': 'Question', name: p.faqItem.question, acceptedAnswer: { '@type': 'Answer', text: `${p.faqItem.level1} ${p.faqItem.level2}`.trim() } }] });
     const bc = breadcrumb(p);
@@ -155,6 +157,8 @@ function headBlock(p, html) {
 
 const template = read('rechner/index.html').replace(/<!--seo:start-->[\s\S]*?<!--seo:end-->/, '');
 const results = [];
+// Rechner-Unterseiten: eigenes WebApplication-Markup je Rechner.
+for (const p of PAGES) if (p.path.startsWith('/rechner/')) p.extra = [...(p.extra || []), 'tool'];
 // Suchmaschinen kürzen Titel ab ca. 60 Zeichen: lange Titel ohne Markenzusatz, Beschreibungen auf 160 Zeichen begrenzt.
 for (const p of PAGES) {
   if (p.title.length > 62) p.title = p.title.replace(/ \| ImmoAdv$/, '');
