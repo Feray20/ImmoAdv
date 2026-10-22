@@ -59,6 +59,9 @@ summary::-webkit-details-marker{display:none}
 .hero h1{font-size:43px}
 .section{padding:65px 0}
 .section-head h2,.two-col h2,.bank-card h2,.faq h2,.knowledge h2{font-size:34px}}
+body:has(> footer.footer){min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+body:has(> footer.footer)>main{flex:1 0 auto;width:100%}
+body:has(> footer.footer)>:not(main){flex-shrink:0}
 .route-accordion{display:grid;gap:7px}
 .route-accordion article{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .route-q{width:100%;display:grid;grid-template-columns:45px 1fr 20px;text-align:left;align-items:center;background:#fff;border:0;padding:13px}

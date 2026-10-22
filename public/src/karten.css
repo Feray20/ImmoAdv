@@ -197,3 +197,8 @@ img,svg{max-width:100%}
 .k-hero-grid>*,.k-grid2>*,.k-dash>*{min-width:0}
 .k-card .k-c-demo{top:auto;bottom:50%;left:auto;right:18px;transform:translateY(50%)}
 .k-rows b{white-space:nowrap;text-align:right}
+
+/* Fußzeile immer ganz unten – auch auf kurzen Seiten und großen Bildschirmen. */
+body:has(> footer.k-foot){min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+body:has(> footer.k-foot)>main{flex:1 0 auto;width:100%}
+body:has(> footer.k-foot)>:not(main){flex-shrink:0}
