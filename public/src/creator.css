@@ -137,3 +137,8 @@
 #camtOut .co-social{margin:10px 0;font-size:14px}
 #camtOut .pt-row{margin-top:10px}
 #camtOut td strong{white-space:nowrap}
+/* Fußzeile: steht immer ganz unten und wird auf Handy/Tablet nicht von der unteren Leiste verdeckt */
+body.is-portal>#creator{flex:1 0 auto}
+@media (max-width:900px){
+  body.is-portal:has(#creator .pt-tabs)>footer.ia-legal .ia-legal-in{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+}
