@@ -26,11 +26,11 @@ export async function GET(req: Request) {
     db.from('immo_settings').select('value').eq('key', 'creator_close_delay_days').maybeSingle(),
   ]);
   const delay = Number(setting.data?.value ?? 15) || 15;
-  const open = ((unbilled.data ?? []) as { amount_net_cents: number; immo_creator_commissions?: unknown }[]).filter((x) => !(Array.isArray(x.immo_creator_commissions) ? x.immo_creator_commissions.length : x.immo_creator_commissions));
+  const open = ((unbilled.data ?? []) as unknown as { amount_net_cents: number; immo_creator_commissions?: unknown }[]).filter((x) => !(Array.isArray(x.immo_creator_commissions) ? x.immo_creator_commissions.length : x.immo_creator_commissions));
   type Doc = { id: string; statement_id: string; doc_type: string; number: string; issued_at: string };
-  const docRows = (docs.data ?? []) as Doc[];
-  const payRows = (pays.data ?? []) as { id: string; statement_id: string; status: string; amount_cents: number }[];
-  const rows = (st.data ?? []) as (StatementRow & { immo_creators?: { display_name: string | null; first_name: string | null; last_name: string | null } })[];
+  const docRows = (docs.data ?? []) as unknown as Doc[];
+  const payRows = (pays.data ?? []) as unknown as { id: string; statement_id: string; status: string; amount_cents: number }[];
+  const rows = (st.data ?? []) as unknown as (StatementRow & { immo_creators?: { display_name: string | null; first_name: string | null; last_name: string | null } })[];
   const statements = [];
   let blockedCents = 0;
   for (const s of rows) {

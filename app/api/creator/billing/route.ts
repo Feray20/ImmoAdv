@@ -23,16 +23,16 @@ export async function GET(req: Request) {
     db.from('immo_creator_commissions').select('commission_cents, status').eq('creator_id', c.id),
     db.from('immo_settings').select('value').eq('key', 'creator_close_delay_days').maybeSingle(),
   ]);
-  const statements = (st.data ?? []) as (StatementRow & { billing_mode: string })[];
+  const statements = (st.data ?? []) as unknown as (StatementRow & { billing_mode: string })[];
   type Doc = { id: string; statement_id: string; doc_type: string; number: string; issued_at: string };
-  const docRows = (docs.data ?? []) as Doc[];
+  const docRows = (docs.data ?? []) as unknown as Doc[];
   type Pay = { statement_id: string; amount_cents: number; status: string; iban_country: string; iban_last4: string; approved_at: string | null; paid_at: string | null };
-  const payRows = (pays.data ?? []) as Pay[];
+  const payRows = (pays.data ?? []) as unknown as Pay[];
 
   // Offene (noch nicht abgeschlossene) Monate: vorläufige Provision nach den aktuell gültigen Regeln
-  const unbilled = ((open.data ?? []) as (ConversionIn & { immo_creator_commissions?: unknown })[])
+  const unbilled = ((open.data ?? []) as unknown as (ConversionIn & { immo_creator_commissions?: unknown })[])
     .filter((x) => !(Array.isArray(x.immo_creator_commissions) ? x.immo_creator_commissions.length : x.immo_creator_commissions));
-  const est = commissionLines((rules.data ?? []) as Rule[], unbilled);
+  const est = commissionLines((rules.data ?? []) as unknown as Rule[], unbilled);
   const byPeriod = new Map<string, { period: string; conversions: number; revenue_net_cents: number; commission_cents: number }>();
   unbilled.forEach((x, i) => {
     const p = periodOf(new Date(x.occurred_at));
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
   const delay = Number(setting.data?.value ?? 15) || 15;
   const openPeriods = [...byPeriod.values()].sort((a, b) => b.period.localeCompare(a.period)).map((o) => ({ ...o, label: periodLabel(o.period), close_from: closeAllowedAt(o.period, delay).toISOString() }));
 
-  const sum = (s: string) => ((comm.data ?? []) as { commission_cents: number; status: string }[]).filter((x) => x.status === s).reduce((a, x) => a + x.commission_cents, 0);
+  const sum = (s: string) => ((comm.data ?? []) as unknown as { commission_cents: number; status: string }[]).filter((x) => x.status === s).reduce((a, x) => a + x.commission_cents, 0);
   const actionable = statements.filter((s) => s.status === 'READY' || s.status === 'INVOICED');
   const blockerMap = new Map<string, string[]>();
   for (const s of actionable) {

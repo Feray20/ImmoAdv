@@ -47,8 +47,8 @@ export async function POST(req: Request) {
   q = d.creator_id ? q.eq('creator_id', d.creator_id) : q.is('creator_id', null);
   q = d.campaign_slug ? q.eq('campaign_slug', d.campaign_slug) : q.is('campaign_slug', null);
   const { data: prev } = await q;
-  const version = Math.max(0, ...((prev ?? []) as { version: number }[]).map((r) => r.version)) + 1;
-  for (const r of (prev ?? []) as { id: string }[]) await db.from('immo_creator_commission_rules').update({ valid_to: start.toISOString() }).eq('id', r.id).is('valid_to', null);
+  const version = Math.max(0, ...((prev ?? []) as unknown as { version: number }[]).map((r) => r.version)) + 1;
+  for (const r of (prev ?? []) as unknown as { id: string }[]) await db.from('immo_creator_commission_rules').update({ valid_to: start.toISOString() }).eq('id', r.id).is('valid_to', null);
   const { error } = await db.from('immo_creator_commission_rules').insert({ ...d, note: d.note || null, version, valid_from: start.toISOString(), created_by: a.actor.ref });
   if (error) return j({ error: 'Regel konnte nicht gespeichert werden.' }, 400);
   await audit('COMMISSION_CHANGED', d.creator_id, a.actor, 'SUCCESS', { kind: d.kind, percent_bps: d.percent_bps, fixed_cents: d.fixed_cents, campaign: d.campaign_slug, version });

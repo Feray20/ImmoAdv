@@ -25,7 +25,7 @@ export async function GET(req: Request) {
     me: { manage: can(a.role, 'payouts.manage') },
     four_eyes: (await supabaseAdmin().from('immo_settings').select('value').eq('key', 'creator_payout_four_eyes').maybeSingle()).data?.value === true,
     debtor_configured: debtor() !== null,
-    payouts: ((data ?? []) as Row[]).map((p) => ({ ...p, iban_masked: maskIban(p.iban_country, p.iban_last4), bank_status: p.immo_creator_payout_accounts?.status ?? null, period_label: p.immo_creator_statements ? periodLabel(p.immo_creator_statements.period) : '' })),
+    payouts: ((data ?? []) as unknown as Row[]).map((p) => ({ ...p, iban_masked: maskIban(p.iban_country, p.iban_last4), bank_status: p.immo_creator_payout_accounts?.status ?? null, period_label: p.immo_creator_statements ? periodLabel(p.immo_creator_statements.period) : '' })),
   });
 }
 
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
   if (!can(a.role, 'payouts.manage')) return j({ error: 'Für Auszahlungen fehlt Ihrer Rolle die Berechtigung.' }, 403);
   const db = supabaseAdmin();
   const { data: rows } = await db.from('immo_creator_payouts').select('*').in('id', d.ids);
-  const list = (rows ?? []) as P[];
+  const list = (rows ?? []) as unknown as P[];
   if (list.length !== d.ids.length) return j({ error: 'Nicht alle Auszahlungen gefunden.' }, 404);
 
   if (d.action === 'approve') {
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     const ok = list.filter((p) => p.status === 'APPROVED' || p.status === 'EXPORTED');
     if (!ok.length) return j({ error: 'Nur freigegebene Auszahlungen können exportiert werden.' }, 409);
     const { data: accs } = await db.from('immo_creator_payout_accounts').select('id, creator_id, holder_name, iban_enc, bic, status').in('id', ok.map((p) => p.payout_account_id));
-    const accMap = new Map(((accs ?? []) as { id: string; creator_id: string; holder_name: string; iban_enc: string; bic: string | null; status: string }[]).map((x) => [x.id, x]));
+    const accMap = new Map(((accs ?? []) as unknown as { id: string; creator_id: string; holder_name: string; iban_enc: string; bic: string | null; status: string }[]).map((x) => [x.id, x]));
     const exportId = `IA-CR-${new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)}`;
     const payments = [];
     for (const p of ok) {

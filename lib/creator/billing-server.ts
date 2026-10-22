@@ -38,11 +38,11 @@ async function factsFor(ids: string[]) {
     db().from('immo_creator_agreements').select('id').not('published_at', 'is', null).order('published_at', { ascending: false }).limit(1).maybeSingle(),
   ]);
   const acc = agr.data ? await db().from('immo_creator_agreement_acceptances').select('creator_id').eq('agreement_id', agr.data.id).in('creator_id', ids) : { data: [] };
-  const accepted = new Set(((acc.data ?? []) as { creator_id: string }[]).map((x) => x.creator_id));
+  const accepted = new Set(((acc.data ?? []) as unknown as { creator_id: string }[]).map((x) => x.creator_id));
   return {
-    creators: new Map(((cr.data ?? []) as CreatorFacts[]).map((c) => [c.id, c])),
-    business: new Map(((bus.data ?? []) as (BusinessIn & Record<string, unknown> & { creator_id: string })[]).map((b) => [b.creator_id, b])),
-    payout: new Map(((pay.data ?? []) as { id: string; creator_id: string; status: string; iban_country: string; iban_last4: string; holder_name: string }[]).map((p) => [p.creator_id, p])),
+    creators: new Map(((cr.data ?? []) as unknown as CreatorFacts[]).map((c) => [c.id, c])),
+    business: new Map(((bus.data ?? []) as unknown as (BusinessIn & Record<string, unknown> & { creator_id: string })[]).map((b) => [b.creator_id, b])),
+    payout: new Map(((pay.data ?? []) as unknown as { id: string; creator_id: string; status: string; iban_country: string; iban_last4: string; holder_name: string }[]).map((p) => [p.creator_id, p])),
     accepted,
   };
 }
@@ -59,7 +59,7 @@ export async function closePeriod(period: string, actor: Actor, now = new Date()
   const { data: rev } = await db().from('immo_creator_commissions').select('id, conversion_id, creator_id, commission_cents, status, immo_creator_conversions!inner(status)')
     .neq('status', 'CLAWED_BACK').eq('immo_creator_conversions.status', 'REVERSED');
   let clawbacks = 0;
-  for (const c of (rev ?? []) as { id: string; creator_id: string; commission_cents: number }[]) {
+  for (const c of (rev ?? []) as unknown as { id: string; creator_id: string; commission_cents: number }[]) {
     if (c.commission_cents > 0) {
       const ins = await db().from('immo_creator_adjustments').upsert({ creator_id: c.creator_id, period, kind: 'CLAWBACK', amount_cents: -c.commission_cents, reason: 'Rückforderung: Kauf wurde erstattet', source_id: c.id, created_by: actor.ref }, { onConflict: 'kind,source_id', ignoreDuplicates: true }).select('id');
       if (ins.data?.length) clawbacks++;
@@ -70,7 +70,7 @@ export async function closePeriod(period: string, actor: Actor, now = new Date()
   // 2) Negative Salden früherer Monate übertragen
   const { data: neg } = await db().from('immo_creator_statements').select('id, creator_id, net_cents').lt('net_cents', 0).eq('carried_over', false).lt('period', period);
   let carried = 0;
-  for (const s of (neg ?? []) as { id: string; creator_id: string; net_cents: number }[]) {
+  for (const s of (neg ?? []) as unknown as { id: string; creator_id: string; net_cents: number }[]) {
     await db().from('immo_creator_adjustments').upsert({ creator_id: s.creator_id, period, kind: 'CARRY_OVER', amount_cents: s.net_cents, reason: 'Übertrag negativer Saldo aus Vormonat', source_id: s.id, created_by: actor.ref }, { onConflict: 'kind,source_id', ignoreDuplicates: true });
     await db().from('immo_creator_statements').update({ carried_over: true }).eq('id', s.id);
     carried++;
@@ -83,11 +83,11 @@ export async function closePeriod(period: string, actor: Actor, now = new Date()
     db().from('immo_creator_commission_rules').select('*'),
     db().from('immo_creator_statements').select('creator_id').eq('period', period),
   ]);
-  const done = new Set(((doneRes.data ?? []) as { creator_id: string }[]).map((x) => x.creator_id));
-  const conversions = ((convRes.data ?? []) as (ConversionIn & { immo_creator_commissions?: { id: string }[] | { id: string } | null })[])
+  const done = new Set(((doneRes.data ?? []) as unknown as { creator_id: string }[]).map((x) => x.creator_id));
+  const conversions = ((convRes.data ?? []) as unknown as (ConversionIn & { immo_creator_commissions?: { id: string }[] | { id: string } | null })[])
     .filter((c) => !(Array.isArray(c.immo_creator_commissions) ? c.immo_creator_commissions.length : c.immo_creator_commissions)).filter((c) => !done.has(c.creator_id));
-  const adjustments = ((adjRes.data ?? []) as (AdjustmentIn & { id: string; creator_id: string })[]).filter((a) => !done.has(a.creator_id));
-  const rules = (rulesRes.data ?? []) as Rule[];
+  const adjustments = ((adjRes.data ?? []) as unknown as (AdjustmentIn & { id: string; creator_id: string })[]).filter((a) => !done.has(a.creator_id));
+  const rules = (rulesRes.data ?? []) as unknown as Rule[];
   const ids = [...new Set([...conversions.map((c) => c.creator_id), ...adjustments.map((a) => a.creator_id)])];
   if (!ids.length) { await audit('PERIOD_CLOSED', null, actor, 'SUCCESS', { period, statements: 0 }); return { closed: 0, clawbacks, carried }; }
 
@@ -147,12 +147,12 @@ async function statementLines(s: StatementRow): Promise<{ lines: DocLine[]; adj:
   type C = { base_cents: number; commission_cents: number; immo_creator_conversions: { occurred_at: string; plan: string | null; source: string; campaign_slug: string | null } | null };
   const KIND: Record<string, string> = { BONUS: 'Bonus', CORRECTION: 'Korrektur', CLAWBACK: 'Rückforderung', CARRY_OVER: 'Übertrag' };
   return {
-    lines: ((com.data ?? []) as C[]).map((c) => ({
+    lines: ((com.data ?? []) as unknown as C[]).map((c) => ({
       description: `Provision ${c.immo_creator_conversions ? dDE(c.immo_creator_conversions.occurred_at) : ''} · ${PLAN[c.immo_creator_conversions?.plan ?? ''] ?? c.immo_creator_conversions?.plan ?? 'Kauf'}`,
       detail: `Netto-Umsatz ${eurText(c.base_cents)} · über ${c.immo_creator_conversions?.source === 'code' ? 'Vorteilscode' : 'Creator-Link'}${c.immo_creator_conversions?.campaign_slug ? ` · Kampagne ${c.immo_creator_conversions.campaign_slug}` : ''}`,
       amountCents: c.commission_cents,
     })),
-    adj: ((adj.data ?? []) as { kind: string; amount_cents: number; reason: string }[]).map((a) => ({ description: `${KIND[a.kind] ?? a.kind}: ${a.reason}`, amountCents: a.amount_cents })),
+    adj: ((adj.data ?? []) as unknown as { kind: string; amount_cents: number; reason: string }[]).map((a) => ({ description: `${KIND[a.kind] ?? a.kind}: ${a.reason}`, amountCents: a.amount_cents })),
   };
 }
 
