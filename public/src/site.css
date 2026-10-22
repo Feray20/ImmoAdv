@@ -1802,7 +1802,8 @@ html:not(.ia-paid) body.lp-sticky-on{padding-bottom:calc(76px + env(safe-area-in
 @media(max-width:620px){.lp-docflow{gap:10px}.lp-docflow li{grid-template-columns:auto 1fr;column-gap:14px;align-items:center;padding:14px}.lp-docflow li .lp-ic{grid-row:span 2}}
 @media(max-width:1180px) and (min-width:621px){.lp-pgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .lp-plan .btn{white-space:normal;text-align:center;line-height:1.25}
-@media(max-width:360px){.lp-hero-ctas .hs-go,.lp-btns .btn,.km-go{font-size:15px;padding-left:14px;padding-right:14px;gap:6px}}
+@media(max-width:380px){.hero3 .home-cta.lp-hero-ctas .hs-go,.lp-btns .btn,.km-go{font-size:15px;padding-left:12px;padding-right:12px;gap:6px}}
+@media(max-width:600px){body.lp-hero-in .cw-fab{display:none}}
 /* b2b-landing.css */
 .bx-svg{display:block;flex:0 0 auto}
 .bx-sec{padding:76px 0}

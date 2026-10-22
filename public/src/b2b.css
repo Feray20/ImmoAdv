@@ -466,9 +466,9 @@ body{max-width:100%;overflow-x:clip}
 .an-list ol{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .an-list li{position:relative;display:flex;justify-content:space-between;gap:10px;padding:6px 8px;border-radius:6px;font-size:14px;overflow:hidden}
 .an-bar{position:absolute;inset:0 auto 0 0;width:var(--w);background:#E0F2FE;z-index:0}.an-k,.an-list b{position:relative;z-index:1}.an-k{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-/* Handy-Leiste: 4 Hauptbereiche + „Mehr“ (ersetzt die wischbare Leiste) */
+/* Handy-Leiste: 5 Hauptbereiche + „Mehr“ (ersetzt die wischbare Leiste) */
 @media (max-width:900px){
-  .pt-tabs{display:grid;grid-template-columns:repeat(5,1fr);grid-auto-flow:row;grid-auto-columns:auto;overflow:visible;gap:0;padding:4px 2px calc(4px + env(safe-area-inset-bottom))}
+  .pt-tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-auto-flow:row;grid-auto-columns:auto;overflow:visible;gap:0;padding:4px 2px calc(4px + env(safe-area-inset-bottom))}
   .pt-tabs a,.pt-tabs button{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:12px;font-family:inherit;font-size:11px;font-weight:600;line-height:1.2;color:#64748B;background:none;border:0;cursor:pointer;text-decoration:none;min-height:50px;justify-content:center;-webkit-tap-highlight-color:transparent}
   .pt-tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .pt-tabs button svg{fill:currentColor;stroke:none}
@@ -1261,3 +1261,7 @@ details.fa-priv p{margin:8px 0 0}
   .fc-table td[data-label]>*{justify-self:auto}
 }
 @media(max-width:760px){.fc-table th,.fc-table td{min-width:0!important}}
+
+@media (max-width:360px){.pt-tabs a,.pt-tabs button{font-size:10.5px;letter-spacing:-.1px}}
+.pt-tabs .pt-short{display:none}
+@media (max-width:420px){.pt-tabs .pt-long{display:none}.pt-tabs .pt-short{display:inline}}

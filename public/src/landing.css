@@ -257,4 +257,7 @@
 /* Preise: vier Karten erst ab 1180 px nebeneinander, Buttons dürfen umbrechen */
 @media(max-width:1180px) and (min-width:621px){.lp-pgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .lp-plan .btn{white-space:normal;text-align:center;line-height:1.25}
-@media(max-width:360px){.lp-hero-ctas .hs-go,.lp-btns .btn,.km-go{font-size:15px;padding-left:14px;padding-right:14px;gap:6px}}
+@media(max-width:380px){.hero3 .home-cta.lp-hero-ctas .hs-go,.lp-btns .btn,.km-go{font-size:15px;padding-left:12px;padding-right:12px;gap:6px}}
+
+/* Kleine Handys: "Fragen?"-Button erst nach dem Hero zeigen, damit er den Haupt-CTA nicht verdeckt */
+@media(max-width:600px){body.lp-hero-in .cw-fab{display:none}}

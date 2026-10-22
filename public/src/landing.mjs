@@ -132,6 +132,7 @@ if (sticky && hero && 'IntersectionObserver' in window) {
     const show = !seen.get(hero) && ![...seen.entries()].some(([el, v]) => el !== hero && v);
     sticky.hidden = !show;
     document.body.classList.toggle('lp-sticky-on', show);
+    document.body.classList.toggle('lp-hero-in', !!seen.get(hero)); // Fragen-Button verdeckt sonst den Hero-CTA auf kleinen Handys
   };
   const io = new IntersectionObserver((es) => { es.forEach((x) => seen.set(x.target, x.isIntersecting)); update(); });
   [hero, qz, document.querySelector('.lp-final'), document.querySelector('.lp-after-demo')].filter(Boolean).forEach((el) => io.observe(el));
