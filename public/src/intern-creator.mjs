@@ -29,7 +29,150 @@ export async function creatorOps(v) {
   const id = (location.hash.match(/^#creator-([0-9a-f-]{36})$/) || [])[1];
   if (id) return detail(v, id);
   if (location.hash === '#creator-rollen') return roles(v);
+  if (location.hash === '#creator-kampagnen') return campaigns(v);
+  if (location.hash === '#creator-assets') return assetsAdmin(v);
+  if (location.hash === '#creator-inhalte') return contentAdmin(v);
   return list(v);
+}
+
+// Unternavigation von Creator Operations
+const SUBNAV = [['creator', 'Creator'], ['creator-kampagnen', 'Kampagnen'], ['creator-assets', 'Assets'], ['creator-inhalte', 'Beiträge'], ['creator-rollen', 'Rollen']];
+const subnav = (cur) => `<nav class="co-sub" aria-label="Creator Operations">${SUBNAV.map(([k, l]) => `<a href="#${k}"${k === cur ? ' aria-current="page"' : ''}>${l}</a>`).join('')}</nav>`;
+const eurC = (c) => (Number(c || 0) / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+const num = (n) => Number(n || 0).toLocaleString('de-DE');
+const RANGES = [['30d', '30 Tage'], ['90d', '90 Tage'], ['month', 'Dieser Monat'], ['last_month', 'Vormonat'], ['all', 'Gesamt']];
+const CST = { SUBMITTED: ['warn', 'Zu prüfen'], APPROVED: ['ok', 'Freigegeben'], CHANGES_REQUESTED: ['bad', 'Änderung erbeten'] };
+const KST = { DRAFT: ['', 'Entwurf'], ACTIVE: ['ok', 'Aktiv'], PAUSED: ['warn', 'Pausiert'], ENDED: ['', 'Beendet'] };
+let campRange = '30d';
+const errBox = (v, t) => { v.innerHTML = `<div class="ad-state err" role="alert"><strong>${esc(t || 'Nicht möglich.')}</strong></div>`; };
+function dialog(html, onSubmit) {
+  const d = document.createElement('dialog');
+  d.className = 'ad-dlg';
+  d.innerHTML = `<form class="ad-dlg-in" novalidate>${html}<p class="pt-alert bad" data-err hidden></p><div class="wiz-nav"><button type="button" class="btn btn-outline" data-x>Abbrechen</button><button type="submit" class="btn btn-dark">Speichern</button></div></form>`;
+  document.body.append(d);
+  d.querySelector('[data-x]').onclick = () => d.close();
+  d.addEventListener('close', () => d.remove());
+  const f = d.querySelector('form');
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const err = d.querySelector('[data-err]'); const btn = f.querySelector('[type=submit]'); btn.disabled = true;
+    const msg = await onSubmit(f).catch((x) => x.message || 'Nicht möglich.');
+    btn.disabled = false;
+    if (msg) { err.hidden = false; err.textContent = msg; return; }
+    d.close();
+  };
+  d.showModal();
+  return d;
+}
+const fv = (f, n) => (f.elements[n]?.value ?? '').trim();
+
+// ---------- Kampagnen ----------
+async function campaigns(v) {
+  const r = await api(`/api/admin/creators/campaigns?range=${campRange}`);
+  if (!r.ok) return errBox(v, r.data?.error);
+  const d = r.data;
+  v.innerHTML = `${subnav('creator-kampagnen')}<section class="pt-card"><div class="ad-h-row"><h2>Kampagnen</h2>${d.me.manage ? '<button type="button" class="btn btn-dark" id="coNew">+ Kampagne</button>' : ''}</div>
+      ${d.me.stats ? `<div class="pc-chips" role="group" aria-label="Zeitraum" style="margin:10px 0">${RANGES.map(([k, l]) => `<button type="button" data-r="${k}" aria-pressed="${k === campRange}">${l}</button>`).join('')}</div>` : ''}
+      <p class="form-note">Welche Kampagne funktioniert? Besuche über Creator-Links (mit <code>utm_campaign</code>), Registrierungen und bezahlte Käufe (netto, ohne Erstattungen).</p>
+      <div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Kampagne</th><th>Status</th><th>Für</th>${d.me.stats ? '<th>Besuche</th><th>Registr.</th><th>Conv.</th><th>Umsatz</th>' : ''}<th>Assets</th><th></th></tr></thead><tbody>
+      ${d.campaigns.map((k) => `<tr><td><strong>${esc(k.name)}</strong><br><small class="form-note">${esc(k.slug)} → ${esc(k.target_path)}</small></td><td>${chip(KST, k.status)}</td><td>${k.audience === 'ALL' ? 'alle Creator' : `${k.member_ids.length} Creator`}</td>
+        ${d.me.stats ? `<td>${num(k.stats?.visits)}</td><td>${num(k.stats?.registrations)}</td><td>${num(k.stats?.conversions)}</td><td>${eurC(k.stats?.revenue_net_cents)}</td>` : ''}<td>${k.assets}</td>
+        <td>${d.me.manage ? `<span class="ad-actions"><button type="button" data-edit="${esc(k.id)}">Bearbeiten</button>${k.audience === 'SELECTED' ? `<button type="button" data-mem="${esc(k.id)}">Creator</button>` : ''}</span>` : ''}</td></tr>`).join('')}
+      ${d.me.stats && d.without_campaign ? `<tr><td><em>Ohne Kampagne</em></td><td></td><td></td><td>${num(d.without_campaign.visits)}</td><td>${num(d.without_campaign.registrations)}</td><td>${num(d.without_campaign.conversions)}</td><td>${eurC(d.without_campaign.revenue_net_cents)}</td><td></td><td></td></tr>` : ''}
+      </tbody></table></div>${d.campaigns.length ? '' : '<p class="form-note">Noch keine Kampagnen.</p>'}</section>`;
+  v.querySelectorAll('[data-r]').forEach((b) => b.onclick = () => { campRange = b.dataset.r; campaigns(v); });
+  const edit = (k) => {
+    const x = k || { audience: 'ALL', status: 'DRAFT', target_path: '/' };
+    const sel = (n, list, cur) => `<select name="${n}">${list.map(([a, b]) => `<option value="${a}"${a === cur ? ' selected' : ''}>${b}</option>`).join('')}</select>`;
+    dialog(`<h2 style="margin:0;color:#0F2C59">${k ? 'Kampagne bearbeiten' : 'Neue Kampagne'}</h2><div class="ad-grid2">
+      <label>Name*<input name="name" required maxlength="120" value="${esc(x.name || '')}"></label>
+      <label>Kurzname (Link)*<input name="slug" required maxlength="40" pattern="[a-z0-9-]{3,40}" value="${esc(x.slug || '')}"${k ? ' readonly' : ''}></label>
+      <label>Status${sel('status', [['DRAFT', 'Entwurf'], ['ACTIVE', 'Aktiv'], ['PAUSED', 'Pausiert'], ['ENDED', 'Beendet']], x.status)}</label>
+      <label>Für${sel('audience', [['ALL', 'alle aktiven Creator'], ['SELECTED', 'ausgewählte Creator']], x.audience)}</label>
+      <label>Start<input type="date" name="starts_on" value="${esc(x.starts_on || '')}"></label><label>Ende<input type="date" name="ends_on" value="${esc(x.ends_on || '')}"></label>
+      <label class="full">Ziel auf immoadv.de<input name="target_path" maxlength="120" value="${esc(x.target_path || '/')}" placeholder="/rechner/budget"></label></div>
+      <label class="pt-field">Kurzbeschreibung<textarea name="summary" rows="2" maxlength="600">${esc(x.summary || '')}</textarea></label>
+      <label class="pt-field">Briefing<textarea name="brief" rows="5" maxlength="8000">${esc(x.brief || '')}</textarea></label>
+      <div class="ad-grid2"><label>Bitte so<textarea name="dos" rows="4" maxlength="4000">${esc(x.dos || '')}</textarea></label><label>Bitte nicht<textarea name="donts" rows="4" maxlength="4000">${esc(x.donts || '')}</textarea></label></div>`,
+    async (f) => {
+      const body = { ...(k ? { id: k.id } : {}), name: fv(f, 'name'), slug: fv(f, 'slug'), status: fv(f, 'status'), audience: fv(f, 'audience'), target_path: fv(f, 'target_path') || '/', starts_on: fv(f, 'starts_on') || null, ends_on: fv(f, 'ends_on') || null, summary: fv(f, 'summary') || null, brief: fv(f, 'brief') || null, dos: fv(f, 'dos') || null, donts: fv(f, 'donts') || null };
+      const x2 = await api('/api/admin/creators/campaigns', { method: 'POST', body: JSON.stringify(body) });
+      if (!x2.ok) return x2.data?.error || 'Nicht möglich.';
+      campaigns(v); return null;
+    });
+  };
+  v.querySelector('#coNew')?.addEventListener('click', () => edit(null));
+  v.querySelectorAll('[data-edit]').forEach((b) => b.onclick = () => edit(d.campaigns.find((k) => k.id === b.dataset.edit)));
+  v.querySelectorAll('[data-mem]').forEach((b) => b.onclick = () => {
+    const k = d.campaigns.find((x) => x.id === b.dataset.mem);
+    dialog(`<h2 style="margin:0;color:#0F2C59">Creator für „${esc(k.name)}“</h2><p class="form-note">Nur aktive Creator. Zugeordnete Creator sehen Kampagne und Assets im Creator Studio.</p>
+      <div class="co-check">${d.creators.map((c) => `<label class="chk"><input type="checkbox" name="c" value="${esc(c.id)}"${k.member_ids.includes(c.id) ? ' checked' : ''}> ${esc(c.display_name || 'Ohne Namen')}</label>`).join('') || '<p class="form-note">Keine aktiven Creator.</p>'}</div>`,
+    async (f) => {
+      const ids = [...f.querySelectorAll('[name=c]:checked')].map((x) => x.value);
+      const x2 = await api('/api/admin/creators/campaigns', { method: 'PUT', body: JSON.stringify({ campaign_id: k.id, creator_ids: ids }) });
+      if (!x2.ok) return x2.data?.error || 'Nicht möglich.';
+      campaigns(v); return null;
+    });
+  });
+}
+
+// ---------- Assets ----------
+async function assetsAdmin(v) {
+  const [r, c] = await Promise.all([api('/api/admin/creators/assets'), api('/api/admin/creators/campaigns')]);
+  if (!r.ok) return errBox(v, r.data?.error);
+  const camps = c.ok ? c.data.campaigns : [];
+  const manage = c.ok && c.data.me.manage;
+  const cname = (id) => camps.find((k) => k.id === id)?.name || 'Allgemein';
+  const KIND = { image: 'Bild', video: 'Video', document: 'Dokument', logo: 'Logo', text: 'Text' };
+  v.innerHTML = `${subnav('creator-assets')}<section class="pt-card"><div class="ad-h-row"><h2>Asset Library</h2>${manage ? '<span class="pt-row"><button type="button" class="btn btn-dark" id="coUp">+ Datei</button><button type="button" class="btn btn-outline" id="coTxt">+ Text</button></span>' : ''}</div>
+    <p class="form-note">Dateien liegen im privaten Speicher; Creator erhalten nur kurzlebige, signierte Download-Links. Downloads werden protokolliert.</p>
+    <div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Asset</th><th>Art</th><th>Kampagne</th><th>Status</th><th></th></tr></thead><tbody>
+    ${r.data.assets.map((a) => `<tr><td><strong>${esc(a.title)}</strong>${a.file ? `<br><small class="form-note">${esc(a.file)}${a.size_bytes ? ` · ${(a.size_bytes / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 })} MB` : ''}</small>` : ''}</td><td>${esc(KIND[a.kind] || a.kind)}</td><td>${esc(cname(a.campaign_id))}</td><td>${a.active ? '<span class="st ok" style="margin:0">sichtbar</span>' : '<span class="st" style="margin:0">verborgen</span>'}</td>
+      <td>${manage ? `<span class="ad-actions"><button type="button" data-tg="${esc(a.id)}" data-on="${a.active ? '0' : '1'}">${a.active ? 'Verbergen' : 'Sichtbar machen'}</button></span>` : ''}</td></tr>`).join('')}</tbody></table></div>${r.data.assets.length ? '' : '<p class="form-note">Noch keine Assets.</p>'}</section>`;
+  const campSel = `<label>Kampagne<select name="campaign_id"><option value="">Allgemein (alle Creator)</option>${camps.map((k) => `<option value="${esc(k.id)}">${esc(k.name)}</option>`).join('')}</select></label>`;
+  v.querySelectorAll('[data-tg]').forEach((b) => b.onclick = async () => { const x = await api('/api/admin/creators/assets', { method: 'POST', body: JSON.stringify({ action: 'toggle', id: b.dataset.tg, active: b.dataset.on === '1' }) }); if (x.ok) assetsAdmin(v); else alert(x.data?.error || 'Nicht möglich.'); });
+  v.querySelector('#coTxt')?.addEventListener('click', () => dialog(`<h2 style="margin:0;color:#0F2C59">Text-Asset (z. B. Caption, Hashtags, Pflichthinweis)</h2><div class="ad-grid2"><label>Titel*<input name="title" required maxlength="140"></label>${campSel}</div>
+    <label class="pt-field">Text*<textarea name="text_body" rows="7" maxlength="8000" required></textarea></label><label class="pt-field">Nutzungshinweis<textarea name="usage_notes" rows="2" maxlength="1000"></textarea></label>`,
+  async (f) => { const x = await api('/api/admin/creators/assets', { method: 'POST', body: JSON.stringify({ action: 'text', title: fv(f, 'title'), campaign_id: fv(f, 'campaign_id') || null, text_body: fv(f, 'text_body'), usage_notes: fv(f, 'usage_notes') || null }) }); if (!x.ok) return x.data?.error || 'Nicht möglich.'; assetsAdmin(v); return null; }));
+  v.querySelector('#coUp')?.addEventListener('click', () => dialog(`<h2 style="margin:0;color:#0F2C59">Datei hochladen</h2><div class="ad-grid2"><label>Titel*<input name="title" required maxlength="140"></label>${campSel}
+    <label>Art<select name="kind"><option value="image">Bild</option><option value="logo">Logo</option><option value="video">Video</option><option value="document">Dokument</option></select></label>
+    <label>Datei* <small class="form-note">PNG, JPG, WebP, MP4, MOV, PDF, ZIP</small><input type="file" name="file" required accept="image/png,image/jpeg,image/webp,video/mp4,video/quicktime,application/pdf,application/zip"></label></div>
+    <label class="pt-field">Beschreibung<textarea name="description" rows="2" maxlength="1000"></textarea></label><label class="pt-field">Nutzungshinweis (z. B. „nur unverändert verwenden“)<textarea name="usage_notes" rows="2" maxlength="1000"></textarea></label><p class="form-note" data-prog></p>`,
+  async (f) => {
+    const file = f.elements.file.files[0];
+    if (!file) return 'Bitte eine Datei wählen.';
+    const prog = f.querySelector('[data-prog]');
+    prog.textContent = 'Upload wird vorbereitet …';
+    const x = await api('/api/admin/creators/assets', { method: 'POST', body: JSON.stringify({ action: 'upload', kind: fv(f, 'kind'), filename: file.name, mime: file.type, size: file.size, title: fv(f, 'title'), campaign_id: fv(f, 'campaign_id') || null, description: fv(f, 'description') || null, usage_notes: fv(f, 'usage_notes') || null }) });
+    if (!x.ok) return x.data?.error || 'Nicht möglich.';
+    prog.textContent = 'Datei wird hochgeladen …';
+    const body = new FormData(); body.append('cacheControl', '3600'); body.append('', file);
+    const up = await fetch(x.data.upload_url, { method: 'PUT', headers: { 'x-upsert': 'false' }, body }).catch(() => null);
+    if (!up || !up.ok) return 'Upload fehlgeschlagen. Bitte erneut versuchen.';
+    prog.textContent = 'Datei wird geprüft …';
+    const fin = await api('/api/admin/creators/assets', { method: 'POST', body: JSON.stringify({ action: 'finalize', id: x.data.id }) });
+    if (!fin.ok) return fin.data?.error || 'Prüfung fehlgeschlagen.';
+    assetsAdmin(v); return null;
+  }));
+}
+
+// ---------- Beiträge (Creator Studio) ----------
+let contentFilter = 'SUBMITTED';
+async function contentAdmin(v) {
+  const r = await api(`/api/admin/creators/content?status=${contentFilter}`);
+  if (!r.ok) return errBox(v, r.data?.error);
+  const PLAT = { youtube: 'YouTube', tiktok: 'TikTok', instagram: 'Instagram', x: 'X', linkedin: 'LinkedIn', other: 'Andere' };
+  v.innerHTML = `${subnav('creator-inhalte')}<section class="pt-card"><h2>Beiträge</h2>
+    <div class="pc-chips" role="group" aria-label="Filter" style="margin:10px 0">${[['SUBMITTED', 'Zu prüfen'], ['CHANGES_REQUESTED', 'Änderung erbeten'], ['APPROVED', 'Freigegeben'], ['', 'Alle']].map(([k, l]) => `<button type="button" data-cf="${k}" aria-pressed="${k === contentFilter}">${l}</button>`).join('')}</div>
+    <p class="form-note">Bitte Werbekennzeichnung und Aussagen über ImmoAdv prüfen (z. B. keine Renditeversprechen, keine Kredit- oder Anlageberatung).</p>
+    ${r.data.content.length ? `<ul class="co-social">${r.data.content.map((c) => `<li class="cr-content"><div><strong>${esc(c.immo_creators?.display_name || 'Creator')}</strong> · ${esc(PLAT[c.platform] || c.platform)} · ${dt(c.published_on)} ${chip(CST, c.status)}${c.immo_creator_campaigns ? ` <small class="form-note">· ${esc(c.immo_creator_campaigns.name)}</small>` : ''}<br>
+        <a href="${/^https:\/\//.test(c.url) ? esc(c.url) : '#'}" target="_blank" rel="noopener noreferrer">${esc(c.title || c.url)}</a>${c.ad_disclosure ? ' <small class="form-note">· Kennzeichnung bestätigt</small>' : ''}${c.review_note ? `<br><small class="form-note">Anmerkung: ${esc(c.review_note)}</small>` : ''}</div>
+        ${c.status !== 'APPROVED' ? `<span class="pt-row"><button type="button" class="btn btn-dark btn-sm" data-ok="${esc(c.id)}">Freigeben</button><button type="button" class="btn btn-outline btn-sm" data-ch="${esc(c.id)}">Änderung erbitten</button></span>` : ''}</li>`).join('')}</ul>` : '<p class="form-note">Keine Beiträge in dieser Ansicht.</p>'}</section>`;
+  v.querySelectorAll('[data-cf]').forEach((b) => b.onclick = () => { contentFilter = b.dataset.cf; contentAdmin(v); });
+  const review = async (id, status, note) => { const x = await api('/api/admin/creators/content', { method: 'POST', body: JSON.stringify({ id, status, note }) }); if (!x.ok) return x.data?.error || 'Nicht möglich.'; contentAdmin(v); return null; };
+  v.querySelectorAll('[data-ok]').forEach((b) => b.onclick = async () => { const m = await review(b.dataset.ok, 'APPROVED', null); if (m) alert(m); });
+  v.querySelectorAll('[data-ch]').forEach((b) => b.onclick = () => dialog(`<h2 style="margin:0;color:#0F2C59">Änderung erbitten</h2><p class="form-note">Der Creator erhält die Anmerkung per E-Mail und im Creator Studio.</p><label class="pt-field">Anmerkung*<textarea name="note" rows="4" maxlength="1000" required></textarea></label>`,
+    (f) => (fv(f, 'note') ? review(b.dataset.ch, 'CHANGES_REQUESTED', fv(f, 'note')) : Promise.resolve('Bitte eine Anmerkung angeben.'))));
 }
 
 async function list(v, q = '') {
@@ -37,7 +180,7 @@ async function list(v, q = '') {
   if (!r.ok) { v.innerHTML = `<div class="ad-state err" role="alert"><strong>Creator konnten nicht geladen werden.</strong><span>${esc(r.data?.error || '')}</span></div>`; return; }
   const d = r.data, c = d.counts;
   const kpi = (k, label, n, sub) => `<button type="button" data-f="${k}"><div class="pt-kpi" aria-pressed="${filter === k}"><small>${label}</small><strong>${n}</strong><small>${sub}</small></div></button>`;
-  v.innerHTML = `<section class="pt-card"><div class="ad-h-row"><h2>Creator Operations</h2><span class="form-note" style="margin:0">Ihre Rolle: <strong>${esc(d.me.role_label)}</strong>${d.me.permissions.includes('roles.manage') ? ' · <a href="#creator-rollen" class="ck-link">Rollen verwalten</a>' : ''}</span></div>
+  v.innerHTML = `${subnav('creator')}<section class="pt-card"><div class="ad-h-row"><h2>Creator Operations</h2><span class="form-note" style="margin:0">Ihre Rolle: <strong>${esc(d.me.role_label)}</strong>${d.me.permissions.includes('roles.manage') ? ' · <a href="#creator-rollen" class="ck-link">Rollen verwalten</a>' : ''}</span></div>
       <p class="form-note">Wer braucht Aufmerksamkeit? ${d.attention ? `<strong>${d.attention}</strong> offene Vorgänge` : 'Keine offenen Vorgänge.'}</p></section>
     <div class="co-kpis">
       ${kpi('REVIEW', 'Neue Bewerbungen', c.SUBMITTED + c.UNDER_REVIEW, `${c.UNDER_REVIEW} in Prüfung`)}
@@ -89,9 +232,33 @@ async function detail(v, id) {
         ${d.agreement.history.length ? `<p class="form-note">Zustimmungen: ${d.agreement.history.map((h) => `${esc(h.immo_creator_agreements?.version || '')} am ${dtt(h.accepted_at)}`).join(' · ')}</p>` : ''}</section>
       <section class="pt-card"><h3>Prüfverlauf</h3>${d.reviews.length ? `<ul class="pt-check">${d.reviews.map((x) => `<li><strong>${esc(ACT[x.action]?.[0] || x.action)}</strong> · ${dtt(x.created_at)}${x.visible_to_creator ? ' <small class="form-note">(an Creator gesendet)</small>' : ''}${x.message ? `<br><span style="white-space:pre-wrap">${esc(x.message)}</span>` : ''}</li>`).join('')}</ul>` : '<p class="form-note">Noch keine Entscheidungen.</p>'}</section>
     </div>
+    ${d.can.conversions ? '<section class="pt-card" id="coPerf"><h3>Attribution und Performance</h3><p class="form-note">Wird geladen …</p></section>' : ''}
+    <div class="pt-grid2 co-360">
+      <section class="pt-card"><h3>Persönlicher Link</h3>${d.link ? `<p><code>${esc(d.link)}</code></p>` : '<p class="form-note">Wird bei der Freigabe vergeben.</p>'}
+        <h3>Kampagnen</h3>${d.memberships.length ? `<ul class="co-social">${d.memberships.map((m) => `<li>${esc(m.immo_creator_campaigns?.name || '')} ${chip(KST, m.immo_creator_campaigns?.status)}</li>`).join('')}</ul>` : '<p class="form-note">Keine ausdrückliche Zuordnung (sieht alle Kampagnen „für alle Creator“).</p>'}</section>
+      <section class="pt-card"><div class="ad-h-row"><h3 style="margin:0">Community-Vorteil</h3>${d.can.campaigns ? '<button type="button" class="btn btn-outline btn-sm" id="coBen">+ Vorteil</button>' : ''}</div>
+        ${d.benefits.length ? `<ul class="co-social" style="margin-top:8px">${d.benefits.map((b) => `<li><strong class="cr-mask">${esc(b.code)}</strong> ${b.active ? '<span class="st ok" style="margin:0">aktiv</span>' : '<span class="st" style="margin:0">inaktiv</span>'}<br>${esc(b.benefit)}<br><small class="form-note">ab ${dt(b.starts_at)}${b.ends_at ? ` bis ${dt(b.ends_at)}` : ''}</small>${d.can.campaigns ? ` <span class="ad-actions"><button type="button" data-ben="${esc(b.id)}">Bearbeiten</button></span>` : ''}</li>`).join('')}</ul>` : '<p class="form-note">Kein Vorteil hinterlegt.</p>'}
+        <p class="form-note">Damit der Code an der Kasse wirkt, muss in Stripe ein gleichnamiger Aktionscode existieren.</p></section>
+    </div>
+    <section class="pt-card"><h3>Beiträge</h3>${d.content.length ? `<ul class="co-social">${d.content.map((x) => `<li>${dt(x.published_on)} ${chip(CST, x.status)} <a href="${/^https:\/\//.test(x.url) ? esc(x.url) : '#'}" target="_blank" rel="noopener noreferrer">${esc(x.title || x.url)}</a></li>`).join('')}</ul><p><a class="ck-link" href="#creator-inhalte">Zur Beitragsprüfung</a></p>` : '<p class="form-note">Noch keine Beiträge.</p>'}</section>
     ${d.audit ? `<section class="pt-card"><h3>Audit</h3><p class="form-note">Unveränderbares Protokoll. Akteure pseudonymisiert, keine Zahlungsdaten.</p><div style="overflow-x:auto"><table class="ad-table co-audit"><thead><tr><th>Zeit</th><th>Ereignis</th><th>Wer</th><th>Ergebnis</th></tr></thead><tbody>${d.audit.map((a) => `<tr><td>${dtt(a.created_at)}</td><td>${esc(EV[a.event_type] || a.event_type)}</td><td>${esc(a.actor_kind === 'creator' ? 'Creator' : `${a.actor_role || ''} ${a.actor_ref}`)}</td><td>${a.result === 'SUCCESS' ? '<span class="st ok" style="margin:0">ok</span>' : `<span class="st bad" style="margin:0">${esc(a.result)}</span>`}</td></tr>`).join('')}</tbody></table></div></section>` : ''}`;
 
   v.querySelectorAll('[data-a]').forEach((btn) => btn.onclick = () => decide(v, id, btn.dataset.a, c));
+  const benefitDlg = (b) => dialog(`<h2 style="margin:0;color:#0F2C59">${b ? 'Vorteil bearbeiten' : 'Community-Vorteil anlegen'}</h2><div class="ad-grid2">
+      <label>Code*<input name="code" required maxlength="20" pattern="[A-Za-z0-9]{3,20}" value="${esc(b?.code || (c.display_name || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12))}"></label>
+      <label>Status<select name="active"><option value="1"${!b || b.active ? ' selected' : ''}>aktiv</option><option value="0"${b && !b.active ? ' selected' : ''}>inaktiv</option></select></label>
+      <label class="full">Vorteil*<input name="benefit" required maxlength="200" placeholder="z. B. 10 % auf den Käufer-Pass" value="${esc(b?.benefit || '')}"></label>
+      <label>Gültig ab<input type="date" name="starts" value="${esc((b?.starts_at || '').slice(0, 10))}"></label><label>Gültig bis<input type="date" name="ends" value="${esc((b?.ends_at || '').slice(0, 10))}"></label></div>
+      <label class="pt-field">Bedingungen<textarea name="terms" rows="3" maxlength="2000">${esc(b?.terms || '')}</textarea></label>`,
+    async (f) => {
+      const day = (x, end) => (x ? new Date(`${x}T${end ? '23:59:59' : '00:00:00'}+01:00`).toISOString() : null);
+      const x = await api('/api/admin/creators/benefits', { method: 'POST', body: JSON.stringify({ ...(b ? { id: b.id } : {}), creator_id: id, code: fv(f, 'code'), benefit: fv(f, 'benefit'), terms: fv(f, 'terms') || null, active: fv(f, 'active') === '1', ...(fv(f, 'starts') ? { starts_at: day(fv(f, 'starts')) } : {}), ends_at: day(fv(f, 'ends'), true) }) });
+      if (!x.ok) return x.data?.error || 'Nicht möglich.';
+      detail(v, id); return null;
+    });
+  v.querySelector('#coBen')?.addEventListener('click', () => benefitDlg(null));
+  v.querySelectorAll('[data-ben]').forEach((b) => b.onclick = () => benefitDlg(d.benefits.find((x) => x.id === b.dataset.ben)));
+  if (d.can.conversions) perfBox(v.querySelector('#coPerf'), id, d.can.reverse, '30d');
   v.querySelector('#coVerify')?.addEventListener('click', async (e) => {
     e.target.disabled = true;
     const x = await api(`/api/admin/creators/${id}/bank`, { method: 'POST', body: JSON.stringify({ action: 'verify' }) });
@@ -148,7 +315,7 @@ async function roles(v) {
   const r = await api('/api/admin/creators/roles');
   if (!r.ok) { v.innerHTML = `<p><a href="#creator" class="ck-link">← Creator Operations</a></p><div class="ad-state err"><strong>${esc(r.data?.error || 'Nicht möglich.')}</strong></div>`; return; }
   const OPTS = [['', 'Standard (Super Admin)'], ['SUPER_ADMIN', 'Super Admin'], ['FINANCE_ADMIN', 'Finance Admin'], ['CREATOR_MANAGER', 'Creator Manager'], ['SUPPORT', 'Support'], ['READ_ONLY', 'Nur lesen']];
-  v.innerHTML = `<p><a href="#creator" class="ck-link">← Creator Operations</a></p><section class="pt-card"><h2>Rollen im Creator-Bereich</h2>
+  v.innerHTML = `${subnav('creator-rollen')}<section class="pt-card"><h2>Rollen im Creator-Bereich</h2>
     <p class="form-note">Rollen schränken den Creator-Bereich ein – sie geben keinen zusätzlichen Zugang zum Web-Admin. Zugang haben weiterhin nur Adressen aus ADMIN_EMAILS mit zweitem Faktor. Vollständige Zahlungsdaten sehen nur Super Admin und Finance Admin.</p>
     <div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Administrator</th><th>Rolle</th></tr></thead><tbody>${r.data.admins.map((a) => `<tr><td>${esc(a.email)}${a.self ? ' <small class="form-note">(Sie)</small>' : ''}</td><td>${a.self ? esc(a.role_label) : `<select data-email="${esc(a.email)}" aria-label="Rolle für ${esc(a.email)}">${OPTS.map(([k, l]) => `<option value="${k}"${(a.explicit ? a.role : '') === k ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`}</td></tr>`).join('')}</tbody></table></div>
     <p class="form-note" id="coRoleMsg" role="status"></p></section>`;
@@ -157,4 +324,19 @@ async function roles(v) {
     const x = await api('/api/admin/creators/roles', { method: 'POST', body: JSON.stringify({ email: s.dataset.email, role: s.value || null }) });
     m.textContent = x.ok ? 'Gespeichert und protokolliert.' : (x.data?.error || 'Nicht möglich.');
   });
+}
+
+// Attribution und Performance eines Creators (Creator 360)
+async function perfBox(box, id, canReverse, range) {
+  const r = await api(`/api/admin/creators/${id}/conversions?range=${range}`);
+  if (!r.ok) { box.innerHTML = `<h3>Attribution und Performance</h3><p class="pt-alert bad">${esc(r.data?.error || 'Nicht möglich.')}</p>`; return; }
+  const p = r.data.performance || {};
+  box.innerHTML = `<div class="ad-h-row"><h3 style="margin:0">Attribution und Performance</h3><div class="pc-chips" role="group" aria-label="Zeitraum">${RANGES.map(([k, l]) => `<button type="button" data-pr="${k}" aria-pressed="${k === range}">${l}</button>`).join('')}</div></div>
+    <div class="pt-kpis" style="margin-top:10px"><div class="pt-kpi"><small>Besuche</small><strong>${num(p.visits)}</strong><small>${num(p.visitors)} Besucher</small></div><div class="pt-kpi"><small>Registrierungen</small><strong>${num(p.registrations)}</strong></div>
+      <div class="pt-kpi"><small>Conversions</small><strong>${num(p.conversions)}</strong><small>${num(p.via_code)} über Code</small></div><div class="pt-kpi"><small>Umsatz netto</small><strong>${eurC(p.revenue_net_cents)}</strong><small>${num(p.reversed)} zurückgenommen</small></div></div>
+    ${r.data.conversions.length ? `<div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Datum</th><th>Kunde</th><th>Quelle</th><th>Tarif</th><th>Netto</th><th>Status</th><th></th></tr></thead><tbody>${r.data.conversions.map((x) => `<tr><td>${dtt(x.occurred_at)}</td><td><code>${esc(x.customer)}</code></td><td>${x.source === 'code' ? 'Code' : 'Link'}${x.campaign_slug ? ` · ${esc(x.campaign_slug)}` : ''}</td><td>${esc(x.plan || '')}</td><td>${eurC(x.amount_net_cents)}</td><td>${x.status === 'PENDING' ? '<span class="st warn" style="margin:0">offen</span>' : '<span class="st bad" style="margin:0">zurückgenommen</span>'}</td><td>${canReverse && x.status === 'PENDING' ? `<span class="ad-actions"><button type="button" data-rv="${esc(x.id)}">Zurücknehmen</button></span>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine Conversions in diesem Zeitraum.</p>'}
+    <p class="form-note">Kunden erscheinen nur als gekürzte Kennung. Creator sehen ausschließlich Summen.</p>`;
+  box.querySelectorAll('[data-pr]').forEach((b) => b.onclick = () => perfBox(box, id, canReverse, b.dataset.pr));
+  box.querySelectorAll('[data-rv]').forEach((b) => b.onclick = () => dialog('<h2 style="margin:0;color:#0F2C59">Conversion zurücknehmen</h2><p class="form-note">Endgültig und protokolliert. Erstattungen über Stripe werden automatisch zurückgenommen.</p><label class="pt-field">Grund*<textarea name="reason" rows="3" maxlength="300" required></textarea></label>',
+    async (f) => { const x = await api(`/api/admin/creators/${id}/conversions`, { method: 'POST', body: JSON.stringify({ conversion_id: b.dataset.rv, reason: fv(f, 'reason') }) }); if (!x.ok) return x.data?.error || 'Nicht möglich.'; perfBox(box, id, canReverse, range); return null; }));
 }

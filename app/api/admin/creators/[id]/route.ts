@@ -3,7 +3,7 @@ import { sendMail } from '@/lib/notify/mail';
 import { actionNeedsMessage, adminTransition, allowedAdminActions, completeness, missingSteps, type AdminAction } from '@/lib/creator/model';
 import { can } from '@/lib/creator/roles';
 import { AdminActionInput, firstIssue } from '@/lib/creator/schema';
-import { audit, j, maskedPayout, newRefCode, onboardingState, requireCreatorAdmin, UUID_RE, type AuditEvent, type CreatorRow } from '@/lib/creator/server';
+import { audit, j, maskedPayout, uniqueRefCode, onboardingState, requireCreatorAdmin, UUID_RE, type AuditEvent, type CreatorRow } from '@/lib/creator/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,11 +25,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!c) return j({ error: 'Nicht gefunden.' }, 404);
   const db = supabaseAdmin();
   const s = await onboardingState(c, c.user_id);
-  const [reviews, acceptances, auditRows, user] = await Promise.all([
+  const [reviews, acceptances, auditRows, user, benefits, memberships, content] = await Promise.all([
     db.from('immo_creator_reviews').select('action, message, visible_to_creator, actor_ref, created_at').eq('creator_id', id).order('created_at', { ascending: false }).limit(50),
     db.from('immo_creator_agreement_acceptances').select('accepted_at, body_sha256, immo_creator_agreements(version, title, is_draft)').eq('creator_id', id).order('accepted_at', { ascending: false }),
     can(a.role, 'audit.read') ? db.from('immo_creator_audit').select('event_type, actor_kind, actor_ref, actor_role, result, meta, created_at').eq('creator_id', id).order('created_at', { ascending: false }).limit(100) : null,
     can(a.role, 'creators.contact') ? db.auth.admin.getUserById(c.user_id) : null,
+    db.from('immo_creator_benefits').select('id, code, benefit, terms, starts_at, ends_at, active, campaign_id').eq('creator_id', id).order('created_at', { ascending: false }),
+    db.from('immo_creator_campaign_members').select('campaign_id, immo_creator_campaigns(name, slug, status)').eq('creator_id', id),
+    db.from('immo_creator_content').select('id, platform, url, title, published_on, status, review_note, campaign_id').eq('creator_id', id).order('published_on', { ascending: false }).limit(50),
   ]);
   const done = completeness(s.state);
   return j({
@@ -47,7 +50,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     completeness: done,
     missing: missingSteps(s.state),
     actions: allowedAdminActions(c.status).filter((x) => can(a.role, x === 'SUSPEND' || x === 'REACTIVATE' ? 'creators.suspend' : 'creators.review')),
-    can: { reveal: can(a.role, 'bank.reveal'), verify: can(a.role, 'bank.verify') },
+    can: { reveal: can(a.role, 'bank.reveal'), verify: can(a.role, 'bank.verify'), campaigns: can(a.role, 'campaigns.manage'), conversions: can(a.role, 'conversions.read'), reverse: can(a.role, 'conversions.manage'), content: can(a.role, 'content.review') },
+    link: c.ref_code ? `https://immoadv.de/?ref=${c.ref_code}` : null,
+    benefits: benefits.data ?? [],
+    memberships: memberships.data ?? [],
+    content: content.data ?? [],
     reviews: reviews.data ?? [],
     audit: auditRows ? auditRows.data ?? [] : undefined,
   });
@@ -90,7 +97,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const now = new Date().toISOString();
   const patch: Record<string, unknown> = { status: to, reviewed_at: now };
-  if (action === 'APPROVE') { patch.approved_at = now; if (!c.ref_code) patch.ref_code = newRefCode(); }
+  if (action === 'APPROVE') { patch.approved_at = now; if (!c.ref_code) patch.ref_code = await uniqueRefCode(); }
   if (action === 'REQUEST_INFO') patch.info_request = message;
   if (action === 'APPROVE' || action === 'REJECT') patch.info_request = null;
 

@@ -20,6 +20,7 @@ const Body = z.object({
   email: z.string().trim().toLowerCase().email().max(200),
   password: z.string().min(8).max(200).optional(),
   ref: z.string().regex(/^[a-z0-9-]{3,40}$/).optional(),
+  campaign: z.string().regex(/^[a-z0-9-]{3,40}$/).optional(),
   website: z.string().optional(),
   next: z.enum(['/b2b-portal', '/creator']).optional(),
 });
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
   const ip = anonymizedIpHash(req) ?? 'x';
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return j({ error: 'Bitte E-Mail-Adresse und Passwort prüfen.' }, 400);
-  const { action, email, password, ref, website, next } = p.data;
+  const { action, email, password, ref, campaign, website, next } = p.data;
   // Unternehmensportal und Privatkundenbereich sind getrennt: eigene Texte, eigener Absender, Links ins jeweilige Portal.
   const biz = next === '/b2b-portal';
   const area = biz ? 'b2b' as const : 'b2c' as const;
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
 
   if (action === 'signup') {
     if (!password) return j({ error: 'Bitte ein Passwort mit mindestens 8 Zeichen wählen.', code: 'weak_password' }, 400);
-    const { data, error } = await admin.generateLink({ type: 'signup', email, password, options: { redirectTo: `${SITE}/auth/login`, data: ref ? { partner_ref: ref } : undefined } });
+    const { data, error } = await admin.generateLink({ type: 'signup', email, password, options: { redirectTo: `${SITE}/auth/login`, data: ref ? { partner_ref: ref, ...(campaign ? { partner_campaign: campaign } : {}) } : undefined } });
     if (error) {
       // Konto existiert bereits: Hinweis per E-Mail an die Adresse (keine Auskunft auf der Seite, ob ein Konto besteht).
       if (/already|exists|registered/i.test(error.message)) {
@@ -63,6 +64,8 @@ export async function POST(req: Request) {
     }
     const hash = data.properties?.hashed_token;
     if (!hash) return j({ error: 'Registrierung fehlgeschlagen.' }, 502);
+    // Creator-Link: Kundenkonto dem Creator zuordnen (nie blockierend).
+    if (ref && data.user?.id) await import('@/lib/creator/attribution').then((x) => x.recordSignupAttribution(data.user!.id, ref, campaign)).catch((e) => console.warn('creator_attribution', e instanceof Error ? e.message : e));
     const ok = await sendMail(email, biz ? 'Bitte bestätigen Sie Ihre E-Mail-Adresse – ImmoAdv Unternehmensportal' : 'Bitte bestätigen Sie Ihre E-Mail-Adresse – ImmoAdv',
       biz ? 'Willkommen im ImmoAdv-Unternehmensportal!\n\nBitte bestätigen Sie Ihre E-Mail-Adresse. Danach richten Sie Ihr Unternehmenskonto ein: Unternehmensdaten, Auftragsverarbeitungsvertrag und Gewerbenachweis.'
         : 'Willkommen bei ImmoAdv!\n\nBitte bestätigen Sie Ihre E-Mail-Adresse, damit wir Ihr Konto freischalten können. Danach können Sie sofort loslegen: Lernbereich, Rechner, RenditeRadar und BankReady.',

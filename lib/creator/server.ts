@@ -30,7 +30,9 @@ export type PayoutRow = {
 export type AuditEvent =
   | 'CREATOR_CREATED' | 'APPLICATION_SUBMITTED' | 'REVIEW_STARTED' | 'CREATOR_APPROVED' | 'CREATOR_INFO_REQUESTED' | 'CREATOR_REJECTED'
   | 'CREATOR_SUSPENDED' | 'CREATOR_REACTIVATED' | 'AGREEMENT_ACCEPTED'
-  | 'BANK_DATA_ADDED' | 'BANK_DATA_CHANGED' | 'BANK_DETAILS_VIEWED' | 'BANK_DATA_VERIFIED' | 'ADMIN_ROLE_CHANGED' | 'ACCESS_DENIED';
+  | 'BANK_DATA_ADDED' | 'BANK_DATA_CHANGED' | 'BANK_DETAILS_VIEWED' | 'BANK_DATA_VERIFIED' | 'ADMIN_ROLE_CHANGED' | 'ACCESS_DENIED'
+  | 'CAMPAIGN_CHANGED' | 'CAMPAIGN_MEMBERS_CHANGED' | 'ASSET_CHANGED' | 'ASSET_DOWNLOADED' | 'BENEFIT_CHANGED'
+  | 'CONTENT_SUBMITTED' | 'CONTENT_REVIEWED' | 'CONVERSION_RECORDED' | 'CONVERSION_REVERSED';
 
 export type Actor = { kind: 'creator' | 'admin' | 'system'; ref: string; role: AdminRole | 'CREATOR' | 'SYSTEM' };
 
@@ -135,6 +137,21 @@ export async function onboardingState(c: CreatorRow, userId: string) {
 
 export const newRefCode = () => refCodeFrom(randomBytes(10));
 
+// Attributions-Code, der weder mit einem anderen Creator noch mit einem Partner-Slug (gleiches ?ref=-Format) kollidiert.
+export async function uniqueRefCode(): Promise<string> {
+  const db = supabaseAdmin();
+  for (let i = 0; i < 8; i++) {
+    const code = newRefCode();
+    const [a, b, c] = await Promise.all([
+      db.from('immo_creators').select('id').eq('ref_code', code).maybeSingle(),
+      db.from('immo_partners').select('slug').eq('slug', code).maybeSingle(),
+      db.from('immo_b2b_accounts').select('id').eq('slug', code).maybeSingle(),
+    ]);
+    if (!a.data && !b.data && !c.data) return code;
+  }
+  throw new Error('ref_code_exhausted');
+}
+
 // ---------------- Admin-Zugang mit Rolle ----------------
 export type AdminCtx = { email: string; role: AdminRole; actor: Actor };
 
@@ -160,3 +177,26 @@ export async function requireCreatorAdmin(req: Request, perm: Permission, creato
 }
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+// ---------------- Phase 2: nur freigegebene Creator ----------------
+export async function requireActiveCreator(req: Request, bucket: string, limit = 60): Promise<{ user: AuthUser; creator: CreatorRow } | NextResponse> {
+  const g = await requireCreatorUser(req, bucket, limit);
+  if (!('user' in g)) return g;
+  const creator = await ownCreator(g.user.id);
+  if (!creator || creator.status !== 'ACTIVE') return j({ error: 'Dieser Bereich steht nach der Freigabe deines Creator-Zugangs zur Verfügung.' }, 403);
+  return { user: g.user, creator };
+}
+
+export const ASSET_BUCKET = 'creator-assets';
+export const SITE_ORIGIN = 'https://immoadv.de';
+
+// Zeitraum für Kennzahlen: 30 Tage, 90 Tage, aktueller Monat, Vormonat, gesamt.
+export function rangeOf(v: string | null, now = new Date()): { key: string; from: Date; to: Date } {
+  const to = new Date(now.getTime() + 60_000);
+  const berlinMonthStart = (y: number, m: number) => new Date(Date.UTC(y, m, 1) - 2 * 3600_000); // ausreichend genau für Monatsgrenzen (MEZ/MESZ)
+  if (v === '90d') return { key: v, from: new Date(now.getTime() - 90 * 86_400_000), to };
+  if (v === 'month') return { key: v, from: berlinMonthStart(now.getUTCFullYear(), now.getUTCMonth()), to };
+  if (v === 'last_month') return { key: v, from: berlinMonthStart(now.getUTCFullYear(), now.getUTCMonth() - 1), to: berlinMonthStart(now.getUTCFullYear(), now.getUTCMonth()) };
+  if (v === 'all') return { key: v, from: new Date('2026-01-01T00:00:00Z'), to };
+  return { key: '30d', from: new Date(now.getTime() - 30 * 86_400_000), to };
+}

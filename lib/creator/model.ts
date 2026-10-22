@@ -92,6 +92,22 @@ export function nextBestAction(s: OnboardingState, openInfoRequest: string | nul
   return null;
 }
 
+// Nach der Freigabe: wichtigste Aufgabe im Creator-Alltag (nach Zahlungsdaten/Vereinbarung aus nextBestAction).
+export type PortalFacts = {
+  contentChangesRequested: number;
+  campaigns: { slug: string; name: string; created_at: string; hasMyContent: boolean }[];
+  now: Date;
+};
+export function portalNextAction(f: PortalFacts): NextAction | null {
+  if (f.contentChangesRequested > 0) return { key: 'content-fix', title: 'Inhalt überarbeiten', text: f.contentChangesRequested === 1 ? 'ImmoAdv hat zu einem deiner Inhalte eine Anmerkung.' : `ImmoAdv hat zu ${f.contentChangesRequested} Inhalten Anmerkungen.`, target: 'studio' };
+  const fresh = f.campaigns.filter((k) => !k.hasMyContent && f.now.getTime() - new Date(k.created_at).getTime() < 14 * 86_400_000)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+  if (fresh) return { key: `campaign:${fresh.slug}`, title: 'Neue Kampagne ansehen', text: fresh.name, target: 'studio' };
+  const open = f.campaigns.find((k) => !k.hasMyContent);
+  if (open) return { key: `publish:${open.slug}`, title: 'Content veröffentlichen', text: `Für die Kampagne „${open.name}“ ist noch kein Inhalt eingetragen.`, target: 'studio' };
+  return null;
+}
+
 export const STEP_TITLE: Record<StepKey, string> = {
   account: 'Konto vervollständigen',
   profile: 'Creator-Profil anlegen',

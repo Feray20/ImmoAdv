@@ -432,54 +432,190 @@ function closed(s) {
 }
 
 // ---------- Creator-Portal (nach Freigabe) ----------
-// Phase 1: Übersicht, Profil, Auszahlung, Vereinbarung, Sicherheit.
-// Studio, Performance, Assets und Abrechnung kommen mit den nächsten Ausbaustufen hinzu (eigene Reiter).
+// Hauptbereiche (Handy: untere Leiste) Home · Studio · Performance · Assets · Mehr; Desktop: Seitenleiste mit allen Bereichen.
+// Provision, Abrechnung und Auszahlungen folgen mit der nächsten Ausbaustufe.
 const IC = {
   home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+  studio: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/>',
+  performance: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  assets: '<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/>',
   profil: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   auszahlung: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/>',
   vereinbarung: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>',
   sicherheit: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
 };
-const NAV = [['home', 'Übersicht', 'Home'], ['profil', 'Profil', 'Profil'], ['auszahlung', 'Auszahlung', 'Auszahlung'], ['vereinbarung', 'Vereinbarung', 'Vertrag'], ['sicherheit', 'Sicherheit', 'Sicherheit']];
+const MAIN = [['home', 'Übersicht', 'Home'], ['studio', 'Creator Studio', 'Studio'], ['performance', 'Performance', 'Performance'], ['assets', 'Asset Library', 'Assets']];
+const MORE = [['profil', 'Profil'], ['auszahlung', 'Auszahlung'], ['vereinbarung', 'Vereinbarung'], ['sicherheit', 'Sicherheit']];
+const ALL = [...MAIN.map(([k, l]) => [k, l]), ...MORE];
 const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
+const PLAT = { youtube: 'YouTube', tiktok: 'TikTok', instagram: 'Instagram', x: 'X', linkedin: 'LinkedIn', other: 'Andere' };
+const CST = { SUBMITTED: ['warn', 'In Prüfung'], APPROVED: ['ok', 'Freigegeben'], CHANGES_REQUESTED: ['bad', 'Änderung erbeten'] };
+const KIND = { image: 'Bild', video: 'Video', document: 'Dokument', logo: 'Logo', text: 'Text' };
+const eurC = (c) => (Number(c || 0) / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+const num = (n) => Number(n || 0).toLocaleString('de-DE');
+const mb = (b) => (b ? `${(b / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 })} MB` : '');
+let hub = null;
+let perfRange = '30d';
+
+async function loadHub(force = false) {
+  if (hub && !force) return hub;
+  const r = await api('/api/creator/hub');
+  hub = r.ok ? r.data : { error: r.data?.error || 'Konnte nicht geladen werden.' };
+  return hub;
+}
+async function copy(btn, text) {
+  try { await navigator.clipboard.writeText(text); const o = btn.textContent; btn.textContent = 'Kopiert ✓'; setTimeout(() => { btn.textContent = o; }, 1600); } catch { toast('Bitte markieren und kopieren.', true); }
+}
+const bindCopy = (el) => el.querySelectorAll('[data-copy]').forEach((b) => b.onclick = () => copy(b, b.dataset.copy));
 
 function portal() {
   view = (location.hash.slice(1) || 'home');
-  if (!NAV.some(([k]) => k === view)) view = 'home';
+  if (!ALL.some(([k]) => k === view)) view = 'home';
   const name = me.creator.display_name || me.creator.first_name || '';
+  const inMore = MORE.some(([k]) => k === view);
   root.innerHTML = `<div class="pt">
     <aside class="pt-side"><a class="pt-brand" href="#home"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><small class="pt-tag">Creator Portal</small>
-      <nav>${NAV.map(([k, l]) => `<a href="#${k}" data-v="${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${esc(l)}</a>`).join('')}</nav>
+      <nav>${ALL.map(([k, l]) => `<a href="#${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${esc(l)}</a>`).join('')}</nav>
       <div class="pt-foot"><a href="mailto:support@immoadv.de">Support</a><strong>${esc(name)}</strong><small>Creator Partner seit ${dt(me.creator.approved_at)}</small><button type="button" class="pt-logout" id="crOut">Abmelden</button></div></aside>
-    <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#home" aria-label="Creator Portal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Creator Portal</small><h1>${esc(NAV.find(([k]) => k === view)[1])}</h1></div><button type="button" class="pt-logout pt-logout-m" id="crOutM" aria-label="Abmelden" title="Abmelden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Abmelden</span></button></header>
-      <div id="crView"></div></section>
-    <nav class="pt-tabs" aria-label="Bereiche">${NAV.map(([k, , s]) => `<a href="#${k}" data-v="${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${svg(k)}<span>${esc(s)}</span></a>`).join('')}</nav></div>`;
-  $('#crOut').onclick = logout; $('#crOutM').onclick = logout;
+    <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#home" aria-label="Creator Portal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Creator Portal</small><h1>${esc(ALL.find(([k]) => k === view)[1])}</h1></div><button type="button" class="pt-logout pt-logout-m" id="crOutM" aria-label="Abmelden" title="Abmelden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Abmelden</span></button></header>
+      <div id="crView"><div class="ad-skel" aria-busy="true"><div class="ad-skel-kpis"><span></span><span></span><span></span><span></span></div></div></div></section>
+    <nav class="pt-tabs" aria-label="Bereiche">${MAIN.map(([k, , s]) => `<a href="#${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${svg(k)}<span>${esc(s)}</span></a>`).join('')}<button type="button" id="crMore" aria-expanded="false" aria-controls="crSheet"${inMore ? ' class="on"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>Mehr</span></button></nav>
+    <div class="pt-sheet" id="crSheet" hidden><div class="pt-sheet-bg" data-close></div><div class="pt-sheet-in" role="dialog" aria-label="Weitere Bereiche"><div class="pt-sheet-h"><span class="pt-sheet-t"><strong>Mehr</strong></span><button type="button" class="stage-x" data-close aria-label="Schließen">×</button></div>
+      <nav>${MORE.map(([k, l]) => `<a href="#${k}"${k === view ? ' class="on"' : ''}>${esc(l)}</a>`).join('')}<a href="mailto:support@immoadv.de">Support kontaktieren</a><button type="button" class="pt-logout" id="crOutS">Abmelden</button></nav></div></div></div>`;
+  ['#crOut', '#crOutM', '#crOutS'].forEach((s) => { const b = $(s); if (b) b.onclick = logout; });
+  const sheet = $('#crSheet'), more = $('#crMore');
+  more.onclick = () => { sheet.hidden = false; more.setAttribute('aria-expanded', 'true'); };
+  sheet.querySelectorAll('[data-close], nav a').forEach((x) => x.addEventListener('click', () => { sheet.hidden = true; more.setAttribute('aria-expanded', 'false'); }));
   const v = $('#crView');
   const o = { wizard: false };
   if (view === 'home') home(v);
+  else if (view === 'studio') studio(v);
+  else if (view === 'performance') performance(v);
+  else if (view === 'assets') assetsView(v);
   else if (view === 'profil') { v.innerHTML = '<section class="pt-card cr-form" id="p1"></section><section class="pt-card cr-form" id="p2"></section><section class="pt-card cr-form" id="p3"></section>'; const ok = { ...o, onSaved: () => toast('Gespeichert') }; secProfile($('#p1'), ok); secSocial($('#p2'), ok); secBusiness($('#p3'), ok); }
   else if (view === 'auszahlung') { v.innerHTML = '<section class="pt-card cr-form" id="p1"></section>'; secPayout($('#p1'), o); }
   else if (view === 'vereinbarung') { v.innerHTML = '<section class="pt-card cr-form" id="p1"></section>'; secAgreement($('#p1'), { ...o, onSaved: () => portal() }); }
   else if (view === 'sicherheit') v.innerHTML = `<section class="pt-card"><h2>Sind meine Daten geschützt?</h2><p>So schützen wir deine Angaben – insbesondere deine Zahlungsdaten:</p>${securityList()}</section>
-    <section class="pt-card"><h2>Was wir nicht tun</h2><ul class="pt-check"><li>Wir verbinden keine Social-Media-Konten und fragen nie nach deinen Social-Media-Passwörtern.</li><li>Wir verwenden deine Zahlungsdaten nicht für Marketing.</li><li>Wir zeigen deine vollständige IBAN weder im Portal noch in E-Mails an.</li></ul>
+    <section class="pt-card"><h2>Was wir nicht tun</h2><ul class="pt-check"><li>Wir verbinden keine Social-Media-Konten und fragen nie nach deinen Social-Media-Passwörtern.</li><li>Wir verwenden deine Zahlungsdaten nicht für Marketing.</li><li>Wir zeigen deine vollständige IBAN weder im Portal noch in E-Mails an.</li><li>Wir zeigen dir nie, welche Personen sich über deinen Link registriert oder gekauft haben – nur Summen.</li></ul>
     <p class="form-note">Verdächtige E-Mail oder unerwartete Änderung bemerkt? Schreibe sofort an <a href="mailto:support@immoadv.de">support@immoadv.de</a>.</p></section>`;
 }
 
-function home(v) {
-  const n = me.next;
-  const p = me.payout;
+const linkCard = (h) => h.link ? `<section class="pt-card"><h2>Dein persönlicher Link</h2><p class="form-note" style="margin-top:0">Besuche, Registrierungen und Käufe über diesen Link werden dir zugeordnet. Der Link enthält keine persönlichen Daten.</p>
+  <div class="cr-copy"><code>${esc(h.link)}</code><button type="button" class="btn btn-dark btn-sm" data-copy="${esc(h.link)}">Link kopieren</button></div></section>` : '';
+const benefitCard = (h) => (h.benefits || []).map((b) => `<section class="pt-card cr-benefit"><small class="pt-top-k">Dein Community-Vorteil</small><h2 style="margin:4px 0 6px">${esc(b.benefit)}</h2>
+  <div class="cr-copy"><span>Code: <strong class="cr-code">${esc(b.code)}</strong></span><button type="button" class="btn btn-outline btn-sm" data-copy="${esc(b.code)}">Code kopieren</button></div>
+  ${b.ends_at ? `<p class="form-note">Gültig bis ${dt(b.ends_at)}</p>` : ''}${b.terms ? `<details><summary class="form-note">Bedingungen</summary><p class="form-note" style="white-space:pre-wrap">${esc(b.terms)}</p></details>` : ''}</section>`).join('');
+
+async function home(v) {
+  const [h, pr] = await Promise.all([loadHub(), api('/api/creator/performance?range=30d')]);
+  const p = me.payout, perf = pr.ok ? pr.data : null;
+  const n = me.next || h.next;
+  const target = n ? ({ payout: '#auszahlung', 'payout-review': '#auszahlung', agreement: '#vereinbarung' })[n.key] || (n.target === 'studio' ? '#studio' : null) : null;
   v.innerHTML = `<div class="pt-hello"><h2>Willkommen bei ImmoAdv${me.creator.first_name ? `, ${esc(me.creator.first_name)}` : ''}</h2><p>Deine Übersicht</p></div>
-    ${n ? `<section class="pt-card cr-next"><small class="pt-top-k">Nächste Aufgabe</small><h2 style="margin:4px 0">${esc(n.title)}</h2><p style="margin:0">${esc(n.text)}</p>${({ payout: '#auszahlung', 'payout-review': '#auszahlung', agreement: '#vereinbarung' })[n.key] ? `<a class="btn btn-dark" href="${({ payout: '#auszahlung', 'payout-review': '#auszahlung', agreement: '#vereinbarung' })[n.key]}">Ansehen</a>` : ''}</section>`
-      : '<section class="pt-card cr-next"><small class="pt-top-k">Nächste Aufgabe</small><h2 style="margin:4px 0">Alles erledigt</h2><p style="margin:0">Dein Creator-Zugang ist vollständig eingerichtet.</p></section>'}
+    <section class="pt-card cr-next"><small class="pt-top-k">Nächste Aufgabe</small>${n ? `<h2 style="margin:4px 0">${esc(n.title)}</h2><p style="margin:0">${esc(n.text)}</p>${target ? `<a class="btn btn-dark" href="${target}">Ansehen</a>` : ''}` : '<h2 style="margin:4px 0">Alles erledigt</h2><p style="margin:0">Teile deinen Link oder schau in die Kampagnen.</p>'}</section>
     <div class="pt-kpis">
-      <div class="pt-kpi"><small>Status</small><strong style="font-size:18px">Freigegeben</strong><small>seit ${dt(me.creator.approved_at)}</small></div>
-      <div class="pt-kpi"><small>Auszahlungskonto</small><strong class="cr-mask" style="font-size:16px">${esc(p?.iban_masked || 'fehlt')}</strong><small>${p ? `<span class="st ${PAY_STATUS[p.status]?.[0] || ''}" style="margin:0">${esc(PAY_STATUS[p.status]?.[1] || '')}</span>` : ''}</small></div>
-      <div class="pt-kpi"><small>Vereinbarung</small><strong style="font-size:18px">${me.agreement?.accepted ? 'Bestätigt' : 'Offen'}</strong><small>Fassung ${esc(me.agreement?.version || '–')}</small></div>
-      <div class="pt-kpi"><small>Profile</small><strong style="font-size:18px">${me.socials.length}</strong><small>öffentliche Social-Media-Profile</small></div>
+      <div class="pt-kpi"><small>Umsatz (30 Tage, netto)</small><strong>${perf ? eurC(perf.revenue_net_cents) : '–'}</strong><small>über dich zugeordnet</small></div>
+      <div class="pt-kpi"><small>Conversions (30 Tage)</small><strong>${perf ? num(perf.conversions) : '–'}</strong><small>${perf ? `${num(perf.registrations)} Registrierungen` : ''}</small></div>
+      <div class="pt-kpi"><small>Aktive Kampagnen</small><strong>${num((h.campaigns || []).length)}</strong><small>für dich freigegeben</small></div>
+      <div class="pt-kpi"><small>Auszahlungskonto</small><strong class="cr-mask">${esc(p?.iban_masked || 'fehlt')}</strong><small>${p ? `<span class="st ${PAY_STATUS[p.status]?.[0] || ''}" style="margin:0">${esc(PAY_STATUS[p.status]?.[1] || '')}</span>` : ''}</small></div>
     </div>
-    <section class="pt-card"><h2>Als Nächstes im Creator Portal</h2><p class="cr-soon">Kampagnen, Assets, Performance, Community-Vorteil und Abrechnung werden hier freigeschaltet, sobald sie für dich bereitstehen. Wir informieren dich per E-Mail.</p></section>`;
+    ${benefitCard(h)}${linkCard(h)}
+    <section class="pt-card"><h2>Provision und Auszahlung</h2><p class="cr-soon">Provision, Monatsabrechnung und Auszahlungen werden hier freigeschaltet, sobald die Abrechnung für dich startet. Deine bisherigen Conversions bleiben dafür gespeichert.</p></section>`;
+  bindCopy(v);
+}
+
+async function studio(v) {
+  const h = await loadHub(true);
+  if (h.error) { v.innerHTML = `<div class="pt-alert bad">${esc(h.error)}</div>`; return; }
+  const camps = h.campaigns || [];
+  v.innerHTML = `${linkCard(h)}${benefitCard(h)}
+    <section class="pt-card"><h2>Kampagnen</h2>${camps.length ? camps.map((k) => `<details class="cr-plat"${camps.length === 1 ? ' open' : ''}><summary>${esc(k.name)}${k.my_content ? `<span class="st ok">${k.my_content} Beitrag${k.my_content > 1 ? 'e' : ''}</span>` : '<span class="st warn">noch kein Beitrag</span>'}</summary>
+        ${k.summary ? `<p>${esc(k.summary)}</p>` : ''}${k.starts_on || k.ends_on ? `<p class="form-note">Zeitraum: ${k.starts_on ? dt(k.starts_on) : 'ab sofort'} – ${k.ends_on ? dt(k.ends_on) : 'offen'}</p>` : ''}
+        ${k.brief ? `<h3>Briefing</h3><p style="white-space:pre-wrap">${esc(k.brief)}</p>` : ''}
+        <div class="pt-grid2">${k.dos ? `<div><h3>Bitte so</h3><p style="white-space:pre-wrap">${esc(k.dos)}</p></div>` : ''}${k.donts ? `<div><h3>Bitte nicht</h3><p style="white-space:pre-wrap">${esc(k.donts)}</p></div>` : ''}</div>
+        ${k.link ? `<div class="cr-copy"><code>${esc(k.link)}</code><button type="button" class="btn btn-outline btn-sm" data-copy="${esc(k.link)}">Kampagnen-Link kopieren</button></div>` : ''}
+        <p class="pt-row" style="margin-top:10px">${k.assets ? `<a class="btn btn-outline btn-sm" href="#assets" data-camp="${esc(k.id)}">${k.assets} Assets ansehen</a>` : ''}<button type="button" class="btn btn-dark btn-sm" data-add="${esc(k.id)}">Beitrag eintragen</button></p></details>`).join('') : '<div class="pt-empty">Gerade ist keine Kampagne für dich freigegeben. Du kannst trotzdem Inhalte mit deinem persönlichen Link veröffentlichen.</div>'}</section>
+    <section class="pt-card cr-form" id="crContentForm"></section>
+    <section class="pt-card"><h2>Deine Beiträge</h2>${(h.content || []).length ? `<ul class="co-social">${h.content.map((c) => `<li class="cr-content"><div><strong>${esc(PLAT[c.platform] || c.platform)}</strong> · ${dt(c.published_on)} <span class="st ${CST[c.status]?.[0]}" style="margin-left:6px">${esc(CST[c.status]?.[1] || c.status)}</span><br><a href="${/^https:\/\//.test(c.url) ? esc(c.url) : '#'}" target="_blank" rel="noopener noreferrer">${esc(c.title || c.url)}</a>${c.review_note ? `<p class="pt-alert warn" style="margin:8px 0 0"><strong>Anmerkung von ImmoAdv:</strong> ${esc(c.review_note)}</p>` : ''}</div>${c.status === 'CHANGES_REQUESTED' ? `<button type="button" class="btn btn-outline btn-sm" data-fix="${esc(c.id)}">Überarbeitet einreichen</button>` : ''}</li>`).join('')}</ul>` : '<p class="form-note">Noch keine Beiträge eingetragen.</p>'}</section>`;
+  bindCopy(v);
+  contentForm($('#crContentForm'), camps, null);
+  v.querySelectorAll('[data-add]').forEach((b) => b.onclick = () => contentForm($('#crContentForm'), camps, b.dataset.add, true));
+  v.querySelectorAll('[data-camp]').forEach((a) => a.addEventListener('click', () => { assetCamp = a.dataset.camp; }));
+  v.querySelectorAll('[data-fix]').forEach((b) => b.onclick = () => fixContent(b, h.content.find((c) => c.id === b.dataset.fix)));
+}
+
+function contentForm(el, camps, campId, focus = false) {
+  const today = new Date().toISOString().slice(0, 10);
+  el.innerHTML = `<h2>Beitrag eintragen</h2><p class="form-note" style="margin-top:0">Trage veröffentlichte Beiträge mit Link ein. ImmoAdv prüft unter anderem die Werbekennzeichnung.</p><form novalidate><div class="ad-grid2">
+    <label>Plattform*<select name="platform" required>${Object.entries(PLAT).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('')}</select></label>
+    <label>Kampagne<select name="campaign_id"><option value="">ohne Kampagne</option>${camps.map((k) => `<option value="${esc(k.id)}"${k.id === campId ? ' selected' : ''}>${esc(k.name)}</option>`).join('')}</select></label>
+    <label class="full">Link zum Beitrag*<input name="url" type="url" inputmode="url" required maxlength="300" placeholder="https://"></label>
+    <label>Titel <small class="hint">optional</small><input name="title" maxlength="160"></label>
+    <label>Veröffentlicht am*<input name="published_on" type="date" required max="${today}" value="${today}"></label></div>
+    <label class="consent"><input type="checkbox" name="ad" required> Der Beitrag ist als Werbung bzw. Kooperation mit ImmoAdv gekennzeichnet.</label>
+    <p class="cr-msg pt-alert bad" hidden></p><div class="wiz-nav"><span></span><button type="submit" class="btn btn-dark">Beitrag eintragen</button></div></form>`;
+  const f = el.querySelector('form');
+  if (focus) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); f.elements.url.focus({ preventScroll: true }); }
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!f.elements.ad.checked) { formMsg(f, 'Bitte bestätige die Werbekennzeichnung.'); return; }
+    const d = await save(f, { platform: val(f, 'platform'), campaign_id: val(f, 'campaign_id') || null, url: val(f, 'url'), title: val(f, 'title') || null, published_on: val(f, 'published_on'), ad_disclosure: true }, '/api/creator/content', 'POST');
+    if (d) { toast('Beitrag eingetragen'); studio($('#crView')); }
+  };
+}
+
+function fixContent(btn, c) {
+  const li = btn.closest('li');
+  li.insertAdjacentHTML('beforeend', `<form class="cr-form" style="width:100%;margin-top:10px" novalidate><div class="ad-grid2"><label class="full">Link zum überarbeiteten Beitrag*<input name="url" type="url" required maxlength="300" value="${esc(c.url)}"></label><label class="full">Titel<input name="title" maxlength="160" value="${esc(c.title || '')}"></label></div>
+    <label class="consent"><input type="checkbox" name="ad" required> Der Beitrag ist als Werbung bzw. Kooperation mit ImmoAdv gekennzeichnet.</label><p class="cr-msg pt-alert bad" hidden></p><div class="wiz-nav"><span></span><button type="submit" class="btn btn-dark btn-sm">Erneut einreichen</button></div></form>`);
+  btn.remove();
+  const f = li.querySelector('form');
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!f.elements.ad.checked) { formMsg(f, 'Bitte bestätige die Werbekennzeichnung.'); return; }
+    const d = await save(f, { id: c.id, url: val(f, 'url'), title: val(f, 'title') || null, ad_disclosure: true }, '/api/creator/content', 'PATCH');
+    if (d) { toast('Erneut eingereicht'); studio($('#crView')); }
+  };
+}
+
+async function performance(v) {
+  const RANGES = [['30d', '30 Tage'], ['90d', '90 Tage'], ['month', 'Dieser Monat'], ['last_month', 'Vormonat'], ['all', 'Gesamt']];
+  const [r, h] = await Promise.all([api(`/api/creator/performance?range=${perfRange}`), loadHub()]);
+  const p = r.ok ? r.data : null;
+  const names = new Map((h.campaigns || []).map((k) => [k.slug, k.name]));
+  v.innerHTML = `<div class="pc-chips" role="group" aria-label="Zeitraum" style="margin-bottom:12px">${RANGES.map(([k, l]) => `<button type="button" data-r="${k}" aria-pressed="${k === perfRange}">${l}</button>`).join('')}</div>
+    ${p ? `<div class="pt-kpis">
+      <div class="pt-kpi"><small>Besuche</small><strong>${num(p.visits)}</strong><small>${num(p.visitors)} Besucher</small></div>
+      <div class="pt-kpi"><small>Registrierungen</small><strong>${num(p.registrations)}</strong><small>über deinen Link</small></div>
+      <div class="pt-kpi"><small>Conversions</small><strong>${num(p.conversions)}</strong><small>${num(p.via_code)} über deinen Code</small></div>
+      <div class="pt-kpi"><small>Umsatz (netto)</small><strong>${eurC(p.revenue_net_cents)}</strong><small>${p.reversed ? `${num(p.reversed)} erstattet (nicht gezählt)` : 'ohne Erstattungen'}</small></div></div>
+    <section class="pt-card"><h2>Nach Kampagne</h2>${(p.by_campaign || []).length ? `<div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Kampagne</th><th>Besuche</th><th>Registr.</th><th>Conversions</th><th>Umsatz</th></tr></thead><tbody>${p.by_campaign.map((x) => `<tr><td>${esc(x.campaign ? names.get(x.campaign) || x.campaign : 'Ohne Kampagne')}</td><td>${num(x.visits)}</td><td>${num(x.registrations)}</td><td>${num(x.conversions)}</td><td>${eurC(x.revenue_net_cents)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">In diesem Zeitraum noch keine Daten.</p>'}</section>
+    <section class="pt-card"><h2>Provision</h2><dl class="pt-dl"><div><dt>Ausstehend</dt><dd>–</dd></div><div><dt>Freigegeben</dt><dd>–</dd></div><div><dt>Ausgezahlt</dt><dd>–</dd></div></dl><p class="cr-soon">Provisionen werden mit dem Start der Abrechnung aus deinen Conversions berechnet.</p></section>
+    <p class="form-note">So zählen wir: Besuche über deinen Link (ohne Cookies, bei „Do Not Track“ nicht gezählt) · Registrierungen über deinen Link · bezahlte Käufe von Kunden, die über deinen Link oder Code kamen (innerhalb von 90 Tagen nach Registrierung). Eigene Käufe zählen nicht. Du siehst nur Summen, keine Personen.</p>`
+    : `<div class="pt-alert bad">${esc(r.data?.error || 'Kennzahlen konnten nicht geladen werden.')}</div>`}`;
+  v.querySelectorAll('[data-r]').forEach((b) => b.onclick = () => { perfRange = b.dataset.r; performance(v); });
+}
+
+let assetCamp = '';
+async function assetsView(v) {
+  const h = await loadHub();
+  if (h.error) { v.innerHTML = `<div class="pt-alert bad">${esc(h.error)}</div>`; return; }
+  const camps = h.campaigns || [];
+  const list = (h.assets || []).filter((a) => !assetCamp || (assetCamp === 'general' ? !a.campaign_id : a.campaign_id === assetCamp));
+  v.innerHTML = `<p class="form-note" style="margin-top:0">Was darf ich verwenden? Alles hier ist für deine Inhalte freigegeben – bitte die Nutzungshinweise beachten.</p>
+    <div class="pc-chips" role="group" aria-label="Filter" style="margin-bottom:12px"><button type="button" data-f="" aria-pressed="${!assetCamp}">Alle</button><button type="button" data-f="general" aria-pressed="${assetCamp === 'general'}">Allgemein</button>${camps.map((k) => `<button type="button" data-f="${esc(k.id)}" aria-pressed="${assetCamp === k.id}">${esc(k.name)}</button>`).join('')}</div>
+    ${list.length ? `<div class="cr-assets">${list.map((a) => `<article class="pt-card"><small class="pt-top-k">${esc(KIND[a.kind] || a.kind)}${a.size_bytes ? ` · ${mb(a.size_bytes)}` : ''}</small><h3 style="margin:4px 0">${esc(a.title)}</h3>${a.description ? `<p class="form-note" style="margin:0 0 6px">${esc(a.description)}</p>` : ''}
+        ${a.kind === 'text' ? `<div class="cr-agree" style="max-height:180px">${esc(a.text_body)}</div><p><button type="button" class="btn btn-outline btn-sm" data-copy="${esc(a.text_body)}">Text kopieren</button></p>` : `<p><button type="button" class="btn btn-dark btn-sm" data-dl="${esc(a.id)}">Herunterladen</button></p>`}
+        ${a.usage_notes ? `<p class="form-note"><strong>Nutzung:</strong> ${esc(a.usage_notes)}</p>` : ''}</article>`).join('')}</div>` : '<div class="pt-empty">Hier sind noch keine Assets freigegeben.</div>'}`;
+  bindCopy(v);
+  v.querySelectorAll('[data-f]').forEach((b) => b.onclick = () => { assetCamp = b.dataset.f; assetsView(v); });
+  v.querySelectorAll('[data-dl]').forEach((b) => b.onclick = async () => {
+    b.disabled = true;
+    const r = await api('/api/creator/assets', { method: 'POST', body: JSON.stringify({ id: b.dataset.dl }) });
+    b.disabled = false;
+    if (!r.ok) { toast(r.data?.error || 'Download nicht möglich.', true); return; }
+    location.href = r.data.url;
+  });
 }
 
 window.addEventListener('hashchange', () => { if (me?.creator?.status === 'ACTIVE') { portal(); window.scrollTo({ top: 0 }); } });
