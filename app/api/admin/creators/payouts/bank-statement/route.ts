@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { eurText, periodLabel } from '@/lib/creator/billing';
-import { markPayoutPaid, type PayoutForPaid } from '@/lib/creator/billing-server';
+import { markPayoutPaid, markPayoutReturned, type PayoutForPaid } from '@/lib/creator/billing-server';
 import { CAMT_MAX_BYTES, matchPayouts, parseCamt053 } from '@/lib/creator/camt';
 import { audit, j, requireCreatorAdmin } from '@/lib/creator/server';
 
@@ -12,7 +12,8 @@ export const maxDuration = 60;
 
 // Kontoauszug (camt.053) hochladen → exportierte Auszahlungen werden über die Ende-zu-Ende-Referenz bzw.
 // Verwendungszweck + Betrag gefunden. Erst die Vorschau, dann „Übernehmen“: Der Server liest die Datei dabei erneut
-// und gleicht neu ab – aus dem Browser wird nur die Datei übernommen, nie ein Ergebnis.
+// und gleicht neu ab – aus dem Browser wird nur die Datei übernommen, nie ein Ergebnis. Rückläufer werden dabei
+// ebenfalls übernommen: bezahlte Auszahlungen → „zurückgekommen“, exportierte → „fehlgeschlagen“.
 const Input = z.object({
   xml: z.string().min(50).max(CAMT_MAX_BYTES),
   confirm: z.boolean().default(false),
@@ -39,10 +40,11 @@ export async function POST(req: Request) {
   const db = supabaseAdmin();
   const { data } = await db.from('immo_creator_payouts')
     .select('id, creator_id, statement_id, amount_cents, status, reference, iban_country, iban_last4, immo_creators(display_name, first_name), immo_creator_statements(period)')
-    .in('status', ['APPROVED', 'EXPORTED']).limit(2000);
-  const open = (data ?? []) as unknown as Row[];
-  const byId = new Map(open.map((p) => [p.id, p]));
-  const r = matchPayouts(st.transactions, open);
+    .in('status', ['APPROVED', 'EXPORTED', 'PAID']).gte('created_at', new Date(Date.now() - 400 * 864e5).toISOString()).limit(5000);
+  const all = (data ?? []) as unknown as Row[];
+  const open = all.filter((p) => p.status !== 'PAID');
+  const byId = new Map(all.map((p) => [p.id, p]));
+  const r = matchPayouts(st.transactions, open, all.filter((p) => p.status === 'PAID'));
   const sha = createHash('sha256').update(pr.data.xml).digest('hex');
   const { data: prev } = await db.from('immo_creator_bank_imports').select('created_at').eq('file_sha256', sha).maybeSingle();
   const debtorIban = (process.env.CREATOR_PAYOUT_IBAN || process.env.INVOICE_IBAN || '').replace(/\s+/g, '').toUpperCase();
@@ -64,11 +66,23 @@ export async function POST(req: Request) {
     const p = byId.get(m.payout_id);
     if (p && (await markPayoutPaid(p, a.actor, { via: 'BANK_STATEMENT', paidAt: m.booking_date, bankRef: m.bank_ref }))) paid++;
   }
+  // Rückläufer: bezahlte Auszahlungen → zurückgekommen (Abrechnung wieder offen, Konto zur Prüfung);
+  // exportierte, noch nicht bezahlte Auszahlungen → fehlgeschlagen.
+  let returned = 0;
+  for (const i of r.issues.filter((x) => x.kind === 'returned' && x.payout_id)) {
+    const p = byId.get(i.payout_id as string);
+    if (!p) continue;
+    if (p.status === 'PAID') { if (await markPayoutReturned(p.id, a.actor, 'Rückläufer laut Kontoauszug').catch(() => false)) returned++; }
+    else {
+      const { data: f } = await db.from('immo_creator_payouts').update({ status: 'FAILED', failed_reason: 'Rückläufer laut Kontoauszug' }).eq('id', p.id).eq('status', p.status).select('id');
+      if (f?.length) { returned++; await audit('PAYOUT_FAILED', p.creator_id, a.actor, 'FAILED', { reason_code: 'bank_return' }); }
+    }
+  }
   const ins = await db.from('immo_creator_bank_imports').upsert({
     file_sha256: sha, statement_id: st.id?.slice(0, 80) ?? null, account_last4: st.ibanLast4 && /^[0-9A-Z]{4}$/.test(st.ibanLast4) ? st.ibanLast4 : null,
     entries: st.transactions.length, matched: paid, imported_by: a.actor.ref,
   }, { onConflict: 'file_sha256', ignoreDuplicates: true });
   if (ins.error) console.warn('creator_bank_import', ins.error.message);
-  await audit('BANK_STATEMENT_IMPORTED', null, a.actor, 'SUCCESS', { transactions: st.transactions.length, paid, issues: r.issues.length });
-  return j({ ok: true, paid, ...summary });
+  await audit('BANK_STATEMENT_IMPORTED', null, a.actor, 'SUCCESS', { transactions: st.transactions.length, paid, returned, issues: r.issues.length });
+  return j({ ok: true, paid, returned, ...summary });
 }

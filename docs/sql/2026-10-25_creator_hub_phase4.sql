@@ -113,21 +113,7 @@ grant execute on function public.immo_creator_close_period(text, text, jsonb) to
 alter table public.immo_creator_statements add column if not exists notified_at timestamptz;
 alter table public.immo_creator_statements add column if not exists reminded_at timestamptz;
 
-create or replace function public.immo_creator_statement_guard() returns trigger language plpgsql set search_path to '' as $$
-declare ord text[] := array['READY','INVOICED','APPROVED','PAID'];
-        free text[] := array['status','approved_at','approved_by','paid_at','carried_over','notified_at','reminded_at'];
-begin
-  if tg_op = 'DELETE' then raise exception 'Abrechnungen werden nicht gelöscht.'; end if;
-  if (to_jsonb(new) - free) is distinct from (to_jsonb(old) - free) then
-    raise exception 'Abgeschlossene Abrechnungen sind unveränderbar.';
-  end if;
-  if old.status = 'ZERO' and new.status <> 'ZERO' then raise exception 'Abrechnung ohne Betrag bleibt abgeschlossen.'; end if;
-  if old.status <> 'ZERO' and array_position(ord, new.status) < array_position(ord, old.status) then raise exception 'Status kann nicht zurückgesetzt werden.'; end if;
-  if old.carried_over and not new.carried_over then raise exception 'Übertrag ist endgültig.'; end if;
-  if old.notified_at is not null and new.notified_at is distinct from old.notified_at then raise exception 'Benachrichtigung ist bereits vermerkt.'; end if;
-  if old.reminded_at is not null and new.reminded_at is distinct from old.reminded_at then raise exception 'Erinnerung ist bereits vermerkt.'; end if;
-  return new;
-end $$;
+-- Abrechnungs-Schutz mit den neuen Feldern: siehe Abschnitt 3b (eine Fassung für beide Erweiterungen).
 
 -- ---------------------------------------------------------------------------
 -- 3) Kontoauszug-Abgleich: Herkunft der Zahlungsbestätigung und importierte Auszüge
@@ -157,6 +143,100 @@ drop trigger if exists immo_creator_bank_import_no_change on public.immo_creator
 create trigger immo_creator_bank_import_no_change before update or delete on public.immo_creator_bank_imports
   for each row execute function public.immo_creator_bank_import_immutable();
 
+-- ---------------------------------------------------------------------------
+-- 3b) Rückläufer nach „bezahlt“: Auszahlung → RETURNED, Abrechnung wieder offen (APPROVED), Konto zur Prüfung.
+--     Danach erneute Auszahlung derselben Abrechnung (gleicher Betrag, gleicher Beleg) auf das aktuelle, geprüfte Konto.
+-- ---------------------------------------------------------------------------
+alter table public.immo_creator_payouts add column if not exists returned_at timestamptz;
+alter table public.immo_creator_payouts add column if not exists reissue_count integer not null default 0;
+alter table public.immo_creator_payouts drop constraint if exists immo_creator_payouts_status_check;
+alter table public.immo_creator_payouts add constraint immo_creator_payouts_status_check check (status in ('READY','APPROVED','EXPORTED','PAID','FAILED','RETURNED'));
+
+create or replace function public.immo_creator_payout_status_guard() returns trigger language plpgsql set search_path to '' as $$
+declare reissue boolean := old.status = 'RETURNED' and new.status = 'READY';
+begin
+  if tg_op = 'DELETE' then raise exception 'Auszahlungen werden nicht gelöscht.'; end if;
+  if new.amount_cents is distinct from old.amount_cents or new.statement_id is distinct from old.statement_id
+     or new.creator_id is distinct from old.creator_id or new.reference is distinct from old.reference then
+    raise exception 'Betrag, Konto und Verwendungszweck einer Auszahlung sind unveränderbar.';
+  end if;
+  if (new.payout_account_id is distinct from old.payout_account_id or new.iban_last4 is distinct from old.iban_last4
+      or new.iban_country is distinct from old.iban_country) and not reissue then
+    raise exception 'Betrag, Konto und Verwendungszweck einer Auszahlung sind unveränderbar.';
+  end if;
+  if new.reissue_count < old.reissue_count then raise exception 'Zähler kann nicht zurückgesetzt werden.'; end if;
+  if old.status = 'PAID' then
+    if new.status <> 'RETURNED' then raise exception 'Bezahlte Auszahlungen sind abgeschlossen.'; end if;
+    if (to_jsonb(new) - array['status','returned_at','failed_reason']) is distinct from (to_jsonb(old) - array['status','returned_at','failed_reason']) then
+      raise exception 'Bezahlte Auszahlungen sind abgeschlossen.';
+    end if;
+  end if;
+  if new.status = 'RETURNED' and old.status not in ('PAID','RETURNED') then raise exception 'Nur bezahlte Auszahlungen können zurückkommen.'; end if;
+  if old.status = 'RETURNED' and new.status not in ('RETURNED','READY') then raise exception 'Zurückgekommene Auszahlungen werden nur neu angestoßen.'; end if;
+  if new.status = 'PAID' and old.status not in ('APPROVED','EXPORTED') then raise exception 'Nur freigegebene Auszahlungen können als bezahlt markiert werden.'; end if;
+  if new.status = 'EXPORTED' and old.status <> 'APPROVED' and old.status <> 'EXPORTED' then raise exception 'Nur freigegebene Auszahlungen können exportiert werden.'; end if;
+  return new;
+end $$;
+
+-- Abrechnungs-Schutz: PAID → APPROVED nur innerhalb von immo_creator_payout_returned (Sitzungsmerker).
+create or replace function public.immo_creator_statement_guard() returns trigger language plpgsql set search_path to '' as $$
+declare ord text[] := array['READY','INVOICED','APPROVED','PAID'];
+        free text[] := array['status','approved_at','approved_by','paid_at','carried_over','notified_at','reminded_at'];
+        back boolean := old.status = 'PAID' and new.status = 'APPROVED' and coalesce(current_setting('immo.creator_payout_return', true), '') = 'on';
+begin
+  if tg_op = 'DELETE' then raise exception 'Abrechnungen werden nicht gelöscht.'; end if;
+  if (to_jsonb(new) - free) is distinct from (to_jsonb(old) - free) then
+    raise exception 'Abgeschlossene Abrechnungen sind unveränderbar.';
+  end if;
+  if old.status = 'ZERO' and new.status <> 'ZERO' then raise exception 'Abrechnung ohne Betrag bleibt abgeschlossen.'; end if;
+  if old.status <> 'ZERO' and array_position(ord, new.status) < array_position(ord, old.status) and not back then raise exception 'Status kann nicht zurückgesetzt werden.'; end if;
+  if old.carried_over and not new.carried_over then raise exception 'Übertrag ist endgültig.'; end if;
+  if old.notified_at is not null and new.notified_at is distinct from old.notified_at then raise exception 'Benachrichtigung ist bereits vermerkt.'; end if;
+  if old.reminded_at is not null and new.reminded_at is distinct from old.reminded_at then raise exception 'Erinnerung ist bereits vermerkt.'; end if;
+  return new;
+end $$;
+
+create or replace function public.immo_creator_payout_returned(p_payout uuid, p_reason text) returns jsonb
+language plpgsql set search_path to '' as $$
+declare p record;
+begin
+  if p_reason is null or char_length(trim(p_reason)) < 3 then raise exception 'Bitte einen Grund angeben.'; end if;
+  select * into p from public.immo_creator_payouts where id = p_payout for update;
+  if not found then raise exception 'Auszahlung nicht gefunden.'; end if;
+  if p.status = 'RETURNED' then return jsonb_build_object('creator_id', p.creator_id, 'amount_cents', p.amount_cents, 'changed', false); end if;
+  if p.status <> 'PAID' then raise exception 'Nur bezahlte Auszahlungen können zurückkommen.'; end if;
+  perform set_config('immo.creator_payout_return', 'on', true);
+  update public.immo_creator_payouts set status = 'RETURNED', returned_at = now(), failed_reason = left(trim(p_reason), 300) where id = p.id;
+  update public.immo_creator_statements set status = 'APPROVED', paid_at = null where id = p.statement_id and status = 'PAID';
+  update public.immo_creator_commissions set status = 'APPROVED' where statement_id = p.statement_id and status = 'PAID';
+  update public.immo_creator_payout_accounts set status = 'VERIFICATION_REQUIRED' where id = p.payout_account_id and status in ('PROVIDED','VERIFIED');
+  perform set_config('immo.creator_payout_return', 'off', true);
+  return jsonb_build_object('creator_id', p.creator_id, 'amount_cents', p.amount_cents, 'changed', true);
+end $$;
+
+-- Erneut anstoßen: auf das aktuelle Konto des Creators (nicht abgelöst, nicht in Prüfung); Freigabe erfolgt wie üblich.
+create or replace function public.immo_creator_payout_reissue(p_payout uuid, p_actor text) returns jsonb
+language plpgsql set search_path to '' as $$
+declare p record; a record;
+begin
+  select * into p from public.immo_creator_payouts where id = p_payout for update;
+  if not found then raise exception 'Auszahlung nicht gefunden.'; end if;
+  if p.status <> 'RETURNED' then raise exception 'Nur zurückgekommene Auszahlungen können neu angestoßen werden.'; end if;
+  select id, status, iban_country, iban_last4 into a from public.immo_creator_payout_accounts
+    where creator_id = p.creator_id and status <> 'SUPERSEDED' for update;
+  if not found then raise exception 'Der Creator hat keine Zahlungsdaten hinterlegt.'; end if;
+  if a.status = 'VERIFICATION_REQUIRED' then raise exception 'Die Zahlungsdaten müssen zuerst geprüft werden.'; end if;
+  update public.immo_creator_payouts set status = 'READY', payout_account_id = a.id, iban_country = a.iban_country, iban_last4 = a.iban_last4,
+    approved_by = null, approved_at = null, exported_at = null, export_id = null, paid_by = null, paid_at = null, paid_via = null, bank_ref = null,
+    created_by = p_actor, reissue_count = p.reissue_count + 1
+  where id = p.id;
+  return jsonb_build_object('creator_id', p.creator_id, 'amount_cents', p.amount_cents, 'iban_last4', a.iban_last4);
+end $$;
+revoke all on function public.immo_creator_payout_returned(uuid, text) from public, anon, authenticated;
+revoke all on function public.immo_creator_payout_reissue(uuid, text) from public, anon, authenticated;
+grant execute on function public.immo_creator_payout_returned(uuid, text) to service_role;
+grant execute on function public.immo_creator_payout_reissue(uuid, text) to service_role;
+
 -- Zugriff: nur Server (Service-Rolle); Creator sehen Erstattungen und Importe nicht.
 alter table public.immo_creator_refunds enable row level security;
 alter table public.immo_creator_bank_imports enable row level security;
@@ -176,7 +256,7 @@ alter table public.immo_creator_audit add constraint immo_creator_audit_event_ty
   'COMMISSION_CHANGED','ADJUSTMENT_CREATED','PERIOD_CLOSED','BILLING_MODE_CHANGED','STATEMENT_APPROVED','DOCUMENT_DOWNLOADED',
   'INVOICE_CREATED','INVOICE_APPROVED','INVOICE_REJECTED','PAYOUT_CREATED','PAYOUT_APPROVED','PAYOUT_EXPORTED','PAYOUT_PAID','PAYOUT_FAILED',
   'CREATOR_ACCOUNT_DELETED',
-  'REFUND_RECORDED','BANK_STATEMENT_IMPORTED','CREATOR_NOTIFIED','SETTINGS_CHANGED'
+  'REFUND_RECORDED','BANK_STATEMENT_IMPORTED','CREATOR_NOTIFIED','SETTINGS_CHANGED','PAYOUT_RETURNED','PAYOUT_REISSUED'
 ));
 
 -- ---------------------------------------------------------------------------

@@ -97,8 +97,10 @@ export type CamtIssue = { payout_id: string | null; kind: 'amount_mismatch' | 'r
 export const payoutEndToEnd = (payoutId: string) => `CR${payoutId.replace(/-/g, '').slice(0, 30)}`;
 const norm = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-export function matchPayouts(txs: CamtTx[], open: OpenPayout[]): { matches: CamtMatch[]; issues: CamtIssue[]; unrelated: number } {
+// paid: bereits bezahlte Auszahlungen – nur für die Erkennung von Rückläufern (werden nie erneut als bezahlt erkannt).
+export function matchPayouts(txs: CamtTx[], open: OpenPayout[], paid: OpenPayout[] = []): { matches: CamtMatch[]; issues: CamtIssue[]; unrelated: number } {
   const byE2e = new Map(open.map((p) => [payoutEndToEnd(p.id), p]));
+  const paidE2e = new Map(paid.map((p) => [payoutEndToEnd(p.id), p]));
   const used = new Set<string>();
   const matches: CamtMatch[] = []; const issues: CamtIssue[] = [];
   let unrelated = 0;
@@ -110,6 +112,11 @@ export function matchPayouts(txs: CamtTx[], open: OpenPayout[]): { matches: Camt
       const r = norm(t.remittance);
       const cands = open.filter((x) => !used.has(x.id) && x.amount_cents === t.amountCents && norm(x.reference).length >= 6 && r.includes(norm(x.reference)));
       if (cands.length === 1) { p = cands[0]; via = 'reference'; }
+    }
+    if (!p && (t.direction === 'CRDT' || t.reversal)) {
+      const q = (t.endToEndId ? paidE2e.get(t.endToEndId) : undefined)
+        ?? (t.remittance ? paid.find((x) => x.amount_cents === t.amountCents && norm(x.reference).length >= 6 && norm(t.remittance).includes(norm(x.reference))) : undefined);
+      if (q) { issues.push({ payout_id: q.id, kind: 'returned', amount_cents: t.amountCents, booking_date: t.bookingDate, note: 'Bereits bezahlte Auszahlung ist zurückgekommen.' }); continue; }
     }
     if (!p) { unrelated++; continue; }
     // Rückläufer: Gutschrift mit unserer Referenz oder stornierte Belastung

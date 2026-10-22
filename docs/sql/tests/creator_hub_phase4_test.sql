@@ -81,9 +81,40 @@ select '80000000-0000-4000-8000-0000000000a4', id, creator_id, payout_cents, '20
 from public.immo_creator_statements where creator_id = '10000000-0000-4000-8000-0000000000a4';
 do $$ begin update public.immo_creator_payouts set paid_via = 'IRGENDWIE' where id = '80000000-0000-4000-8000-0000000000a4'; raise exception 'FAIL: freie Herkunft';
 exception when check_violation then raise notice 'ok: Herkunft der Zahlungsbestätigung geprüft'; end $$;
+update public.immo_creator_statements set status = 'APPROVED', approved_at = now() where creator_id = '10000000-0000-4000-8000-0000000000a4';
 update public.immo_creator_payouts set status = 'PAID', paid_at = '2026-11-20T12:00:00Z', paid_by = 'test', paid_via = 'BANK_STATEMENT', bank_ref = 'BANK-1' where id = '80000000-0000-4000-8000-0000000000a4';
+update public.immo_creator_statements set status = 'PAID', paid_at = '2026-11-20T12:00:00Z' where creator_id = '10000000-0000-4000-8000-0000000000a4';
 do $$ begin update public.immo_creator_payouts set bank_ref = 'X' where id = '80000000-0000-4000-8000-0000000000a4'; raise exception 'FAIL: bezahlte Auszahlung änderbar';
 exception when raise_exception then if sqlerrm like 'FAIL:%' then raise; end if; raise notice 'ok: Bezahlte Auszahlung bleibt abgeschlossen'; end $$;
+
+-- Rückläufer nach „bezahlt“: Auszahlung zurückgekommen → Abrechnung wieder offen, Konto in Prüfung; erneut anstoßen
+do $$ declare r jsonb; st text; acc text; begin
+  r := public.immo_creator_payout_returned('80000000-0000-4000-8000-0000000000a4', 'Rückläufer AC04');
+  if not (r->>'changed')::boolean then raise exception 'FAIL: nicht als zurückgekommen markiert'; end if;
+  select s.status into st from public.immo_creator_statements s join public.immo_creator_payouts p on p.statement_id = s.id where p.id = '80000000-0000-4000-8000-0000000000a4';
+  if st <> 'APPROVED' then raise exception 'FAIL: Abrechnung ist %', st; end if;
+  select status into acc from public.immo_creator_payout_accounts where id = '20000000-0000-4000-8000-0000000000a4';
+  if acc <> 'VERIFICATION_REQUIRED' then raise exception 'FAIL: Konto ist %', acc; end if;
+  if (public.immo_creator_payout_returned('80000000-0000-4000-8000-0000000000a4', 'nochmal')->>'changed')::boolean then raise exception 'FAIL: doppelt'; end if;
+  raise notice 'ok: Rückläufer öffnet Abrechnung wieder und schickt Konto in die Prüfung';
+end $$;
+do $$ begin update public.immo_creator_statements set status = 'READY'; raise exception 'FAIL: Status zurücksetzbar ohne Rückläufer';
+exception when raise_exception then if sqlerrm like 'FAIL:%' then raise; end if; raise notice 'ok: Abrechnung bleibt sonst vorwärtsgerichtet'; end $$;
+do $$ begin perform public.immo_creator_payout_reissue('80000000-0000-4000-8000-0000000000a4', 'adm'); raise exception 'FAIL: ohne Prüfung neu angestoßen';
+exception when raise_exception then if sqlerrm like 'FAIL:%' then raise; end if; raise notice 'ok: Neu anstoßen erst nach geprüften Zahlungsdaten'; end $$;
+do $$ declare nid uuid; p record; begin
+  nid := public.immo_creator_payout_replace('10000000-0000-4000-8000-0000000000a4', 'Anna Neu', 'v1:D:E:F', '4444', 'DE', repeat('5', 64), null, 'PROVIDED');
+  perform public.immo_creator_payout_reissue('80000000-0000-4000-8000-0000000000a4', 'adm');
+  select * into p from public.immo_creator_payouts where id = '80000000-0000-4000-8000-0000000000a4';
+  if p.status <> 'READY' or p.payout_account_id <> nid or p.iban_last4 <> '4444' or p.reissue_count <> 1 or p.paid_at is not null then raise exception 'FAIL: erneute Auszahlung %', row_to_json(p); end if;
+  raise notice 'ok: Erneute Auszahlung auf das neue Konto, gleicher Betrag';
+end $$;
+do $$ begin update public.immo_creator_payouts set amount_cents = 1 where id = '80000000-0000-4000-8000-0000000000a4'; raise exception 'FAIL: Betrag änderbar';
+exception when raise_exception then if sqlerrm like 'FAIL:%' then raise; end if; raise notice 'ok: Betrag bleibt unveränderbar'; end $$;
+do $$ begin update public.immo_creator_payouts set payout_account_id = '20000000-0000-4000-8000-0000000000a4' where id = '80000000-0000-4000-8000-0000000000a4'; raise exception 'FAIL: Konto änderbar';
+exception when raise_exception then if sqlerrm like 'FAIL:%' then raise; end if; raise notice 'ok: Konto nur beim erneuten Anstoßen änderbar'; end $$;
+do $$ begin perform public.immo_creator_payout_returned('80000000-0000-4000-8000-0000000000a4', 'x y z'); raise exception 'FAIL: nicht bezahlte Auszahlung zurückgekommen';
+exception when raise_exception then if sqlerrm like 'FAIL:%' then raise; end if; raise notice 'ok: Nur bezahlte Auszahlungen können zurückkommen'; end $$;
 
 insert into public.immo_creator_bank_imports (file_sha256, statement_id, account_last4, entries, matched, imported_by) values (repeat('a', 64), '2026-11-20-001', '3000', 4, 1, 'test');
 do $$ begin insert into public.immo_creator_bank_imports (file_sha256, entries, matched, imported_by) values (repeat('a', 64), 1, 0, 'test'); raise exception 'FAIL: doppelter Import';
@@ -100,6 +131,8 @@ do $$ begin perform 1 from public.immo_creator_bank_imports; raise exception 'FA
 exception when insufficient_privilege then raise notice 'ok: Kontoauszug-Importe nur Server'; end $$;
 do $$ begin perform public.immo_creator_record_refund('pi_p4_3', null, 2900, 2900); raise exception 'FAIL: Erstattung durch Nutzer';
 exception when insufficient_privilege then raise notice 'ok: Erstattung melden nur Server'; end $$;
+do $$ begin perform public.immo_creator_payout_returned('80000000-0000-4000-8000-0000000000a4', 'abc'); raise exception 'FAIL: Rückläufer durch Nutzer';
+exception when insufficient_privilege then raise notice 'ok: Rückläufer/Neuanstoß nur Server'; end $$;
 do $$ declare n int; begin
   select count(*) into n from public.immo_creator_statements; if n <> 1 then raise exception 'FAIL: A sieht % Abrechnungen', n; end if;
   raise notice 'ok: Creator A sieht weiterhin nur die eigene Abrechnung';
@@ -110,7 +143,7 @@ reset role;
 do $$ begin
   if not exists (select 1 from public.immo_settings where key = 'creator_auto_close' and value = 'false'::jsonb) then raise exception 'FAIL: Automatik nicht standardmäßig aus'; end if;
   insert into public.immo_creator_audit (event_type, creator_id, actor_kind, actor_ref, actor_role, result) values ('REFUND_RECORDED', '10000000-0000-4000-8000-0000000000a4', 'system', 'stripe', 'SYSTEM', 'SUCCESS'),
-    ('BANK_STATEMENT_IMPORTED', null, 'admin', 'adm1', 'FINANCE_ADMIN', 'SUCCESS'), ('CREATOR_NOTIFIED', '10000000-0000-4000-8000-0000000000a4', 'system', 'cron', 'SYSTEM', 'SUCCESS'), ('SETTINGS_CHANGED', null, 'admin', 'adm1', 'SUPER_ADMIN', 'SUCCESS');
+    ('BANK_STATEMENT_IMPORTED', null, 'admin', 'adm1', 'FINANCE_ADMIN', 'SUCCESS'), ('CREATOR_NOTIFIED', '10000000-0000-4000-8000-0000000000a4', 'system', 'cron', 'SYSTEM', 'SUCCESS'), ('SETTINGS_CHANGED', null, 'admin', 'adm1', 'SUPER_ADMIN', 'SUCCESS'), ('PAYOUT_RETURNED', null, 'admin', 'adm1', 'FINANCE_ADMIN', 'FAILED'), ('PAYOUT_REISSUED', null, 'admin', 'adm1', 'FINANCE_ADMIN', 'SUCCESS');
   raise notice 'ok: Automatik standardmäßig aus, neue Audit-Ereignisse zugelassen';
 end $$;
 

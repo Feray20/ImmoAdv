@@ -348,6 +348,31 @@ export async function markPayoutPaid(p: PayoutForPaid, actor: Actor, o: { paidAt
   return true;
 }
 
+// Rückläufer nach „bezahlt“ (Bank hat die Überweisung zurückgegeben): Abrechnung wieder offen, Konto zur Prüfung,
+// Creator wird gebeten, die Zahlungsdaten zu prüfen. Danach wird dieselbe Auszahlung erneut angestoßen.
+export async function markPayoutReturned(payoutId: string, actor: Actor, reason: string): Promise<boolean> {
+  const { data, error } = await db().rpc('immo_creator_payout_returned', { p_payout: payoutId, p_reason: reason });
+  if (error) throw new Error(error.message.includes('Nur bezahlte') ? 'Nur bezahlte Auszahlungen können als zurückgekommen markiert werden.' : 'Nicht möglich (Phase-4-Migration angewendet?).');
+  const r = data as { creator_id: string; amount_cents: number; changed: boolean };
+  if (!r.changed) return false;
+  await audit('PAYOUT_RETURNED', r.creator_id, actor, 'FAILED', { amount_cents: r.amount_cents });
+  const to = await creatorContact(r.creator_id);
+  if (to) {
+    await sendMail(to.email, 'Deine Auszahlung ist zurückgekommen', `Hallo ${to.name},\n\ndeine Auszahlung über ${eurText(r.amount_cents)} wurde von der Bank zurückgegeben. Bitte prüfe im Creator-Portal deine Zahlungsdaten (Kontoinhaber und IBAN) und ändere sie bei Bedarf. Sobald sie geprüft sind, zahlen wir erneut aus – an deiner Abrechnung ändert sich nichts.\n\n${SITE_ORIGIN}/creator#auszahlung`, [], { title: 'Auszahlung zurückgekommen' }).catch(() => false);
+  }
+  return true;
+}
+
+export async function reissuePayout(payoutId: string, actor: Actor): Promise<void> {
+  const { data, error } = await db().rpc('immo_creator_payout_reissue', { p_payout: payoutId, p_actor: actor.ref });
+  if (error) {
+    const known = ['Die Zahlungsdaten müssen zuerst geprüft werden.', 'Der Creator hat keine Zahlungsdaten hinterlegt.', 'Nur zurückgekommene Auszahlungen können neu angestoßen werden.'];
+    throw new Error(known.find((k) => error.message.includes(k)) ?? 'Nicht möglich.');
+  }
+  const r = data as { creator_id: string; amount_cents: number };
+  await audit('PAYOUT_REISSUED', r.creator_id, actor, 'SUCCESS', { amount_cents: r.amount_cents });
+}
+
 async function creatorContact(creatorId: string): Promise<{ email: string; name: string } | null> {
   const { data: c } = await db().from('immo_creators').select('user_id, first_name, display_name').eq('id', creatorId).maybeSingle();
   if (!c?.user_id) return null;

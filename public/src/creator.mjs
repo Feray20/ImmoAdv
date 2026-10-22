@@ -601,7 +601,7 @@ async function performance(v) {
   v.querySelectorAll('[data-r]').forEach((b) => b.onclick = () => { perfRange = b.dataset.r; performance(v); });
 }
 
-const PO_TEXT = { READY: 'wird zur Zahlung vorbereitet', APPROVED: 'zur Zahlung freigegeben', EXPORTED: 'Überweisung beauftragt', PAID: 'überwiesen', FAILED: 'Zahlung fehlgeschlagen – wir melden uns' };
+const PO_TEXT = { READY: 'wird zur Zahlung vorbereitet', APPROVED: 'zur Zahlung freigegeben', EXPORTED: 'Überweisung beauftragt', PAID: 'überwiesen', FAILED: 'Zahlung fehlgeschlagen – wir melden uns', RETURNED: 'von der Bank zurückgegeben – bitte Zahlungsdaten prüfen' };
 const ST_TEXT = { READY: ['warn', 'Bereit'], INVOICED: ['warn', 'Rechnung eingereicht'], APPROVED: ['ok', 'Freigegeben'], PAID: ['ok', 'Ausgezahlt'], ZERO: ['', 'Kein Betrag'] };
 const DOC_TEXT = { STATEMENT: 'Abrechnung', INVOICE: 'Rechnung', CREDIT_NOTE: 'Gutschrift', CANCELLATION: 'Storno' };
 

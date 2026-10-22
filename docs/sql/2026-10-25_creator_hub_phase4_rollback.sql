@@ -40,6 +40,25 @@ drop table if exists public.immo_creator_bank_imports cascade;
 drop function if exists public.immo_creator_record_refund(text, text, bigint, bigint);
 drop function if exists public.immo_creator_refund_guard();
 drop function if exists public.immo_creator_bank_import_immutable();
+drop function if exists public.immo_creator_payout_returned(uuid, text);
+drop function if exists public.immo_creator_payout_reissue(uuid, text);
+-- Hinweis: zurückgekommene Auszahlungen (RETURNED) müssen vor dem Rückbau erneut angestoßen oder geklärt sein.
+create or replace function public.immo_creator_payout_status_guard() returns trigger language plpgsql set search_path to '' as $$
+begin
+  if tg_op = 'DELETE' then raise exception 'Auszahlungen werden nicht gelöscht.'; end if;
+  if new.amount_cents is distinct from old.amount_cents or new.payout_account_id is distinct from old.payout_account_id
+     or new.statement_id is distinct from old.statement_id or new.creator_id is distinct from old.creator_id or new.reference is distinct from old.reference then
+    raise exception 'Betrag, Konto und Verwendungszweck einer Auszahlung sind unveränderbar.';
+  end if;
+  if old.status = 'PAID' then raise exception 'Bezahlte Auszahlungen sind abgeschlossen.'; end if;
+  if new.status = 'PAID' and old.status not in ('APPROVED','EXPORTED') then raise exception 'Nur freigegebene Auszahlungen können als bezahlt markiert werden.'; end if;
+  if new.status = 'EXPORTED' and old.status <> 'APPROVED' and old.status <> 'EXPORTED' then raise exception 'Nur freigegebene Auszahlungen können exportiert werden.'; end if;
+  return new;
+end $$;
+alter table public.immo_creator_payouts drop constraint if exists immo_creator_payouts_status_check;
+alter table public.immo_creator_payouts add constraint immo_creator_payouts_status_check check (status in ('READY','APPROVED','EXPORTED','PAID','FAILED'));
+alter table public.immo_creator_payouts drop column if exists returned_at;
+alter table public.immo_creator_payouts drop column if exists reissue_count;
 alter table public.immo_creator_payouts drop constraint if exists immo_creator_payouts_paid_via_check;
 alter table public.immo_creator_payouts drop constraint if exists immo_creator_payouts_bank_ref_check;
 alter table public.immo_creator_payouts drop column if exists paid_via;

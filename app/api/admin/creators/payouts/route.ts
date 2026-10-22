@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { periodLabel } from '@/lib/creator/billing';
-import { markPayoutPaid } from '@/lib/creator/billing-server';
+import { markPayoutPaid, markPayoutReturned, reissuePayout } from '@/lib/creator/billing-server';
 import { maskIban } from '@/lib/creator/iban';
 import { can } from '@/lib/creator/roles';
 import { painXml } from '@/lib/creator/sepa';
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   if (!('role' in a)) return a;
   const cols = 'id, statement_id, creator_id, amount_cents, iban_country, iban_last4, reference, status, created_at, approved_at, exported_at, paid_at, failed_reason, immo_creators(display_name), immo_creator_statements(period, billing_mode, status), immo_creator_payout_accounts(status)';
   const q = (c: string) => supabaseAdmin().from('immo_creator_payouts').select(c).order('created_at', { ascending: false }).limit(500);
-  let res = await q(`${cols}, paid_via, bank_ref`);
+  let res = await q(`${cols}, paid_via, bank_ref, returned_at, reissue_count`);
   if (res.error) res = await q(cols); // ohne Phase-4-Migration
   const data = res.data;
   type Row = { id: string; iban_country: string; iban_last4: string; immo_creator_payout_accounts?: { status: string } | null; immo_creator_statements?: { period: string } | null; [k: string]: unknown };
@@ -39,7 +39,7 @@ function debtor() {
 }
 
 const Input = z.object({
-  action: z.enum(['approve', 'export', 'paid', 'failed']),
+  action: z.enum(['approve', 'export', 'paid', 'failed', 'returned', 'reissue']),
   ids: z.array(z.string().uuid()).min(1).max(200),
   execution_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   reason: z.string().trim().max(300).optional(),
@@ -95,6 +95,22 @@ export async function POST(req: Request) {
       await audit('PAYOUT_EXPORTED', p.creator_id, a.actor, 'SUCCESS', { export: exportId, amount_cents: p.amount_cents });
     }
     return new NextResponse(xmlText, { headers: { ...noStore, 'Content-Type': 'application/xml; charset=utf-8', 'Content-Disposition': `attachment; filename="${exportId}.xml"` } });
+  }
+
+  if (d.action === 'returned') {
+    if (!d.reason) return j({ error: 'Bitte einen Grund angeben.' }, 400);
+    let n = 0;
+    try { for (const p of list.filter((x) => x.status === 'PAID')) if (await markPayoutReturned(p.id, a.actor, d.reason)) n++; }
+    catch (e) { return j({ error: e instanceof Error ? e.message : 'Nicht möglich.' }, 409); }
+    return j({ ok: true, returned: n });
+  }
+  if (d.action === 'reissue') {
+    let n = 0; const errors: string[] = [];
+    for (const p of list.filter((x) => x.status === 'RETURNED')) {
+      try { await reissuePayout(p.id, a.actor); n++; } catch (e) { errors.push(e instanceof Error ? e.message : 'Nicht möglich.'); }
+    }
+    if (!n && errors.length) return j({ error: errors[0] }, 409);
+    return j({ ok: true, reissued: n, skipped: list.length - n });
   }
 
   if (d.action === 'paid') {

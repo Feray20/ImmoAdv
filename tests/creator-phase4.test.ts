@@ -101,3 +101,17 @@ test('E-Mails: Rechnungs-Creator werden zur Rechnung geführt, Gutschrift-Creato
   assert.match(reminderMail('2026-10', 'Nahim').text, /noch keine Rechnung/);
   for (const m of [inv, reminderMail('2026-10', 'X')]) assert.doesNotMatch(m.text, /DE\d{2}\d{4,}/); // keine IBAN in Mails
 });
+
+test('Abgleich: Rückläufer einer bereits bezahlten Auszahlung wird erkannt, nie erneut als bezahlt', () => {
+  const paid = [{ ...open[0], status: 'PAID' }];
+  const tx = (dir: 'DBIT' | 'CRDT', e2e: string | null, ustrd = '') => ({ amountCents: 4635, currency: 'EUR', direction: dir, reversal: false, booked: true, bookingDate: '2026-11-25', endToEndId: e2e, remittance: ustrd, bankRef: null });
+  const r = matchPayouts([tx('CRDT', payoutEndToEnd(P1))], [], paid);
+  assert.equal(r.issues[0]?.kind, 'returned');
+  assert.equal(r.issues[0]?.payout_id, P1);
+  const viaText = matchPayouts([tx('CRDT', null, 'RETOURE AC04 ImmoAdv Creator 2026-10 CR-2026-001')], [], paid);
+  assert.equal(viaText.issues[0]?.payout_id, P1);
+  // dieselbe Belastung erneut eingelesen → keine zweite Bezahlt-Meldung
+  const again = matchPayouts([tx('DBIT', payoutEndToEnd(P1))], [], paid);
+  assert.equal(again.matches.length, 0);
+  assert.equal(again.unrelated, 1);
+});
