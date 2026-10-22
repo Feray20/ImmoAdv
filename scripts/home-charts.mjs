@@ -39,7 +39,7 @@ function chartWealth(m) {
   const desc = `Liniendiagramm: Nettovermögen (Wert minus Restschuld) über 25 Jahre. Bei stagnierendem Wert ${eur(net(0, years))}, bei 1 % ${eur(net(1, years))}, bei 2 % ${eur(net(2, years))}. Eigener Einsatz aus Eigenkapital und Zuzahlungen ${eur(inv(years))}.`;
   return svgTag(W, H, desc, g, m);
 }
-const wealthLegend = legend([[C.navy, 'Wert +2 % im Jahr'], [C.blue, 'Wert +1 % im Jahr'], [C.grey, 'Wert stagniert (0 %)', true], [C.red, 'Ihr Einsatz (Eigenkapital + Zuzahlungen)', true]]);
+const wealthLegend = legend([[C.navy, 'Wert +2 % im Jahr'], [C.blue, 'Wert +1 % im Jahr'], [C.grey, 'Wert stagniert (0 %)', true], [C.red, 'Dein Einsatz (Eigenkapital + Zuzahlungen)', true]]);
 
 // ---------- 2. Wohin die Miete fließt (Monat 1) ----------
 const vac = EX.rent * EX.vacancyPct / 100, costs = EX.nonRecoverable + EX.maintenanceQm * EX.area;
@@ -68,7 +68,7 @@ function chartFlow(m) {
   const desc = `Balkendiagramm Monat 1: Miete ${eur(EX.rent)}${zu ? ` plus Zuzahlung ${eur(zu)}` : ''}; Ausgaben Zins ${eur(a.interestM)}, Tilgung ${eur(a.principalM)}, Kosten und Leerstand ${eur(costs + vac)}.`;
   return svgTag(W, H, desc, g, m);
 }
-const flowLegend = legend([[C.blue, `Miete ${eur(EX.rent)}`], ...(zu ? [[C.red, `Ihre Zuzahlung ${eur(zu)}`]] : []), [C.grey, `Zins ${eur(a.interestM)}`], [C.mint, `Tilgung = Ihr Vermögen ${eur(a.principalM)}`], ['#CBD5E1', `Kosten & Leerstand ${eur(costs + vac)}`]]);
+const flowLegend = legend([[C.blue, `Miete ${eur(EX.rent)}`], ...(zu ? [[C.red, `Deine Zuzahlung ${eur(zu)}`]] : []), [C.grey, `Zins ${eur(a.interestM)}`], [C.mint, `Tilgung = dein Vermögen ${eur(a.principalM)}`], ['#CBD5E1', `Kosten & Leerstand ${eur(costs + vac)}`]]);
 
 // ---------- 3. Kaufnebenkosten je Bundesland ----------
 const SHORT = { 'Mecklenburg-Vorpommern': 'Meckl.-Vorp.', 'Nordrhein-Westfalen': 'Nordrhein-Westf.', 'Baden-Württemberg': 'Baden-Württ.', 'Schleswig-Holstein': 'Schleswig-Holst.' };
@@ -115,7 +115,7 @@ const html = `<!--charts:start-->
     <div class="why-cards">
       <article class="why-card"><span class="why-tag">Stagnation</span><h3>Wenn nichts wächst</h3><p>Auf dem Konto wächst bei Nullzins nichts – real schrumpft es. Bei einer vermieteten Immobilie baut die Tilgung auch dann Vermögen auf, wenn die Preise stagnieren. Voraussetzung: Miete und Reserve tragen die Rate.</p></article>
       <article class="why-card"><span class="why-tag warn">Krisenzeiten</span><h3>Kein Investment ist krisenfest</h3><p>2023 fielen die Preise für Wohnimmobilien im Schnitt um 8,4 % – der stärkste Rückgang seit Beginn der Statistik 2000 (Destatis). Wer mit Reserve, langer Zinsbindung und tragfähiger Miete gekauft hatte, musste nicht verkaufen und konnte abwarten.</p></article>
-      <article class="why-card"><span class="why-tag ok">Mit Verstand</span><h3>Krisen vorher durchrechnen</h3><p>ImmoAdv rechnet jedes Angebot mit Stresstest: Zins plus 2 Prozentpunkte, Mietausfall, Kipp-Zins und Anschlussfinanzierung. So sehen Sie vor dem Kauf, ob ein Objekt auch schlechte Jahre übersteht.</p></article>
+      <article class="why-card"><span class="why-tag ok">Mit Verstand</span><h3>Krisen vorher durchrechnen</h3><p>ImmoAdv rechnet jedes Angebot mit Stresstest: Zins plus 2 Prozentpunkte, Mietausfall, Kipp-Zins und Anschlussfinanzierung. So siehst du vor dem Kauf, ob ein Objekt auch schlechte Jahre übersteht.</p></article>
     </div>
   </div>
   <p class="hc-note">Allgemeine Information, keine Anlageberatung. Jede Geldanlage hat Risiken; Immobilienpreise können fallen. <a class="ck-link" href="/wissen">Wie funktioniert Geld? Alles Wichtige im Lernbereich</a></p>
@@ -124,8 +124,8 @@ const html = `<!--charts:start-->
   <h2 class="home-h2">Was eine vermietete Wohnung rechnerisch leistet</h2>
   <p class="hc-lead">Ein durchgerechnetes Beispiel: Eigentumswohnung in Hessen, ${eur(EX.price)} Kaufpreis, ${EX.area} m², ${eur(EX.rent)} Kaltmiete, ${eur(EX.equity)} Eigenkapital, ${String(EX.ratePct).replace('.', ',')} % Zins und ${EX.repaymentPct} % Tilgung.</p>
   <div class="hc-grid">
-    <figure class="hc-card hc-wide"><figcaption><strong>Vermögen nach 25 Jahren – selbst wenn der Wert stagniert</strong><span>Wert der Wohnung minus Restschuld. Die rote Linie zeigt Ihren eigenen Einsatz (Eigenkapital plus Zuzahlungen, zusammen ${eur(inv(years))}). Selbst bei stagnierendem Wert liegt das Vermögen mit ${eur(net(0, years))} darüber, weil der Mieter einen großen Teil der Tilgung trägt. Mit 1 bis 2 % Wertsteigerung im Jahr wächst es deutlich schneller.</span></figcaption>${both(chartWealth)}${wealthLegend}</figure>
-    <figure class="hc-card"><figcaption><strong>Wohin die Miete fließt</strong><span>Im Beispiel zahlen Sie ${eur(zu)} im Monat zu und tilgen gleichzeitig ${eur(a.principalM)}. Es fließt also mehr in Ihr Vermögen, als Sie zuzahlen. ImmoAdv zeigt das für jedes Angebot.</span></figcaption>${both(chartFlow)}${flowLegend}</figure>
+    <figure class="hc-card hc-wide"><figcaption><strong>Vermögen nach 25 Jahren – selbst wenn der Wert stagniert</strong><span>Wert der Wohnung minus Restschuld. Die rote Linie zeigt deinen eigenen Einsatz (Eigenkapital plus Zuzahlungen, zusammen ${eur(inv(years))}). Selbst bei stagnierendem Wert liegt das Vermögen mit ${eur(net(0, years))} darüber, weil der Mieter einen großen Teil der Tilgung trägt. Mit 1 bis 2 % Wertsteigerung im Jahr wächst es deutlich schneller.</span></figcaption>${both(chartWealth)}${wealthLegend}</figure>
+    <figure class="hc-card"><figcaption><strong>Wohin die Miete fließt</strong><span>Im Beispiel zahlst du ${eur(zu)} im Monat zu und tilgen gleichzeitig ${eur(a.principalM)}. Es fließt also mehr in dein Vermögen, als du zuzahlst. ImmoAdv zeigt das für jedes Angebot.</span></figcaption>${both(chartFlow)}${flowLegend}</figure>
     <figure class="hc-card"><figcaption><strong>Kaufnebenkosten je Bundesland</strong><span>Bei ${eur(EX.price)} Kaufpreis (ohne Makler) liegen zwischen ${n.min.name} und ${n.max.name} ${eur(n.max.v - n.min.v)}. Diese Kosten finanziert die Bank selten mit.</span></figcaption>${both(chartNk)}</figure>
   </div>
   <p class="hc-note">Beispielrechnung mit dem ImmoAdv-Rechenkern, keine Prognose und keine Anlageberatung. Vereinfacht: gleichbleibender Zins über die gesamte Laufzeit, ohne Steuern, Mietsteigerung und Rücklagen für größere Sanierungen. Wertentwicklung kann auch negativ sein. <a class="ck-link" href="/start">Mit eigenen Zahlen rechnen – kostenlos und ohne Konto</a></p>

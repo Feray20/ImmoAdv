@@ -27,7 +27,7 @@ const APP = {
 
 // Seitenliste: Pfad, Datei, Titel, Beschreibung, Brotkrumen, Indexierung, Zusatz-JSON-LD.
 const PAGES = [
-  { path: '/', file: 'index.html', title: 'Rechnet sich Ihre Immobilie? Rendite & Kreditmappe | ImmoAdv', desc: 'Kostenloser Schnellrechner für Kapitalanlage und Eigenheim: Rendite, Cashflow, Rate, Stresstest – plus bankfertige Kreditmappe. Unabhängig, ohne Provision.', crumbs: [], extra: ['website', 'app', 'howto'] },
+  { path: '/', file: 'index.html', title: 'Ist diese Immobilie eine gute Entscheidung? Kostenlos prüfen | ImmoAdv', desc: 'Kaufpreis, Nebenkosten, Rate, Risiken und Stresstest deiner Wunschimmobilie kostenlos prüfen – plus bankfertige Kreditmappe. Unabhängig, ohne Provision.', crumbs: [], extra: ['website', 'app', 'howto', 'homefaq'] },
   { path: '/wissen', title: `Immobilien und Geld verständlich erklärt – ${((f) => (Array.isArray(f) ? f : f.entries).length)(JSON.parse(readFileSync(new URL('../public/data/faq.json', import.meta.url), 'utf8')))} Antworten | ImmoAdv`, desc: 'Wissen in vier Phasen: Leistbarkeit, Objektprüfung, Steuern und Cashflow, Bankgespräch – verständlich erklärt, mit Formel und Rechtsgrundlage.', crumbs: ['Wissen'], extra: ['faq'] },
   { path: '/cockpit', file: null, skip: true, title: '', desc: '' },
   { path: '/suche', file: 'suche/index.html', template: 'wissen/index.html', title: 'Suche | ImmoAdv', noindex: true, desc: 'Rechner, Antworten und Fachbegriffe rund um Immobilienkauf und Finanzierung durchsuchen.', crumbs: ['Suche'] },

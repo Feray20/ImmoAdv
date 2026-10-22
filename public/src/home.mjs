@@ -26,7 +26,7 @@ if (qz) {
       const v = Math.max(0, Math.min(1.5, pct)), a = Math.PI * (1 - v / 1.5), x = 60 + 46 * Math.cos(a), y = 62 - 46 * Math.sin(a);
       const lvl = pct <= 0.9 ? 0 : pct <= 1.1 ? 1 : 2;
       return `<div class="qz-gauge l${lvl}"><svg viewBox="0 0 120 70" aria-hidden="true"><path d="M14 62A46 46 0 0 1 74.2 18.3" class="g0"/><path d="M74.2 18.3A46 46 0 0 1 90.8 27.8" class="g1"/><path d="M90.8 27.8A46 46 0 0 1 106 62" class="g2"/><line x1="60" y1="62" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="gn"/><circle cx="60" cy="62" r="4" class="gn"/></svg>
-        <div><strong>${Math.round(pct * 100)}\u00a0%</strong><span>Ihres Monatsbudgets</span></div></div>`;
+        <div><strong>${Math.round(pct * 100)}\u00a0%</strong><span>deines Monatsbudgets</span></div></div>`;
     };
     const result = () => {
       lv.length = 0;
@@ -45,27 +45,27 @@ if (qz) {
         burden = Math.max(0, -e.cashflow); burdenS = Math.max(0, -eS.cashflow);
         const cover = e.rate > 0 ? (rent - e.costs) / e.rate : 9;
         const cL = cover >= 1 ? 0 : cover >= 0.8 ? 1 : 2;
-        rows.push(lamp(cL, 'Miete trägt die Rate', `${Math.round(cover * 100)}\u00a0%`, cL === 0 ? 'Die Miete deckt nach Kosten die ganze Rate.' : `Die Miete deckt nach Kosten ${Math.round(cover * 100)}\u00a0% der Rate – den Rest zahlen Sie zu.`, 1));
+        rows.push(lamp(cL, 'Miete trägt die Rate', `${Math.round(cover * 100)}\u00a0%`, cL === 0 ? 'Die Miete deckt nach Kosten die ganze Rate.' : `Die Miete deckt nach Kosten ${Math.round(cover * 100)}\u00a0% der Rate – den Rest zahlst du zu.`, 1));
         const tL = burden <= budget * 0.9 ? 0 : burden <= budget * 1.1 ? 1 : 2;
-        rows.unshift(lamp(tL, 'Ihre Zuzahlung', burden > 0 ? E(burden) + ' / Monat' : 'keine', burden > 0 ? `Rate ${E(e.rate)} minus Miete nach Kosten. Davon tilgen Sie ${E(e.firstPrincipal)} – das ist Vermögensaufbau.` : `Die Miete trägt Rate und Kosten. Tilgung im ersten Monat: ${E(e.firstPrincipal)}.`));
+        rows.unshift(lamp(tL, 'Deine Zuzahlung', burden > 0 ? E(burden) + ' / Monat' : 'keine', burden > 0 ? `Rate ${E(e.rate)} minus Miete nach Kosten. Davon tilgst du ${E(e.firstPrincipal)} – das ist Vermögensaufbau.` : `Die Miete trägt Rate und Kosten. Tilgung im ersten Monat: ${E(e.firstPrincipal)}.`));
       } else {
         burden = rate; burdenS = rateS;
         const tL = rate <= budget * 0.9 ? 0 : rate <= budget * 1.1 ? 1 : 2;
         rows.unshift(lamp(tL, 'Monatliche Rate', E(rate), `Darlehen ${E(loan)} bei ${(i * 100).toLocaleString('de-DE')} % Zins und ${(t * 100).toLocaleString('de-DE')} % Tilgung. Hausgeld und Nebenkosten des Wohnens kommen hinzu.`));
       }
       const sL = burdenS <= budget ? 0 : burdenS <= budget * 1.2 ? 1 : 2;
-      rows.push(lamp(sL, 'Zins-Puffer', `+2\u00a0% Zins → ${E(burdenS)}`, sL === 0 ? 'Auch bei 2 Prozentpunkten mehr Zins bleiben Sie im Budget.' : 'Steigt der Zins bei der Anschlussfinanzierung um 2 Prozentpunkte, wird es eng.'));
+      rows.push(lamp(sL, 'Zins-Puffer', `+2\u00a0% Zins → ${E(burdenS)}`, sL === 0 ? 'Auch bei 2 Prozentpunkten mehr Zins bleibst du im Budget.' : 'Steigt der Zins bei der Anschlussfinanzierung um 2 Prozentpunkte, wird es eng.'));
       const pct = budget > 0 ? burden / budget : 2;
       const worst = Math.max(...lv);
       const head = ['Das sieht tragfähig aus.', 'Machbar – mit ein paar Stellschrauben.', 'So wird es schwierig.'][worst];
-      const tipTxt = worst === 0 ? 'Halten Sie das Ergebnis fest und bereiten Sie die Kreditmappe für die Bank vor.' : worst === 1 ? 'Mehr Eigenkapital, ein günstigeres Objekt oder eine längere Zinsbindung verbessern das Bild.' : 'Prüfen Sie Kaufpreis, Eigenkapital oder Ihr Monatsbudget – oder rechnen Sie ein anderes Objekt durch.';
+      const tipTxt = worst === 0 ? 'Halte das Ergebnis fest und bereite die Kreditmappe für die Bank vor.' : worst === 1 ? 'Mehr Eigenkapital, ein günstigeres Objekt oder eine längere Zinsbindung verbessern das Bild.' : 'Prüfe Kaufpreis, Eigenkapital oder dein Monatsbudget – oder rechne ein anderes Objekt durch.';
       $('qz_out').innerHTML = `<div class="qz-sum l${worst}"><h3>${head}</h3><p>${tipTxt}</p></div>${gauge(pct)}<ul class="qz-lamps">${rows.join('')}</ul>`;
       try { window.iaTrack?.('qz_result', { use, worst }); } catch { /* ignore */ }
     };
     const show = (k) => {
       step = k;
       qz.querySelectorAll('.qz-step').forEach((f) => { f.hidden = Number(f.dataset.qz) !== k; });
-      $('qz_count').textContent = k < 4 ? `Schritt ${k} von 3` : 'Ihr Ergebnis';
+      $('qz_count').textContent = k < 4 ? `Schritt ${k} von 3` : 'Dein Ergebnis';
       $('qz_bar').style.width = Math.min(100, (k / 3) * 100) + '%';
       if (k === 4) result();
       const f = qz.querySelector(`.qz-step[data-qz="${k}"]`);
