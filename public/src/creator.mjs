@@ -1,0 +1,486 @@
+// ImmoAdv Creator Partner: Bewerbung (einmaliges Onboarding), Prüfstatus und Creator-Portal.
+// Gemeinsame Anmeldung mit dem Kundenbereich (Supabase). Alle Prüfungen passieren zusätzlich auf dem Server.
+// Sicherheitstexte beschreiben nur Maßnahmen, die tatsächlich umgesetzt sind (siehe lib/creator/*).
+import { api, dt, esc, loginForm, logout, token } from './sess.mjs';
+
+const root = document.getElementById('creator');
+const $ = (s, el = document) => el.querySelector(s);
+let me = null;
+let step = null;
+let view = 'home';
+
+const STEPS = [['account', 'Konto'], ['profile', 'Profil'], ['social', 'Social Media'], ['business', 'Rechnungsdaten'], ['payout', 'Auszahlung'], ['agreement', 'Vereinbarung'], ['review', 'Prüfen']];
+const CATS = [['immobilien', 'Immobilien'], ['finanzen', 'Finanzen'], ['business', 'Business'], ['entrepreneurship', 'Entrepreneurship'], ['lifestyle', 'Lifestyle'], ['technology', 'Technology'], ['education', 'Education'], ['other', 'Sonstiges']];
+const RANGES = [['', 'keine Angabe'], ['lt_1k', 'unter 1.000'], ['1k_10k', '1.000 – 10.000'], ['10k_50k', '10.000 – 50.000'], ['50k_100k', '50.000 – 100.000'], ['100k_500k', '100.000 – 500.000'], ['500k_1m', '500.000 – 1 Mio.'], ['gt_1m', 'über 1 Mio.']];
+const PLATFORMS = [
+  ['youtube', 'YouTube', { channel: true, handle: 'Handle (z. B. @kanal)', range: 'Abonnenten' }],
+  ['tiktok', 'TikTok', { handle: 'Username', range: 'Follower' }],
+  ['instagram', 'Instagram', { handle: 'Username', range: 'Follower' }],
+  ['x', 'X', { handle: 'Username', range: 'Follower' }],
+  ['linkedin', 'LinkedIn', {}],
+  ['other', 'Andere Plattform', { label: true, handle: 'Username' }],
+];
+const COUNTRIES = [['DE', 'Deutschland'], ['AT', 'Österreich'], ['CH', 'Schweiz'], ['NL', 'Niederlande'], ['BE', 'Belgien'], ['LU', 'Luxemburg'], ['FR', 'Frankreich'], ['IT', 'Italien'], ['ES', 'Spanien'], ['PT', 'Portugal'], ['PL', 'Polen'], ['CZ', 'Tschechien'], ['DK', 'Dänemark'], ['SE', 'Schweden'], ['NO', 'Norwegen'], ['FI', 'Finnland'], ['IE', 'Irland'], ['GB', 'Vereinigtes Königreich'], ['GR', 'Griechenland'], ['HR', 'Kroatien'], ['HU', 'Ungarn'], ['RO', 'Rumänien'], ['BG', 'Bulgarien'], ['SI', 'Slowenien'], ['SK', 'Slowakei'], ['EE', 'Estland'], ['LV', 'Lettland'], ['LT', 'Litauen'], ['CY', 'Zypern'], ['MT', 'Malta'], ['TR', 'Türkei'], ['AE', 'Vereinigte Arabische Emirate'], ['US', 'USA']];
+const VAT = [['small_business', 'Kleinunternehmer (§ 19 UStG) – ohne Umsatzsteuer'], ['vat_registered', 'Umsatzsteuerpflichtig'], ['not_applicable', 'Nicht anwendbar / Sitz im Ausland']];
+const PAY_STATUS = { PROVIDED: ['ok', 'Hinterlegt'], VERIFIED: ['ok', 'Geprüft'], VERIFICATION_REQUIRED: ['warn', 'In Prüfung'], SUPERSEDED: ['', 'Abgelöst'] };
+
+// ---------- Hilfen ----------
+const opts = (list, cur) => list.map(([v, l]) => `<option value="${esc(v)}"${v === (cur ?? '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
+const toast = (t, bad = false) => {
+  let el = $('#crToast');
+  if (!el) { el = document.createElement('div'); el.id = 'crToast'; el.className = 'pt-toast'; el.setAttribute('role', 'status'); document.body.append(el); }
+  el.textContent = t; el.classList.toggle('bad', bad); el.classList.add('on');
+  clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2600);
+};
+function formMsg(form, text, field) {
+  form.querySelectorAll('.bad').forEach((x) => x.classList.remove('bad'));
+  const m = form.querySelector('.cr-msg');
+  if (m) { m.hidden = !text; m.className = 'cr-msg pt-alert bad'; m.textContent = text || ''; }
+  if (field) { const f = form.querySelector(`[name="${CSS.escape(field.split('.').pop())}"]`); if (f) { f.classList.add('bad'); f.focus(); } }
+}
+async function save(form, body, url = '/api/creator/me', method = 'PATCH') {
+  const btn = form.querySelector('button[type=submit]');
+  if (btn) btn.disabled = true;
+  try {
+    const r = await api(url, { method, body: JSON.stringify(body) });
+    if (!r.ok) { formMsg(form, r.data?.error || 'Speichern fehlgeschlagen.', r.data?.field); return null; }
+    formMsg(form, '');
+    return r.data;
+  } finally { if (btn) btn.disabled = false; }
+}
+const val = (f, n) => (f.elements[n]?.value ?? '').trim();
+
+// IBAN: gleiche Prüfung wie auf dem Server (lib/creator/iban.ts), nur als Komfort vor dem Absenden.
+const IBAN_LEN = { AD: 24, AE: 23, AL: 28, AT: 20, AZ: 28, BA: 20, BE: 16, BG: 22, BH: 22, BI: 27, BR: 29, BY: 28, CH: 21, CR: 22, CY: 28, CZ: 24, DE: 22, DJ: 27, DK: 18, DO: 28, EE: 20, EG: 29, ES: 24, FI: 18, FK: 18, FO: 18, FR: 27, GB: 22, GE: 22, GI: 23, GL: 18, GR: 27, GT: 28, HR: 21, HU: 28, IE: 22, IL: 23, IQ: 23, IS: 26, IT: 27, JO: 30, KW: 30, KZ: 20, LB: 28, LC: 32, LI: 21, LT: 20, LU: 20, LV: 21, LY: 25, MC: 27, MD: 24, ME: 22, MK: 19, MN: 20, MR: 27, MT: 31, MU: 30, NI: 28, NL: 18, NO: 15, OM: 23, PK: 24, PL: 28, PS: 29, PT: 25, QA: 29, RO: 24, RS: 22, RU: 33, SA: 24, SC: 31, SD: 18, SE: 24, SI: 19, SK: 24, SM: 27, SO: 23, ST: 25, SV: 28, TL: 23, TN: 24, TR: 26, UA: 29, VA: 22, VG: 24, XK: 20, YE: 30 };
+const SEPA = new Set(['AD', 'AT', 'BE', 'BG', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GI', 'GR', 'HR', 'HU', 'IE', 'IS', 'IT', 'LI', 'LT', 'LU', 'LV', 'MC', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK', 'SM', 'VA']);
+const normIban = (s) => String(s || '').toUpperCase().replace(/[\s\-.]/g, '');
+function ibanOk(raw) {
+  const i = normIban(raw);
+  if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{8,30}$/.test(i) || IBAN_LEN[i.slice(0, 2)] !== i.length) return null;
+  let rest = 0;
+  for (const ch of i.slice(4) + i.slice(0, 4)) { const v = ch >= 'A' ? String(ch.charCodeAt(0) - 55) : ch; for (const d of v) rest = (rest * 10 + (d.charCodeAt(0) - 48)) % 97; }
+  return rest === 1 ? { country: i.slice(0, 2), last4: i.slice(-4), sepa: SEPA.has(i.slice(0, 2)) } : null;
+}
+const mask = (c, l4) => `${c}${'•'.repeat(10)}${l4}`;
+
+// ---------- Start ----------
+async function boot() {
+  if (!token()) { landing(false); return; }
+  const r = await api('/api/creator/me');
+  if (r.status === 401) { landing(false); return; }
+  if (!r.ok) { root.innerHTML = `<div class="cr-wrap"><div class="pt-alert bad">${esc(r.data?.error || 'Der Creator-Bereich konnte nicht geladen werden.')} <button type="button" class="btn btn-outline" id="crRetry">Erneut versuchen</button></div></div>`; $('#crRetry').onclick = boot; return; }
+  me = r.data;
+  routeByStatus();
+}
+
+function routeByStatus() {
+  if (!me.creator) { landing(true); return; }
+  const s = me.creator.status;
+  if (s === 'DRAFT' || s === 'INFO_REQUESTED') wizard();
+  else if (s === 'SUBMITTED' || s === 'UNDER_REVIEW') pending();
+  else if (s === 'ACTIVE') portal();
+  else closed(s);
+}
+
+async function refresh() {
+  const r = await api('/api/creator/me');
+  if (r.ok) me = r.data;
+  return r.ok;
+}
+
+// ---------- Landingpage ----------
+function landing(loggedIn) {
+  document.title = 'ImmoAdv Creator Partner';
+  root.innerHTML = `<div class="cr-wrap">
+    <section class="cr-hero"><span class="cr-kick">Creator Partner</span>
+      <h1>ImmoAdv Creator Partner</h1>
+      <p class="lead">Erstelle Content in deinem eigenen Stil und erhalte Zugang zu ImmoAdv Tools, Kampagnen, Assets und einem transparenten Creator-System.</p>
+      <p>Du bringst deine Community und deinen eigenen Content-Stil mit. ImmoAdv stellt dir die notwendigen Informationen, Tools, Assets und Unterstützung bereit.</p>
+      <form id="crStart"><div class="cr-hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+        <button class="btn btn-dark btn-lg" type="submit">Als Creator bewerben</button></form>
+      <p class="cr-msg pt-alert bad" hidden></p>
+    </section>
+    <div class="cr-cards">
+      <article class="pt-card"><h3>Einmal eingeben</h3><p>Du gibst deine Angaben einmal ein. Wir verwenden sie danach überall wieder – für Profil, Abrechnung und Auszahlung.</p></article>
+      <article class="pt-card"><h3>Keine Konto-Verbindung</h3><p>Wir brauchen nur öffentliche Profilangaben. Keine Passwörter, kein Login mit deinen Social-Media-Konten.</p></article>
+      <article class="pt-card"><h3>Transparent</h3><p>Nach der Freigabe siehst du im Creator-Portal jederzeit deinen Stand, deine Vereinbarung und deine Zahlungsdaten.</p></article>
+    </div>
+    <p class="form-note">Du hast schon ein Creator-Konto? Klicke auf „Als Creator bewerben“ und melde dich an – dein Stand bleibt erhalten.</p>
+  </div>`;
+  const ts = Date.now();
+  $('#crStart').onsubmit = async (e) => {
+    e.preventDefault();
+    if (!loggedIn) { authForm(); return; }
+    const btn = e.target.querySelector('button'); btn.disabled = true;
+    const r = await api('/api/creator/me', { method: 'POST', body: JSON.stringify({ website: e.target.elements.website.value, ts }) });
+    btn.disabled = false;
+    if (!r.ok) { const m = $('.cr-msg'); m.hidden = false; m.textContent = r.data?.error || 'Das hat nicht geklappt. Bitte erneut versuchen.'; return; }
+    me = r.data; step = 'account'; routeByStatus();
+  };
+}
+
+function authForm() {
+  loginForm(root, {
+    title: 'Creator-Konto',
+    lead: 'Melde dich mit deinem ImmoAdv-Konto an, um deine Bewerbung zu beginnen oder fortzusetzen.',
+    signupLead: 'Lege dein Creator-Konto an. Danach bestätigst du deine E-Mail-Adresse und kannst deine Bewerbung ausfüllen.',
+    note: 'Nach der Registrierung erhältst du eine E-Mail zur Bestätigung deiner Adresse.',
+    signup: { next: '/creator' },
+  });
+  $('[data-mode="signup"]', root)?.click();
+}
+
+// ---------- Onboarding-Assistent ----------
+function wizard() {
+  document.title = 'Bewerbung | ImmoAdv Creator';
+  const st = me.steps;
+  if (!step) step = me.creator.status === 'INFO_REQUESTED' ? 'review' : (STEPS.find(([k]) => k !== 'review' && !st[k].done)?.[0] || 'review');
+  const idx = STEPS.findIndex(([k]) => k === step);
+  root.innerHTML = `<div class="cr-wrap">
+    <div class="ad-h-row" style="margin-bottom:12px"><a class="pt-brand dark" href="/creator"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><button type="button" class="btn btn-outline btn-sm" id="crOut">Abmelden</button></div>
+    ${me.creator.status === 'INFO_REQUESTED' ? `<div class="pt-alert warn"><strong>ImmoAdv benötigt noch eine Information von dir.</strong>${me.creator.info_request ? `<p style="margin:6px 0 0;white-space:pre-wrap">${esc(me.creator.info_request)}</p>` : ''}${step === 'review' ? '<p style="margin:10px 0 0"><button type="button" class="btn btn-dark btn-sm" data-step="account">Angabe ergänzen</button></p>' : ''}</div>` : ''}
+    <ol class="cr-steps" aria-label="Schritte der Bewerbung">${STEPS.map(([k, l], i) => `<li><button type="button" data-step="${k}" class="${k !== 'review' && st[k].done ? 'done' : ''}"${k === step ? ' aria-current="step"' : ''}><i>${k !== 'review' && st[k].done ? '' : i + 1}</i>${esc(l)}</button></li>`).join('')}</ol>
+    <section class="pt-card cr-form" id="crStep"></section>
+    <p class="form-note">Schritt ${idx + 1} von ${STEPS.length} · Deine Angaben werden mit jedem Schritt gespeichert.</p></div>`;
+  $('#crOut').onclick = logout;
+  root.querySelectorAll('[data-step]').forEach((b) => b.onclick = () => { step = b.dataset.step; wizard(); });
+  const next = async () => { await refresh(); const i = STEPS.findIndex(([k]) => k === step); step = STEPS[Math.min(i + 1, STEPS.length - 1)][0]; routeByStatus(); window.scrollTo({ top: 0 }); };
+  const back = idx > 0 ? () => { step = STEPS[idx - 1][0]; wizard(); } : null;
+  renderSection(step, $('#crStep'), { onSaved: next, back, wizard: true });
+  $('#crStep').querySelector('input:not([readonly]),select,textarea')?.focus({ preventScroll: true });
+}
+
+const navRow = (o, label = 'Speichern und weiter') => `<p class="cr-msg pt-alert bad" hidden></p><div class="wiz-nav">${o.back ? '<button type="button" class="btn btn-outline" data-back>Zurück</button>' : '<span></span>'}<button type="submit" class="btn btn-dark">${esc(o.wizard ? label : 'Speichern')}</button></div>`;
+const bindBack = (el, o) => { const b = el.querySelector('[data-back]'); if (b && o.back) b.onclick = o.back; };
+const lockNote = '<div class="pt-alert">Deine Angaben werden gerade geprüft und können in diesem Moment nicht geändert werden.</div>';
+
+function renderSection(key, el, o) {
+  ({ account: secAccount, profile: secProfile, social: secSocial, business: secBusiness, payout: secPayout, agreement: secAgreement, review: secReview })[key](el, o);
+}
+
+function secAccount(el, o) {
+  const c = me.creator;
+  el.innerHTML = `<h2>Dein Konto</h2><form novalidate>
+    <div class="ad-grid2">
+      <label>Vorname*<input name="first_name" autocomplete="given-name" required maxlength="80" value="${esc(c.first_name || '')}"></label>
+      <label>Nachname*<input name="last_name" autocomplete="family-name" required maxlength="80" value="${esc(c.last_name || '')}"></label>
+      <label>E-Mail<input value="${esc(me.email)}" readonly aria-describedby="crMailSt"><small class="hint" id="crMailSt">${me.email_confirmed ? '<span class="st ok">✓ bestätigt</span>' : '<span class="st warn">noch nicht bestätigt – bitte den Link in unserer E-Mail öffnen</span>'}</small></label>
+      <label>Land*<select name="country" required autocomplete="country"><option value="">Bitte wählen</option>${opts(COUNTRIES, c.country)}</select></label>
+      <label>Telefon <small class="hint">optional</small><input name="phone" type="tel" autocomplete="tel" maxlength="40" value="${esc(c.phone || '')}"></label>
+    </div>${navRow(o)}</form>`;
+  const f = el.querySelector('form');
+  bindBack(el, o);
+  if (!me.steps.account.editable) { f.querySelectorAll('input,select').forEach((x) => { x.disabled = true; }); f.querySelector('.wiz-nav').remove(); return; }
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const d = await save(f, { section: 'account', data: { first_name: val(f, 'first_name'), last_name: val(f, 'last_name'), country: val(f, 'country'), phone: val(f, 'phone') || null } });
+    if (d) { me = d; o.onSaved?.(); }
+  };
+}
+
+function secProfile(el, o) {
+  const c = me.creator;
+  el.innerHTML = `<h2>Dein Creator-Profil</h2><p class="form-note">So stellst du dich ImmoAdv vor. Dein Profil ist nicht öffentlich.</p><form novalidate>
+    <div class="ad-grid2">
+      <label>Creator-Name / Anzeigename*<input name="display_name" required maxlength="80" value="${esc(c.display_name || '')}"></label>
+      <label>Unternehmen <small class="hint">optional</small><input name="company" maxlength="120" autocomplete="organization" value="${esc(c.company || '')}"></label>
+      <label class="full">Website <small class="hint">optional</small><input name="website" type="url" inputmode="url" maxlength="200" placeholder="https://" value="${esc(c.website || '')}"></label>
+      <label class="full">Kurzbeschreibung <small class="hint">optional, max. 600 Zeichen</small><textarea name="bio" maxlength="600" rows="4">${esc(c.bio || '')}</textarea></label>
+      <fieldset class="cr-cats full"><legend>Content-Kategorien*</legend>${CATS.map(([v, l]) => `<label><input type="checkbox" name="categories" value="${v}"${(c.categories || []).includes(v) ? ' checked' : ''}>${esc(l)}</label>`).join('')}</fieldset>
+    </div>${navRow(o)}</form>`;
+  const f = el.querySelector('form');
+  bindBack(el, o);
+  if (!me.steps.profile.editable) { f.querySelectorAll('input,select,textarea').forEach((x) => { x.disabled = true; }); f.querySelector('.wiz-nav').remove(); return; }
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const cats = [...f.querySelectorAll('[name=categories]:checked')].map((x) => x.value);
+    if (!cats.length) { formMsg(f, 'Bitte mindestens eine Kategorie wählen.'); return; }
+    const d = await save(f, { section: 'profile', data: { display_name: val(f, 'display_name'), company: val(f, 'company') || null, website: val(f, 'website') || null, bio: val(f, 'bio') || null, categories: cats } });
+    if (d) { me = d; o.onSaved?.(); }
+  };
+}
+
+function secSocial(el, o) {
+  const have = (p) => me.socials.find((s) => s.platform === p) || null;
+  el.innerHTML = `<h2>Social Media</h2>
+    <div class="cr-note"><strong>Keine Verbindung deiner Social-Media-Konten.</strong> Du musst nichts verbinden – kein Login, keine Passwörter, kein API-Zugriff. ImmoAdv benötigt nur die öffentlichen Angaben deines Profils. Gib die Plattformen an, auf denen du aktiv bist (mindestens eine).</div>
+    <form novalidate>${PLATFORMS.map(([p, name, cfg]) => { const s = have(p); return `<details class="cr-plat" data-p="${p}"${s ? ' open' : ''}><summary>${esc(name)}${s ? '<span class="st ok">angegeben</span>' : ''}</summary><div class="ad-grid2">
+      ${cfg.label ? `<label>Plattform<input name="platform_label" maxlength="40" value="${esc(s?.platform_label || '')}"></label>` : ''}
+      ${cfg.channel ? `<label>Kanalname<input name="channel_name" maxlength="100" value="${esc(s?.channel_name || '')}"></label>` : ''}
+      ${cfg.handle ? `<label>${esc(cfg.handle)}<input name="handle" maxlength="100" autocapitalize="none" spellcheck="false" value="${esc(s?.handle || '')}"></label>` : ''}
+      <label class="${cfg.handle || cfg.channel ? '' : 'full'}">Profil-URL<input name="url" type="url" inputmode="url" maxlength="300" placeholder="https://" autocapitalize="none" spellcheck="false" value="${esc(s?.url || '')}"></label>
+      ${cfg.range ? `<label>${esc(cfg.range)} <small class="hint">optional, ungefähr</small><select name="follower_range">${opts(RANGES, s?.follower_range || '')}</select></label>` : ''}
+    </div></details>`; }).join('')}${navRow(o)}</form>`;
+  const f = el.querySelector('form');
+  bindBack(el, o);
+  if (!me.steps.social.editable) { f.querySelectorAll('input,select').forEach((x) => { x.disabled = true; }); f.querySelector('.wiz-nav').remove(); return; }
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const list = [];
+    for (const d of f.querySelectorAll('.cr-plat')) {
+      const g = (n) => (d.querySelector(`[name=${n}]`)?.value || '').trim();
+      if (!g('url')) continue;
+      list.push({ platform: d.dataset.p, platform_label: g('platform_label') || null, channel_name: g('channel_name') || null, handle: g('handle') || null, url: g('url'), follower_range: g('follower_range') || null });
+    }
+    if (!list.length) { formMsg(f, 'Bitte mindestens ein öffentliches Profil mit URL angeben.'); return; }
+    const d = await save(f, { section: 'social', data: { socials: list } });
+    if (d) { me = d; o.onSaved?.(); }
+  };
+}
+
+function secBusiness(el, o) {
+  const b = me.business || {};
+  const company = b.entity_type === 'company';
+  el.innerHTML = `<h2>Business- und Rechnungsdaten</h2><p class="form-note">Wir fragen nur, was für Gutschriften und Rechnungen nötig ist.</p><form novalidate>
+    <div class="seg" role="radiogroup" aria-label="Art" style="margin-bottom:12px"><button type="button" role="radio" data-et="individual" aria-selected="${!company}">Privatperson / Einzelunternehmen</button><button type="button" role="radio" data-et="company" aria-selected="${company}">Unternehmen</button></div>
+    <input type="hidden" name="entity_type" value="${company ? 'company' : 'individual'}">
+    <div class="ad-grid2">
+      <label class="full" id="crLn">${company ? 'Firma*' : 'Vollständiger Name*'}<input name="legal_name" required maxlength="160" value="${esc(b.legal_name || [me.creator.first_name, me.creator.last_name].filter(Boolean).join(' '))}"></label>
+      <label id="crLf"${company ? '' : ' hidden'}>Rechtsform<input name="legal_form" maxlength="60" placeholder="z. B. GmbH, UG, GbR" value="${esc(b.legal_form || '')}"></label>
+      <label class="full">Straße und Hausnummer*<input name="street" required maxlength="160" autocomplete="street-address" value="${esc(b.street || '')}"></label>
+      <label>PLZ*<input name="postal_code" required maxlength="12" autocomplete="postal-code" inputmode="numeric" value="${esc(b.postal_code || '')}"></label>
+      <label>Ort*<input name="city" required maxlength="80" autocomplete="address-level2" value="${esc(b.city || '')}"></label>
+      <label>Land*<select name="country" required><option value="">Bitte wählen</option>${opts(COUNTRIES, b.country || me.creator.country)}</select></label>
+      <label>Rechnungs-E-Mail*<input name="billing_email" type="email" required maxlength="200" value="${esc(b.billing_email || me.email)}"></label>
+      <label class="full">Umsatzsteuer*<select name="vat_status" required><option value="">Bitte wählen</option>${opts(VAT, b.vat_status)}</select></label>
+      <label>Steuernummer <small class="hint">falls vorhanden</small><input name="tax_number" maxlength="30" value="${esc(b.tax_number || '')}"></label>
+      <label>USt-IdNr. <small class="hint">falls vorhanden</small><input name="vat_id" maxlength="15" autocapitalize="characters" value="${esc(b.vat_id || '')}"></label>
+    </div><p class="form-note">Hinweis: ImmoAdv leistet keine Steuerberatung. Bitte wähle die Umsatzsteuer-Angabe so, wie sie für dich gilt.</p>${navRow(o)}</form>`;
+  const f = el.querySelector('form');
+  bindBack(el, o);
+  el.querySelectorAll('[data-et]').forEach((x) => x.onclick = () => {
+    const co = x.dataset.et === 'company';
+    el.querySelectorAll('[data-et]').forEach((y) => y.setAttribute('aria-selected', String(y === x)));
+    f.elements.entity_type.value = x.dataset.et;
+    $('#crLn', el).firstChild.textContent = co ? 'Firma*' : 'Vollständiger Name*';
+    $('#crLf', el).hidden = !co;
+  });
+  if (!me.steps.business.editable) { f.querySelectorAll('input,select,button').forEach((x) => { x.disabled = true; }); f.querySelector('.wiz-nav').remove(); return; }
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const d = await save(f, { section: 'business', data: {
+      entity_type: f.elements.entity_type.value, legal_name: val(f, 'legal_name'), legal_form: f.elements.entity_type.value === 'company' ? val(f, 'legal_form') || null : null,
+      street: val(f, 'street'), postal_code: val(f, 'postal_code'), city: val(f, 'city'), country: val(f, 'country'),
+      tax_number: val(f, 'tax_number') || null, vat_id: val(f, 'vat_id') || null, vat_status: val(f, 'vat_status'), billing_email: val(f, 'billing_email'),
+    } });
+    if (d) { me = d; o.onSaved?.(); }
+  };
+}
+
+// ---------- Zahlungsdaten ----------
+const SECURITY_BOX = `<div class="cr-sec" role="note"><h3><span aria-hidden="true">🔒</span> Deine Zahlungsdaten sind geschützt</h3>
+  <p>Deine IBAN wird ausschließlich für die Abwicklung deiner vereinbarten Auszahlungen verwendet. Sie wird nicht öffentlich in deinem Creator-Profil angezeigt und nicht für Marketingzwecke verwendet.</p>
+  <p>Der Zugriff auf Zahlungsdaten ist rollen- und berechtigungsabhängig. Sensible Zahlungsinformationen werden besonders geschützt und Zugriffe auf besonders geschützte Daten werden aus Sicherheits- und Auditgründen protokolliert.</p>
+  <p>Im Creator-Portal und im Admin-Bereich werden sensible Zahlungsdaten grundsätzlich nur angezeigt, soweit sie für die jeweilige Aufgabe erforderlich sind.</p>
+  <button type="button" class="link-btn" data-sec>Mehr über Sicherheit erfahren</button></div>`;
+
+const SECURITY_ITEMS = [
+  ['⇄', 'Verschlüsselte Übertragung', 'Deine Daten werden ausschließlich über geschützte Verbindungen (HTTPS/TLS) übertragen.'],
+  ['⚿', 'Zugriffskontrolle', 'Nur autorisierte Benutzer und Systeme erhalten Zugriff entsprechend ihrer Berechtigung. Administratoren melden sich mit zweitem Faktor an.'],
+  ['▣', 'Geschützte Speicherung', 'Deine IBAN wird verschlüsselt gespeichert und ist an dein Creator-Konto gebunden. Sie ist nie öffentlich zugänglich.'],
+  ['••', 'Maskierte Darstellung', 'Im normalen Portal wird deine IBAN beispielsweise so dargestellt: DE••••••••••4821'],
+  ['✎', 'Audit', 'Sicherheitsrelevante Zugriffe und Änderungen werden nachvollziehbar protokolliert – zum Beispiel jedes Anzeigen der vollständigen Zahlungsdaten im Admin-Bereich.'],
+  ['⊘', 'Keine Social-Media-Verbindung', 'Deine Social-Media-Accounts werden nicht benötigt, um deine Auszahlung zu verwalten.'],
+];
+const securityList = () => `<ul class="cr-sec-list">${SECURITY_ITEMS.map(([i, t, d]) => `<li><span aria-hidden="true">${i}</span><div><strong>${esc(t)}</strong><p>${esc(d)}</p></div></li>`).join('')}</ul>`;
+
+function securityModal() {
+  const d = document.createElement('dialog');
+  d.className = 'ad-dlg';
+  d.setAttribute('aria-labelledby', 'crSecT');
+  d.innerHTML = `<div class="ad-dlg-in"><div class="ad-h-row"><h2 id="crSecT" style="margin:0;color:#0F2C59">Wie schützt ImmoAdv deine Zahlungsdaten?</h2><button type="button" class="stage-x" data-x aria-label="Schließen">×</button></div>${securityList()}<p class="form-note">Wir schützen deine Daten nach aktuellen Sicherheitsstandards und mehrstufig. Einen absoluten Schutz kann kein Anbieter versprechen – deshalb kombinieren wir mehrere Maßnahmen.</p><div class="wiz-nav"><span></span><button type="button" class="btn btn-dark" data-x>Verstanden</button></div></div>`;
+  document.body.append(d);
+  d.querySelectorAll('[data-x]').forEach((b) => b.onclick = () => d.close());
+  d.addEventListener('close', () => d.remove());
+  d.showModal();
+}
+
+function secPayout(el, o) {
+  const p = me.payout;
+  const editable = me.steps.payout.editable;
+  const current = p ? `<div class="pt-card" style="background:#F8FAFC"><h3 style="margin-top:0">Aktuelle Zahlungsdaten</h3><dl class="cr-review"><dt>Kontoinhaber</dt><dd>${esc(p.holder_name)}</dd><dt>IBAN</dt><dd class="cr-mask">${esc(p.iban_masked)}</dd>${p.bic ? `<dt>BIC</dt><dd>${esc(p.bic)}</dd>` : ''}<dt>Status</dt><dd><span class="st ${PAY_STATUS[p.status]?.[0] || ''}">${esc(PAY_STATUS[p.status]?.[1] || p.status)}</span></dd><dt>Hinterlegt am</dt><dd>${dt(p.created_at)}</dd></dl>
+    ${p.status === 'VERIFICATION_REQUIRED' ? '<p class="form-note">Deine geänderten Zahlungsdaten werden geprüft, bevor wir darauf auszahlen.</p>' : ''}
+    ${editable ? '<button type="button" class="btn btn-outline" id="crPayChange">Zahlungsdaten ändern</button>' : ''}</div>` : '';
+  el.innerHTML = `<h2>Deine Auszahlung</h2><p>Damit wir dir deine vereinbarte Vergütung auszahlen können, benötigen wir deine Zahlungsdaten.</p>${current}<div id="crPayForm"></div>
+    ${o.wizard && p ? `<div class="wiz-nav" id="crPayNav">${o.back ? '<button type="button" class="btn btn-outline" data-back>Zurück</button>' : '<span></span>'}<button type="button" class="btn btn-dark" data-next>Weiter</button></div>` : ''}`;
+  bindBack(el, o);
+  el.querySelector('[data-next]')?.addEventListener('click', () => o.onSaved?.());
+  if (!editable) { if (!p) el.querySelector('#crPayForm').innerHTML = lockNote; return; }
+  if (!p) payoutForm(el.querySelector('#crPayForm'), o, false);
+  else $('#crPayChange', el).onclick = () => {
+    $('#crPayChange', el).remove();
+    $('#crPayNav', el)?.remove();
+    payoutForm(el.querySelector('#crPayForm'), o, true);
+  };
+}
+
+function payoutForm(box, o, change) {
+  box.innerHTML = `<form novalidate autocomplete="off">
+    ${change ? '<h3>Zahlungsdaten ändern</h3><div class="pt-alert warn">Eine Änderung deiner Zahlungsdaten kann Auswirkungen auf bevorstehende Auszahlungen haben. Aus Sicherheitsgründen erhältst du eine Bestätigung per E-Mail.</div>' : '<h3>Bankkonto</h3>'}
+    <div class="ad-grid2">
+      <label class="full">Kontoinhaber*<input name="holder_name" required maxlength="140" autocomplete="off" value="${esc(change ? '' : (me.business?.legal_name || [me.creator.first_name, me.creator.last_name].filter(Boolean).join(' ')))}"></label>
+    </div>
+    ${SECURITY_BOX}
+    <div class="ad-grid2">
+      <label class="full">IBAN*<input name="iban" class="cr-iban" required maxlength="42" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="DE89 3704 0044 0532 0130 00" aria-describedby="crIbanHint"><small class="hint" id="crIbanHint">Leerzeichen sind erlaubt.</small></label>
+      <label class="full" id="crBic">BIC <small class="hint" id="crBicHint">nur nötig für Konten außerhalb des SEPA-Raums</small><input name="bic" maxlength="11" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+    </div>
+    <p class="cr-msg pt-alert bad" hidden></p>
+    <div class="wiz-nav">${change ? '<button type="button" class="btn btn-outline" data-cancel>Abbrechen</button>' : o.back ? '<button type="button" class="btn btn-outline" data-back>Zurück</button>' : '<span></span>'}<button type="submit" class="btn btn-dark">Weiter zur Überprüfung</button></div></form>`;
+  const f = box.querySelector('form');
+  box.querySelector('[data-sec]').onclick = securityModal;
+  box.querySelector('[data-cancel]')?.addEventListener('click', () => { me.payout && renderAgain(o); });
+  box.querySelector('[data-back]')?.addEventListener('click', () => o.back?.());
+  const iban = f.elements.iban;
+  // Live-Gruppierung in Viererblöcken, Cursor bleibt am Ende
+  iban.addEventListener('input', () => {
+    const n = normIban(iban.value).slice(0, 34);
+    iban.value = n.replace(/(.{4})/g, '$1 ').trim();
+    iban.classList.remove('bad');
+    const ok = ibanOk(n);
+    $('#crBicHint', box).textContent = ok && !ok.sepa ? 'erforderlich für dieses Land' : 'nur nötig für Konten außerhalb des SEPA-Raums';
+  });
+  f.onsubmit = (e) => {
+    e.preventDefault();
+    const holder = val(f, 'holder_name');
+    if (holder.length < 2) { formMsg(f, 'Bitte den Kontoinhaber angeben.', 'holder_name'); return; }
+    const ok = ibanOk(iban.value);
+    if (!ok) { formMsg(f, 'Bitte überprüfe deine IBAN.', 'iban'); return; }
+    const bic = val(f, 'bic').toUpperCase().replace(/\s/g, '');
+    if (bic && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bic)) { formMsg(f, 'Bitte überprüfe die BIC.', 'bic'); return; }
+    if (!bic && !ok.sepa) { formMsg(f, 'Für Konten außerhalb des SEPA-Raums wird die BIC benötigt.', 'bic'); return; }
+    confirmPayout(box, o, { holder_name: holder, iban: normIban(iban.value), bic: bic || null }, ok, change);
+  };
+}
+
+function confirmPayout(box, o, data, ok, change) {
+  box.innerHTML = `<form novalidate><h3>Zahlungsdaten überprüfen</h3>
+    <dl class="cr-review"><dt>Kontoinhaber</dt><dd>${esc(data.holder_name)}</dd><dt>IBAN</dt><dd class="cr-mask">${esc(mask(ok.country, ok.last4))}</dd>${data.bic ? `<dt>BIC</dt><dd>${esc(data.bic)}</dd>` : ''}</dl>
+    <label class="consent"><input type="checkbox" name="ok" required> Ich bestätige, dass die angegebenen Zahlungsdaten korrekt sind.</label>
+    <p class="cr-msg pt-alert bad" hidden></p>
+    <div class="wiz-nav"><button type="button" class="btn btn-outline" data-edit>Korrigieren</button><button type="submit" class="btn btn-dark">Zahlungsdaten bestätigen</button></div></form>`;
+  const f = box.querySelector('form');
+  f.querySelector('[data-edit]').onclick = () => payoutForm(box, o, change);
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!f.elements.ok.checked) { formMsg(f, 'Bitte bestätige, dass die Zahlungsdaten korrekt sind.'); return; }
+    const d = await save(f, { ...data, confirmed: true }, '/api/creator/payout', 'POST');
+    data.iban = ''; // Klartext nicht länger als nötig im Speicher halten
+    if (!d) return;
+    await refresh();
+    box.innerHTML = `<div class="pt-alert"><strong>${change ? 'Zahlungsdaten aktualisiert' : 'Zahlungsdaten gespeichert'}</strong><p style="margin:6px 0 0">${change ? 'Die neue Zahlungsinformation wurde gespeichert.' : 'Deine Zahlungsdaten sind hinterlegt.'}${d.review_required ? ' Status: <span class="st warn">Prüfung erforderlich</span> – wir prüfen die Änderung, bevor wir darauf auszahlen.' : ''}</p></div>`;
+    toast(change ? 'Zahlungsdaten aktualisiert' : 'Zahlungsdaten gespeichert');
+    if (o.wizard) setTimeout(() => o.onSaved?.(), 900); else setTimeout(() => renderAgain(o), 1600);
+  };
+}
+const renderAgain = (o) => { if (o.wizard) wizard(); else portal(); };
+
+function secAgreement(el, o) {
+  const a = me.agreement;
+  if (!a) { el.innerHTML = '<h2>Vereinbarung</h2><div class="pt-alert warn">Die Vereinbarung wird gerade vorbereitet. Bitte schau später noch einmal vorbei.</div>'; return; }
+  el.innerHTML = `<h2>${esc(a.title)}</h2><p class="form-note">Fassung ${esc(a.version)}${a.accepted ? ' · <span class="st ok">von dir bestätigt</span>' : ''}</p>
+    ${a.is_draft ? '<div class="pt-alert warn"><strong>Entwurf.</strong> Diese Fassung ist noch nicht final. Vor dem Start erhältst du die geprüfte Fassung zur Bestätigung.</div>' : ''}
+    <div class="cr-agree" tabindex="0" aria-label="Text der Vereinbarung">${esc(a.body)}</div>
+    <form novalidate>${a.accepted ? '' : '<label class="consent"><input type="checkbox" name="ok" required> Ich habe die Vereinbarung gelesen und stimme ihr zu.</label>'}
+    <p class="cr-msg pt-alert bad" hidden></p><div class="wiz-nav">${o.back ? '<button type="button" class="btn btn-outline" data-back>Zurück</button>' : '<span></span>'}<button type="submit" class="btn btn-dark">${a.accepted ? (o.wizard ? 'Weiter' : 'OK') : 'Vereinbarung bestätigen'}</button></div></form>`;
+  bindBack(el, o);
+  const f = el.querySelector('form');
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    if (a.accepted) { o.onSaved?.(); return; }
+    if (!f.elements.ok.checked) { formMsg(f, 'Bitte bestätige, dass du die Vereinbarung gelesen hast und ihr zustimmst.'); return; }
+    const d = await save(f, { agreement_id: a.id, sha256: a.sha256, accept: true }, '/api/creator/agreement', 'POST');
+    if (d) { toast('Vereinbarung bestätigt'); await refresh(); if (o.onSaved) o.onSaved(); else renderAgain(o); }
+  };
+}
+
+function secReview(el, o) {
+  const labels = { account: 'Konto', profile: 'Profil', social: 'Social Media', business: 'Business- und Rechnungsdaten', payout: 'Zahlungsdaten', agreement: 'Vereinbarung' };
+  const all = Object.keys(labels).every((k) => me.steps[k].done);
+  el.innerHTML = `<h2>${all ? 'Deine Bewerbung ist bereit' : 'Fast geschafft'}</h2>
+    <ul class="cr-done">${Object.entries(labels).map(([k, l]) => `<li class="${me.steps[k].done ? '' : 'miss'}"><span aria-hidden="true">${me.steps[k].done ? '✓' : '!'}</span>${esc(l)}${me.steps[k].done ? '' : ` <button type="button" class="btn btn-outline btn-sm" data-go="${k}">Ergänzen</button>`}</li>`).join('')}</ul>
+    ${me.email_confirmed ? '' : '<div class="pt-alert warn">Bitte bestätige zuerst deine E-Mail-Adresse über den Link in unserer E-Mail.</div>'}
+    <form><p class="cr-msg pt-alert bad" hidden></p><div class="wiz-nav">${o.back ? '<button type="button" class="btn btn-outline" data-back>Zurück</button>' : '<span></span>'}<button type="submit" class="btn btn-dark btn-lg"${me.can_submit ? '' : ' disabled'}>${me.creator.status === 'INFO_REQUESTED' ? 'Erneut einreichen' : 'Bewerbung einreichen'}</button></div></form>`;
+  bindBack(el, o);
+  el.querySelectorAll('[data-go]').forEach((b) => b.onclick = () => { step = b.dataset.go; wizard(); });
+  const f = el.querySelector('form');
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const d = await save(f, {}, '/api/creator/submit', 'POST');
+    if (d) { await refresh(); step = null; routeByStatus(); window.scrollTo({ top: 0 }); }
+  };
+}
+
+// ---------- Prüfstatus ----------
+function pending() {
+  document.title = 'Bewerbung in Prüfung | ImmoAdv Creator';
+  root.innerHTML = `<div class="cr-wrap"><div class="ad-h-row" style="margin-bottom:12px"><a class="pt-brand dark" href="/creator"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><button type="button" class="btn btn-outline btn-sm" id="crOut">Abmelden</button></div>
+    <section class="pt-card"><span class="st warn" style="margin:0">${me.creator.status === 'UNDER_REVIEW' ? 'In Prüfung' : 'Eingereicht'}</span>
+      <h1 style="color:#0F2C59;font-size:26px;margin:10px 0 6px">Danke, deine Bewerbung ist eingegangen</h1>
+      <p>Wir prüfen deine Angaben und melden uns per E-Mail an <strong>${esc(me.email)}</strong>. Eingereicht am ${dt(me.creator.submitted_at)}.</p>
+      <ul class="cr-done"><li><span>✓</span>Profil</li><li><span>✓</span>Social Media</li><li><span>✓</span>Business- und Rechnungsdaten</li><li><span>✓</span>Zahlungsdaten <span class="cr-mask" style="margin-left:6px">${esc(me.payout?.iban_masked || '')}</span></li><li><span>✓</span>Vereinbarung</li></ul>
+      <p class="form-note">Während der Prüfung sind deine Angaben gesperrt, damit wir genau das freigeben, was du eingereicht hast.</p></section></div>`;
+  $('#crOut').onclick = logout;
+}
+
+function closed(s) {
+  const last = (me.messages || [])[0];
+  root.innerHTML = `<div class="cr-wrap"><section class="pt-card"><h1 style="color:#0F2C59;font-size:24px;margin:0 0 8px">${s === 'SUSPENDED' ? 'Dein Creator-Zugang ist pausiert' : 'Deine Bewerbung wurde nicht freigegeben'}</h1>
+    ${last?.message ? `<p style="white-space:pre-wrap">${esc(last.message)}</p>` : ''}<p>Bei Fragen erreichst du uns unter <a href="mailto:support@immoadv.de">support@immoadv.de</a>.</p>
+    <button type="button" class="btn btn-outline" id="crOut">Abmelden</button></section></div>`;
+  $('#crOut').onclick = logout;
+}
+
+// ---------- Creator-Portal (nach Freigabe) ----------
+// Phase 1: Übersicht, Profil, Auszahlung, Vereinbarung, Sicherheit.
+// Studio, Performance, Assets und Abrechnung kommen mit den nächsten Ausbaustufen hinzu (eigene Reiter).
+const IC = {
+  home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+  profil: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  auszahlung: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/>',
+  vereinbarung: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>',
+  sicherheit: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+};
+const NAV = [['home', 'Übersicht', 'Home'], ['profil', 'Profil', 'Profil'], ['auszahlung', 'Auszahlung', 'Auszahlung'], ['vereinbarung', 'Vereinbarung', 'Vertrag'], ['sicherheit', 'Sicherheit', 'Sicherheit']];
+const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
+
+function portal() {
+  view = (location.hash.slice(1) || 'home');
+  if (!NAV.some(([k]) => k === view)) view = 'home';
+  const name = me.creator.display_name || me.creator.first_name || '';
+  root.innerHTML = `<div class="pt">
+    <aside class="pt-side"><a class="pt-brand" href="#home"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><small class="pt-tag">Creator Portal</small>
+      <nav>${NAV.map(([k, l]) => `<a href="#${k}" data-v="${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${esc(l)}</a>`).join('')}</nav>
+      <div class="pt-foot"><a href="mailto:support@immoadv.de">Support</a><strong>${esc(name)}</strong><small>Creator Partner seit ${dt(me.creator.approved_at)}</small><button type="button" class="pt-logout" id="crOut">Abmelden</button></div></aside>
+    <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#home" aria-label="Creator Portal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Creator Portal</small><h1>${esc(NAV.find(([k]) => k === view)[1])}</h1></div><button type="button" class="pt-logout pt-logout-m" id="crOutM" aria-label="Abmelden" title="Abmelden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Abmelden</span></button></header>
+      <div id="crView"></div></section>
+    <nav class="pt-tabs" aria-label="Bereiche">${NAV.map(([k, , s]) => `<a href="#${k}" data-v="${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${svg(k)}<span>${esc(s)}</span></a>`).join('')}</nav></div>`;
+  $('#crOut').onclick = logout; $('#crOutM').onclick = logout;
+  const v = $('#crView');
+  const o = { wizard: false };
+  if (view === 'home') home(v);
+  else if (view === 'profil') { v.innerHTML = '<section class="pt-card cr-form" id="p1"></section><section class="pt-card cr-form" id="p2"></section><section class="pt-card cr-form" id="p3"></section>'; const ok = { ...o, onSaved: () => toast('Gespeichert') }; secProfile($('#p1'), ok); secSocial($('#p2'), ok); secBusiness($('#p3'), ok); }
+  else if (view === 'auszahlung') { v.innerHTML = '<section class="pt-card cr-form" id="p1"></section>'; secPayout($('#p1'), o); }
+  else if (view === 'vereinbarung') { v.innerHTML = '<section class="pt-card cr-form" id="p1"></section>'; secAgreement($('#p1'), { ...o, onSaved: () => portal() }); }
+  else if (view === 'sicherheit') v.innerHTML = `<section class="pt-card"><h2>Sind meine Daten geschützt?</h2><p>So schützen wir deine Angaben – insbesondere deine Zahlungsdaten:</p>${securityList()}</section>
+    <section class="pt-card"><h2>Was wir nicht tun</h2><ul class="pt-check"><li>Wir verbinden keine Social-Media-Konten und fragen nie nach deinen Social-Media-Passwörtern.</li><li>Wir verwenden deine Zahlungsdaten nicht für Marketing.</li><li>Wir zeigen deine vollständige IBAN weder im Portal noch in E-Mails an.</li></ul>
+    <p class="form-note">Verdächtige E-Mail oder unerwartete Änderung bemerkt? Schreibe sofort an <a href="mailto:support@immoadv.de">support@immoadv.de</a>.</p></section>`;
+}
+
+function home(v) {
+  const n = me.next;
+  const p = me.payout;
+  v.innerHTML = `<div class="pt-hello"><h2>Willkommen bei ImmoAdv${me.creator.first_name ? `, ${esc(me.creator.first_name)}` : ''}</h2><p>Deine Übersicht</p></div>
+    ${n ? `<section class="pt-card cr-next"><small class="pt-top-k">Nächste Aufgabe</small><h2 style="margin:4px 0">${esc(n.title)}</h2><p style="margin:0">${esc(n.text)}</p>${({ payout: '#auszahlung', 'payout-review': '#auszahlung', agreement: '#vereinbarung' })[n.key] ? `<a class="btn btn-dark" href="${({ payout: '#auszahlung', 'payout-review': '#auszahlung', agreement: '#vereinbarung' })[n.key]}">Ansehen</a>` : ''}</section>`
+      : '<section class="pt-card cr-next"><small class="pt-top-k">Nächste Aufgabe</small><h2 style="margin:4px 0">Alles erledigt</h2><p style="margin:0">Dein Creator-Zugang ist vollständig eingerichtet.</p></section>'}
+    <div class="pt-kpis">
+      <div class="pt-kpi"><small>Status</small><strong style="font-size:18px">Freigegeben</strong><small>seit ${dt(me.creator.approved_at)}</small></div>
+      <div class="pt-kpi"><small>Auszahlungskonto</small><strong class="cr-mask" style="font-size:16px">${esc(p?.iban_masked || 'fehlt')}</strong><small>${p ? `<span class="st ${PAY_STATUS[p.status]?.[0] || ''}" style="margin:0">${esc(PAY_STATUS[p.status]?.[1] || '')}</span>` : ''}</small></div>
+      <div class="pt-kpi"><small>Vereinbarung</small><strong style="font-size:18px">${me.agreement?.accepted ? 'Bestätigt' : 'Offen'}</strong><small>Fassung ${esc(me.agreement?.version || '–')}</small></div>
+      <div class="pt-kpi"><small>Profile</small><strong style="font-size:18px">${me.socials.length}</strong><small>öffentliche Social-Media-Profile</small></div>
+    </div>
+    <section class="pt-card"><h2>Als Nächstes im Creator Portal</h2><p class="cr-soon">Kampagnen, Assets, Performance, Community-Vorteil und Abrechnung werden hier freigeschaltet, sobald sie für dich bereitstehen. Wir informieren dich per E-Mail.</p></section>`;
+}
+
+window.addEventListener('hashchange', () => { if (me?.creator?.status === 'ACTIVE') { portal(); window.scrollTo({ top: 0 }); } });
+boot();

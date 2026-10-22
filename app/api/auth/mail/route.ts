@@ -21,7 +21,7 @@ const Body = z.object({
   password: z.string().min(8).max(200).optional(),
   ref: z.string().regex(/^[a-z0-9-]{3,40}$/).optional(),
   website: z.string().optional(),
-  next: z.enum(['/b2b-portal']).optional(),
+  next: z.enum(['/b2b-portal', '/creator']).optional(),
 });
 const confirmUrl = (hash: string, type: string, next?: string) => `${SITE}/auth/confirm?th=${encodeURIComponent(hash)}&type=${type}${next ? `&next=${encodeURIComponent(next)}` : ''}`;
 const DONE = { ok: true };

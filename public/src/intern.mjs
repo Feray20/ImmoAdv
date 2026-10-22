@@ -97,16 +97,16 @@ const getSeg = () => { try { const x = localStorage.getItem('ia-admin-seg'); ret
 // Welche Reiter es in welchem Bereich gibt (alles andere ist im Bereich ausgeblendet).
 const TAB_SCOPES = {
   uebersicht: ['b2c', 'b2b'], nutzer: ['b2c', 'b2b', 'system'], vorschlaege: ['b2c', 'b2b'], werbung: ['b2c', 'b2b'], cockpit: ['b2c', 'b2b'], rechnungen: ['b2c', 'b2b'], steuer: ['b2c', 'b2b'],
-  analyse: ['b2c', 'b2b'], kennzahlen: ['b2c', 'b2b'], partner: ['b2b'], anfragen: ['b2b'], akquise: ['b2b'],
+  analyse: ['b2c', 'b2b'], kennzahlen: ['b2c', 'b2b'], partner: ['b2b'], creator: ['b2b'], anfragen: ['b2b'], akquise: ['b2b'],
   einrichtung: ['system'], system: ['system'], testkauf: ['system'], sicherheit: ['system'], protokoll: ['system'],
 };
 const inScope = (t, g = getSeg()) => (TAB_SCOPES[t] || ['system']).includes(g);
 const firstTab = (g = getSeg()) => (g === 'system' ? 'einrichtung' : 'uebersicht');
 const setSeg = (x) => { try { localStorage.setItem('ia-admin-seg', x); } catch { /* nur Komfort */ } };
-const TABS = [['uebersicht', 'Übersicht'], ['einrichtung', 'Einrichtung'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['rechnungen', 'Rechnungen'], ['steuer', 'GoBD-Export (ZIP, DATEV)'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen'], ['vorschlaege', 'Vorschläge']];
+const TABS = [['uebersicht', 'Übersicht'], ['einrichtung', 'Einrichtung'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['creator', 'Creator Operations'], ['rechnungen', 'Rechnungen'], ['steuer', 'GoBD-Export (ZIP, DATEV)'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen'], ['vorschlaege', 'Vorschläge']];
 // Vier Hauptbereiche (Handy: untere Leiste + Unterreiter; Desktop: Seitenleiste mit Gruppen).
 const GROUPS = [
-  ['ops', 'Operations & CRM', 'CRM', '<path d="M16 11a4 4 0 1 0-8 0"/><circle cx="12" cy="7" r="3"/><path d="M4 21v-2a6 6 0 0 1 16 0v2"/>', ['uebersicht', 'vorschlaege', 'partner', 'nutzer', 'anfragen', 'akquise', 'werbung']],
+  ['ops', 'Operations & CRM', 'CRM', '<path d="M16 11a4 4 0 1 0-8 0"/><circle cx="12" cy="7" r="3"/><path d="M4 21v-2a6 6 0 0 1 16 0v2"/>', ['uebersicht', 'vorschlaege', 'partner', 'creator', 'nutzer', 'anfragen', 'akquise', 'werbung']],
   ['fin', 'Finanzen & Compliance', 'Finanzen', '<path d="M4 7h16v12H4z"/><path d="M4 11h16M8 15h3"/>', ['cockpit', 'rechnungen', 'steuer']],
   ['ana', 'Analytics & Monitoring', 'Analyse', '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', ['analyse', 'kennzahlen', 'protokoll', 'sicherheit']],
   ['sys', 'System & Setup', 'System', '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>', ['einrichtung', 'system', 'testkauf']],
@@ -169,7 +169,7 @@ function show() {
   const v = $('#adView');
   v.innerHTML = skel();
   msg('');
-  const view = ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)) })[t](v);
+  const view = ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs').then((m) => m.werbung(x)), creator: (x) => import('./intern-creator.mjs').then((m) => m.creatorOps(x)) })[t](v);
   Promise.resolve(view).catch((e) => { console.warn('[admin]', e); errState(v, ''); });
 }
 
