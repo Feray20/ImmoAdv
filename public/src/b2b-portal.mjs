@@ -9,11 +9,14 @@ try { history.scrollRestoration = 'manual'; } catch { /* ältere Browser */ }
 const $ = (s, el = document) => el.querySelector(s);
 // Bereiche in drei Gruppen: Tagesgeschäft, Werkzeuge & Wissen, Konto.
 const VIEWS = [
-  ['start', 'Übersicht', 'arbeit'], ['fall', 'Fall-Analyse', 'arbeit'], ['kunden', 'Kunden', 'arbeit'], ['anfragen', 'Anfragen', 'arbeit'], ['einreichungen', 'Einreichungen', 'arbeit'],
-  ['tools', 'Software-Tools', 'werk'], ['wissen', 'Beratungskompass', 'werk'], ['werkzeuge', 'Widget & QR', 'werk'],
-  ['verifizierung', 'Verifizierung', 'konto'], ['team', 'Team', 'konto'], ['profil', 'Profil', 'konto'], ['tarif', 'Tarif & Rechnungen', 'konto'], ['vorschlaege', 'Verbesserungsvorschläge', 'konto'],
+  ['start', 'Start', 'arbeit'], ['faelle', 'Fälle', 'arbeit'], ['kunden', 'Kunden', 'arbeit'], ['fall', 'Analyse', 'arbeit'], ['anfragen', 'Anfragen', 'arbeit'], ['einreichungen', 'Einreichungen', 'arbeit'],
+  ['wissen', 'Beratungskompass', 'werk'], ['tools', 'Rechner & Tools', 'werk'], ['werkzeuge', 'Widget & QR', 'werk'],
+  ['team', 'Team', 'firma'], ['verifizierung', 'Verifizierung', 'firma'], ['profil', 'Profil', 'firma'], ['tarif', 'Tarif & Rechnungen', 'firma'],
+  ['vorschlaege', 'Verbesserungsvorschläge', 'hilfe'],
 ];
-const GROUPS = [['arbeit', 'Tagesgeschäft'], ['werk', 'Werkzeuge & Wissen'], ['konto', 'Konto']];
+// Seitentitel, wo er vom kurzen Menünamen abweicht.
+const VTITLE = { fall: 'Fall-Analyse', tools: 'Rechner & Software-Tools' };
+const GROUPS = [['arbeit', 'Arbeit'], ['werk', 'Werkzeuge'], ['firma', 'Unternehmen'], ['hilfe', 'Hilfe']];
 // Handy-Leiste: vier Hauptbereiche plus „Mehr“ (alle übrigen Bereiche als Liste).
 const MAIN = [
   ['start', 'Start', '<rect x="3" y="3" width="7.5" height="9" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="5" rx="1.5"/><rect x="13.5" y="11" width="7.5" height="10" rx="1.5"/><rect x="3" y="15" width="7.5" height="6" rx="1.5"/>'],
@@ -53,7 +56,7 @@ function shell() {
   root.innerHTML = `<div class="pt">
     <aside class="pt-side"><a class="pt-brand" href="/"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a>
       <small class="pt-tag">Unternehmensportal</small>
-      <nav>${navGroups((v) => true)}</nav>
+      <nav>${navGroups((v) => true)}<a href="mailto:support@immoadv.de">Support kontaktieren</a></nav>
       <div class="pt-foot"><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><button type="button" class="pt-logout" id="ptLogout">Abmelden</button></div>
     </aside>
     <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#start" aria-label="ImmoAdv Unternehmensportal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Unternehmensportal</small><h1 id="ptTitle"></h1></div><button type="button" class="pt-pres-btn" id="ptPres" hidden title="Vollbild für das Kundengespräch am Tablet"><span aria-hidden="true">⛶</span> Präsentieren</button><button type="button" class="pt-brh" id="ptBr" aria-haspopup="dialog" title="Ihre Ansicht – zum Wechseln tippen"><span class="pt-brh-i" aria-hidden="true">${B().icon}</span><span class="pt-brh-t"><small>Ansicht</small><b>${esc(B().short)}</b></span><svg class="pt-brh-l" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M7 10l5 5 5-5"/></svg></button><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM" aria-label="Abmelden" title="Abmelden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Abmelden</span></button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
@@ -61,7 +64,7 @@ function shell() {
       <div id="ptView"></div><p class="pt-liab">ImmoAdv stellt rein technische Analyse- und Erfassungsinstrumente bereit und trifft keine Votierungs-, Bonitäts- oder Kreditentscheidung. Die aufsichtsrechtliche Pflicht zur Prüfung nach MaRisk, KWG oder § 34i GewO verbleibt vollumfänglich beim beratenden bzw. finanzierenden Institut. <a href="/nutzungsbedingungen#hinweise">Rechtliche Hinweise</a> · <a href="/datenschutz">Datenschutz</a></p></section>
     <nav class="pt-tabs" aria-label="Bereiche">${MAIN.map(([v, l, ic]) => `<a href="#${v}" data-v="${v}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${v === 'kunden' ? B().kunden : l}</span>${v === 'anfragen' && me.usage.leadsNew ? `<b class="pt-dot">${me.usage.leadsNew}</b>` : ''}</a>`).join('')}<button type="button" id="ptMore" aria-expanded="false" aria-controls="ptSheet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>Mehr</span></button></nav>
     <div class="pt-sheet" id="ptSheet" hidden><div class="pt-sheet-bg" data-close></div><div class="pt-sheet-in" role="dialog" aria-label="Alle Bereiche"><div class="pt-sheet-h"><span class="pt-sheet-t"><strong>Hauptmenü</strong>${(a.companyName || '').trim().length >= 3 ? `<small>${esc(a.companyName)}</small>` : ''}</span><button type="button" class="stage-x" data-close aria-label="Schließen">×</button></div>
-      <nav>${navGroups((v) => !MAIN.some(([m]) => m === v))}<button type="button" class="pt-logout" id="ptLogoutS">Abmelden</button></nav></div></div>
+      <nav>${navGroups((v) => !MAIN.some(([m]) => m === v))}<a href="mailto:support@immoadv.de">Support kontaktieren</a><span class="pt-grp">Konto</span><button type="button" class="pt-logout" id="ptLogoutS">Abmelden</button></nav></div></div>
   </div>`;
   root.querySelectorAll('#ptLogout,#ptLogoutM,#ptLogoutS').forEach((b) => { b.onclick = async () => { try { (await import('./b2b-tools.mjs')).clearAll(); } catch { /* weiter */ } logout(); }; });
   const brb = $('#ptBr'); if (brb) brb.onclick = () => chooseBranche();
@@ -94,20 +97,20 @@ function route() {
   const view = VIEWS.find(([k]) => k === v) ? v : 'start';
   document.querySelectorAll('[data-v]').forEach((a) => a.classList.toggle('on', a.dataset.v === view));
   $('#ptMore')?.classList.toggle('on', !MAIN.some(([m]) => m === view));
-  $('#ptTitle').textContent = vLabel(view, VIEWS.find(([k]) => k === view)[1]);
+  $('#ptTitle').textContent = VTITLE[view] || vLabel(view, VIEWS.find(([k]) => k === view)[1]);
   const box = $('#ptView');
   // Neuer Bereich: immer oben beginnen (Kapitel-Sprünge innerhalb eines Bereichs behalten ihre Position).
   if (route.last !== view) { const ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) ae.blur(); window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })); route.last = view; }
   box.innerHTML = logoLoader();
   { const pb = $('#ptPres'); if (pb) pb.hidden = !['wissen', 'tools'].includes(view); if (!['wissen', 'tools'].includes(view)) presentation(false); }
-  ({ start: vStart, tools: (b) => import('./b2b-tools.mjs').then((m) => m.renderPrograms(b, { tier: me.tier, branche: br(), toast, brand: { color: me.limits?.cobranding && me.account.brandColor ? me.account.brandColor : '#0F2C59', logo: me.limits?.cobranding && me.account.hasLogo && me.account.slug ? `/api/b2b/logo?slug=${encodeURIComponent(me.account.slug)}` : '', sender: [me.account.companyName, me.account.advisorName].filter(Boolean).join(' · ') } })).catch(() => { b.innerHTML = '<p class="form-note">Programme konnten nicht geladen werden.</p>'; }), fall: (b) => import('./b2b-fall.mjs').then((m) => m.renderFall(b, { api, toast, me })).catch(() => { b.innerHTML = '<p class="form-note">Fall-Analyse konnte nicht geladen werden.</p>'; }), kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs').then((m) => m.renderWissen(b, br())).catch(() => { b.innerHTML = '<p class="form-note">Fachwissen konnte nicht geladen werden.</p>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: (b) => vTeam(b).then(() => addPw(b)), profil: (b) => { vProfil(b); addPw(b); }, tarif: vTarif, vorschlaege: (b) => { b.innerHTML = '<section class="pt-card" id="rvBox" hidden></section><section class="pt-card" id="fbBox"></section>'; import('./reviews.mjs').then(async (m) => { const h = await m.askHtml('b2b'); const x = b.querySelector('#rvBox'); if (h && x) { x.innerHTML = h; x.hidden = false; } }).catch(() => {}); import('./feedback-ui.mjs').then((m) => m.mountFeedback(b.querySelector('#fbBox'), { area: 'b2b' })).catch(() => { b.innerHTML = '<p class="form-note">Konnte nicht geladen werden.</p>'; }); } })[view](box);
+  ({ start: vStart, faelle: vFaelle, tools: (b) => import('./b2b-tools.mjs').then((m) => m.renderPrograms(b, { tier: me.tier, branche: br(), toast, brand: { color: me.limits?.cobranding && me.account.brandColor ? me.account.brandColor : '#0F2C59', logo: me.limits?.cobranding && me.account.hasLogo && me.account.slug ? `/api/b2b/logo?slug=${encodeURIComponent(me.account.slug)}` : '', sender: [me.account.companyName, me.account.advisorName].filter(Boolean).join(' · ') } })).catch(() => { b.innerHTML = '<p class="form-note">Programme konnten nicht geladen werden.</p>'; }), fall: (b) => import('./b2b-fall.mjs').then((m) => m.renderFall(b, { api, toast, me })).catch(() => { b.innerHTML = '<div class="pt-alert warn">Fall-Analyse konnte nicht geladen werden. <button type="button" class="btn btn-outline btn-sm" data-reload>Erneut versuchen</button></div>'; }), kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs').then((m) => { b.innerHTML = kompassHead(); m.renderWissen(b.querySelector('#bwBody'), br()); }).catch(() => { b.innerHTML = '<div class="pt-alert warn">Beratungskompass konnte nicht geladen werden. <button type="button" class="btn btn-outline btn-sm" data-reload>Erneut versuchen</button></div>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: (b) => vTeam(b).then(() => addPw(b)), profil: (b) => { vProfil(b); addPw(b); }, tarif: vTarif, vorschlaege: (b) => { b.innerHTML = '<section class="pt-card" id="rvBox" hidden></section><section class="pt-card" id="fbBox"></section>'; import('./reviews.mjs').then(async (m) => { const h = await m.askHtml('b2b'); const x = b.querySelector('#rvBox'); if (h && x) { x.innerHTML = h; x.hidden = false; } }).catch(() => {}); import('./feedback-ui.mjs').then((m) => m.mountFeedback(b.querySelector('#fbBox'), { area: 'b2b' })).catch(() => { b.innerHTML = '<p class="form-note">Konnte nicht geladen werden.</p>'; }); } })[view](box);
 }
 
 // ---------- Kachel-Auswahl: Arbeitsbereiche öffnen erst beim Antippen ----------
 // In jedem Bereich mit mehreren Arbeitskarten steht oben eine Kachel je Karte; geöffnet ist immer nur eine.
 // Ausgenommen: Übersicht, Software-Tools und Beratungskompass (eigene Struktur) sowie reine Info-/Marketing-Karten
 // ohne Bedienelemente (bleiben normal sichtbar). In der Fall-Analyse bleibt die Upload-Karte immer offen.
-const TILE_SKIP = new Set(['start', 'tools', 'wissen']);
+const TILE_SKIP = new Set(['start', 'faelle', 'tools', 'wissen']);
 const TILE_IC = '<path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/>';
 const tileState = { view: null, sel: null };
 function tileView() {
@@ -165,35 +168,37 @@ async function vKunden(box) {
   const ready = con.filter((c) => (c.progress?.best ?? 0) >= 90).length;
   const card = (c) => {
     const p = c.progress || {}, best = p.best ?? 0;
-    return `<article class="kd-card" id="kd-${esc(c.id)}"><div class="kd-top"><strong>${esc(c.name || c.email || 'Kunde')}</strong>${best >= 90 ? '<span class="st ok">bankreif</span>' : best >= 60 ? '<span class="st warn">fast</span>' : '<span class="st">in Vorbereitung</span>'}</div>
+    return `<article class="kd-card" id="kd-${esc(c.id)}" data-stage="${stageOf(c)}" data-q="${esc(`${c.name || ''} ${c.email || ''}`.toLowerCase())}"><div class="kd-top"><strong>${esc(c.name || c.email || 'Kunde')}</strong>${best >= 90 ? '<span class="st ok">bankreif</span>' : best >= 60 ? '<span class="st warn">fast</span>' : '<span class="st">in Vorbereitung</span>'}</div>
       ${c.name && c.email ? `<small class="kd-mail">${esc(c.email)}</small>` : ''}
       <div class="kd-bar" role="img" aria-label="Bankreife ${best} %"><span style="width:${Math.max(2, Math.min(100, best))}%"></span></div>
       <dl class="kd-dl"><div><dt>Bankreife</dt><dd>${p.best == null ? '–' : best + ' %'}</dd></div><div><dt>Stufe</dt><dd>${p.stage ? `${p.stage} · ${PH[p.stage - 1]}` : '–'}</dd></div><div><dt>Objekte</dt><dd>${p.objects ?? '–'}</dd></div><div><dt>Unterlagen</dt><dd>${p.docs ?? '–'}</dd></div><div><dt>Finanzprofil</dt><dd>${p.profile == null ? '–' : p.profile ? 'ausgefüllt' : 'offen'}</dd></div><div><dt>Zuletzt aktiv</dt><dd>${p.lastActive ? dt(p.lastActive) : '–'}</dd></div></dl>
       ${p.missing && p.missing.length ? `<div class="kd-miss"><strong>Fehlt noch:</strong> ${p.missing.map(esc).join(' · ')}</div>` : p.missing ? '<div class="kd-miss ok">Alle Unterlagen-Arten vorhanden.</div>' : ''}
       <div class="kd-btns"><button type="button" class="btn btn-dark" data-kd-req="${esc(c.id)}"${c.lastRequestAt && Date.now() - new Date(c.lastRequestAt).getTime() < 864e5 ? ' disabled title="Heute bereits erinnert"' : ''}>Unterlagen anfordern</button><button type="button" class="btn btn-outline" data-kd-pdf="${esc(c.id)}">Kurzbericht (PDF)</button></div>
       ${c.lastRequestAt ? `<small class="kd-last">Zuletzt erinnert: ${dtt(c.lastRequestAt)}</small>` : ''}
-      <div class="kd-act"><small>verbunden seit ${c.since ? dt(c.since) : '–'}</small><button type="button" class="btn btn-ghost" data-kd-end="${esc(c.id)}">Trennen</button></div></article>`;
+      <a class="btn btn-outline kd-open" href="#faelle=${esc(c.id)}">Fall öffnen</a><div class="kd-act"><small>verbunden seit ${c.since ? dt(c.since) : '–'}</small><button type="button" class="btn btn-ghost" data-kd-end="${esc(c.id)}">Trennen</button></div></article>`;
   };
   // Bestandskunden-Radar: Kunden, deren Zinsbindung in den nächsten 36 Monaten endet (nur mit Radar-Einwilligung, ab Pro).
   const mon = (ym) => { const [y, m] = ym.split('-').map(Number); const n = new Date(); return (y - n.getFullYear()) * 12 + (m - 1 - n.getMonth()); };
   const radarRows = con.flatMap((c) => (Array.isArray(c.radar) ? c.radar : []).map((ym) => ({ c, ym, m: mon(ym) }))).filter((x) => x.m >= -1 && x.m <= 36).sort((a, b) => a.m - b.m);
   const radarAsked = con.filter((c) => c.radar).length;
-  const radar = `<section class="pt-card kd-radar"><div class="kd-head"><h2>Bestandskunden-Radar</h2><span class="form-note">${radarAsked} von ${con.length} Kunden teilen ihr Zinsbindungsende</span></div><p class="form-note">Am 1. jedes Monats erhalten Sie eine E-Mail, wenn bei einem Kunden die Zinsbindung in 36, 24, 12, 6 oder 3 Monaten endet.</p>
-    ${!r.data.radarOn ? '<p class="form-note">Der Radar meldet Ihnen, wenn bei Ihren Kunden die Zinsbindung in 36, 24 oder 12 Monaten endet – Ihre Anschlussfinanzierungen von morgen. Enthalten ab <a href="#tarif">Kanzlei & Baufi Pro</a>.</p>'
-      : radarRows.length ? `<ul class="kd-rlist">${radarRows.map((x) => `<li class="${x.m <= 12 ? 'hot' : x.m <= 24 ? 'warm' : ''}"><span><strong>${esc(x.c.name || x.c.email || 'Kunde')}</strong><small>Zinsbindung endet ${x.ym.split('-').reverse().join('/')}</small></span><b>${x.m < 0 ? 'abgelaufen' : x.m === 0 ? 'diesen Monat' : `in ${x.m} Monat${x.m === 1 ? '' : 'en'}`}</b>${x.m <= 60 ? '<em>Forward möglich</em>' : ''}</li>`).join('')}</ul>`
+  const radar = `<section class="pt-card kd-radar"><div class="kd-head"><h2>Bestandskunden-Radar</h2><span class="form-note">${radarAsked} von ${con.length} teilen ihr Zinsbindungsende</span></div><p class="form-note">Kunden mit relevanten bevorstehenden Finanzierungsthemen.</p>
+    ${!r.data.radarOn ? '<p class="kd-radar-off">Enthalten ab <a href="#tarif">Kanzlei &amp; Baufi Pro</a>: Sie sehen, bei welchen Kunden die Zinsbindung in den nächsten 36 Monaten endet.</p>'
+      : radarRows.length ? `<div class="kd-rcards">${radarRows.map((x) => `<article class="kd-rcard"><strong>${esc(x.c.name || x.c.email || 'Kunde')}</strong><span>Zinsbindung endet ${x.m < 0 ? 'bereits' : x.m === 0 ? 'diesen Monat' : `in ${x.m} Monat${x.m === 1 ? '' : 'en'}`}</span><span class="st ${x.m <= 12 ? 'warn' : ''}">${x.m <= 12 ? 'Potenzial – jetzt ansprechen' : 'Potenzial'}</span><a class="btn btn-outline btn-sm" href="#faelle=${esc(x.c.id)}">Kunden ansehen</a></article>`).join('')}</div>`
       : '<p class="form-note">Aktuell endet bei keinem Ihrer Kunden die Zinsbindung in den nächsten 36 Monaten.</p>'}
-    <p class="form-note">Kunden geben nur Monat und Jahr frei – mit eigener, widerrufbarer Einwilligung, ohne Beträge.</p></section>`;
-  box.innerHTML = radar + `<section class="pt-card kd-new"><div class="kd-head"><h2>Neue Kundeneinladung</h2><span class="form-note">${esc(me.account.companyName || '')}</span></div>
+    <p class="form-note kd-radar-note">Nur mit Einwilligung des Kunden: Er gibt Monat und Jahr frei – ohne Beträge – und kann die Freigabe jederzeit widerrufen. Benachrichtigung am 1. jedes Monats.</p></section>`;
+  box.innerHTML = `<section class="pt-card kd-new"><div class="kd-head"><h2>Neue Kundeneinladung</h2><span class="form-note">${esc(me.account.companyName || '')}</span></div>
       <ol class="kd-flow" aria-label="Ablauf"><li><b>1</b>Einladung senden</li><li><b>2</b>Kunde ergänzt Profil, Objekt und Unterlagen</li><li><b>3</b>Daten erscheinen im Fall – Sie prüfen die Vollständigkeit</li></ol>
-      <form class="kd-form2" id="kdF"><label>Kundenname <span class="kd-opt">(optional)</span><input id="kdName" type="text" maxlength="120" autocomplete="off" placeholder="z. B. Familie Muster"></label><label>E-Mail des Kunden*<input id="kdMail" type="email" required autocomplete="off" placeholder="kunde@beispiel.de"></label><label class="chk kd-consent"><input type="checkbox" id="kdOk" required> Ich bestätige, dass mir die Einwilligung des Kunden für die Zusendung dieser Einladung vorliegt (Art. 6 Abs. 1 lit. a/b DSGVO).</label><button class="btn btn-dark" type="submit">Kunden einladen</button></form>
+      <form class="kd-form2" id="kdF"><label><span>Kundenname <span class="kd-opt">(optional)</span></span><input id="kdName" type="text" maxlength="120" autocomplete="off" placeholder="z. B. Familie Muster"></label><label>E-Mail des Kunden*<input id="kdMail" type="email" required autocomplete="off" placeholder="kunde@beispiel.de"></label><label class="chk kd-consent"><input type="checkbox" id="kdOk" required> Ich bestätige, dass mir die Einwilligung des Kunden für die Zusendung dieser Einladung vorliegt (Art. 6 Abs. 1 lit. a/b DSGVO).</label><button class="btn btn-dark" type="submit">Kunden einladen</button></form>
       <p class="form-note">Ihr Kunde bereitet alles kostenlos vor. Mit seiner Zustimmung sehen Sie den Fortschritt – nicht die Dokumente. Er kann die Verbindung jederzeit trennen.</p>
       <div id="kdLink" aria-live="polite">${KD_LAST ? kdLinkHtml(KD_LAST) : ''}</div></section>
     <section class="pt-card pipe"><div class="kd-head"><h2>Pipeline</h2><span class="pipe-exp"><button type="button" class="btn btn-ghost btn-sm" data-exp="csv">CSV (Excel, CRM)</button><button type="button" class="btn btn-ghost btn-sm" data-exp="json">JSON</button></span></div>
       <div class="pipe-board">${[['inv', 'Eingeladen'], ['missing', 'Unterlagen unvollständig'], ['check', 'Prüfbereit'], ['ready', 'Bankfertig']].map(([k, l]) => { const xs = all.filter((c) => (c.status === 'verbunden' || c.status === 'eingeladen') && stageOf(c) === k); return `<div class="pipe-col ${k}"><h3>${l}<b>${xs.length}</b></h3>${xs.length ? xs.map((c) => `<a class="pipe-card" href="${c.status === 'eingeladen' ? '#kunden' : `#kd-${esc(c.id)}`}" data-jump="${c.status === 'eingeladen' ? '' : esc(c.id)}"><strong>${esc(c.name || c.email || 'Kunde')}</strong>${c.status === 'eingeladen' ? `<small>gültig bis ${dt(c.expiresAt)}</small>` : `<span class="pipe-bar"><i style="width:${Math.max(3, Math.min(100, c.progress?.best ?? 0))}%"></i></span><small>${c.progress?.best ?? 0} % Bankreife${c.progress?.missing?.length ? ` · fehlt: ${esc(c.progress.missing.slice(0, 2).join(', '))}` : ''}</small>`}</a>`).join('') : '<p class="pipe-empty">–</p>'}</div>`; }).join('')}
         <div class="pipe-col sent"><h3>Eingereicht<b id="pipeSentN">…</b></h3><div id="pipeSent"><p class="ia-ld sm" role="status">wird geladen …</p></div></div></div></section>
     <section class="pt-card"><div class="kd-head"><h2>Ihre Kunden</h2><span class="form-note">${con.length} verbunden · ${ready} bankreif · ${inv.length} Einladung${inv.length === 1 ? '' : 'en'} offen</span></div>
+      ${con.length + inv.length ? `<div class="fc-tools kd-tools"><label class="fc-search"><span class="sr-only">Kunden suchen</span><input type="search" id="kdQ" placeholder="Kunden suchen" autocomplete="off"></label><div class="seg fc-seg" role="tablist" aria-label="Status">${[['alle', 'Alle'], ['aktiv', 'Aktiv'], ['inv', 'Wartet auf Kunde'], ['offen', 'Fall offen'], ['ready', 'Bankreif']].map(([k, l], i) => `<button type="button" role="tab" data-kdf="${k}" aria-selected="${i === 0}">${l}</button>`).join('')}</div></div>` : ''}
       ${con.length ? `<p class="form-note">Sortiert nach Bankreife – die abschlussreifen Fälle stehen oben.</p><div class="kd-list">${con.map(card).join('')}</div>` : '<div class="pt-empty"><strong>Noch keine Fälle</strong><p>Erstellen Sie Ihren ersten Fall oder laden Sie einen Kunden ein.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden" data-focus-invite>Kunden einladen</a><a class="btn btn-outline" href="#fall">Neuen Fall anlegen</a></div></div>'}
-      ${inv.length ? `<h3 class="kd-sub">Offene Einladungen</h3><ul class="kd-inv">${inv.map((c) => `<li><span><strong>${esc(c.name || c.email)}</strong><small>${c.name ? esc(c.email) + ' · ' : ''}gültig bis ${dt(c.expiresAt)}</small></span><span class="st">Wartet auf Kunde</span><button type="button" class="btn btn-ghost" data-kd-end="${esc(c.id)}">Zurückziehen</button></li>`).join('')}</ul>` : ''}</section>`;
+      ${inv.length ? `<h3 class="kd-sub">Offene Einladungen</h3><ul class="kd-inv">${inv.map((c) => `<li data-stage="inv" data-q="${esc(`${c.name || ''} ${c.email || ''}`.toLowerCase())}"><span><strong>${esc(c.name || c.email)}</strong><small>${c.name ? esc(c.email) + ' · ' : ''}gültig bis ${dt(c.expiresAt)}</small></span><span class="st">Wartet auf Kunde</span><button type="button" class="btn btn-ghost" data-kd-end="${esc(c.id)}">Zurückziehen</button></li>`).join('')}</ul>` : ''}</section>`;
+  box.insertAdjacentHTML('beforeend', radar); // Radar als Zusatz unten – Einladung und Kundenliste zuerst
   box.querySelectorAll('[data-jump]').forEach((l) => l.onclick = (e) => { if (!l.dataset.jump) return; e.preventDefault(); const el = document.getElementById('kd-' + l.dataset.jump); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); el?.classList.add('kd-flash'); setTimeout(() => el?.classList.remove('kd-flash'), 1600); });
   const STG = { inv: 'Eingeladen', missing: 'Unterlagen unvollständig', check: 'Prüfbereit', ready: 'Bankfertig' };
   const rows = all.filter((c) => c.status === 'verbunden' || c.status === 'eingeladen').map((c) => ({ name: c.name || '', email: c.email || '', stufe: STG[stageOf(c)], bankreife: c.progress?.best ?? null, objekte: c.progress?.objects ?? null, unterlagen: c.progress?.docs ?? null, fehlend: (c.progress?.missing || []).join('; '), verbunden_seit: c.since || '', zinsbindung_endet: Array.isArray(c.radar) ? c.radar.join('; ') : '' }));
@@ -217,6 +222,17 @@ async function vKunden(box) {
     await vKunden(box);
   }); };
   box.querySelectorAll('[data-focus-invite]').forEach((l) => l.onclick = (e) => { e.preventDefault(); $('#kdMail')?.focus(); });
+  // Suche und Filter in „Ihre Kunden“ (Status aus der Pipeline-Stufe).
+  let kf = 'alle', kq = '';
+  const kdFilter = () => box.querySelectorAll('.kd-card[data-stage], .kd-inv li[data-stage]').forEach((el) => {
+    const st = el.dataset.stage, okF = kf === 'alle' || (kf === 'aktiv' ? st !== 'inv' : kf === 'offen' ? st === 'missing' || st === 'check' : st === kf);
+    el.hidden = !(okF && (!kq || el.dataset.q.includes(kq)));
+  });
+  box.querySelectorAll('[data-kdf]').forEach((b) => b.onclick = () => { kf = b.dataset.kdf; box.querySelectorAll('[data-kdf]').forEach((x) => x.setAttribute('aria-selected', String(x === b))); kdFilter(); });
+  $('#kdQ')?.addEventListener('input', (e) => { kq = e.target.value.trim().toLowerCase(); kdFilter(); });
+  // Aus einer Anfrage übernommen: Name und E-Mail vorbelegen; „#kunden=einladen“ springt direkt zur Einladung.
+  try { const pf = JSON.parse(sessionStorage.getItem('ia-invite') || 'null'); if (pf) { sessionStorage.removeItem('ia-invite'); if (pf.email) $('#kdMail').value = pf.email; if (pf.name) $('#kdName').value = pf.name; } } catch { /* ignore */ }
+  if (/=einladen/.test(location.hash) || $('#kdMail')?.value) setTimeout(() => { $('#kdName')?.focus(); $('.kd-new')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120);
   $('#kdCopy')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(KD_LAST.link); toast('Link kopiert.'); } catch { toast('Bitte den Link markieren und kopieren.', true); } });
   box.querySelectorAll('[data-kd-req]').forEach((b) => b.onclick = () => {
     const note = prompt('Optional: kurze Nachricht an Ihren Kunden (z. B. „Bitte bis Freitag“). Leer lassen für die Standard-Erinnerung.');
@@ -266,91 +282,206 @@ const stageOf = (c) => {
 // Fallstatus in Worten (nie nur Farbe): gleiche Stufen wie die Pipeline.
 const CASE_ST = { inv: ['', 'Wartet auf Kunde'], missing: ['warn', 'Dokumente fehlen'], check: ['', 'Prüfung'], ready: ['ok', 'Bereit'] };
 const caseName = (c) => c.name || c.email || 'Kunde';
+// Status-Text je Fall: „Dokumente fehlen“ nur, wenn wirklich Unterlagen fehlen – sonst „Angaben fehlen“.
+const stLabel = (c) => { const k = stageOf(c); return k === 'missing' && !c.progress?.missing?.length ? ['warn', 'Angaben fehlen'] : CASE_ST[k]; };
 const greet = () => { const h = new Date().getHours(); return h < 11 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend'; };
+const ICO = (d) => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const IC = {
+  invite: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/>',
+  scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/>',
+  cases: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  calc: '<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M8 6h8"/><path d="M8 10h.01"/><path d="M12 10h.01"/><path d="M16 10h.01"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14v4"/><path d="M8 18h.01"/><path d="M12 18h.01"/>',
+  monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+};
+// Nächster Schritt eines Falls – nur aus dem tatsächlichen Stand abgeleitet.
+const nextStep = (c) => {
+  const k = stageOf(c), p = c.progress || {};
+  if (k === 'inv') return { t: 'Kundenantwort steht aus', x: `Die Einladung ist noch nicht angenommen${c.expiresAt ? ` (gültig bis ${dt(c.expiresAt)})` : ''}.`, cta: 'Kunde öffnen' };
+  if (p.missing?.length) return { t: `${p.missing.slice(0, 2).join(', ')} fehlt`, x: 'Fordern Sie das fehlende Dokument beim Kunden an.', cta: 'Kunde erinnern', remind: true };
+  if (p.profile === false) return { t: 'Finanzprofil unvollständig', x: 'Bitten Sie den Kunden, Einkommen und Ausgaben zu ergänzen.', cta: 'Kunde erinnern', remind: true };
+  if (k === 'missing') return { t: `Bankreife ${p.best ?? 0} %`, x: 'Angaben sind noch unvollständig – Kunde erinnern.', cta: 'Kunde erinnern', remind: true };
+  if (k === 'check') return { t: 'Fallprüfung offen', x: 'Kennzahlen sind gerechnet – Ihr Blick als Berater fehlt noch.', cta: 'Kurzbericht öffnen', pdf: true };
+  return { t: 'Bereit für den nächsten Schritt', x: 'Kreditmappe erstellen und einreichen.', cta: 'Zu den Einreichungen', href: '#einreichungen' };
+};
+// Fälle einmal laden und für Start, Fälle und Kunden teilen (kurz zwischengespeichert).
+let CASES = null;
+const loadCases = async (force = false) => {
+  if (!force && CASES && Date.now() - CASES.at < 20000) return CASES.r;
+  const r = await api('/api/b2b/clients').catch(() => ({ ok: false, data: {} }));
+  if (r.ok) CASES = { at: Date.now(), r };
+  return r;
+};
+const remind = (id, btn, after) => {
+  const note = prompt('Optional: kurze Nachricht an Ihren Kunden (z. B. „Bitte bis Freitag“). Leer lassen für die Standard-Erinnerung.');
+  if (note === null) return;
+  busy(btn, async () => {
+    const x = await api('/api/b2b/clients/request', { method: 'POST', body: JSON.stringify({ id, note: note.trim() || undefined }) });
+    if (!x.ok) throw Error(x.data?.error || 'Erinnerung konnte nicht gesendet werden.');
+    toast(x.data.mailed ? 'Erinnerung per E-Mail gesendet und in der App angezeigt.' : 'Erinnerung wird dem Kunden in der App angezeigt (E-Mail-Versand noch nicht eingerichtet).');
+    CASES = null; after?.();
+  });
+};
 
-// Startseite: Begrüßung, Fall-Kennzahlen, was heute zu tun ist (mit Namen), letzte Fälle – danach Konto & Nutzung.
+// Start: Was braucht heute Aufmerksamkeit? Kennzahlen, Aufgaben nach Priorität, Schnellaktionen, letzte Fälle.
 function vStart(box) {
   const a = me.account, u = me.usage, lim = me.limits;
   const quota = lim ? (lim.dossiersPerMonth == null ? 'unbegrenzt' : `${u.dossiersThisMonth} von ${lim.dossiersPerMonth + (a.dossierBonus || 0)}`) : '–';
   const done = setupSteps().filter(([ok]) => ok).length;
   const col = me.limits?.cobranding && a.brandColor ? a.brandColor : '#0F2C59';
   const first = me.role === 'owner' ? String(a.advisorName || '').trim().split(/\s+/)[0] : '';
-  box.innerHTML = `<p class="pt-mobile-hint" role="note"><span aria-hidden="true">💻</span> Für die bestmögliche Performance und komplexe Votierungsanalysen empfehlen wir Tablet oder Computer. Die mobile Ansicht wird laufend optimiert.</p>${a.verified ? '' : `<div class="pt-alert warn"><strong>Ihr Konto ist noch nicht freigeschaltet.</strong> Bitte laden Sie Ihre Gewerbeanmeldung oder einen Handelsregisterauszug hoch. Nach unserer Prüfung schalten wir Partnerseite, Widget, Anfragen, Kreditmappen und Tarife frei. <a class="btn btn-dark" href="#verifizierung">Zur Verifizierung</a></div>`}
-    <section class="pt-hello"><h2>${esc(greet())}${first ? ', ' + esc(first) : ''}</h2><p>Ihre Übersicht</p></section>
-    <div class="pt-kpis pt-case-kpis" id="caseKpis" aria-live="polite">${['Offene Fälle', 'Wartende Kundeneinladungen', 'Unvollständige Fälle', 'Bereit für nächsten Schritt'].map((l) => `<div class="pt-kpi"><small>${l}</small><strong>…</strong></div>`).join('')}</div>
-    <section class="pt-card todo"><div class="todo-h"><h2>Heute zu erledigen</h2><span class="form-note" id="todoSum">wird geladen …</span></div><ul class="todo-list" id="todoList"></ul><p class="todo-more" id="todoMore" hidden><a class="btn btn-dark" href="#kunden">Fälle anzeigen</a></p></section>
-    <section class="pt-card last-cases"><div class="todo-h"><h2>Letzte Fälle</h2><a class="ck-link" href="#kunden">Alle Fälle →</a></div><div id="lastCases"><p class="ia-ld sm" role="status">wird geladen …</p></div></section>
+  box.innerHTML = `<p class="pt-mobile-hint" role="note">${ICO(IC.monitor)} <span>Für umfangreiche Analysen empfehlen wir Tablet oder Computer.</span></p>${a.verified ? '' : `<div class="pt-alert warn"><strong>Ihr Konto ist noch nicht freigeschaltet.</strong> Bitte laden Sie Ihre Gewerbeanmeldung oder einen Handelsregisterauszug hoch. Nach unserer Prüfung schalten wir Partnerseite, Widget, Anfragen, Kreditmappen und Tarife frei. <a class="btn btn-dark" href="#verifizierung">Zur Verifizierung</a></div>`}
+    <section class="pt-hello"><h2>${esc(greet())}${first ? ', ' + esc(first) : ''}</h2><p>Hier ist der aktuelle Stand Ihrer Fälle.</p></section>
+    <div class="pt-kpis pt-case-kpis" id="caseKpis" aria-live="polite">${['Neue Anfragen', 'Offene Fälle', 'Dokumente fehlen', 'Bereit für nächsten Schritt'].map((l) => `<div class="pt-kpi pt-skel"><small>${l}</small><strong>&nbsp;</strong></div>`).join('')}</div>
+    <section class="pt-card todo"><div class="todo-h"><h2>Heute zu erledigen</h2><span class="form-note" id="todoSum">wird geladen …</span></div><ul class="todo-list todo-cases" id="todoList"></ul></section>
+    <section class="pt-card"><h2 class="pt-h2s">Schnellaktionen</h2><div class="pt-quick">
+      <a href="#kunden=einladen">${ICO(IC.invite)}<span>Kunden einladen</span></a>
+      <a href="#fall">${ICO(IC.scan)}<span>Fall-Analyse starten</span></a>
+      <a href="#faelle">${ICO(IC.cases)}<span>Fälle ansehen</span></a>
+      <a href="#anfragen">${ICO(IC.inbox)}<span>Anfragen prüfen</span></a></div>
+      <p class="pt-tools-row"><span>Rechner:</span> <a href="#tools">Haushaltsrechnung</a> · <a href="/rechner/kaufnebenkosten" target="_blank" rel="noopener">Kaufnebenkosten ↗</a> · <a href="/rechner/tilgungsplan" target="_blank" rel="noopener">Tilgungsplan ↗</a> · <a href="/rechner/budget" target="_blank" rel="noopener">Finanzierungsbudget ↗</a></p></section>
+    <section class="pt-card last-cases"><div class="todo-h"><h2>Letzte Fälle</h2><a class="ck-link" href="#faelle">Alle Fälle →</a></div><div id="lastCases"><p class="ia-ld sm" role="status">wird geladen …</p></div></section>
     <h2 class="pt-sec-h">Konto &amp; Nutzung</h2>
     <div class="pt-kpis">
-      <div class="pt-kpi"><small>Neue Anfragen</small><strong>${u.leadsNew}</strong><a href="#anfragen">Ansehen</a></div>
-      <div class="pt-kpi"><small>Kreditmappen diesen Monat</small><strong>${quota}</strong><a href="#fall">Fall anlegen</a></div>
+      <div class="pt-kpi"><small>Kreditmappen diesen Monat</small><strong>${quota}</strong><a href="#einreichungen">Einreichungen</a></div>
       <div class="pt-kpi"><small>Berater-Zugänge</small><strong>${u.seats} / ${lim ? lim.seats : 1}</strong><a href="#team">Team</a></div>
       <div class="pt-kpi"><small>Einrichtung</small><strong>${done} / 5</strong><a href="#profil">${me.role === 'owner' ? 'Im Profil' : 'Beim Inhaber'}</a></div>
+      <div class="pt-kpi"><small>Tarif</small><strong class="pt-kpi-sm">${me.tier ? esc(TIER[me.tier]) : 'Noch kein Tarif'}</strong><a href="#tarif">Ansehen</a></div>
     </div>
     <div class="pt-grid2">
       <section class="pt-card wl-card"><h2>So sieht Ihr Kunde die Einladung</h2>
         <div class="wl-prev" style="--wl:${esc(col)}"><div class="wl-mail"><small>Von: <b>${esc(a.companyName)} über ImmoAdv</b></small><small>Antwort an: ${esc(a.email || 'Ihre E-Mail-Adresse')}</small></div>
         <div class="wl-page"><h4>Einladung von <span>${esc(a.companyName)}</span></h4><p class="wl-txt">Bereiten Sie Finanzprofil, Objekt und Unterlagen Schritt für Schritt vor – Ihr Berater sieht nur den Fortschritt.</p><span class="wl-btn">Einladung ansehen</span></div></div>
         <p class="form-note">${me.limits?.cobranding ? 'Hausfarbe und Logo pflegen Sie im <a href="#profil">Profil</a>.' : 'Mit „Kanzlei &amp; Baufi Pro“ erscheint die Einladung in Ihrer Hausfarbe, Kreditmappen mit Ihrem Logo. <a href="#tarif">Tarife</a>'}</p>
-        <a class="btn btn-dark" href="#kunden">Kunden einladen</a></section>
+        <a class="btn btn-dark" href="#kunden=einladen">Kunden einladen</a></section>
+      <section class="pt-card" id="stats30"></section>
     </div>
-    <p class="form-note">Rechnerische Orientierungswerte nach einem strukturierten Datenmodell. Keine Kreditzusage und keine Bonitätsentscheidung; die Entscheidung trifft das finanzierende Institut.</p>
-    <section class="pt-card" id="stats30"></section>`;
+    <p class="form-note">Rechnerische Orientierungswerte nach einem strukturierten Datenmodell. Keine Kreditzusage und keine Bonitätsentscheidung; die Entscheidung trifft das finanzierende Institut.</p>`;
   startStats($('#stats30'));
   todo();
 }
 async function todo() {
-  const list = $('#todoList'), sum = $('#todoSum'), kp = $('#caseKpis'), last = $('#lastCases'), more = $('#todoMore');
+  const list = $('#todoList'), sum = $('#todoSum'), kp = $('#caseKpis'), last = $('#lastCases');
   if (!list) return;
-  const items = [];
-  if (!me.account.verified) items.push(['warn', 'Konto verifizieren', 'Gewerbenachweis hochladen – danach sind alle Funktionen frei.', '#verifizierung']);
-  if (me.usage.leadsNew) items.push(['hot', `${me.usage.leadsNew} neue Anfrage${me.usage.leadsNew === 1 ? '' : 'n'}`, 'Interessenten mit Eckdaten aus Widget, QR-Code oder Partnerseite.', '#anfragen']);
-  const r = await api('/api/b2b/clients').catch(() => null);
-  let attention = 0;
-  if (r?.ok) {
-    const all = (r.data.clients || []).filter((c) => c.status === 'verbunden' || c.status === 'eingeladen');
-    const by = (k) => all.filter((c) => stageOf(c) === k);
-    const ready = by('ready'), miss = by('missing'), check = by('check'), inv = by('inv');
-    const con = all.filter((c) => c.status === 'verbunden');
-    if (kp) kp.innerHTML = [['Offene Fälle', con.length - ready.length], ['Wartende Kundeneinladungen', inv.length], ['Unvollständige Fälle', miss.length], ['Bereit für nächsten Schritt', ready.length]]
-      .map(([l, n]) => `<div class="pt-kpi"><small>${l}</small><strong>${n}</strong><a href="#kunden">Anzeigen</a></div>`).join('');
-    // Fälle mit Namen: zuerst fehlende Unterlagen (fast fertige oben), dann offene Prüfungen, dann ältere Einladungen.
-    const named = [
-      ...miss.sort((x, y) => (y.progress?.best ?? 0) - (x.progress?.best ?? 0)).map((c) => ['warn', caseName(c), c.progress?.missing?.length ? `${c.progress.missing.slice(0, 2).join(', ')} fehlt` : `Bankreife ${c.progress?.best ?? 0} %`]),
-      ...check.map((c) => ['', caseName(c), 'Fallprüfung offen']),
-      ...inv.filter((c) => c.expiresAt && new Date(c.expiresAt).getTime() - Date.now() < 11 * 864e5).map((c) => ['', caseName(c), `Einladung noch nicht angenommen · gültig bis ${dt(c.expiresAt)}`]),
-    ];
-    attention = named.length;
-    named.slice(0, 5).forEach(([t, n, x]) => items.push([t, n, x, '#kunden']));
-    if (named.length > 5) items.push(['', `${named.length - 5} weitere Fälle`, 'In der Fallübersicht ansehen.', '#kunden']);
-    if (ready.length) items.push(['ok', `${ready.length} ${ready.length === 1 ? 'Fall' : 'Fälle'} bankfertig`, 'Kreditmappe erstellen und einreichen.', '#einreichungen']);
-    const mon = (ym) => { const [y, m] = ym.split('-').map(Number); const n = new Date(); return (y - n.getFullYear()) * 12 + (m - 1 - n.getMonth()); };
-    const soon = r.data.radarOn ? con.flatMap((c) => (Array.isArray(c.radar) ? c.radar : []).map((ym) => mon(ym))).filter((m) => m >= -1 && m <= 12).length : 0;
-    if (soon) items.push(['hot', `${soon} Zinsbindung${soon === 1 ? '' : 'en'} enden in 12 Monaten`, 'Anschlussfinanzierung jetzt ansprechen (Bestandskunden-Radar).', '#kunden']);
-    // Letzte Fälle: zuletzt aktive verbundene Kunden, dazu offene Einladungen.
-    const recent = [...con].sort((x, y) => new Date(y.progress?.lastActive || y.since || 0) - new Date(x.progress?.lastActive || x.since || 0)).slice(0, 5);
-    if (last) last.innerHTML = recent.length ? `<ul class="lc-list">${recent.map((c) => { const [cls, lbl] = CASE_ST[stageOf(c)]; const best = c.progress?.best ?? 0; return `<li><a href="#kunden"><span class="lc-n"><strong>${esc(caseName(c))}</strong><small>${c.progress?.missing?.length ? 'Fehlt: ' + esc(c.progress.missing.slice(0, 2).join(', ')) : c.progress?.lastActive ? 'zuletzt aktiv ' + dt(c.progress.lastActive) : ''}</small></span><span class="st ${cls}">${lbl}</span><span class="lc-p"><span class="pipe-bar"><i style="width:${Math.max(3, Math.min(100, best))}%"></i></span><b>${best} %</b></span><em aria-hidden="true">→</em></a></li>`; }).join('')}</ul>`
-      : `<div class="pt-empty"><strong>Noch keine Fälle</strong><p>Erstellen Sie Ihren ersten Fall oder laden Sie einen Kunden ein.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden">Kunden einladen</a><a class="btn btn-outline" href="#fall">Neuen Fall anlegen</a></div></div>`;
-  } else {
+  const r = await loadCases(true);
+  const kpi = (l, n, none, href) => `<a class="pt-kpi pt-kpi-link" href="${href}"><small>${l}</small>${n ? `<strong>${n}</strong>` : `<strong class="pt-kpi-zero">${none}</strong>`}</a>`;
+  if (!r?.ok) {
     const retry = '<button type="button" class="btn btn-outline btn-sm" data-retry-start>Erneut versuchen</button>';
-    if (kp) kp.innerHTML = `<div class="pt-alert warn pt-kpi-err">Fälle konnten nicht geladen werden. ${retry}</div>`;
-    if (last) last.innerHTML = `<p class="form-note">Fälle konnten nicht geladen werden. ${retry}</p>`;
+    kp.innerHTML = `<div class="pt-alert warn pt-kpi-err">Fälle konnten nicht geladen werden. ${retry}</div>`;
+    list.innerHTML = ''; sum.textContent = '';
+    last.innerHTML = `<p class="form-note">Fälle konnten nicht geladen werden. ${retry}</p>`;
     $('#ptView')?.querySelectorAll('[data-retry-start]').forEach((b) => b.onclick = () => vStart($('#ptView')));
+    return;
   }
-  sum.textContent = attention ? `${attention} ${attention === 1 ? 'Fall' : 'Fälle'} benötig${attention === 1 ? 't' : 'en'} Aufmerksamkeit` : items.length ? `${items.length} Punkt${items.length === 1 ? '' : 'e'}` : 'Alles erledigt';
-  if (more) more.hidden = !attention;
-  list.innerHTML = items.length ? items.map(([t, h, x, href]) => `<li class="${t}"><a href="${href}"><span class="todo-dot" aria-hidden="true"></span><span><strong>${esc(h)}</strong><small>${esc(x)}</small></span><em aria-hidden="true">→</em></a></li>`).join('')
-    : '<li class="empty"><p>Keine offenen Aufgaben.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden">Neue Kunden einladen</a><a class="btn btn-outline" href="#werkzeuge">Widget einbinden</a></div></li>';
+  const all = (r.data.clients || []).filter((c) => c.status === 'verbunden' || c.status === 'eingeladen');
+  const by = (k) => all.filter((c) => stageOf(c) === k);
+  const ready = by('ready'), miss = by('missing'), check = by('check'), inv = by('inv');
+  const con = all.filter((c) => c.status === 'verbunden');
+  const docMiss = con.filter((c) => c.progress?.missing?.length);
+  kp.innerHTML = kpi('Neue Anfragen', me.usage.leadsNew, 'Keine neuen Anfragen', '#anfragen') + kpi('Offene Fälle', con.length - ready.length, 'Keine offenen Fälle', '#faelle')
+    + kpi('Dokumente fehlen', docMiss.length, 'Keine fehlenden Dokumente', '#faelle=missing') + kpi('Bereit für nächsten Schritt', ready.length, 'Noch kein Fall bereit', '#faelle=ready');
+  // Priorität: 1 fehlende Unterlagen, 2 Kundenantwort, 3 unvollständige Daten, 4 Prüfung, 5 neue Anfragen, 6 Allgemeines.
+  const rows = [];
+  docMiss.sort((x, y) => (y.progress?.best ?? 0) - (x.progress?.best ?? 0)).forEach((c) => rows.push(['warn', c, nextStep(c)]));
+  inv.forEach((c) => rows.push(['', c, nextStep(c)]));
+  miss.filter((c) => !c.progress?.missing?.length).forEach((c) => rows.push(['warn', c, nextStep(c)]));
+  check.forEach((c) => rows.push(['', c, nextStep(c)]));
+  const caseItems = rows.length;
+  const items = rows.slice(0, 6).map(([t, c, n]) => `<li class="${t}"><div class="todo-row"><span class="todo-dot" aria-hidden="true"></span><span><strong>${esc(caseName(c))}</strong><small>${esc(n.t)}</small></span><a class="btn btn-outline btn-sm" href="#faelle=${esc(c.id)}">${c.status === 'eingeladen' ? 'Kunde öffnen' : 'Fall öffnen'}</a></div></li>`);
+  if (rows.length > 6) items.push(`<li><div class="todo-row"><span class="todo-dot" aria-hidden="true"></span><span><strong>${rows.length - 6} weitere Fälle</strong><small>In der Fallübersicht ansehen.</small></span><a class="btn btn-outline btn-sm" href="#faelle">Alle Fälle</a></div></li>`);
+  const gen = [];
+  if (me.usage.leadsNew) gen.push(['hot', `${me.usage.leadsNew} neue Anfrage${me.usage.leadsNew === 1 ? '' : 'n'}`, 'Aus Widget, QR-Code oder Partnerseite.', '#anfragen', 'Anfragen öffnen']);
+  if (!me.account.verified) gen.push(['warn', 'Konto verifizieren', 'Gewerbenachweis hochladen – danach sind alle Funktionen frei.', '#verifizierung', 'Zur Verifizierung']);
+  if (ready.length) gen.push(['ok', `${ready.length} ${ready.length === 1 ? 'Fall' : 'Fälle'} bereit`, 'Kreditmappe erstellen und einreichen.', '#einreichungen', 'Einreichungen']);
+  const mon = (ym) => { const [y, m] = ym.split('-').map(Number); const n = new Date(); return (y - n.getFullYear()) * 12 + (m - 1 - n.getMonth()); };
+  const soon = r.data.radarOn ? con.flatMap((c) => (Array.isArray(c.radar) ? c.radar : []).map((ym) => mon(ym))).filter((m) => m >= -1 && m <= 12).length : 0;
+  if (soon) gen.push(['hot', `${soon} Zinsbindung${soon === 1 ? '' : 'en'} enden in 12 Monaten`, 'Anschlussfinanzierung ansprechen (Bestandskunden-Radar).', '#kunden', 'Radar öffnen']);
+  gen.forEach(([t, h, x, href, cta]) => items.push(`<li class="${t}"><div class="todo-row"><span class="todo-dot" aria-hidden="true"></span><span><strong>${esc(h)}</strong><small>${esc(x)}</small></span><a class="btn btn-outline btn-sm" href="${href}">${cta}</a></div></li>`));
+  sum.textContent = caseItems ? `${caseItems} ${caseItems === 1 ? 'Fall benötigt' : 'Fälle benötigen'} Aufmerksamkeit` : items.length ? `${items.length} ${items.length === 1 ? 'Punkt' : 'Punkte'}` : '';
+  list.innerHTML = items.length ? items.join('') : `<li class="empty todo-done">${ICO(IC.check)}<div><strong>Alles erledigt</strong><p>Aktuell gibt es keine offenen Aufgaben.</p></div></li>`;
+  const recent = [...con].sort((x, y) => new Date(y.progress?.lastActive || y.since || 0) - new Date(x.progress?.lastActive || x.since || 0)).slice(0, 5);
+  last.innerHTML = recent.length ? `<ul class="lc-list">${recent.map((c) => { const [cls, lbl] = stLabel(c); const best = c.progress?.best ?? 0; return `<li><a href="#faelle=${esc(c.id)}"><span class="lc-n"><strong>${esc(caseName(c))}</strong><small>${c.progress?.missing?.length ? 'Fehlt: ' + esc(c.progress.missing.slice(0, 2).join(', ')) : c.progress?.lastActive ? 'zuletzt aktiv ' + dt(c.progress.lastActive) : ''}</small></span><span class="st ${cls}">${lbl}</span><span class="lc-p"><span class="pipe-bar"><i style="width:${Math.max(3, Math.min(100, best))}%"></i></span><b>${best} %</b></span><em aria-hidden="true">→</em></a></li>`; }).join('')}</ul>`
+    : `<div class="pt-empty"><strong>Noch keine Fälle</strong><p>Erstellen Sie Ihren ersten Fall oder laden Sie einen Kunden ein.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden=einladen">Kunden einladen</a><a class="btn btn-outline" href="#fall">Fall-Analyse starten</a></div></div>`;
+}
+
+// ---------- Fälle: alle Kundenfälle mit Suche, Status-Filter und Falldetail ----------
+const FILTERS = [['alle', 'Alle'], ['inv', 'Wartet auf Kunde'], ['missing', 'Dokumente fehlen'], ['check', 'Prüfung'], ['ready', 'Bereit']];
+async function vFaelle(box) {
+  const arg = (location.hash.split('=')[1] || '').trim();
+  const r = await loadCases(true);
+  if (!r.ok) { box.innerHTML = `<section class="pt-card"><h2>Fälle konnten nicht geladen werden.</h2><p class="form-note">${esc(r.data?.error || 'Bitte versuchen Sie es erneut.')}</p><button type="button" class="btn btn-dark" id="fcRetry">Erneut versuchen</button></section>`; $('#fcRetry').onclick = () => { box.innerHTML = logoLoader(); vFaelle(box); }; return; }
+  const all = (r.data.clients || []).filter((c) => c.status === 'verbunden' || c.status === 'eingeladen');
+  let f = FILTERS.some(([k]) => k === arg) ? arg : 'alle', q = '';
+  const count = (k) => (k === 'alle' ? all.length : all.filter((c) => stageOf(c) === k).length);
+  box.innerHTML = `<section class="pt-card fc"><div class="fc-top"><div><p class="form-note fc-lead">Jeder eingeladene oder verbundene ${esc(B().kunden === 'Kunden' ? 'Kunde' : B().kunden.replace(/en$/, ''))} ist ein Fall – mit Status, Vollständigkeit und nächstem Schritt.</p></div><a class="btn btn-dark" href="#kunden=einladen">Kunden einladen</a></div>
+    <div class="fc-tools"><label class="fc-search"><span class="sr-only">Fälle suchen</span><input type="search" id="fcQ" placeholder="Fälle suchen (Name oder E-Mail)" autocomplete="off"></label>
+    <div class="seg fc-seg" role="tablist" aria-label="Status">${FILTERS.map(([k, l]) => `<button type="button" role="tab" data-fc="${k}" aria-selected="${k === f}">${l} <b>${count(k)}</b></button>`).join('')}</div></div>
+    <div id="fcList"></div></section>
+    <dialog class="fc-dlg" id="fcDlg" aria-labelledby="fcDlgH"></dialog>`;
+  const draw = () => {
+    const xs = all.filter((c) => (f === 'alle' || stageOf(c) === f) && (!q || `${c.name || ''} ${c.email || ''}`.toLowerCase().includes(q)))
+      .sort((x, y) => ['missing', 'inv', 'check', 'ready'].indexOf(stageOf(x)) - ['missing', 'inv', 'check', 'ready'].indexOf(stageOf(y)) || (y.progress?.best ?? 0) - (x.progress?.best ?? 0));
+    $('#fcList').innerHTML = xs.length ? `<table class="fc-table"><thead><tr><th scope="col">Kunde</th><th scope="col">Status</th><th scope="col">Vollständigkeit</th><th scope="col">Nächster Schritt</th><th scope="col">Zuletzt aktiv</th><th scope="col"><span class="sr-only">Aktion</span></th></tr></thead><tbody>${xs.map((c) => {
+      const [cls, lbl] = stLabel(c), best = c.progress?.best, n = nextStep(c);
+      return `<tr><th scope="row" data-label="Kunde"><strong>${esc(caseName(c))}</strong>${c.name && c.email ? `<small>${esc(c.email)}</small>` : ''}</th><td data-label="Status"><span class="st ${cls}">${lbl}</span></td><td data-label="Vollständigkeit">${best == null ? '–' : `<span class="lc-p"><span class="pipe-bar"><i style="width:${Math.max(3, Math.min(100, best))}%"></i></span><b>${best} %</b></span>`}</td><td data-label="Nächster Schritt">${esc(n.t)}</td><td data-label="Zuletzt aktiv">${c.progress?.lastActive ? dt(c.progress.lastActive) : c.status === 'eingeladen' ? 'eingeladen' : '–'}</td><td><button type="button" class="btn btn-outline btn-sm" data-open="${esc(c.id)}">Fall öffnen</button></td></tr>`;
+    }).join('')}</tbody></table>` : all.length ? '<div class="pt-empty"><strong>Keine passenden Fälle</strong><p>Filter oder Suche anpassen.</p></div>'
+      : '<div class="pt-empty"><strong>Noch keine Fälle</strong><p>Erstellen Sie Ihren ersten Fall oder laden Sie einen Kunden ein.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden=einladen">Kunden einladen</a><a class="btn btn-outline" href="#fall">Fall-Analyse starten</a></div></div>';
+    $('#fcList').querySelectorAll('[data-open]').forEach((b) => b.onclick = () => openCase(all.find((c) => c.id === b.dataset.open), box));
+  };
+  box.querySelectorAll('[data-fc]').forEach((b) => b.onclick = () => { f = b.dataset.fc; box.querySelectorAll('[data-fc]').forEach((x) => x.setAttribute('aria-selected', String(x === b))); draw(); });
+  $('#fcQ').addEventListener('input', (e) => { q = e.target.value.trim().toLowerCase(); draw(); });
+  draw();
+  const pre = all.find((c) => c.id === arg);
+  if (pre) openCase(pre, box);
+}
+// Falldetail als Dialog: Kunde, Status, Vollständigkeit, offene Punkte, nächster Schritt – Aktionen ohne Bereichswechsel.
+function openCase(c, box) {
+  const dlg = $('#fcDlg'); if (!c || !dlg) return;
+  const p = c.progress || {}, [cls, lbl] = stLabel(c), n = nextStep(c), best = p.best ?? 0, con = c.status === 'verbunden';
+  const open = [...(p.missing || []).map((m) => ['Dokument', m]), ...(p.profile === false ? [['Finanzangabe', 'Finanzprofil (Einkommen, Ausgaben)']] : [])];
+  const reminded = c.lastRequestAt && Date.now() - new Date(c.lastRequestAt).getTime() < 864e5;
+  dlg.innerHTML = `<div class="fc-d"><header class="fc-dh"><div><small>Fall</small><h2 id="fcDlgH">${esc(caseName(c))}</h2><p>${c.name && c.email ? esc(c.email) + ' · ' : ''}Immobilienfinanzierung</p></div><span class="st ${cls}">${lbl}</span><button type="button" class="stage-x" data-x aria-label="Schließen">×</button></header>
+    <section class="fc-next ${n.remind ? 'warn' : ''}"><small>Nächster Schritt</small><strong>${esc(n.t)}</strong><p>${esc(n.x)}</p>
+      ${n.remind && con ? `<button type="button" class="btn btn-dark" id="fcRem"${reminded ? ' disabled' : ''}>${reminded ? 'Heute bereits erinnert' : 'Kunde erinnern'}</button>` : n.pdf ? '<button type="button" class="btn btn-dark" id="fcPdf">Kurzbericht öffnen (PDF)</button>' : n.href ? `<a class="btn btn-dark" href="${n.href}" data-x>${esc(n.cta)}</a>` : `<a class="btn btn-dark" href="#kunden" data-x>Zur Kundenübersicht</a>`}</section>
+    ${con ? `<section class="fc-comp"><div class="fc-comp-h"><span>Fallvollständigkeit</span><b>${best} %</b></div><div class="pipe-bar fc-bar"><i style="width:${Math.max(3, Math.min(100, best))}%"></i></div><small>Bankreife laut Kundenbereich: Finanzprofil, Objekt und Unterlagen.</small>
+      ${open.length ? `<h3>Noch offen</h3><ul class="fc-open">${open.map(([k, v]) => `<li><em>${k}</em>${esc(v)}</li>`).join('')}</ul>` : '<p class="fc-ok">Alle Unterlagen-Arten vorhanden.</p>'}</section>
+    <dl class="fc-kv"><div><dt>Objekte</dt><dd>${p.objects ?? '–'}</dd></div><div><dt>Unterlagen</dt><dd>${p.docs ?? '–'}</dd></div><div><dt>Finanzprofil</dt><dd>${p.profile == null ? '–' : p.profile ? 'ausgefüllt' : 'offen'}</dd></div><div><dt>Zuletzt aktiv</dt><dd>${p.lastActive ? dt(p.lastActive) : '–'}</dd></div><div><dt>Verbunden seit</dt><dd>${c.since ? dt(c.since) : '–'}</dd></div>${c.lastRequestAt ? `<div><dt>Zuletzt erinnert</dt><dd>${dtt(c.lastRequestAt)}</dd></div>` : ''}</dl>` : `<p class="form-note">Sobald der Kunde die Einladung annimmt, erscheinen hier Profil, Objekt und Unterlagen.</p>`}
+    <section class="fc-acts"><h3>Weiter im Fall</h3><div class="fc-act-grid">
+      ${con ? '<button type="button" class="btn btn-outline" id="fcPdf2">Kurzbericht (PDF)</button>' : ''}
+      <a class="btn btn-outline" href="#fall" data-x>Unterlagen analysieren</a>
+      <a class="btn btn-outline" href="#wissen" data-x data-ctx>Beratungskompass für diesen Fall</a>
+      <a class="btn btn-outline" href="#einreichungen" data-x>Kreditmappe &amp; Einreichung</a></div></section>
+    <p class="form-note">Orientierungswerte aus den Angaben des Kunden. Keine Kredit- oder Bonitätsentscheidung.</p></div>`;
+  const close = () => { try { dlg.close(); } catch { dlg.removeAttribute('open'); } if (/^#faelle=/.test(location.hash)) history.replaceState(null, '', '#faelle'); };
+  dlg.querySelectorAll('[data-x]').forEach((x) => x.addEventListener('click', () => { if (x.hasAttribute('data-ctx')) try { sessionStorage.setItem('ia-ctx', JSON.stringify({ id: c.id, name: caseName(c) })); } catch { /* ignore */ } close(); }));
+  dlg.onclick = (e) => { if (e.target === dlg) close(); };
+  const pdf = (b) => busy(b, async () => { await download('/api/b2b/clients/report?id=' + encodeURIComponent(c.id), {}, 'ImmoAdv-Kurzbericht.pdf'); });
+  dlg.querySelector('#fcPdf')?.addEventListener('click', (e) => pdf(e.currentTarget));
+  dlg.querySelector('#fcPdf2')?.addEventListener('click', (e) => pdf(e.currentTarget));
+  dlg.querySelector('#fcRem')?.addEventListener('click', (e) => remind(c.id, e.currentTarget, () => { c.lastRequestAt = new Date().toISOString(); openCase(c, box); }));
+  if (!dlg.open) { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); }
+  dlg.querySelector('.stage-x')?.focus();
+}
+// Kopf des Beratungskompass – mit Fallkontext, wenn er aus einem Fall heraus geöffnet wurde.
+function kompassHead() {
+  let ctx = null; try { ctx = JSON.parse(sessionStorage.getItem('ia-ctx') || 'null'); } catch { /* ignore */ }
+  return `${ctx?.name ? `<div class="bw-ctx"><span>Passend zu <strong>${esc(ctx.name)}</strong> – Beratungskompass aus dem Fall geöffnet.</span><a class="btn btn-outline btn-sm" href="#faelle=${esc(ctx.id)}">Zurück zum Fall</a><button type="button" class="btn btn-ghost btn-sm" data-ctx-off>Kontext entfernen</button></div>` : ''}<div id="bwBody"></div>`;
 }
 
 // ---------- Verifizierung (Gewerbenachweis) ----------
 const VKIND = { gewerbe: 'Gewerbeanmeldung', handelsregister: 'Handelsregisterauszug', erlaubnis: 'Erlaubnis § 34c / § 34i GewO', sonstiges: 'Sonstiger Nachweis' };
 async function vVerify(box) {
   const r = await api('/api/b2b/verification');
-  if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  if (!r.ok) { box.innerHTML = `<section class="pt-card"><h2>Verifizierung konnte nicht geladen werden.</h2><button type="button" class="btn btn-dark" data-reload>Erneut versuchen</button></section>`; return; }
   const v = r.data, locked = v.verified || v.status === 'eingereicht', owner = v.isOwner;
+  const state = v.verified ? ['ok', 'Verifiziert'] : v.status === 'eingereicht' ? ['warn', 'In Prüfung'] : ['bad', 'Nicht verifiziert'];
+  const hasProof = v.docs.some((d) => d.kind === 'gewerbe' || d.kind === 'handelsregister');
+  const nextV = v.verified ? 'Nichts zu tun – alle Funktionen sind freigeschaltet.' : v.status === 'eingereicht' ? 'Wir prüfen Ihre Unterlagen, in der Regel innerhalb von zwei Werktagen.' : hasProof ? 'Nachweis zur Prüfung einreichen.' : 'Gewerbeanmeldung oder Handelsregisterauszug hochladen.';
   const stat = { offen: ['warn', 'Noch nicht eingereicht'], eingereicht: ['warn', 'Eingereicht – wird geprüft'], geprueft: ['ok', 'Geprüft und freigeschaltet'], abgelehnt: ['bad', 'Bitte Unterlagen ergänzen'] }[v.status] || ['warn', v.status];
-  box.innerHTML = `<section class="pt-card"><h2>Unternehmen verifizieren</h2>
+  box.innerHTML = `<section class="pt-card vf-sum"><div class="vf-h"><h2>Unternehmensverifizierung</h2><span class="st ${state[0]}">${state[1]}</span></div>
+    <dl class="vf-dl"><div><dt>Eingereicht</dt><dd>${v.docs.length ? `${v.docs.length} Nachweis${v.docs.length === 1 ? '' : 'e'}` : 'noch nichts'}</dd></div><div><dt>Was fehlt</dt><dd>${v.verified ? '–' : hasProof ? (v.status === 'eingereicht' ? '–' : 'Einreichung') : 'Gewerbe- oder Registernachweis'}</dd></div><div><dt>Nächster Schritt</dt><dd>${nextV}</dd></div></dl></section>
+    <section class="pt-card"><h2>Unternehmen verifizieren</h2>
     <p>Status: <span class="st ${stat[0]}">${stat[1]}</span>${v.submittedAt ? ` <small class="form-note">eingereicht ${dtt(v.submittedAt)}</small>` : ''}</p>
     ${v.note ? `<div class="pt-alert bad"><strong>Hinweis aus der Prüfung:</strong> ${esc(v.note)}</div>` : ''}
     ${v.verified ? '<p>Ihr Konto ist freigeschaltet. Vielen Dank!</p>' : `<p class="form-note">Wir schalten ausschließlich Unternehmen frei (§ 14 BGB). Benötigt: <strong>Gewerbeanmeldung oder Handelsregisterauszug</strong> (nicht älter als 12 Monate). Für Makler und Finanzierungsvermittler zusätzlich hilfreich: Erlaubnis nach § 34c bzw. § 34i GewO. Bitte keine Ausweiskopien hochladen. Die Nachweise werden nur für die Prüfung verwendet, vertraulich gespeichert und 90 Tage nach der Entscheidung gelöscht.</p>`}
@@ -386,7 +517,7 @@ async function vVerify(box) {
 // ---------- Anfragen ----------
 async function vLeads(box) {
   const [r, t] = await Promise.all([api('/api/b2b/leads'), api('/api/b2b/team')]);
-  if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  if (!r.ok) { box.innerHTML = `<section class="pt-card"><h2>Anfragen konnten nicht geladen werden.</h2><p class="form-note">${esc(r.data?.error || 'Bitte versuchen Sie es erneut.')}</p><button type="button" class="btn btn-dark" id="ldRetry">Erneut versuchen</button></section>`; $('#ldRetry').onclick = () => { box.innerHTML = logoLoader(); vLeads(box); }; return; }
   const leads = r.data.leads;
   const members = t.ok ? t.data.members : [];
   const self = members.find((m) => m.self)?.user_id;
@@ -394,7 +525,7 @@ async function vLeads(box) {
   const assignSel = (l) => members.length > 1 || me.role === 'owner'
     ? `<label class="form-note">Zuständig <select data-as="${l.id}"><option value="">– niemand –</option>${members.filter((m) => me.role === 'owner' || m.self || m.user_id === l.assigned_to).map((m) => `<option value="${m.user_id}"${m.user_id === l.assigned_to ? ' selected' : ''}>${esc(m.email)}${m.self ? ' (Sie)' : ''}</option>`).join('')}</select></label>` : '';
   const n = (v) => (v == null || v === '' ? '–' : Number(v).toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' €');
-  box.innerHTML = `<div class="pt-bar"><div class="seg" role="tablist">${['alle', ...Object.keys(STATUS)].map((s, i) => `<button type="button" data-f="${s}" aria-selected="${i === 0}">${s === 'alle' ? 'Alle' : STATUS[s]}</button>`).join('')}<button type="button" data-f="mine" aria-selected="false">Mir zugewiesen</button></div>
+  box.innerHTML = `<div class="pt-bar"><div class="seg" role="tablist">${['alle', ...Object.keys(STATUS)].map((s, i) => `<button type="button" data-f="${s}" aria-selected="${i === 0}">${s === 'alle' ? 'Alle' : STATUS[s]} <b>${s === 'alle' ? leads.length : leads.filter((l) => l.status === s).length}</b></button>`).join('')}<button type="button" data-f="mine" aria-selected="false">Mir zugewiesen <b>${leads.filter((l) => l.assigned_to && l.assigned_to === self).length}</b></button></div>
     <button class="btn btn-ghost" id="csv" type="button">CSV exportieren</button></div>
     ${leads.length ? '' : '<div class="pt-empty"><strong>Noch keine Anfragen.</strong><p>Jede Anfrage aus Widget, QR-Code oder Partnerseite erscheint hier mit Objektdaten und Kennzahlen.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden">Mandanten einladen via Link</a><a class="btn btn-outline" href="#werkzeuge">QR-Code &amp; Widget</a></div></div>'}
     <div class="pt-leads">${leads.map((l) => {
@@ -409,6 +540,7 @@ async function vLeads(box) {
         <label class="pt-field">Interne Notiz (nur Ihr Team)<textarea data-nt="${l.id}" rows="2" maxlength="4000">${esc(l.notes || '')}</textarea></label>
         ${assignSel(l)}${l.assigned_to && !assignSel(l) ? `<p class="form-note">Zuständig: ${esc(who(l.assigned_to))}</p>` : ''}
         <details><summary>Einwilligung</summary><p class="form-note">${dtt(l.consent_at)}: ${esc(l.consent_text)}</p></details>
+        <div class="pt-lead-acts"><button class="btn btn-dark btn-sm" type="button" data-tocase="${l.id}">Als Kunde einladen – Fall anlegen</button><a class="btn btn-outline btn-sm" href="#fall">Unterlagen analysieren</a></div>
         ${me.role === 'owner' ? `<button class="text-btn del" data-del="${l.id}" type="button">Löschen</button>` : ''}
       </article>`;
     }).join('')}</div>`;
@@ -434,6 +566,12 @@ async function vLeads(box) {
     if (x.ok) b.closest('.pt-lead').remove(); else toast(x.data?.error || 'Fehler', true);
   });
   $('#csv').onclick = (e) => busy(e.target, () => download('/api/b2b/leads?format=csv', {}, 'ImmoAdv_Anfragen.csv'));
+  // Anfrage → Fall: Einladung mit Name und E-Mail vorbelegen; die Einwilligung bestätigt der Berater selbst.
+  box.querySelectorAll('[data-tocase]').forEach((b) => b.onclick = () => {
+    const l = leads.find((x) => x.id === b.dataset.tocase); if (!l) return;
+    try { sessionStorage.setItem('ia-invite', JSON.stringify({ email: l.client_email || '', name: l.client_name || '' })); } catch { /* ignore */ }
+    location.hash = 'kunden=einladen';
+  });
 }
 
 // ---------- Einreichungen (Vorprüfungs-Postkorb) ----------
@@ -543,9 +681,9 @@ document.addEventListener('click', async (e) => { const b = e.target.closest?.('
 // ---------- Team ----------
 async function vTeam(box) {
   const r = await api('/api/b2b/team');
-  if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
+  if (!r.ok) { box.innerHTML = `<section class="pt-card"><h2>Team konnte nicht geladen werden.</h2><p class="form-note">${esc(r.data?.error || 'Bitte versuchen Sie es erneut.')}</p><button type="button" class="btn btn-dark" data-reload>Erneut versuchen</button></section>`; return; }
   const { members, invites, seats } = r.data;
-  box.innerHTML = `<section class="pt-card"><h2>Berater-Zugänge (${members.length + invites.length} von ${seats})</h2>
+  box.innerHTML = `<section class="pt-card"><h2>Ihr Team</h2><p class="form-note">${members.length + invites.length} von ${seats} Berater-Zugängen belegt. Rollen: <strong>Inhaber</strong> (Tarif, Profil, Team) und <strong>Berater</strong> (Fälle, Kunden, Anfragen) – die Rechte prüft der Server.</p>
     <table class="bill-table"><thead><tr><th>E-Mail</th><th>Rolle</th><th>Seit</th><th></th></tr></thead><tbody>
     ${members.map((m) => `<tr><td>${esc(m.email)}${m.self ? ' (Sie)' : ''}</td><td>${m.role === 'owner' ? 'Inhaber' : 'Berater'}</td><td>${dt(m.created_at)}</td><td>${me.role === 'owner' && m.role !== 'owner' ? `<button class="text-btn del" data-m="${m.user_id}" type="button">Entfernen</button>` : ''}</td></tr>`).join('')}
     ${invites.map((i) => `<tr><td>${esc(i.email)}</td><td>Eingeladen</td><td>bis ${dt(i.expires_at)}</td><td><button class="text-btn del" data-i="${i.id}" type="button">Zurückziehen</button></td></tr>`).join('')}
@@ -694,15 +832,15 @@ async function vTarif(box) {
   const tiers = ['BASIC', 'PRO'];
   box.innerHTML = `
     <section class="pt-card"><h2>Aktueller Tarif</h2>
-      <p><strong>${me.tier ? TIER[me.tier] : 'Kein Tarif gebucht'}</strong>${a.planSource === 'manual' ? ' (vom Betreiber freigeschaltet)' : ''}${a.planUntil ? ` · läuft bis ${dt(a.planUntil)}` : ''}</p>
+      ${me.tier ? `<p class="tf-act"><span class="st ok">Aktiv</span></p>` : '<p class="tf-none"><strong>Noch kein Tarif aktiv</strong><br><span class="form-note">Wählen Sie einen Tarif, um das Unternehmensportal vollständig zu nutzen.</span></p>'}<p><strong>${me.tier ? TIER[me.tier] : ''}</strong>${a.planSource === 'manual' ? ' (vom Betreiber freigeschaltet)' : ''}${a.planUntil ? ` · läuft bis ${dt(a.planUntil)}` : ''}</p>
       ${a.planSource === 'stripe' ? '<button class="btn btn-ghost" id="aboPortal" type="button">Abo verwalten (Zahlungsmittel, Wechsel, Kündigung)</button>' : ''}</section>
-    <section class="pt-card roi-card"><h2>Lohnt sich das für Sie?</h2>
+    <section class="pt-card roi-card"><h2>Lohnt sich das für Sie? <span class="st">Schätzung</span></h2>
       <p class="form-note">Ihre eigene Rechnung – tragen Sie Ihre Werte ein. ImmoAdv nennt bewusst keine pauschale Zeitersparnis.</p>
       <div class="roi-in"><label>Fälle pro Monat<input id="roiN" type="number" min="0" step="1" inputmode="numeric" placeholder="z. B. 4"></label>
         <label>Minuten Vorarbeit, die Sie je Fall sparen<input id="roiM" type="number" min="0" step="5" inputmode="numeric" placeholder="Ihre Schätzung"></label>
         <label>Ihr interner Stundensatz (€)<input id="roiH" type="number" min="0" step="5" inputmode="decimal" placeholder="z. B. 80"></label></div>
       <div id="roiOut" class="roi-res" aria-live="polite"></div></section>
-    <section class="pt-card trust-card"><h2>Rechtssicher für Unternehmen</h2><ul class="trust-l">
+    <section class="pt-card trust-card"><h2>Rechtliche Grundlagen für Unternehmen</h2><ul class="trust-l">
       <li><b>AVV nach Art. 28 DSGVO</b><span>bei der Registrierung abgeschlossen, im Profil jederzeit abrufbar</span></li>
       <li><b>GoBD-gerechtes Rechnungsarchiv</b><span>Rechnungen unveränderbar gespeichert, SHA-256-geprüft</span></li>
       <li><b>Hosting in Frankfurt am Main</b><span>Anwendung (Vercel, Region fra1) und Datenbank (Supabase, eu-central-1) in der EU</span></li>
@@ -717,7 +855,7 @@ async function vTarif(box) {
     </div>
     ${cmpTable(b2b.vergleich, { BASIC: 0, PRO: 1, ENTERPRISE: 2 }[me.tier] ?? -1)}
     ${billingOn ? '' : '<p class="form-note">Online-Buchung ist noch nicht freigeschaltet. Für einen Testzugang oder Kauf auf Rechnung: support@immoadv.de.</p>'}
-    <section class="pt-card"><h2>Rechnungen</h2>${inv.ok && inv.data.invoices.length ? `<table class="bill-table"><thead><tr><th>Nummer</th><th>Datum</th><th>Brutto</th><th>Status</th><th></th></tr></thead><tbody>
+    <section class="pt-card"><h2>Rechnungen</h2>${inv.ok && inv.data?.invoices?.length ? `<table class="bill-table"><thead><tr><th>Nummer</th><th>Datum</th><th>Brutto</th><th>Status</th><th></th></tr></thead><tbody>
       ${inv.data.invoices.map((i) => `<tr><td>${esc(i.invoice_number)}${i.kind !== 'invoice' ? ' (Storno)' : ''}</td><td>${dt(i.issue_date)}</td><td>${eur(i.gross_cents)}</td><td>${{ PAID: 'bezahlt', PENDING: 'offen', OVERDUE: 'überfällig', CANCELLED: 'storniert' }[i.payment_status]}</td><td><button class="text-btn" data-inv="${i.id}" type="button">PDF</button></td></tr>`).join('')}</tbody></table>` : '<p class="form-note">Noch keine Rechnungen.</p>'}</section>`;
   box.querySelectorAll('#ivl button').forEach((b) => b.onclick = () => {
     box.querySelectorAll('#ivl button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
@@ -730,7 +868,7 @@ async function vTarif(box) {
     if (!n || !mi || !h) { o.innerHTML = '<p class="form-note">Alle drei Werte eintragen – dann sehen Sie Ihren Gegenwert pro Monat.</p>'; return; }
     const val = (n * mi / 60) * h;
     const pl = b2b.plans.filter((p) => p.interval === 'month');
-    o.innerHTML = `<p class="roi-big"><b>${(n * mi / 60).toLocaleString('de-DE', { maximumFractionDigits: 1 })} Stunden</b> pro Monat · Gegenwert <b>${eur(Math.round(val * 100))}</b></p>
+    o.innerHTML = `<p class="roi-big">Geschätzt eingesparte Arbeitszeit: <b>${(n * mi / 60).toLocaleString('de-DE', { maximumFractionDigits: 1 })} Stunden</b> pro Monat · monatlicher Gegenwert <b>${eur(Math.round(val * 100))}</b></p><p class="form-note">Schätzung mit Ihren Annahmen – keine garantierte Einsparung.</p>
       <ul class="roi-l">${pl.map((p) => `<li><span>${esc(p.name)}</span><b class="${val * 100 >= p.netto_cents ? 'ok' : 'warn'}">${val * 100 >= p.netto_cents ? 'rechnet sich' : 'rechnet sich noch nicht'}</b><small>${net(p.netto_cents)} netto / Monat</small></li>`).join('')}</ul>`;
   };
   ['#roiN', '#roiM', '#roiH'].forEach((id) => $(id).addEventListener('input', roi)); roi();
@@ -954,7 +1092,7 @@ async function start() {
 window.addEventListener('hashchange', () => { if (me) route(); });
 // Erneutes Tippen auf den aktiven Bereich: zurück nach oben.
 document.addEventListener('click', (e) => { const a = e.target.closest?.('a[data-v]'); if (a && a.getAttribute('href') === (location.hash || '#start')) window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); });
-root.addEventListener('click', (e) => { if (e.target.closest('[data-brsw]')) chooseBranche(); });
+root.addEventListener('click', (e) => { if (e.target.closest('[data-brsw]')) chooseBranche(); if (e.target.closest('[data-reload]')) location.reload(); const off = e.target.closest('[data-ctx-off]'); if (off) { try { sessionStorage.removeItem('ia-ctx'); } catch { /* ignore */ } off.closest('.bw-ctx')?.remove(); } });
 root.addEventListener('submit', async (e) => {
   if (e.target.id !== 'brandF') return;
   e.preventDefault();

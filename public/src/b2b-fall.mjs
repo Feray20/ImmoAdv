@@ -1,7 +1,7 @@
 // Unternehmensportal → Fall-Analyse: Unterlagen eines Kunden hochladen, sofort auswerten,
 // Analyse für den Berater, verständliche Fassung für den Kunden und Präsentation mit Varianten.
 // Die PDFs werden ausschließlich im Browser gelesen und nicht übertragen; der Server zählt nur das Kontingent.
-import { analyseText, caseFacts, missingDocs, TYPES } from './doc-check.mjs';
+import { analyseText, caseFacts, crossCheck, missingDocs, quality, TYPES } from './doc-check.mjs';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const E = (v, d = 0) => (v == null || !isFinite(v) ? '–' : v.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: d, maximumFractionDigits: d }));
@@ -87,8 +87,8 @@ export async function renderFall(box, { api, toast, me }) {
   const lim = (n) => (n == null ? 'unbegrenzt' : n);
   box.innerHTML = `<div class="fa">
     <section class="pt-card fa-hero"><div><span class="bw-kick">Fall-Analyse</span><h2>Unterlagen hochladen – Analyse in Sekunden</h2>
-      <p>Ziehen Sie die PDFs Ihres Kunden hierher (Gehaltsabrechnungen, Kontoauszug, Grundbuch, Energieausweis, Teilungserklärung, Protokolle, Kaufvertragsentwurf …). Sie erhalten eine Analyse für sich, eine verständliche Fassung für den Kunden und auf Wunsch eine Präsentation.</p>
-      <p class="fa-priv"><b>Datenschutz:</b> Die Fall-Analyse ist eine clientseitige Vorprüfung für maximale Diskretion bei sensiblen Gehaltsnachweisen: Die Dateien werden nur in Ihrem Browser gelesen und dabei nicht an ImmoAdv übertragen oder gespeichert. Unterlagen, die Ihr Kunde selbst im Kundenbereich hochlädt und für Sie freigibt, liegen dagegen verschlüsselt (AES-256) in einem ISO-27001-zertifizierten Rechenzentrum in Frankfurt am Main (AWS eu-central-1) – zur gemeinsamen Bearbeitung nach dem Auftragsverarbeitungsvertrag (Art. 28 DSGVO).</p></div>
+      <p>Unterlagen hochladen – relevante Informationen strukturiert erfassen und Prüfpunkte erkennen. Gehaltsabrechnungen, Kontoauszug, Exposé, Grundbuch, Energieausweis, Teilungserklärung, Protokolle, Kaufvertragsentwurf …</p>
+      <details class="fa-priv"><summary><b>Datenschutz:</b> Die PDFs werden nur in Ihrem Browser gelesen – nicht an ImmoAdv übertragen oder gespeichert.</summary><p>Die Fall-Analyse ist eine clientseitige Vorprüfung für maximale Diskretion bei sensiblen Gehaltsnachweisen. Unterlagen, die Ihr Kunde selbst im Kundenbereich hochlädt und für Sie freigibt, liegen dagegen verschlüsselt (AES-256) in einem ISO-27001-zertifizierten Rechenzentrum in Frankfurt am Main (AWS eu-central-1) – zur gemeinsamen Bearbeitung nach dem Auftragsverarbeitungsvertrag (Art. 28 DSGVO).</p></details></div>
       <div class="fa-quota"><div><small>Fall-Analysen diesen Monat</small><strong>${info.usage.fall} / ${lim(info.limits.fall)}</strong></div><div><small>Präsentationen</small><strong>${info.usage.praes} / ${lim(info.limits.praes)}</strong></div><div><small>Erscheinungsbild</small><strong>${({ immoadv: 'ImmoAdv', eigen: 'Ihr Logo', whitelabel: 'White-Label' })[info.branding.mode]}</strong></div></div></section>
     ${info.verified ? '' : '<div class="pt-alert warn">Die Fall-Analyse steht nach der Freischaltung Ihres Unternehmenskontos zur Verfügung.</div>'}
     <label class="fa-drop" id="faDrop"><input type="file" id="faFiles" accept="application/pdf" multiple hidden ${info.verified ? '' : 'disabled'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg><strong>PDFs auswählen oder hierher ziehen</strong><span>Bis zu 15 Dateien, je max. 25 MB. Gescannte Bilder ohne Text werden erkannt und markiert.</span></label>
@@ -165,6 +165,7 @@ function berater(c, f, sv, miss) {
       ${v0.ueber < 0 && i.netto ? '<p class="fa-flag bad">Haushaltsrechnung negativ – Kapitaldienstfähigkeit nicht gegeben (mit den angesetzten Pauschalen).</p>' : ''}
       ${v0.stress > v0.rate * 1.2 && v0.rest ? `<p class="fa-flag warn">Anschlussrisiko: Rate steigt bei +2 Prozentpunkten um ${P(v0.stress / v0.rate - 1, 0)}.</p>` : ''}
       ${f.lasten.length ? `<p class="fa-flag warn">Grundbuch Abt. II: ${esc(f.lasten.join(', '))}</p>` : ''}</section>
+    ${xcheckHtml(S.docs)}
     <section class="pt-card"><h2>Eckdaten – aus den Unterlagen übernommen, bitte prüfen</h2>
       <div class="fa-in">${inField('kunde', 'Kunde (für Präsentation)', i.kunde, 'text')}${inField('objekt', 'Objekt (Titel)', i.objekt, 'text')}${inField('flaeche', 'Wohnfläche m²', i.flaeche)}${inField('baujahr', 'Baujahr', i.baujahr)}${inField('energie', 'Energieeffizienz (A+–H)', i.energie, 'text')}${inField('kaufpreis', 'Kaufpreis €', i.kaufpreis)}${inField('nkPct', 'Nebenkosten %', +(i.nkPct * 100).toFixed(2))}${inField('modern', 'Modernisierung €', i.modern)}${inField('eigenkapital', 'Eigenkapital €', i.eigenkapital)}${inField('netto', 'Haushaltsnetto mtl. €', i.netto)}${inField('miete', 'Mieteinnahmen mtl. €', i.miete)}${inField('hausgeld', 'Hausgeld / Bewirtschaftung mtl. €', i.hausgeld)}${inField('sonst', 'Sonstige Raten mtl. €', i.sonst)}${inField('personen', 'Personen im Haushalt', i.personen)}${inField('lebens1', 'Lebenshaltung 1. Person €', i.lebens1)}${inField('lebensWeitere', 'je weitere Person €', i.lebensWeitere)}${inField('abschlag', 'Sicherheitsabschlag %', +(i.abschlag * 100).toFixed(1))}</div>
       <p class="form-note">Netto aus ${f.gehaltsMonate || 0} Gehaltsabrechnung(en) gemittelt${f.selbststaendig ? '; selbstständig – Einkommen aus Steuerbescheiden/BWA bitte manuell ansetzen' : ''}. Mieten zu 75 % angesetzt. Lebenshaltungspauschalen sind Annahmen – bitte durch die Werte Ihres Hauses ersetzen.</p></section>
@@ -185,9 +186,18 @@ function varTable(c) {
     <tr><td>Rate bei +2 % Anschluss</td>${c.variants.map((v) => `<td>${E(v.stress)}</td>`).join('')}</tr>
     <tr><td>Haushaltsüberschuss</td>${c.variants.map((v) => `<td class="${v.ueber < 0 ? 'neg' : ''}">${E(v.ueber)}</td>`).join('')}</tr></tbody></table></div>`;
 }
+// Abgleich zwischen Dokumenten mit Quellenangabe (Dokumentart und Datei).
+function xcheckHtml(docs) {
+  const xs = crossCheck(docs);
+  if (!xs.length) return '';
+  const fmt = (x, v) => (x.unit === '€' ? E(v) : v.toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' ' + x.unit);
+  return `<section class="pt-card fa-xc"><h2>Abgleich zwischen Dokumenten</h2><ul class="fa-xc-l">${xs.map((x) => `<li class="${x.differs ? 'warn' : 'ok'}"><span class="st ${x.differs ? 'warn' : 'ok'}">${x.differs ? 'Abweichung erkannt' : 'Übereinstimmung'}</span><div><strong>${x.differs ? `${x.label} unterscheidet sich zwischen ${x.hits.length} Dokumenten.` : `${x.label} stimmt in ${x.hits.length} Dokumenten überein.`}</strong>
+    <details${x.differs ? ' open' : ''}><summary>Details anzeigen</summary><ul>${x.hits.map((h) => `<li><b>${esc(fmt(x, h.value))}</b> – Quelle: ${esc(h.label)}${h.name ? ` (${esc(h.name)})` : ''}</li>`).join('')}</ul>${x.differs ? '<p class="form-note">Nächster Schritt: Originale vergleichen und den verbindlichen Wert in den Eckdaten unten eintragen.</p>' : ''}</details></div></li>`).join('')}</ul></section>`;
+}
+
 function docCard(d, k) {
   const vals = Object.entries(d.values || {}).filter(([x]) => !x.startsWith('_')).map(([x, v]) => [VAL_LABEL[x] || x, valStr(x, v)]).filter(([, v]) => v);
-  return `<article class="fa-doc"><header><select data-dt="${k}" aria-label="Dokumentart">${[['', d.label], ...TYPES.map((t) => [t.id, t.label])].map(([id, l], j) => `<option value="${id}"${j === 0 ? ' selected' : ''}>${esc(j === 0 ? l : '→ ' + l)}</option>`).join('')}</select><small>${esc(d.name)}</small></header>
+  return `<article class="fa-doc"><header><select data-dt="${k}" aria-label="Dokumentart">${[['', d.label], ...TYPES.map((t) => [t.id, t.label])].map(([id, l], j) => `<option value="${id}"${j === 0 ? ' selected' : ''}>${esc(j === 0 ? l : '→ ' + l)}</option>`).join('')}</select><small>${esc(d.name)}</small>${d.confidence != null && d.type !== 'scan' ? (quality(d.confidence) === 'niedrig' ? '<span class="st warn fa-q">Erkennung: niedrig – bitte prüfen</span>' : `<span class="st fa-q">Erkennung: ${quality(d.confidence)}</span>`) : ''}</header>
     ${vals.length ? `<dl>${vals.map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl>` : ''}
     ${d.findings.length ? `<ul>${d.findings.map(([s, t]) => `<li class="${s}">${esc(t)}</li>`).join('')}</ul>` : ''}</article>`;
 }

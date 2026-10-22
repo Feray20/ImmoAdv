@@ -196,3 +196,23 @@ export function caseFacts(docs) {
     vermietet: by('miete').length > 0,
   };
 }
+
+// Abgleich zwischen Dokumenten: Werte, die in mehreren Unterlagen stehen, gegeneinander prüfen.
+// Liefert je Feld die Fundstellen (Dokumentart und Dateiname) und ob sie voneinander abweichen.
+// Toleranz: Kaufpreis 0,5 %, Wohnfläche 3 % (Rundungen in Exposés). Nur echte Fundstellen, nichts geschätzt.
+const XCHECK = [
+  { key: 'kaufpreis', label: 'Kaufpreis', unit: '€', tol: 0.005, from: ['kaufvertrag', 'expose'] },
+  { key: 'flaeche', label: 'Wohnfläche', unit: 'm²', tol: 0.03, from: ['flaeche', 'expose'] },
+];
+export function crossCheck(docs = []) {
+  const out = [];
+  for (const x of XCHECK) {
+    const hits = docs.filter((d) => x.from.includes(d.type) && Number(d.values?.[x.key]) > 0).map((d) => ({ label: d.label, name: d.name || '', value: Number(d.values[x.key]) }));
+    if (hits.length < 2) continue;
+    const vals = hits.map((h) => h.value), min = Math.min(...vals), max = Math.max(...vals);
+    out.push({ key: x.key, label: x.label, unit: x.unit, hits, differs: (max - min) / max > x.tol });
+  }
+  return out;
+}
+// Erkennungsqualität aus der Zuordnungssicherheit der Dokumentart (0–1).
+export const quality = (c) => (c == null ? null : c >= 0.75 ? 'hoch' : c >= 0.5 ? 'mittel' : 'niedrig');
