@@ -838,7 +838,7 @@ img,svg,video,canvas,iframe{max-width:100%}
 .b2b-acad-map{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-areas:"a b c" "core core core" "d e f";gap:10px;position:relative}
 .b2b-acad-map::before{content:"";position:absolute;left:12%;right:12%;top:50%;height:2px;background:rgba(255,255,255,.35)}
 .b2b-acad-map .m{background:#fff;color:#0F2C59;border-radius:12px;padding:12px 8px;text-align:center;font-weight:700;font-size:13.5px;border-top:4px solid var(--c);hyphens:auto}
-.b2b-acad-map .a{grid-area:a;--c:#0F2C59}.b2b-acad-map .b{grid-area:b;--c:#0369A1}.b2b-acad-map .c{grid-area:c;--c:#7C3AED}.b2b-acad-map .d{grid-area:d;--c:#16A34A}.b2b-acad-map .e{grid-area:e;--c:#DC2626}.b2b-acad-map .f{grid-area:f;--c:#D97706}
+.b2b-acad-map .a{grid-area:a;--c:#0F2C59}.b2b-acad-map .b{grid-area:b;--c:#0369A1}.b2b-acad-map .c{grid-area:c;--c:#475569}.b2b-acad-map .d{grid-area:d;--c:#16A34A}.b2b-acad-map .e{grid-area:e;--c:#DC2626}.b2b-acad-map .f{grid-area:f;--c:#D97706}
 .b2b-acad-map .m-core{grid-area:core;justify-self:center;position:relative;z-index:1;background:#38BDF8;color:#0F2C59;font-weight:800;border-radius:999px;padding:12px 22px;box-shadow:0 0 0 6px rgba(56,189,248,.25)}
 @media (max-width:860px){.b2b-acad{grid-template-columns:1fr;padding:20px 16px}}
 
@@ -1083,7 +1083,7 @@ img,svg,video,canvas,iframe{max-width:100%}
 .btn-pay:disabled::before,.btn-pay[disabled]::before,.tk-plan.btn-pay::before{display:none}
 .tl-hint{display:flex;align-items:center;gap:6px;margin:10px 0 0;font-size:12.5px;color:#64748B}.tl-hint a{color:#0369A1;font-weight:600}.tl-hint svg{color:#94A3B8}
 .tl-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
-.tl-plan{font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px;background:#F1F5F9;color:#334155;border:1px solid #CBD5E1}.tl-plan-starter{background:#D1FAE5;color:#047857;border-color:#A7F3D0}.tl-plan-pro{background:#EDE9FE;color:#6D28D9;border-color:#DDD6FE}
+.tl-plan{font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px;background:#F1F5F9;color:#334155;border:1px solid #CBD5E1}.tl-plan-starter{background:#D1FAE5;color:#047857;border-color:#A7F3D0}.tl-plan-pro{background:#E0F2FE;color:#0369A1;border-color:#BAE6FD}
 .tl-planline{margin:6px 0 0;font-size:13px;color:#475569}
 .tl-more{margin-top:16px;border:1px dashed #CBD5E1;border-radius:14px;padding:12px 14px;background:#F8FAFC}.tl-more summary{cursor:pointer;font-weight:700;color:#0F2C59}.tl-more summary span{display:block;font-weight:400;font-size:13px;color:#64748B;margin-top:2px}
 .tl-foot{margin-top:14px}
@@ -1097,7 +1097,7 @@ img,svg,video,canvas,iframe{max-width:100%}
 .tl-need{margin:10px 0;padding:10px 12px;border-radius:10px;background:#F1F5F9;color:#475569;font-size:14px}
 .tl-why{margin:8px 0 0;font-size:13.5px;color:#475569}.tl-why summary{cursor:pointer;font-weight:700;color:#0369A1}.tl-why p{margin:6px 0 0;line-height:1.55}
 .tl-base{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 14px;margin:12px 0 4px;padding:10px 12px;border:1px solid #E2E8F0;border-radius:12px;background:#F8FAFC}.tl-base label{display:grid;gap:3px;font-size:12.5px;font-weight:700;color:#334155}.tl-base select{min-width:240px}.tl-base small{color:#64748B;font-size:12.5px;text-transform:none;letter-spacing:0;font-weight:500}.tl-base select{font:inherit;font-size:15px;font-weight:600;padding:9px 10px;border:1px solid #CBD5E1;border-radius:10px;background:#fff;color:#0F172A;max-width:100%}
-.tl-badge{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:#EEF2FF;color:#3730A3;vertical-align:middle;margin-left:6px}
+.tl-badge{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:#F0F9FF;color:#0F2C59;vertical-align:middle;margin-left:6px}
 .tl-card.tl-locked{background:#F8FAFC;border-style:dashed}.tl-card.tl-locked h3{color:#475569}
 .tl-facts div.ok{border-color:#86EFAC;background:#F0FDF4}.tl-facts div.warn{border-color:#FCD34D;background:#FFFBEB}.tl-facts div.bad{border-color:#FCA5A5;background:#FEF2F2}
 .tl-grid label.tl-chk,label.tl-chk{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#334155;grid-column:1/-1}.tl-chk input{width:18px;height:18px;flex:none;margin:0}
@@ -1215,13 +1215,13 @@ img,svg,video,canvas,iframe{max-width:100%}
 .paths{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
 .path{border:1px solid #E2E8F0;border-radius:16px;padding:16px;background:#fff;display:grid;gap:10px;align-content:start}
 .path-h{display:flex;gap:10px;align-items:center}.path-h span{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:19px;background:#E0F2FE}
-.path.b .path-h span{background:#EDE9FE}
+.path.b .path-h span{background:#E0F2FE}
 .path-h strong{font-size:17px;color:#0F2C59}.path-h small{display:block;font-size:12.5px;color:#64748B;text-transform:none;letter-spacing:0;font-weight:500}
 .path-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .path-list a{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;min-height:52px;padding:8px 12px;border-radius:12px;background:#F8FAFC;border:1px solid #E2E8F0;text-decoration:none;color:#0F172A}
 .path-list a:hover{border-color:#0284C7;background:#F0F9FF}
 .path-list i{font-style:normal;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;background:#0F2C59;color:#fff}
-.path.b .path-list i{background:#6D28D9}
+.path.b .path-list i{background:#0369A1}
 .path-list b{font-size:15px;display:block}.path-list small{display:block;font-size:12.5px;color:#64748B;text-transform:none;letter-spacing:0;font-weight:500}
 .path-list em{font-style:normal;color:#94A3B8;font-size:18px}
 @media(max-width:760px){.paths{grid-template-columns:1fr}}
@@ -1232,8 +1232,8 @@ img,svg,video,canvas,iframe{max-width:100%}
   .offer-price{font-size:28px}
 }
 /* Profi-Schwerpunkte im Stufen-Dialog: eigene Werkzeug-Chips */
-.stage-opts.pro .stage-opt{border-color:#C4B5FD}.stage-opts.pro .stage-n{background:#6D28D9}
-.stage-tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.stage-tools i{font-style:normal;font-size:12px;font-weight:700;color:#5B21B6;background:#EDE9FE;border-radius:999px;padding:2px 8px}
+.stage-opts.pro .stage-opt{border-color:#7DD3FC}.stage-opts.pro .stage-n{background:#0369A1}
+.stage-tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.stage-tools i{font-style:normal;font-size:12px;font-weight:700;color:#075985;background:#E0F2FE;border-radius:999px;padding:2px 8px}
 
 /* Etappe 1: Umbruch nie buchstabenweise. 'break-word' (statt 'anywhere') hält die Mindestbreite eines Wortes,
    damit Grid-/Flex-Spalten nicht auf einen Buchstaben zusammenfallen. Überschriften ohne automatische Silbentrennung. */
