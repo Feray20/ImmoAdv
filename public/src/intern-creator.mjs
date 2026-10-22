@@ -483,7 +483,7 @@ function bankStatement(v) {
     const file = input.files?.[0];
     if (!file) return;
     v.querySelector('#camtName').textContent = file.name;
-    if (file.size > 5 * 1024 * 1024) { out.innerHTML = '<p class="pt-alert bad">Die Datei ist zu groß (höchstens 5 MB).</p>'; return; }
+    if (file.size > 3 * 1024 * 1024) { out.innerHTML = '<p class="pt-alert bad">Die Datei ist zu groß (höchstens 3 MB).</p>'; return; }
     const xml = await file.text();
     out.innerHTML = '<p class="form-note">Wird gelesen …</p>';
     const r = await api('/api/admin/creators/payouts/bank-statement', { method: 'POST', body: JSON.stringify({ xml, confirm: false }) });

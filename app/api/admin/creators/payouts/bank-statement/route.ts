@@ -21,7 +21,7 @@ const Input = z.object({
 
 const ERR: Record<string, string> = {
   camt_empty: 'Die Datei ist leer.',
-  camt_too_large: 'Die Datei ist zu groß (höchstens 5 MB).',
+  camt_too_large: 'Die Datei ist zu groß (höchstens 3 MB).',
   camt_doctype: 'Die Datei enthält nicht erlaubte XML-Bestandteile.',
   camt_format: 'Das ist kein Kontoauszug im Format camt.053. Bitte im Online-Banking „Kontoauszug als camt.053 (XML)“ herunterladen.',
 };
@@ -30,7 +30,7 @@ type Row = PayoutForPaid & { immo_creators?: { display_name: string | null; firs
 
 export async function POST(req: Request) {
   const pr = Input.safeParse(await req.json().catch(() => null));
-  if (!pr.success) return j({ error: 'Bitte eine camt.053-Datei (XML, höchstens 5 MB) auswählen.' }, 400);
+  if (!pr.success) return j({ error: 'Bitte eine camt.053-Datei (XML, höchstens 3 MB) auswählen.' }, 400);
   const a = await requireCreatorAdmin(req, 'payouts.manage');
   if (!('role' in a)) return a;
 

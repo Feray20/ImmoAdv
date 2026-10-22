@@ -15,7 +15,7 @@ export type CamtTx = {
 };
 export type CamtStatement = { id: string | null; ibanLast4: string | null; transactions: CamtTx[] };
 
-export const CAMT_MAX_BYTES = 5 * 1024 * 1024;
+export const CAMT_MAX_BYTES = 3 * 1024 * 1024;
 
 const tag = (name: string) => new RegExp(`<(?:[A-Za-z0-9_]+:)?${name}(?:\\s[^>]*)?>([\\s\\S]*?)</(?:[A-Za-z0-9_]+:)?${name}>`, 'g');
 function all(xml: string, name: string): string[] { return [...xml.matchAll(tag(name))].map((m) => m[1]); }

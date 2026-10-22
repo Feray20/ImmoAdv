@@ -123,7 +123,7 @@ Conversions (PENDING) → Monatsabschluss (frühestens Monatsende + 15 Tage)
 - Bei festen Provisionsbeträgen (FIXED/HYBRID) wird ebenfalls anteilig zurückgefordert.
 
 ### Kontoauszug-Abgleich (Phase 4)
-Payout Center → „Kontoauszug abgleichen“: camt.053-Datei (XML, max. 5 MB) hochladen. Erkannt wird über die Ende-zu-Ende-Referenz
+Payout Center → „Kontoauszug abgleichen“: camt.053-Datei (XML, max. 3 MB) hochladen. Erkannt wird über die Ende-zu-Ende-Referenz
 der SEPA-Datei (`CR…`), sonst über Verwendungszweck + exakten Betrag. Vorschau zuerst; bei „Übernehmen“ liest der Server die Datei
 erneut und markiert nur gebuchte Belastungen mit passendem Betrag als bezahlt (Buchungsdatum, Bankreferenz, Herkunft „laut Kontoauszug“).
 Rückläufer, abweichende Beträge und vorgemerkte Umsätze werden angezeigt, aber nicht übernommen. Dateien mit DOCTYPE/Entitäten
