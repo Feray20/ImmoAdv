@@ -129,6 +129,12 @@ erneut und markiert nur gebuchte Belastungen mit passendem Betrag als bezahlt (B
 Rückläufer, abweichende Beträge und vorgemerkte Umsätze werden angezeigt, aber nicht übernommen. Dateien mit DOCTYPE/Entitäten
 werden abgelehnt. Jeder übernommene Auszug wird mit Prüfsumme vermerkt.
 
+### Rückläufer nach „bezahlt“ (Phase 4)
+Gibt die Bank eine bereits bezahlte Überweisung zurück (im Kontoauszug erkannt oder im Payout Center „Zurückgekommen“):
+Auszahlung → `RETURNED`, Abrechnung wieder `APPROVED`, Zahlungsdaten → „Prüfung nötig“, Creator erhält eine E-Mail.
+Nach Prüfung bzw. Änderung der Zahlungsdaten stößt „Erneut auszahlen“ dieselbe Auszahlung (gleicher Betrag, gleicher Beleg)
+auf das aktuelle Konto neu an; danach Freigabe und Export wie gewohnt. Exportierte, noch nicht bezahlte Rückläufer werden „fehlgeschlagen“.
+
 ### Automatik und E-Mails (Phase 4)
 - Automatischer Monatsabschluss: einmal je Monat für den Vormonat, frühestens nach der Sperrfrist (Einstellung `creator_auto_close`).
 - „Abrechnung bereit“: einmal je Abrechnung (nur Abrechnungen der letzten 30 Tage), Rechnungs-Creator mit Link zur 1-Klick-Rechnung.
@@ -187,8 +193,8 @@ Aktive Creator sehen danach „Vereinbarung bestätigen“ als nächste Aufgabe.
 - Datenbank lokal: `PGHOST=… PGPORT=… PGUSER=postgres bash docs/sql/tests/run_local.sh` (leere PostgreSQL ≥ 15; alle Phasen inkl. Rückbau).
 - Datenbank Supabase: `docs/sql/tests/creator_hub_rls_test.sql`, `…_phase2_test.sql`, `…_phase3_test.sql`, `…_phase4_test.sql` (rollen zurück).
 
-## Noch offen
+## Noch offen (nicht technisch)
 
 - Rechtlich geprüfte Vereinbarung (inkl. Gutschriftverfahren, falls genutzt) und mit der Steuerberatung abgestimmte Provisionsregel.
-- Rückläufer nach „Bezahlt“ (Rücküberweisung Tage später) werden beim Abgleich angezeigt; die Auszahlung muss dann manuell neu angestoßen werden
-  (bezahlte Auszahlungen sind unveränderbar).
+- Migrationen vor dem Livegang einmal in einer Supabase-Testumgebung (Branch) ausführen; lokal sind alle Phasen getestet, und die
+  Live-Datenbank wurde lesend auf alle Voraussetzungen geprüft (Tabellen, Funktionen, Buckets, keine Namenskonflikte).
