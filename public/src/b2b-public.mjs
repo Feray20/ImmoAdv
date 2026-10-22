@@ -11,12 +11,15 @@ async function offers() {
   const d = await fetch('/data/preise.json').then((r) => r.json()).catch(() => null);
   if (!d?.b2b) { box.innerHTML = '<p class="form-note">Tarife derzeit nicht verfügbar.</p>'; return; }
   const b = d.b2b;
+  // Zielgruppe und Grenzen je Paket aus den Tarifdaten (Zugänge, Kreditmappen) – keine zusätzlichen Versprechen.
+  const FOR = { BASIC: 'Für Einzelberater und kleinere Vermittlerteams.', PRO: 'Für Kanzleien und Baufinanzierungs-Teams.', ENTERPRISE: 'Für Banken, Sparkassen und Filialnetze.' };
+  const lim = (p) => [p.seats === 1 ? '1 Berater-Zugang' : p.seats ? `bis ${p.seats} Berater-Zugänge` : '', p.dossiers ? `${p.dossiers} Kreditmappen pro Monat` : 'Kreditmappen ohne Limit'].filter(Boolean).join(' · ');
   const card = (p, rec) => `<div class="offer${rec ? ' rec' : ''}" data-ivl="${p.interval}"${p.interval === 'year' ? ' hidden' : ''}>${rec ? '<span class="offer-rec">Empfohlen für Kanzleien &amp; Baufi-Teams</span>' : ''}
-    <h4>${esc(p.name.replace(' (Jahr)', ''))}</h4><div class="offer-price">${net(p.netto_cents)} <small>netto ${esc(p.intervall)}</small></div>
+    <h4>${esc(p.name.replace(' (Jahr)', ''))}</h4><p class="offer-for">${esc(FOR[p.tier] || '')}</p><div class="offer-price">${net(p.netto_cents)} <small>netto ${esc(p.intervall)}</small></div><p class="offer-lim"><strong>Enthalten:</strong> ${esc(lim(p))}</p>
     <ul>${p.basis ? `<li class="offer-basis">${esc(p.basis)}</li>` : ''}${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-dark" href="#anfrage">Unternehmenskonto anfragen</a></div>`;
   box.innerHTML = `<div class="seg" role="tablist"><button type="button" data-i="month" aria-selected="true">Monatlich</button><button type="button" data-i="year" aria-selected="false">Jährlich</button></div>
     <div class="offers">${b.plans.map((p) => card(p, p.tier === 'PRO')).join('')}
-      <div class="offer"><h4>${esc(b.enterprise.name)}</h4><div class="offer-price">${esc(b.enterprise.preis)}</div><ul>${b.enterprise.basis ? `<li class="offer-basis">${esc(b.enterprise.basis)}</li>` : ''}${b.enterprise.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-ghost" href="#kontakt">Angebot anfragen</a></div></div>
+      <div class="offer"><h4>${esc(b.enterprise.name)}</h4><p class="offer-for">${esc(FOR.ENTERPRISE)}</p><div class="offer-price">${esc(b.enterprise.preis)}</div><p class="offer-lim"><strong>Enthalten:</strong> ab ${b.enterprise.seats} Berater-Zugänge · Kreditmappen ohne Limit · Preis nach Filialgröße</p><ul>${b.enterprise.basis ? `<li class="offer-basis">${esc(b.enterprise.basis)}</li>` : ''}${b.enterprise.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-ghost" href="#kontakt">Angebot anfragen</a></div></div>
     ${cmpTable(b.vergleich, 1)}<p class="price-note">${esc(b.hinweis)}</p>`;
   box.querySelectorAll('[data-i]').forEach((btn) => btn.onclick = () => {
     box.querySelectorAll('[data-i]').forEach((x) => x.setAttribute('aria-selected', String(x === btn)));
@@ -91,7 +94,7 @@ function syncLegal(f) {
 const RB = {
   vermittler: { h: 'Vorqualifizierte Fälle statt Unterlagen-Jagd – Ihr Zeitgewinn, offen gerechnet.', p: 'Ihre Kunden laden Unterlagen hoch und füllen die Selbstauskunft aus. ImmoAdv prüft Beleihungsauslauf, Haushaltsüberschuss, DSCR und Zins-Stresstest automatisch. Sie übernehmen den Fall, wenn er entscheidungsreif ist.', n: 15, m: 120, type: 'BROKER' },
   makler: { h: 'Kaufinteressenten vorqualifiziert – bevor Sie die Besichtigung planen.', p: 'Per QR-Code am Exposé rechnen Interessenten ihre Finanzierung durch und reichen Unterlagen ein. Sie sehen, wer realistisch kaufen kann, und geben bankfertige Fälle an Ihren Finanzierungspartner weiter.', n: 25, m: 60, type: 'REALTOR' },
-  bank: { h: 'Vollständige Fälle vor dem Votum – weniger Nacharbeit in der Erstprüfung.', p: 'Kreditmappen kommen in festem Aufbau an: Selbstauskunft, Haushaltsrechnung, Objektkennzahlen und nummerierte Anlagen, jeweils mit SHA-256-Prüfsumme. Ihre Berater prüfen statt zu sammeln.', n: 40, m: 90, type: 'BANK' },
+  bank: { h: 'Kreditmappen in festem Aufbau – Ihre Berater prüfen statt zu sammeln.', p: 'Kreditmappen kommen in festem Aufbau an: Selbstauskunft, Haushaltsrechnung, Objektkennzahlen und nummerierte Anlagen, jeweils mit SHA-256-Prüfsumme. Ihre Berater prüfen statt zu sammeln.', n: 40, m: 90, type: 'BANK' },
   finanzberater: { h: 'Immobilie als Anlageklasse – durchgerechnet und präsentationsfertig.', p: 'Cashflow nach Steuern, Rendite und Zins-Stresstest für Ihre Mandanten, als Präsentation mit Ihrem Logo. Unterlagen und Kennzahlen liegen strukturiert vor, wenn es zur Finanzierung geht.', n: 8, m: 120, type: 'OTHER' },
 };
 const x$ = (id) => document.getElementById(id);
@@ -131,7 +134,17 @@ function landing() {
     }
   };
   document.querySelectorAll('[data-sim]').forEach((b) => b.onclick = () => sim(+b.dataset.sim));
-  document.querySelectorAll('[data-sim-go]').forEach((b) => b.onclick = () => sim(+b.dataset.simGo));
+  document.querySelectorAll('[data-sim-go]').forEach((b) => b.onclick = () => {
+    if (b.hasAttribute('data-sim-reset')) {
+      // Demo von vorn: Unterlagen-Liste, Balken und Upload-Knopf zurücksetzen.
+      document.querySelectorAll('#simDocs li').forEach((l) => l.classList.remove('done', 'miss'));
+      if (x$('simBar')) x$('simBar').style.width = '0';
+      const up = x$('simUp'); if (up) { up.textContent = 'Upload simulieren'; up.disabled = false; up.onclick = null; }
+      if (x$('simNote')) x$('simNote').textContent = 'Der Mandant lädt Unterlagen über Ihren Einladungslink hoch – geführt, am Handy.';
+      document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    sim(+b.dataset.simGo);
+  });
   x$('simUp')?.addEventListener('click', (e) => {
     const btn = e.currentTarget; btn.disabled = true;
     const li = [...document.querySelectorAll('#simDocs li')];
@@ -150,5 +163,20 @@ function landing() {
     x$('wlPrev').style.setProperty('--wl', col);
   };
   ['wlName', 'wlCol'].forEach((id) => x$(id)?.addEventListener('input', wl)); wl();
+
+  // Conversion-Ereignisse (cookielose Messung, nur Ereignisname und Ort – keine Eingaben).
+  const tr = (ev, where) => { try { window.iaTrack?.(ev, { seg: 'b2b', plan: where }); } catch { /* nie stören */ } };
+  const seen = new Set(); const once = (ev, w) => { if (!seen.has(ev)) { seen.add(ev); tr(ev, w); } };
+  x$('simUp')?.addEventListener('click', () => once('demo_started', 'upload'));
+  document.querySelectorAll('[data-sim]').forEach((b) => b.addEventListener('click', () => { once('demo_started', 'tab'); if (b.dataset.sim === '3') once('demo_completed'); }));
+  document.querySelectorAll('[data-sim-go="3"]').forEach((b) => b.addEventListener('click', () => once('demo_completed')));
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest?.('a[href="#anfrage"], a[href="#b2bContact"], a[href="#demo"], a[href="/b2b-portal"], [data-btrack]');
+    if (a) tr('business_cta_clicked', (a.dataset.btrack || a.getAttribute('href') || '').replace(/[^a-z0-9_#/-]/gi, '').slice(0, 40));
+    const w = e.target.closest?.('[data-way="konto"]');
+    if (w) { const f = document.getElementById('b2bContact'); if (f?.kind) f.kind.value = 'konto'; setTimeout(() => f?.querySelector('input[name=name]')?.focus({ preventScroll: true }), 400); }
+  });
+  const pr = document.getElementById('preise');
+  if (pr && 'IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); once('pricing_viewed'); } }, { threshold: 0.3 }); io.observe(pr); }
 }
 init();
