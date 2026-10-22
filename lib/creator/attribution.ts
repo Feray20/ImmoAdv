@@ -102,13 +102,24 @@ export async function recordCheckoutConversion(stripe: Stripe, s: Stripe.Checkou
   if (ins?.length) await audit('CONVERSION_RECORDED', d.creatorId, SYSTEM, 'SUCCESS', { source: d.source, amount_net_cents: amount, plan: s.metadata?.plan ?? null });
 }
 
-// Vollständige Erstattung → Conversion zurücknehmen (Teilerstattungen werden mit der Provisionsabrechnung behandelt).
+// Erstattung (charge.refunded kommt auch bei Teilerstattungen): Erstattungsstand anteilig netto übernehmen,
+// bei vollständiger Erstattung die Conversion zurücknehmen. Verrechnet wird beim nächsten Monatsabschluss.
 export async function reverseForCharge(charge: Stripe.Charge): Promise<void> {
-  if (!adminConfigured() || !charge.refunded) return;
+  if (!adminConfigured() || !(charge.amount_refunded > 0)) return;
   const pi = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
   if (!pi) return;
   const db = supabaseAdmin();
-  const { data } = await db.from('immo_creator_conversions').update({ status: 'REVERSED', reversed_at: new Date().toISOString() })
+  const { data, error } = await db.rpc('immo_creator_record_refund', { p_payment_intent: pi, p_charge: charge.id, p_amount: charge.amount, p_refunded: charge.amount_refunded });
+  if (!error) {
+    for (const r of (data ?? []) as { creator_id: string; refunded_net_cents: number; full: boolean }[]) {
+      if (r.full) await audit('CONVERSION_REVERSED', r.creator_id, SYSTEM, 'SUCCESS', { reason: 'refund' });
+      else if (r.refunded_net_cents > 0) await audit('REFUND_RECORDED', r.creator_id, SYSTEM, 'SUCCESS', { refunded_net_cents: r.refunded_net_cents });
+    }
+    return;
+  }
+  // Rückfall ohne Phase-4-Migration: nur vollständige Erstattungen nehmen die Conversion zurück.
+  if (!charge.refunded) return;
+  const { data: rows } = await db.from('immo_creator_conversions').update({ status: 'REVERSED', reversed_at: new Date().toISOString() })
     .eq('stripe_payment_intent', pi).eq('status', 'PENDING').select('id, creator_id');
-  for (const r of (data ?? []) as { id: string; creator_id: string }[]) await audit('CONVERSION_REVERSED', r.creator_id, SYSTEM, 'SUCCESS', { reason: 'refund' });
+  for (const r of (rows ?? []) as { id: string; creator_id: string }[]) await audit('CONVERSION_REVERSED', r.creator_id, SYSTEM, 'SUCCESS', { reason: 'refund' });
 }

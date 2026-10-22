@@ -22,6 +22,15 @@ $P -d "$DB" -f docs/sql/2026-10-24_creator_hub_phase3.sql 2>&1 | grep -v NOTICE 
 $P -d "$DB" -f docs/sql/tests/creator_hub_rls_test.sql 2>&1 | grep -E "FAIL|ERROR|PASSED" | sed 's/.*NOTICE:  //'
 $P -d "$DB" -f docs/sql/tests/creator_hub_phase2_test.sql 2>&1 | grep -E "FAIL|ERROR|PASSED" | sed 's/.*NOTICE:  //'
 $P -d "$DB" -f docs/sql/tests/creator_hub_phase3_test.sql 2>&1 | grep -E "ok:|FAIL|ERROR|PASSED" | sed 's/.*NOTICE:  //'
+echo "--- Phase 4"
+$P -d "$DB" -f docs/sql/2026-10-25_creator_hub_phase4.sql 2>&1 | grep -v NOTICE || true
+$P -d "$DB" -f docs/sql/2026-10-25_creator_hub_phase4.sql 2>&1 | grep -v NOTICE || true
+$P -d "$DB" -f docs/sql/tests/creator_hub_rls_test.sql 2>&1 | grep -E "FAIL|ERROR|PASSED" | sed 's/.*NOTICE:  //'
+$P -d "$DB" -f docs/sql/tests/creator_hub_phase2_test.sql 2>&1 | grep -E "FAIL|ERROR|PASSED" | sed 's/.*NOTICE:  //'
+$P -d "$DB" -f docs/sql/tests/creator_hub_phase3_test.sql 2>&1 | grep -E "FAIL|ERROR|PASSED" | sed 's/.*NOTICE:  //'
+$P -d "$DB" -f docs/sql/tests/creator_hub_phase4_test.sql 2>&1 | grep -E "ok:|FAIL|ERROR|PASSED" | sed 's/.*NOTICE:  //'
+$P -d "$DB" -f docs/sql/2026-10-25_creator_hub_phase4_rollback.sql 2>&1 | grep -v NOTICE || true
+$P -d "$DB" -f docs/sql/tests/creator_hub_phase3_test.sql 2>&1 | grep -E "FAIL|ERROR|PASSED" | sed 's/.*NOTICE:  //' | sed 's/^/nach Rückbau Phase 4: /'
 $P -d "$DB" -f docs/sql/2026-10-24_creator_hub_phase3_rollback.sql 2>&1 | grep -v NOTICE || true
 $P -d "$DB" -f docs/sql/2026-10-23_creator_hub_phase2_rollback.sql 2>&1 | grep -v NOTICE || true
 $P -d "$DB" -f docs/sql/2026-10-22_creator_hub_rollback.sql 2>&1 | grep -v NOTICE || true

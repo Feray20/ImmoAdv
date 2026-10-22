@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { BLOCKER_TEXT, closeAllowedAt, commissionLines, periodLabel, periodOf, previousPeriod, suggestInvoiceNumber, type ConversionIn, type Rule } from '@/lib/creator/billing';
+import { BLOCKER_TEXT, closeAllowedAt, commissionLines, reducedBase, periodLabel, periodOf, previousPeriod, suggestInvoiceNumber, type ConversionIn, type Rule } from '@/lib/creator/billing';
 import { statementBlockers, type StatementRow } from '@/lib/creator/billing-server';
 import { maskIban } from '@/lib/creator/iban';
 import { j, requireActiveCreator } from '@/lib/creator/server';
@@ -32,6 +32,13 @@ export async function GET(req: Request) {
   // Offene (noch nicht abgeschlossene) Monate: vorläufige Provision nach den aktuell gültigen Regeln
   const unbilled = ((open.data ?? []) as unknown as (ConversionIn & { immo_creator_commissions?: unknown })[])
     .filter((x) => !(Array.isArray(x.immo_creator_commissions) ? x.immo_creator_commissions.length : x.immo_creator_commissions));
+  // Teilerstattungen mindern die vorläufige Grundlage (wie beim Monatsabschluss).
+  if (unbilled.length) {
+    const rf = await db.from('immo_creator_refunds').select('conversion_id, refunded_net_cents').eq('creator_id', c.id).is('processed_at', null).in('conversion_id', unbilled.map((x) => x.id));
+    const sum = new Map<string, number>();
+    for (const r of (rf.error ? [] : rf.data ?? []) as unknown as { conversion_id: string; refunded_net_cents: number }[]) sum.set(r.conversion_id, (sum.get(r.conversion_id) ?? 0) + r.refunded_net_cents);
+    for (const x of unbilled) if (sum.has(x.id)) x.amount_net_cents = reducedBase(x.amount_net_cents, sum.get(x.id) ?? 0);
+  }
   const est = commissionLines((rules.data ?? []) as unknown as Rule[], unbilled);
   const byPeriod = new Map<string, { period: string; conversions: number; revenue_net_cents: number; commission_cents: number }>();
   unbilled.forEach((x, i) => {

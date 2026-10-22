@@ -1,12 +1,14 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import {
-  blockers, closeAllowedAt, commissionLines, creditNoteNumber, eurText, periodBounds, periodLabel, statementStatusAfterClose, statementTotals, taxTreatment,
+  blockers, closeAllowedAt, commissionLines, partialClawback, previousPeriod, periodOf, reducedBase, creditNoteNumber, eurText, periodBounds, periodLabel, statementStatusAfterClose, statementTotals, taxTreatment,
   type AdjustmentIn, type BillingMode, type BusinessIn, type ConversionIn, type Rule, type TaxTreatment,
 } from '@/lib/creator/billing';
 import { maskIban } from '@/lib/creator/iban';
 import { renderDoc, type DocLine } from '@/lib/creator/pdf';
-import { audit, type Actor } from '@/lib/creator/server';
+import { audit, SITE_ORIGIN, type Actor } from '@/lib/creator/server';
+import { mailConfigured, sendMail } from '@/lib/notify/mail';
+import { readyMail, reminderMail } from '@/lib/creator/mails';
 
 // Serverseitige Abrechnung: Monatsabschluss, Freigabe, Dokumente (Abrechnung, Rechnung, Gutschrift), Auszahlungen.
 // Alle Beträge werden hier aus der Datenbank berechnet – nie aus Eingaben des Browsers übernommen.
@@ -49,22 +51,80 @@ async function factsFor(ids: string[]) {
 
 const noBusiness: BusinessIn = { country: 'DE', vat_status: 'not_applicable', vat_id: null, tax_number: null };
 
+// ---------------- Erstattungen (Phase 4) ----------------
+type OpenRefund = {
+  id: string; conversion_id: string; creator_id: string; refunded_net_cents: number;
+  conv: { status: string; commission: { commission_cents: number; base_cents: number } | null };
+};
+type RefundRow = {
+  id: string; conversion_id: string; creator_id: string; refunded_net_cents: number;
+  immo_creator_conversions: { status: string; immo_creator_commissions: { commission_cents: number; base_cents: number }[] | { commission_cents: number; base_cents: number } | null } | null;
+};
+// Offene (noch nicht verrechnete) Erstattungen. Fehlt die Tabelle (Phase-4-Migration noch nicht angewendet), gibt es keine.
+async function openRefunds(): Promise<OpenRefund[]> {
+  const { data, error } = await db().from('immo_creator_refunds')
+    .select('id, conversion_id, creator_id, refunded_net_cents, immo_creator_conversions(status, immo_creator_commissions(commission_cents, base_cents))')
+    .is('processed_at', null).order('created_at').limit(5000);
+  if (error) return [];
+  return ((data ?? []) as unknown as RefundRow[]).map((r) => {
+    const cm = r.immo_creator_conversions?.immo_creator_commissions;
+    const commission = Array.isArray(cm) ? cm[0] ?? null : cm ?? null;
+    return { id: r.id, conversion_id: r.conversion_id, creator_id: r.creator_id, refunded_net_cents: r.refunded_net_cents, conv: { status: r.immo_creator_conversions?.status ?? 'PENDING', commission } };
+  });
+}
+// Bereits anteilig zurückgeforderte Provision je Conversion (Summe der CLAWBACK-Anpassungen zu ihren Erstattungen).
+async function clawedByConversion(conversionIds: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (!conversionIds.length) return out;
+  const { data: rf, error } = await db().from('immo_creator_refunds').select('id, conversion_id').in('conversion_id', conversionIds);
+  if (error || !rf?.length) return out;
+  const byRefund = new Map(((rf ?? []) as unknown as { id: string; conversion_id: string }[]).map((r) => [r.id, r.conversion_id]));
+  const { data: adj } = await db().from('immo_creator_adjustments').select('source_id, amount_cents').eq('kind', 'CLAWBACK').in('source_id', [...byRefund.keys()]);
+  for (const a of (adj ?? []) as unknown as { source_id: string; amount_cents: number }[]) {
+    const cid = byRefund.get(a.source_id);
+    if (cid) out.set(cid, (out.get(cid) ?? 0) + Math.abs(a.amount_cents));
+  }
+  return out;
+}
+async function markRefunds(ids: string[], as: 'CLAWBACK' | 'REVERSED' | 'IGNORED'): Promise<void> {
+  if (ids.length) await db().from('immo_creator_refunds').update({ processed_at: new Date().toISOString(), processed_as: as }).in('id', ids).is('processed_at', null);
+}
+
 // ---------------- Monatsabschluss ----------------
 export async function closePeriod(period: string, actor: Actor, now = new Date()): Promise<{ closed: number; clawbacks: number; carried: number }> {
   const delay = Number(await setting('creator_close_delay_days', 15)) || 15;
   if (now < closeAllowedAt(period, delay)) throw new Error(`Abschluss ab ${dDE(closeAllowedAt(period, delay))} möglich (Widerrufsfrist).`);
   const { from, to } = periodBounds(period);
 
-  // 1) Erstattungen nach einem Abschluss → Rückforderung in diesem Monat
+  // 1) Erstattungen: Teilerstattungen bereits abgerechneter Käufe anteilig, vollständige Erstattungen mit der
+  //    restlichen Provision zurückfordern; Teilerstattungen noch offener Käufe mindern unten die Grundlage.
+  const refunds = await openRefunds();
+  let clawbacks = 0;
+  const clawedSoFar = await clawedByConversion([...new Set(refunds.map((r) => r.conversion_id))]);
+  for (const r of refunds) {
+    const conv = r.conv;
+    if (!conv.commission) { if (conv.status === 'REVERSED') await markRefunds([r.id], 'IGNORED'); continue; }
+    if (conv.status === 'REVERSED') continue; // unten mit der restlichen Provision
+    const already = clawedSoFar.get(r.conversion_id) ?? 0;
+    const amt = partialClawback(conv.commission.commission_cents, conv.commission.base_cents, r.refunded_net_cents, already);
+    if (amt > 0) {
+      const ins = await db().from('immo_creator_adjustments').upsert({ creator_id: r.creator_id, period, kind: 'CLAWBACK', amount_cents: -amt, reason: 'Anteilige Rückforderung: Kauf wurde teilweise erstattet', source_id: r.id, created_by: actor.ref }, { onConflict: 'kind,source_id', ignoreDuplicates: true }).select('id');
+      if (ins.data?.length) { clawbacks++; clawedSoFar.set(r.conversion_id, already + amt); }
+    }
+    await markRefunds([r.id], amt > 0 ? 'CLAWBACK' : 'IGNORED');
+  }
   const { data: rev } = await db().from('immo_creator_commissions').select('id, conversion_id, creator_id, commission_cents, status, immo_creator_conversions!inner(status)')
     .neq('status', 'CLAWED_BACK').eq('immo_creator_conversions.status', 'REVERSED');
-  let clawbacks = 0;
-  for (const c of (rev ?? []) as unknown as { id: string; creator_id: string; commission_cents: number }[]) {
-    if (c.commission_cents > 0) {
-      const ins = await db().from('immo_creator_adjustments').upsert({ creator_id: c.creator_id, period, kind: 'CLAWBACK', amount_cents: -c.commission_cents, reason: 'Rückforderung: Kauf wurde erstattet', source_id: c.id, created_by: actor.ref }, { onConflict: 'kind,source_id', ignoreDuplicates: true }).select('id');
+  const revRows = (rev ?? []) as unknown as { id: string; conversion_id: string; creator_id: string; commission_cents: number }[];
+  const clawedRev = await clawedByConversion(revRows.map((c) => c.conversion_id));
+  for (const c of revRows) {
+    const rest = c.commission_cents - (clawedRev.get(c.conversion_id) ?? 0);
+    if (rest > 0) {
+      const ins = await db().from('immo_creator_adjustments').upsert({ creator_id: c.creator_id, period, kind: 'CLAWBACK', amount_cents: -rest, reason: 'Rückforderung: Kauf wurde erstattet', source_id: c.id, created_by: actor.ref }, { onConflict: 'kind,source_id', ignoreDuplicates: true }).select('id');
       if (ins.data?.length) clawbacks++;
     }
     await db().from('immo_creator_commissions').update({ status: 'CLAWED_BACK' }).eq('id', c.id);
+    await markRefunds(refunds.filter((r) => r.conversion_id === c.conversion_id).map((r) => r.id), 'REVERSED');
   }
 
   // 2) Negative Salden früherer Monate übertragen
@@ -92,6 +152,14 @@ export async function closePeriod(period: string, actor: Actor, now = new Date()
   if (!ids.length) { await audit('PERIOD_CLOSED', null, actor, 'SUCCESS', { period, statements: 0 }); return { closed: 0, clawbacks, carried }; }
 
   const f = await factsFor(ids);
+  // Teilerstattungen noch nicht abgerechneter Käufe mindern die Grundlage (und werden mit dem Abschluss verrechnet).
+  const baseRefunds = new Map<string, { ids: string[]; net: number }>();
+  for (const r of refunds) {
+    if (r.conv.commission || r.conv.status === 'REVERSED') continue;
+    const e = baseRefunds.get(r.conversion_id) ?? { ids: [], net: 0 };
+    e.ids.push(r.id); e.net += r.refunded_net_cents; baseRefunds.set(r.conversion_id, e);
+  }
+  for (const c of conversions) { const e = baseRefunds.get(c.id); if (e) c.amount_net_cents = reducedBase(c.amount_net_cents, e.net); }
   const lines = commissionLines(rules, conversions);
   const payload = ids.map((cid) => {
     const c = f.creators.get(cid);
@@ -111,6 +179,7 @@ export async function closePeriod(period: string, actor: Actor, now = new Date()
         city: b.city ?? null, country: b.country ?? null, tax_number: b.tax_number ?? null, vat_id: b.vat_id ?? null, billing_email: b.billing_email ?? null, display_name: c?.display_name ?? null,
       },
       adjustment_ids: myAdj.map((a) => a.id),
+      refund_ids: myLines.flatMap((l) => baseRefunds.get(l.conversion_id)?.ids ?? []),
       lines: myLines.map((l) => ({ conversion_id: l.conversion_id, rule_id: l.rule_id ?? '', rule_version: l.rule_version ?? '', base_cents: l.base_cents, commission_cents: l.commission_cents })),
     };
   });
@@ -255,4 +324,83 @@ export async function approveStatement(s: StatementRow, actor: Actor) {
   if (s.billing_mode === 'INVOICE') await audit('INVOICE_APPROVED', s.creator_id, actor, 'SUCCESS', { period: s.period });
   await audit('PAYOUT_CREATED', s.creator_id, actor, 'SUCCESS', { period: s.period, amount_cents: s.payout_cents });
   return ins.data;
+}
+
+// ---------------- Auszahlung als bezahlt vermerken (manuell oder aus dem Kontoauszug) ----------------
+export type PayoutForPaid = { id: string; creator_id: string; statement_id: string; amount_cents: number; status: string; reference: string; iban_country: string; iban_last4: string };
+export async function markPayoutPaid(p: PayoutForPaid, actor: Actor, o: { paidAt?: string | null; via: 'MANUAL' | 'BANK_STATEMENT'; bankRef?: string | null }): Promise<boolean> {
+  if (p.status !== 'APPROVED' && p.status !== 'EXPORTED') return false;
+  const paidAt = o.paidAt ? new Date(`${o.paidAt.slice(0, 10)}T12:00:00Z`).toISOString() : new Date().toISOString();
+  const patch: Record<string, unknown> = { status: 'PAID', paid_by: actor.ref, paid_at: paidAt, paid_via: o.via, bank_ref: o.bankRef ? o.bankRef.slice(0, 120) : null };
+  let res = await db().from('immo_creator_payouts').update(patch).eq('id', p.id).eq('status', p.status).select('id');
+  if (res.error && /paid_via|bank_ref/.test(res.error.message)) { // ohne Phase-4-Migration
+    delete patch.paid_via; delete patch.bank_ref;
+    res = await db().from('immo_creator_payouts').update(patch).eq('id', p.id).eq('status', p.status).select('id');
+  }
+  if (!res.data?.length) return false;
+  await db().from('immo_creator_statements').update({ status: 'PAID', paid_at: paidAt }).eq('id', p.statement_id).eq('status', 'APPROVED');
+  await db().from('immo_creator_commissions').update({ status: 'PAID' }).eq('statement_id', p.statement_id).eq('status', 'APPROVED');
+  await audit('PAYOUT_PAID', p.creator_id, actor, 'SUCCESS', { amount_cents: p.amount_cents, via: o.via });
+  const to = await creatorContact(p.creator_id);
+  if (to) {
+    await sendMail(to.email, 'Deine Auszahlung von ImmoAdv', `Hallo ${to.name},\n\nwir haben ${eurText(p.amount_cents)} an dein Konto ${maskIban(p.iban_country, p.iban_last4)} überwiesen (Verwendungszweck: ${p.reference}). Je nach Bank ist der Betrag in 1–2 Bankarbeitstagen gutgeschrieben.\n\nDeine Abrechnungen findest du im Creator-Portal: ${SITE_ORIGIN}/creator#abrechnung`, [], { title: 'Auszahlung überwiesen' }).catch(() => false);
+  }
+  return true;
+}
+
+async function creatorContact(creatorId: string): Promise<{ email: string; name: string } | null> {
+  const { data: c } = await db().from('immo_creators').select('user_id, first_name, display_name').eq('id', creatorId).maybeSingle();
+  if (!c?.user_id) return null;
+  const { data: u } = await db().auth.admin.getUserById(c.user_id);
+  return u?.user?.email ? { email: u.user.email, name: c.first_name || c.display_name || '' } : null;
+}
+
+// ---------------- Automatik (täglicher Lauf): Monatsabschluss, Hinweise, Erinnerungen ----------------
+export const SYSTEM_BILLING: Actor = { kind: 'system', ref: 'cron:creator-billing', role: 'SYSTEM' };
+
+export async function runCreatorBilling(now = new Date()): Promise<Record<string, unknown>> {
+  const out: Record<string, unknown> = {};
+  // 1) Automatischer Monatsabschluss (nur wenn eingeschaltet, einmal je Monat, frühestens nach der Sperrfrist)
+  if ((await setting('creator_auto_close', false)) === true) {
+    const period = previousPeriod(periodOf(now));
+    const delay = Number(await setting('creator_close_delay_days', 15)) || 15;
+    if (now < closeAllowedAt(period, delay)) out.close = 'nicht fällig';
+    else {
+      const { data: done } = await db().from('immo_creator_audit').select('id').eq('event_type', 'PERIOD_CLOSED').contains('meta', { period }).limit(1);
+      if (done?.length) out.close = 'bereits abgeschlossen';
+      else out.close = await closePeriod(period, SYSTEM_BILLING, now).catch((e) => ({ error: e instanceof Error ? e.message : String(e) }));
+    }
+  } else out.close = 'aus';
+  if (!mailConfigured()) return { ...out, mail: 'nicht eingerichtet' };
+
+  // 2) Hinweis „Abrechnung bereit“ (nur jüngere Abrechnungen, damit beim Einschalten keine Altlasten verschickt werden)
+  const since = new Date(now.getTime() - 30 * 864e5).toISOString();
+  const { data: fresh, error: fe } = await db().from('immo_creator_statements').select('id, creator_id, period, billing_mode, payout_cents, status')
+    .is('notified_at', null).in('status', ['READY', 'INVOICED', 'APPROVED']).gte('closed_at', since).limit(500);
+  if (fe) return { ...out, notify: 'Phase-4-Migration fehlt' };
+  let notified = 0;
+  for (const s of (fresh ?? []) as unknown as { id: string; creator_id: string; period: string; billing_mode: BillingMode; payout_cents: number }[]) {
+    const to = await creatorContact(s.creator_id);
+    const m = readyMail(s.billing_mode, s.period, s.payout_cents, to?.name ?? '');
+    const ok = to ? await sendMail(to.email, m.subject, m.text, [], { title: m.title }).catch(() => false) : true;
+    if (!ok) continue;
+    const { data } = await db().from('immo_creator_statements').update({ notified_at: now.toISOString() }).eq('id', s.id).is('notified_at', null).select('id');
+    if (data?.length && to) { notified++; await audit('CREATOR_NOTIFIED', s.creator_id, SYSTEM_BILLING, 'SUCCESS', { kind: 'statement_ready', period: s.period }); }
+  }
+
+  // 3) Eine Erinnerung, wenn die Rechnung des Creators nach N Tagen noch fehlt
+  const days = Number(await setting('creator_invoice_reminder_days', 7)) || 7;
+  const before = new Date(now.getTime() - days * 864e5).toISOString();
+  const { data: due } = await db().from('immo_creator_statements').select('id, creator_id, period')
+    .eq('status', 'READY').eq('billing_mode', 'INVOICE').is('reminded_at', null).lt('notified_at', before).limit(500);
+  let reminded = 0;
+  for (const s of (due ?? []) as unknown as { id: string; creator_id: string; period: string }[]) {
+    const to = await creatorContact(s.creator_id);
+    const m = reminderMail(s.period, to?.name ?? '');
+    const ok = to ? await sendMail(to.email, m.subject, m.text, [], { title: m.title }).catch(() => false) : true;
+    if (!ok) continue;
+    const { data } = await db().from('immo_creator_statements').update({ reminded_at: now.toISOString() }).eq('id', s.id).is('reminded_at', null).select('id');
+    if (data?.length && to) { reminded++; await audit('CREATOR_NOTIFIED', s.creator_id, SYSTEM_BILLING, 'SUCCESS', { kind: 'invoice_reminder', period: s.period }); }
+  }
+  return { ...out, notified, reminded };
 }

@@ -35,7 +35,8 @@ export type AuditEvent =
   | 'CONTENT_SUBMITTED' | 'CONTENT_REVIEWED' | 'CONVERSION_RECORDED' | 'CONVERSION_REVERSED'
   | 'COMMISSION_CHANGED' | 'ADJUSTMENT_CREATED' | 'PERIOD_CLOSED' | 'BILLING_MODE_CHANGED' | 'STATEMENT_APPROVED' | 'DOCUMENT_DOWNLOADED'
   | 'INVOICE_CREATED' | 'INVOICE_APPROVED' | 'INVOICE_REJECTED' | 'PAYOUT_CREATED' | 'PAYOUT_APPROVED' | 'PAYOUT_EXPORTED' | 'PAYOUT_PAID' | 'PAYOUT_FAILED'
-  | 'CREATOR_ACCOUNT_DELETED';
+  | 'CREATOR_ACCOUNT_DELETED'
+  | 'REFUND_RECORDED' | 'BANK_STATEMENT_IMPORTED' | 'CREATOR_NOTIFIED' | 'SETTINGS_CHANGED';
 
 export type Actor = { kind: 'creator' | 'admin' | 'system'; ref: string; role: AdminRole | 'CREATOR' | 'SYSTEM' };
 
@@ -192,7 +193,7 @@ export async function requireActiveCreator(req: Request, bucket: string, limit =
 }
 
 export const ASSET_BUCKET = 'creator-assets';
-export const SITE_ORIGIN = 'https://immoadv.de';
+export { SITE_ORIGIN } from '@/lib/creator/site';
 
 // Zeitraum für Kennzahlen: 30 Tage, 90 Tage, aktueller Monat, Vormonat, gesamt.
 export function rangeOf(v: string | null, now = new Date()): { key: string; from: Date; to: Date } {

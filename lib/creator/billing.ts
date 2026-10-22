@@ -179,3 +179,22 @@ export function suggestInvoiceNumber(year: number, existing: string[]): string {
 export const creditNoteNumber = (year: number, n: number) => `GS-${year}-${String(n).padStart(5, '0')}`;
 
 export const eurText = (c: number) => (c / 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+
+// ---------------- Erstattungen (Phase 4) ----------------
+// Netto-Anteil einer (Teil-)Erstattung: Stripe meldet brutto (amount, amount_refunded); verrechnet wird anteilig netto.
+export function refundedNetTotal(amountNetCents: number, chargeAmount: number, refundedAmount: number): number {
+  if (chargeAmount <= 0 || refundedAmount <= 0) return 0;
+  if (refundedAmount >= chargeAmount) return amountNetCents;
+  return Math.round((amountNetCents * refundedAmount) / chargeAmount);
+}
+
+// Grundlage einer noch nicht abgerechneten Conversion nach Teilerstattungen.
+export const reducedBase = (amountNetCents: number, refundedNetCents: number) => Math.max(0, amountNetCents - Math.max(0, refundedNetCents));
+
+// Anteilige Rückforderung nach dem Abschluss: Anteil der Erstattung an der abgerechneten Grundlage,
+// höchstens die noch nicht zurückgeforderte Provision.
+export function partialClawback(commissionCents: number, baseCents: number, refundNetCents: number, alreadyClawedCents: number): number {
+  if (commissionCents <= 0 || baseCents <= 0 || refundNetCents <= 0) return 0;
+  const share = Math.round((commissionCents * Math.min(refundNetCents, baseCents)) / baseCents);
+  return Math.max(0, Math.min(share, commissionCents - Math.max(0, alreadyClawedCents)));
+}

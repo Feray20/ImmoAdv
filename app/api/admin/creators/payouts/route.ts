@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { sendMail } from '@/lib/notify/mail';
-import { eurText, periodLabel } from '@/lib/creator/billing';
+import { periodLabel } from '@/lib/creator/billing';
+import { markPayoutPaid } from '@/lib/creator/billing-server';
 import { maskIban } from '@/lib/creator/iban';
 import { can } from '@/lib/creator/roles';
 import { painXml } from '@/lib/creator/sepa';
@@ -17,9 +17,11 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const a = await requireCreatorAdmin(req, 'billing.read');
   if (!('role' in a)) return a;
-  const { data } = await supabaseAdmin().from('immo_creator_payouts')
-    .select('id, statement_id, creator_id, amount_cents, iban_country, iban_last4, reference, status, created_at, approved_at, exported_at, paid_at, failed_reason, immo_creators(display_name), immo_creator_statements(period, billing_mode, status), immo_creator_payout_accounts(status)')
-    .order('created_at', { ascending: false }).limit(500);
+  const cols = 'id, statement_id, creator_id, amount_cents, iban_country, iban_last4, reference, status, created_at, approved_at, exported_at, paid_at, failed_reason, immo_creators(display_name), immo_creator_statements(period, billing_mode, status), immo_creator_payout_accounts(status)';
+  const q = (c: string) => supabaseAdmin().from('immo_creator_payouts').select(c).order('created_at', { ascending: false }).limit(500);
+  let res = await q(`${cols}, paid_via, bank_ref`);
+  if (res.error) res = await q(cols); // ohne Phase-4-Migration
+  const data = res.data;
   type Row = { id: string; iban_country: string; iban_last4: string; immo_creator_payout_accounts?: { status: string } | null; immo_creator_statements?: { period: string } | null; [k: string]: unknown };
   return j({
     me: { manage: can(a.role, 'payouts.manage') },
@@ -97,18 +99,7 @@ export async function POST(req: Request) {
 
   if (d.action === 'paid') {
     let n = 0;
-    for (const p of list.filter((x) => x.status === 'APPROVED' || x.status === 'EXPORTED')) {
-      const now = new Date().toISOString();
-      const { data } = await db.from('immo_creator_payouts').update({ status: 'PAID', paid_by: a.actor.ref, paid_at: now }).eq('id', p.id).eq('status', p.status).select('id');
-      if (!data?.length) continue;
-      n++;
-      await db.from('immo_creator_statements').update({ status: 'PAID', paid_at: now }).eq('id', p.statement_id).eq('status', 'APPROVED');
-      await db.from('immo_creator_commissions').update({ status: 'PAID' }).eq('statement_id', p.statement_id).eq('status', 'APPROVED');
-      await audit('PAYOUT_PAID', p.creator_id, a.actor, 'SUCCESS', { amount_cents: p.amount_cents });
-      const { data: c } = await db.from('immo_creators').select('user_id, first_name').eq('id', p.creator_id).maybeSingle();
-      const { data: u } = c?.user_id ? await db.auth.admin.getUserById(c.user_id) : { data: null };
-      if (u?.user?.email) await sendMail(u.user.email, 'Deine Auszahlung von ImmoAdv', `Hallo ${c?.first_name || ''},\n\nwir haben ${eurText(p.amount_cents)} an dein Konto ${maskIban(p.iban_country, p.iban_last4)} überwiesen (Verwendungszweck: ${p.reference}). Je nach Bank ist der Betrag in 1–2 Bankarbeitstagen gutgeschrieben.\n\nDeine Abrechnungen findest du im Creator-Portal: https://immoadv.de/creator#abrechnung`, [], { title: 'Auszahlung überwiesen' }).catch(() => false);
-    }
+    for (const p of list) if (await markPayoutPaid(p, a.actor, { via: 'MANUAL' })) n++;
     return j({ ok: true, paid: n });
   }
 

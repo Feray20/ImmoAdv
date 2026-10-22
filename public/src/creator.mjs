@@ -665,9 +665,9 @@ function guideView(v) {
   const steps = [
     ['Link oder Code teilen', 'Verwende deinen persönlichen Link (Creator Studio) oder deinen Vorteilscode. Für Kampagnen gibt es eigene Links, damit wir sehen, was funktioniert.'],
     ['Werbung kennzeichnen', 'Jeder Beitrag über ImmoAdv ist Werbung und wird als solche gekennzeichnet. Trage veröffentlichte Beiträge im Studio ein – wir prüfen sie.'],
-    ['Was gezählt wird', 'Bezahlte Käufe von Kunden, die über deinen Link kamen (bis 90 Tage nach ihrer Registrierung) oder deinen Code eingelöst haben. Eigene Käufe und erstattete Käufe zählen nicht.'],
+    ['Was gezählt wird', 'Bezahlte Käufe von Kunden, die über deinen Link kamen (bis 90 Tage nach ihrer Registrierung) oder deinen Code eingelöst haben. Eigene Käufe und erstattete Käufe zählen nicht; bei einer Teilerstattung zählt der verbleibende Betrag.'],
     ['Provision', 'Je Kauf nach der für dich hinterlegten Regel (z. B. Prozent vom Netto-Umsatz). Ausstehende Beträge siehst du laufend unter Performance und Abrechnung.'],
-    ['Monatsabschluss', 'Ein Monat wird abgerechnet, wenn die 14-tägige Widerrufsfrist aller Käufe vorbei ist – in der Regel ab dem 15. des Folgemonats. Spätere Erstattungen werden im nächsten Monat verrechnet.'],
+    ['Monatsabschluss', 'Ein Monat wird abgerechnet, wenn die 14-tägige Widerrufsfrist aller Käufe vorbei ist – in der Regel ab dem 15. des Folgemonats. Spätere Erstattungen werden im nächsten Monat anteilig verrechnet. Sobald deine Abrechnung bereit ist, bekommst du eine E-Mail.'],
     ['Rechnung oder Gutschrift', 'Je nach Vereinbarung erstellst du mit einem Klick eine vorausgefüllte Rechnung, oder ImmoAdv stellt dir eine Gutschrift aus.'],
     ['Auszahlung', 'Nach der Freigabe überweisen wir auf dein hinterlegtes, geprüftes Konto. Du bekommst eine E-Mail, sobald die Überweisung raus ist.'],
   ];

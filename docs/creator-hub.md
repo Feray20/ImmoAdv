@@ -1,7 +1,8 @@
 # ImmoAdv Creator Hub
 
 Stand: Phase 1 (Fundament), Phase 2 (Attribution, Kampagnen, Asset Library, Community-Vorteil, Creator Studio, Performance)
-und Phase 3 (Provision, Monatsabschluss, Rechnung/Gutschrift, Payout Center, Creator Guide).
+Phase 3 (Provision, Monatsabschluss, Rechnung/Gutschrift, Payout Center, Creator Guide)
+und Phase 4 (Teilerstattungen, Kontoauszug-Abgleich, automatischer Monatsabschluss mit E-Mails).
 
 ## Einrichtung (einmalig, vor dem Livegang)
 
@@ -36,6 +37,12 @@ und Phase 3 (Provision, Monatsabschluss, Rechnung/Gutschrift, Payout Center, Cre
     (fällt sonst auf `INVOICE_IBAN` / `INVOICE_BIC` / `INVOICE_ACCOUNT_HOLDER` zurück). Ohne IBAN ist der Export gesperrt.
 13. **Einstellungen** (`immo_settings`): `creator_close_delay_days` (Standard 15 – Monatsabschluss frühestens 15 Tage nach Monatsende,
     deckt die Widerrufsfrist ab) und `creator_payout_four_eyes` (Standard `false`; bei `true` darf die Person, die die Abrechnung freigegeben hat, die Auszahlung nicht selbst freigeben).
+
+### Zusätzlich für Phase 4
+14. `docs/sql/2026-10-25_creator_hub_phase4.sql` ausführen, danach `docs/sql/tests/creator_hub_phase4_test.sql`.
+15. **Stripe-Webhook**: `charge.refunded` ist seit Phase 2 abonniert – Stripe sendet das Ereignis auch bei Teilerstattungen; keine weitere Einstellung nötig.
+16. **Automatik** (optional): Web-Admin → Creator Operations → Abrechnung → „Automatik“ (nur Super Admin). Standard: aus.
+    Läuft im bestehenden täglichen Vercel-Cron (`/api/cron/cleanup`, `CRON_SECRET`). E-Mails nur bei eingerichtetem Versand (Resend).
 
 Einstieg für Creator: `https://immoadv.de/creator` (nicht verlinkt, noindex, nicht in der Sitemap, in robots.txt gesperrt).
 Admin: Web-Admin → Bereich **B2B** → **Creator Operations**.
@@ -106,6 +113,29 @@ Conversions (PENDING) → Monatsabschluss (frühestens Monatsende + 15 Tage)
   Die PDFs enthalten die IBAN nur maskiert.
 - Bei „Bezahlt“ erhält der Creator eine E-Mail; Dokumente lädt er über kurzlebige signierte Links (60 Sekunden).
 
+### Erstattungen (Phase 4)
+- Stripe meldet den kumulierten Erstattungsbetrag; der Server rechnet ihn anteilig auf den Netto-Kaufbetrag um und speichert
+  je neuem Stand eine unveränderbare Zeile (`immo_creator_refunds`, doppelte Zustellungen werden ignoriert).
+- **Vor dem Abschluss**: Die Provision wird auf die verbleibende Grundlage berechnet; die Erstattung wird in derselben
+  Datenbank-Transaktion als verrechnet markiert.
+- **Nach dem Abschluss**: anteilige Rückforderung (Anteil der Erstattung an der abgerechneten Grundlage) im nächsten Abschluss;
+  bei vollständiger Erstattung die noch nicht zurückgeforderte Restprovision. Rückforderungen übersteigen nie die Provision.
+- Bei festen Provisionsbeträgen (FIXED/HYBRID) wird ebenfalls anteilig zurückgefordert.
+
+### Kontoauszug-Abgleich (Phase 4)
+Payout Center → „Kontoauszug abgleichen“: camt.053-Datei (XML, max. 5 MB) hochladen. Erkannt wird über die Ende-zu-Ende-Referenz
+der SEPA-Datei (`CR…`), sonst über Verwendungszweck + exakten Betrag. Vorschau zuerst; bei „Übernehmen“ liest der Server die Datei
+erneut und markiert nur gebuchte Belastungen mit passendem Betrag als bezahlt (Buchungsdatum, Bankreferenz, Herkunft „laut Kontoauszug“).
+Rückläufer, abweichende Beträge und vorgemerkte Umsätze werden angezeigt, aber nicht übernommen. Dateien mit DOCTYPE/Entitäten
+werden abgelehnt. Jeder übernommene Auszug wird mit Prüfsumme vermerkt.
+
+### Automatik und E-Mails (Phase 4)
+- Automatischer Monatsabschluss: einmal je Monat für den Vormonat, frühestens nach der Sperrfrist (Einstellung `creator_auto_close`).
+- „Abrechnung bereit“: einmal je Abrechnung (nur Abrechnungen der letzten 30 Tage), Rechnungs-Creator mit Link zur 1-Klick-Rechnung.
+- Erinnerung „Rechnung fehlt“: einmal, `creator_invoice_reminder_days` (Standard 7) Tage nach dem Hinweis.
+- E-Mails enthalten keine Zahlungsdaten. Versand und Zeitpunkte werden protokolliert (`CREATOR_NOTIFIED`).
+- Einstellungen (Automatik, Sperrfrist ≥ 14 Tage, Erinnerung, Vier-Augen-Prinzip) ändern nur Super Admins; jede Änderung wird protokolliert.
+
 ### Kontolöschung eines Creators
 Ohne Conversions, Abrechnungen oder Auszahlungen wird der Creator mit dem Konto vollständig gelöscht.
 Liegen solche Daten vor (Aufbewahrungspflicht nach § 147 AO / § 257 HGB), löst die Kontolöschung den Creator vom Login
@@ -133,6 +163,8 @@ offene Auszahlungen können weiter bearbeitet werden. Nach Ablauf der Fristen si
 | Abrechnungen sehen | ✓ | ✓ | ✓ | – | ✓ |
 | Monatsabschluss, Anpassungen, Freigabe, Abrechnungsart, Provisionsregeln | ✓ | ✓ | – | – | – |
 | Auszahlungen freigeben, exportieren, als bezahlt markieren | ✓ | ✓ | – | – | – |
+| Kontoauszug abgleichen | ✓ | ✓ | – | – | – |
+| Abrechnungs-Einstellungen (Automatik, Vier-Augen) | ✓ | – | – | – | – |
 | Rollen vergeben | ✓ | – | – | – | – |
 
 Admins ohne Eintrag gelten als Super Admin (wie im übrigen Web-Admin). Die eigene Rolle kann niemand selbst ändern.
@@ -150,13 +182,13 @@ Aktive Creator sehen danach „Vereinbarung bestätigen“ als nächste Aufgabe.
 
 - Unit: `npm test` (u. a. `tests/creator.test.ts`: IBAN, Tresor, Rollen, Status, Audit-Filter).
 - Unit Phase 2: `tests/creator-attribution.test.ts` (Vorrang Code vor Link, Fenster, Eigenkauf, Ausschlüsse, Netto, Link-Aufbau).
+- Unit Phase 4: `tests/creator-phase4.test.ts` (Teilerstattung, anteilige Rückforderung, camt.053 inkl. Sammelbuchung/Rückläufer, E-Mail-Texte).
 - Unit Phase 3: `tests/creator-billing.test.ts` (Zeiträume, Regeln, Staffeln, Steuer, Summen, Blocker, Nummern, SEPA, PDF ohne volle IBAN).
 - Datenbank lokal: `PGHOST=… PGPORT=… PGUSER=postgres bash docs/sql/tests/run_local.sh` (leere PostgreSQL ≥ 15; alle Phasen inkl. Rückbau).
-- Datenbank Supabase: `docs/sql/tests/creator_hub_rls_test.sql`, `…_phase2_test.sql`, `…_phase3_test.sql` (rollen zurück).
+- Datenbank Supabase: `docs/sql/tests/creator_hub_rls_test.sql`, `…_phase2_test.sql`, `…_phase3_test.sql`, `…_phase4_test.sql` (rollen zurück).
 
 ## Noch offen
 
 - Rechtlich geprüfte Vereinbarung (inkl. Gutschriftverfahren, falls genutzt) und mit der Steuerberatung abgestimmte Provisionsregel.
-- Abgleich der Zahlungsbestätigung mit dem Kontoauszug (camt.053) – „Bezahlt“ wird derzeit manuell gesetzt.
-- Teilerstattungen: Nur vollständige Erstattungen nehmen eine Conversion automatisch zurück; Teilerstattungen sind derzeit per Korrektur-Anpassung zu erfassen.
-- Automatischer Monatsabschluss per Zeitplan (derzeit manuell im Admin, frühestens nach der Sperrfrist).
+- Rückläufer nach „Bezahlt“ (Rücküberweisung Tage später) werden beim Abgleich angezeigt; die Auszahlung muss dann manuell neu angestoßen werden
+  (bezahlte Auszahlungen sind unveränderbar).
