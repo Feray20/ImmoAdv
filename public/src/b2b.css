@@ -1265,3 +1265,6 @@ details.fa-priv p{margin:8px 0 0}
 @media (max-width:360px){.pt-tabs a,.pt-tabs button{font-size:10.5px;letter-spacing:-.1px}}
 .pt-tabs .pt-short{display:none}
 @media (max-width:420px){.pt-tabs .pt-long{display:none}.pt-tabs .pt-short{display:inline}}
+
+/* Einheitliche Knopfform (wie Website und Bezahlseite): Pillenform statt eckig. */
+.btn,a.btn,button.btn,.btn-pay{border-radius:999px!important}

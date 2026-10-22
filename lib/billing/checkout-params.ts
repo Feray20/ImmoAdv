@@ -6,7 +6,7 @@ import { PLANS, type Plan } from '@/lib/billing/stripe';
 // (Karte, PayPal, Apple Pay, Google Pay, Klarna, SEPA …). Logo und Farben kommen aus Stripe → Einstellungen → Branding.
 // Stripe-Feld ist evtl. noch nicht in den SDK-Typen, daher als Spread.
 // Bezahlseite im ImmoAdv-Stil: Bestellknopf schwarz wie Apple Pay (wie alle Kaufknöpfe auf immoadv.de), Schrift Inter.
-export const CHECKOUT_BRANDING = { branding_settings: { button_color: '#000000', background_color: '#ffffff', border_style: 'rounded', font_family: 'inter' } } as unknown as Partial<Stripe.Checkout.SessionCreateParams>;
+export const CHECKOUT_BRANDING = { branding_settings: { button_color: '#000000', background_color: '#ffffff', border_style: 'pill', font_family: 'inter' } } as unknown as Partial<Stripe.Checkout.SessionCreateParams>;
 export const NO_MANAGED_PAYMENTS = { managed_payments: { enabled: false } } as unknown as Partial<Stripe.Checkout.SessionCreateParams>;
 
 export function checkoutParams(o: {

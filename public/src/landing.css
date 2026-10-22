@@ -261,3 +261,6 @@
 
 /* Kleine Handys: "Fragen?"-Button erst nach dem Hero zeigen, damit er den Haupt-CTA nicht verdeckt */
 @media(max-width:600px){body.lp-hero-in .cw-fab{display:none}}
+
+/* Einheitliche Knopfform auf der ganzen Website: abgerundet (Pillenform) statt eckig – passend zur Bezahlseite. */
+.btn,a.btn,button.btn,.hs-go,a.hs-go,.btn-pay,.km-go{border-radius:999px!important}
