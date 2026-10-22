@@ -1661,3 +1661,13 @@ details.an-sec>.form-note{margin-bottom:16px}
   body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a.nav-acc,
   body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a[href^="/app/dashboard"]{display:none!important}
 }
+
+/* Privatbereich: keine doppelte Überschrift, Inhalt auf großen Bildschirmen mittig und breiter, Fußzeile immer unten */
+.dup-title{display:none!important}
+@media(min-width:901px){
+  body.is-app main{display:flex;flex-direction:column;min-height:100vh}
+  body.is-app main>*:not(.ia-legal){width:100%;max-width:1320px;margin-left:auto;margin-right:auto}
+  body.is-app main .container{max-width:1320px}
+  body.is-app main>.section{padding-bottom:40px}
+  body.is-app main .ia-legal{margin:auto -28px -48px}
+}

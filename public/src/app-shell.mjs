@@ -392,6 +392,15 @@ export function setupApp({ u, d, saveData, reload }) {
   }
 
   const CLASSIFIED = new WeakSet();
+  const normT = (t) => String(t || '').toLowerCase().replace(/&amp;/g, '&').replace(/[^a-zäöüß0-9&]+/g, ' ').trim();
+  const dedupeTitles = () => {
+    const t = normT($('appTitle')?.textContent);
+    grid.querySelectorAll('.dup-title').forEach((h) => h.classList.remove('dup-title'));
+    if (!t) return;
+    for (const card of grid.querySelectorAll(':scope > .v-show')) {
+      for (const h of card.querySelectorAll('h2, h3')) { if (h.offsetParent !== null && normT(h.textContent) === t) h.classList.add('dup-title'); }
+    }
+  };
   const apply = () => {
     if ((location.hash.slice(1) || '').split('?')[0] === 'suche') { history.replaceState(null, '', location.pathname + location.search + location.hash.replace(/^#suche/, '#objekte')); window.__iaToAnalyse = true; }
     const v = (location.hash.slice(1) || 'start').split('?')[0];
@@ -401,6 +410,7 @@ export function setupApp({ u, d, saveData, reload }) {
     [...grid.children].forEach((el) => { if (!CLASSIFIED.has(el)) { el.dataset.view = classify(el); CLASSIFIED.add(el); } el.classList.toggle('v-show', el.dataset.view.split(' ').includes(cur)); });
     document.querySelectorAll('[data-go]').forEach((a) => a.classList.toggle('on', a.dataset.go === cur));
     $('appTitle').textContent = views.find((x) => x[0] === cur)[1];
+    dedupeTitles();
     document.body.dataset.cur = cur;
     if (cur === 'objekte' && lastCur !== 'objekte') {
       let imp = false; try { imp = !!sessionStorage.getItem('ia-import'); } catch { /* ohne Speicher */ }
@@ -440,6 +450,10 @@ export function setupApp({ u, d, saveData, reload }) {
   window.addEventListener('hashchange', window.__iaHash);
   if (!window.__iaTopBound) { window.__iaTopBound = true; document.addEventListener('click', (e) => { const a = e.target.closest?.('a[data-go], .app-tab, .app-nav'); if (a && a.getAttribute('href') === location.hash) toTop(); }); }
   window.__iaApplyView = apply;
+  // Keine doppelte Überschrift: trägt die erste Karte eines Bereichs denselben Titel wie die Seitenüberschrift
+  // (z. B. „Tarif“ unter „Tarif“), wird die Kartenüberschrift ausgeblendet. Auch für nachgeladene Inhalte.
+  let ddT = 0;
+  new MutationObserver(() => { if (ddT) return; ddT = requestAnimationFrame(() => { ddT = 0; dedupeTitles(); }); }).observe(grid, { childList: true, subtree: true });
   new MutationObserver(() => schedule()).observe(grid, { childList: true });
   // Nach Anmeldung / erstem Laden immer mit der Übersicht beginnen – kein Rücksprung in den zuletzt
   // offenen Bereich (z. B. Konto). Ausnahmen nur für ausdrückliche Absichten: Kauf (?buy/?want → #angebot),

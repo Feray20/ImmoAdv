@@ -1268,3 +1268,13 @@ details.fa-priv p{margin:8px 0 0}
 
 /* Einheitliche Knopfform (wie Website und Bezahlseite): Pillenform statt eckig. */
 .btn,a.btn,button.btn,.btn-pay{border-radius:999px!important}
+
+/* Fußzeile wie im Privatbereich: in der Inhaltsspalte, Seitenleiste läuft bis unten durch */
+body:has(.pt-main .ia-legal-in-main)>footer.ia-legal-b2b{display:none}
+.pt-main>.ia-legal .ia-legal-in{width:auto;padding:22px 28px 24px!important}
+@media(min-width:901px){
+  .pt-main{display:flex;flex-direction:column;min-height:100vh}
+  .pt-main>.pt-liab{margin-bottom:40px}
+  .pt-main>.ia-legal{margin:auto -28px -48px}
+}
+@media(max-width:900px){.pt-main>.ia-legal{margin:32px -14px 0}.pt-main>.ia-legal .ia-legal-in{padding-left:14px!important;padding-right:14px!important}}

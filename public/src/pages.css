@@ -902,6 +902,11 @@ html:not(.ia-paid) .nav-actions a[href="/auth/login"],html.ia-user:not(.ia-paid)
 @media (max-width:900px){body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a[href="/auth/login"],
 body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a.nav-acc,
 body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a[href^="/app/dashboard"]{display:none!important}}
+@media(min-width:901px){body.is-app main{display:flex;flex-direction:column;min-height:100vh}
+body.is-app main>*:not(.ia-legal){width:100%;max-width:1320px;margin-left:auto;margin-right:auto}
+body.is-app main .container{max-width:1320px}
+body.is-app main>.section{padding-bottom:40px}
+body.is-app main .ia-legal{margin:auto -28px -48px}}
 .btn,a.btn,button.btn,.hs-go,a.hs-go,.btn-pay,.km-go{border-radius:999px!important}
 .mobile-menu{border-radius:999px!important;padding-left:14px;padding-right:16px}
 .mobile-nav a[href="/app/dashboard"],html:not(.ia-user) .mobile-nav a[href="/auth/login"]{border-radius:999px!important}

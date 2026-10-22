@@ -67,6 +67,8 @@ function shell() {
     <div class="pt-sheet" id="ptSheet" hidden><div class="pt-sheet-bg" data-close></div><div class="pt-sheet-in" role="dialog" aria-label="Alle Bereiche"><div class="pt-sheet-h"><span class="pt-sheet-t"><strong>Hauptmenü</strong>${(a.companyName || '').trim().length >= 3 ? `<small>${esc(a.companyName)}</small>` : ''}</span><button type="button" class="stage-x" data-close aria-label="Schließen">×</button></div>
       <nav>${navGroups((v) => !MAIN.some(([m]) => m === v))}<a href="mailto:support@immoadv.de">Support kontaktieren</a><span class="pt-grp">Konto</span><button type="button" class="pt-logout" id="ptLogoutS">Abmelden</button></nav></div></div>
   </div>`;
+  // Fußzeile wie im Privatbereich: in der Inhaltsspalte neben der Seitenleiste (Original unter der Seite wird per CSS ausgeblendet).
+  { const lf = document.querySelector('body > footer.ia-legal-b2b'), pm = root.querySelector('.pt-main'); if (lf && pm && !pm.querySelector('.ia-legal')) { const c = lf.cloneNode(true); c.classList.add('ia-legal-in-main'); pm.appendChild(c); } }
   root.querySelectorAll('#ptLogout,#ptLogoutM,#ptLogoutS').forEach((b) => { b.onclick = async () => { try { (await import('./b2b-tools.mjs')).clearAll(); } catch { /* weiter */ } logout(); }; });
   const brb = $('#ptBr'); if (brb) brb.onclick = () => chooseBranche();
   const sheet = $('#ptSheet'), more = $('#ptMore');
