@@ -5,6 +5,7 @@ import { requireAdmin, isAdminEmail } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
 import { adminAudit } from '@/lib/b2b/core';
+import { maskEmail } from '@/lib/admin/pii';
 import { purgeUser } from '@/lib/account/purge';
 import { billingEnabled, entitlementsFor } from '@/lib/billing/stripe';
 
@@ -41,7 +42,8 @@ export async function GET(req: Request) {
     .filter((u) => !term || (u.email || '').toLowerCase().includes(term))
     .map((u) => ({
       id: u.id,
-      email: u.email || '',
+      // Datenminimierung: E-Mail nur maskiert; Klartext über /api/admin/reveal (protokolliert).
+      email: maskEmail(u.email),
       createdAt: u.created_at,
       lastSignIn: u.last_sign_in_at || null,
       confirmed: Boolean(u.email_confirmed_at),

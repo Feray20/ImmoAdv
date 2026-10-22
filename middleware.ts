@@ -53,9 +53,26 @@ async function blocked(h: string | null): Promise<boolean> {
   return blocks.set.has(h);
 }
 
+// Log-Rauschen begrenzen: je Quelle (IP-Hash) und 10-Minuten-Fenster höchstens so viele Meldungen, wie die automatische
+// Sperre braucht (20 Scanner-Treffer); gesperrte Quellen nur einmal je Fenster. Der Rest wird weiterhin mit 404/403 abgewiesen.
+const SEEN = new Map<string, { at: number; n: number }>();
+const CAP = { probe: 20, blocked: 1 } as const;
+function throttled(kind: 'probe' | 'blocked', ip: string | null): boolean {
+  const k = `${kind}:${ip || 'x'}`, now = Date.now();
+  const e = SEEN.get(k);
+  if (!e || now - e.at > 600_000) {
+    if (SEEN.size > 5000) SEEN.clear();
+    SEEN.set(k, { at: now, n: 1 });
+    return false;
+  }
+  e.n += 1;
+  return e.n > CAP[kind];
+}
+
 function report(req: NextRequest, ev: NextFetchEvent, kind: 'probe' | 'blocked', ip: string | null, detail: string) {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) return;
+  if (throttled(kind, ip)) return;
   ev.waitUntil(sha(`immoadv-sec:${key}`).then((t) => fetch(new URL('/api/sec/event', req.url), { method: 'POST', headers: { 'content-type': 'application/json', 'x-ia-sec': t.slice(0, 40) }, body: JSON.stringify({ kind, ip, detail: detail.slice(0, 160) }) })).then(() => null, () => null));
 }
 

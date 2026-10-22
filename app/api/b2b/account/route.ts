@@ -9,7 +9,7 @@ import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase
 import { RegistrationProofDocument, proofText, typeLabel, type RegistrationProof } from '@/lib/b2b/registration-proof';
 import { avvEvidence } from '@/lib/b2b/avv-evidence';
 import { AVV_VERSION, MODULE_KEYS, TIER_LIMITS, adminAudit, moduleOverrides, type ModuleKey, dossiersThisMonth, effectiveTier, membershipFor, newWidgetKey, slugify, type B2BAccount } from '@/lib/b2b/core';
-import { json, requireMember } from '@/lib/b2b/http';
+import { b2bMfaRequired, json, requireMember } from '@/lib/b2b/http';
 import { adminList } from '@/lib/security/admin';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
 import { newWebhookSecret, safeTarget } from '@/lib/b2b/webhook';
@@ -121,7 +121,7 @@ export async function GET(req: Request) {
     branche = BRANCHEN.includes(meta.b2b_branche) ? meta.b2b_branche : null;
   } catch { mustChange = false; }
   const consentsMissing = m.role === 'owner' && (!m.account.unternehmer_confirmed_at || !m.account.avv_accepted_at);
-  return json({ ...view(m.account, m.role), usage: { seats: seats ?? 1, dossiersThisMonth: used, leadsNew: leadsNew ?? 0 }, avvVersion: AVV_VERSION, branche, onboarding: { mustChange, consentsMissing } });
+  return json({ ...view(m.account, m.role), usage: { seats: seats ?? 1, dossiersThisMonth: used, leadsNew: leadsNew ?? 0 }, avvVersion: AVV_VERSION, branche, onboarding: { mustChange, consentsMissing, mfaSetup: b2bMfaRequired() && !user.mfa } });
 }
 
 // Registrierung eines Unternehmenskontos (nur Unternehmer nach § 14 BGB, mit AVV nach Art. 28 DSGVO).

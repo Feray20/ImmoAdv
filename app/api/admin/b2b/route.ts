@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { adminAudit, dossiersThisMonth, effectiveTier, type B2BAccount } from '@/lib/b2b/core';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
+import { maskEmail, maskTail } from '@/lib/admin/pii';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
       db.from('immo_b2b_verification_docs').select('id, kind, file_name, byte_size, sha256, storage_path, created_at').eq('account_id', id).order('created_at'),
     ]);
     if (!a) return j({ error: 'Nicht gefunden.' }, 404);
-    const members = await Promise.all((mem ?? []).map(async (m) => ({ ...m, email: (await db.auth.admin.getUserById(m.user_id)).data?.user?.email ?? '' })));
+    const members = await Promise.all((mem ?? []).map(async (m) => ({ ...m, email: maskEmail((await db.auth.admin.getUserById(m.user_id)).data?.user?.email ?? '') })));
     const { widget_key: _k, ...safe } = a as B2BAccount; // eslint-disable-line @typescript-eslint/no-unused-vars
     // Nachweise: kurzlebige, signierte Links (5 Minuten) – Dateien liegen in einem privaten Speicher. Jeder Abruf wird protokolliert.
     const docs = await Promise.all((vdocs ?? []).map(async (d) => {
@@ -36,7 +37,9 @@ export async function GET(req: Request) {
       return { ...rest, url: sig.data?.signedUrl ?? null };
     }));
     if (docs.length) await adminAudit(auth.user.email, 'b2b_verification_view', id, { docs: docs.length });
-    return j({ account: { ...safe, tier: effectiveTier(a as B2BAccount), dossiersThisMonth: await dossiersThisMonth(id) }, members, leads: leads ?? [], invoices: inv ?? [], verificationDocs: docs });
+    await adminAudit(auth.user.email, 'b2b_detail_view', id, {});
+    const masked = { ...safe, email: maskEmail(safe.email), tax_id: safe.tax_id ? maskTail(safe.tax_id) : null, phone: (safe as { phone?: string | null }).phone ? maskTail((safe as { phone?: string | null }).phone, 2) : null };
+    return j({ account: { ...masked, tier: effectiveTier(a as B2BAccount), dossiersThisMonth: await dossiersThisMonth(id) }, members, leads: leads ?? [], invoices: inv ?? [], verificationDocs: docs });
   }
   const { data, error } = await db
     .from('immo_b2b_accounts')
@@ -47,7 +50,7 @@ export async function GET(req: Request) {
   const { data: leadRows } = await db.from('immo_b2b_leads').select('account_id').limit(20000);
   const leadCount = new Map<string, number>();
   for (const r of leadRows ?? []) leadCount.set(r.account_id, (leadCount.get(r.account_id) ?? 0) + 1);
-  return j({ accounts: (data ?? []).map((a) => ({ ...a, tier: effectiveTier(a as B2BAccount), leads: leadCount.get(a.id) ?? 0 })) });
+  return j({ accounts: (data ?? []).map((a) => ({ ...a, email: maskEmail(a.email), tax_id: a.tax_id ? maskTail(a.tax_id) : null, tier: effectiveTier(a as B2BAccount), leads: leadCount.get(a.id) ?? 0 })) });
 }
 
 const Action = z.discriminatedUnion('action', [

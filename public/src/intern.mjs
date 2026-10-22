@@ -29,6 +29,46 @@ function errState(v, text) {
 }
 const emptyState = (title, text) => `<div class="ad-state"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg><strong>${title}</strong>${text ? `<span>${text}</span>` : ''}</div>`;
 
+// Personendaten (E-Mail, Steuer-/USt-IdNr., Telefon) kommen vom Server maskiert. „Aufdecken“ holt ein einzelnes Feld
+// im Klartext – nur mit Admin-Rolle und 2FA, jeder Abruf landet mit Zweck im Audit-Protokoll.
+async function reveal(kind, id, field, purpose = 'ansicht') {
+  const r = await api('/api/admin/reveal', { method: 'POST', body: JSON.stringify({ kind, id, field, purpose }) });
+  if (!r.ok) { msg(r.data?.error || 'Aufdecken nicht möglich.', true); return null; }
+  return r.data.value;
+}
+const PII_L = { email: 'E-Mail', tax_id: 'Steuernummer', phone: 'Telefon' };
+const pii = (val, kind, id, field) => (val ? `<span class="pii"><span class="pii-v">${esc(val)}</span>${id ? `<button type="button" class="pii-btn" data-pii="${kind}|${esc(id)}|${field}" aria-label="${PII_L[field]} aufdecken (wird protokolliert)" title="Wird im Audit-Protokoll vermerkt">Aufdecken</button>` : ''}</span>` : '–');
+function bindPii(el) {
+  el.querySelectorAll('[data-pii]').forEach((b) => b.onclick = async () => {
+    const [k, i, f] = b.dataset.pii.split('|');
+    b.disabled = true;
+    const val = await reveal(k, i, f);
+    if (val == null) { b.disabled = false; return; }
+    const w = b.closest('.pii'); w.querySelector('.pii-v').textContent = val || '–'; w.classList.add('on'); b.remove();
+  });
+}
+// Endgültiges Löschen: eigener Dialog statt prompt(). Bestätigung nur durch Eingabe der vollständigen E-Mail-Adresse;
+// die Adresse kann im Dialog aufgedeckt werden (protokolliert, Zweck „loeschen“). Der Server prüft die Eingabe erneut.
+function deleteDialog({ masked, warn = '', revealFn }) {
+  return new Promise((done) => {
+    let d = document.getElementById('delDlg');
+    if (!d) { d = document.createElement('dialog'); d.id = 'delDlg'; d.className = 'ad-dlg ad-dlg-danger'; document.body.append(d); }
+    d.innerHTML = `<form method="dialog" class="del-f">
+      <h2>Konto endgültig löschen</h2>
+      <p><strong class="pii-v" id="delMail">${esc(masked)}</strong> ${revealFn ? '<button type="button" class="pii-btn" id="delRev">Aufdecken</button>' : ''}</p>
+      <p class="form-note">Profil, Objekte, Dokumente und Zugang werden entfernt.${esc(warn)} Das lässt sich nicht rückgängig machen. Zum Sperren statt Löschen bitte abbrechen und „Sperren“ wählen.</p>
+      <label>Zur Bestätigung die vollständige E-Mail-Adresse eingeben<input id="delIn" type="email" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+      <div class="pt-row"><button class="btn btn-ghost" value="x" type="submit" formnovalidate>Abbrechen</button><button class="btn btn-danger" id="delGo" type="button" disabled>Endgültig löschen</button></div></form>`;
+    const inp = d.querySelector('#delIn'), go = d.querySelector('#delGo');
+    inp.oninput = () => { go.disabled = !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(inp.value.trim()); };
+    d.querySelector('#delRev')?.addEventListener('click', async (e) => { e.target.disabled = true; const v = await revealFn(); if (v) { d.querySelector('#delMail').textContent = v; e.target.remove(); } else e.target.disabled = false; });
+    let val = null;
+    go.onclick = () => { val = inp.value.trim(); d.close(); };
+    d.onclose = () => done(val);
+    d.showModal(); inp.focus();
+  });
+}
+
 // ---------- Zugang ----------
 async function gate() {
   const adminLogin = () => loginForm(root, {
@@ -126,12 +166,23 @@ function frame() {
   const ic = (d) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   root.innerHTML = `<header class="ad-head ad-sticky"><a class="ad-brand" href="#uebersicht" aria-label="ImmoAdv Web-Admin – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="ad-title"><small class="ad-kicker" id="adKicker">Web-Admin</small><h1 id="adTitle">Admin</h1></div>
       <div class="ad-segctl ad-segctl3" role="group" aria-label="Datenbereich"><button type="button" data-segset="b2c">B2C<span> · Privat</span></button><button type="button" data-segset="b2b">B2B<span> · Unternehmen</span></button><button type="button" data-segset="system">System</button></div>
+      <button type="button" class="ad-menu-btn" id="adMenu" aria-haspopup="dialog" aria-controls="adDrawer"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menü</span></button>
       <button type="button" class="btn btn-outline ad-out" id="adLogout" aria-label="Abmelden" title="Abmelden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Abmelden</span></button></header>
     <p class="form-note ad-note">Nur für Administratoren · zweiter Faktor · alle Aktionen werden protokolliert · Abmeldung nach 15 Minuten ohne Aktivität.</p>
     <div class="ad-shell"><nav class="ad-tabs" aria-label="Bereiche">${groupsIn().map(([g, l, , , ts]) => `<div class="ad-grp"><span class="ad-grp-h">${l}</span>${ts.map((k) => `<button type="button" data-t="${k}">${tabLabel(k)}</button>`).join('')}</div>`).join('')}</nav>
     <div class="ad-main"><div class="ad-scope-band" id="adBand"></div><div class="ad-subtabs" id="adSub" role="tablist"></div><p id="adMsg" class="form-note" role="status"></p><div id="adView"></div></div></div>
+    <dialog class="ad-drawer" id="adDrawer" aria-label="Navigation"><div class="ad-dr-in">
+      <div class="ad-dr-h"><strong>Navigation</strong><button type="button" class="ad-dr-x" id="adDrX" aria-label="Menü schließen">✕</button></div>
+      <div class="ad-dr-seg" role="group" aria-label="Datenbereich"><button type="button" data-segset="b2c">B2C · Privat</button><button type="button" data-segset="b2b">B2B · Unternehmen</button><button type="button" data-segset="system">System</button></div>
+      ${groupsIn().map(([, l, , , ts]) => `<div class="ad-dr-grp"><span class="ad-grp-h">${l}</span>${ts.map((k) => `<button type="button" data-t="${k}">${tabLabel(k)}</button>`).join('')}</div>`).join('')}
+    </div></dialog>
     <nav class="ad-bottom" aria-label="Hauptbereiche">${groupsIn().map(([g, , sh, d]) => `<button type="button" data-g="${g}">${ic(d)}<span>${sh}</span></button>`).join('')}</nav>`;
-  root.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { location.hash = b.dataset.t; });
+  // Handy/Tablet: eine einzige Navigationsebene – Bereich und alle Reiter in einem Menü (Drawer), kein Querscrollen.
+  const dr = $('#adDrawer');
+  root.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { location.hash = b.dataset.t; if (dr.open) dr.close(); });
+  $('#adMenu').onclick = () => { dr.showModal(); dr.querySelector('[aria-selected=true]')?.focus(); };
+  $('#adDrX').onclick = () => dr.close();
+  dr.addEventListener('click', (e) => { if (e.target === dr) dr.close(); });
   root.querySelectorAll('[data-g]').forEach((b) => b.onclick = () => {
     const g = groupsIn().find((x) => x[0] === b.dataset.g);
     let last = null; try { last = sessionStorage.getItem(`ia-admin-last-${getSeg()}-${g[0]}`); } catch { /* ignore */ }
@@ -146,8 +197,10 @@ function frame() {
     // Bereichswechsel: Navigation neu aufbauen (nur Reiter dieses Bereichs) und – falls der aktuelle Reiter hier
     // nicht existiert – auf den Start des Bereichs springen. Nie Daten des vorigen Bereichs stehen lassen.
     const cur = location.hash.slice(1).split('-')[0];
+    const fromDrawer = Boolean(b.closest('.ad-drawer'));
     frame();
     if (!inScope(cur)) location.hash = firstTab(); else show();
+    if (fromDrawer) $('#adDrawer').showModal();
   });
 }
 
@@ -161,6 +214,7 @@ function show() {
   const g = groupOf(t);
   { const tt = $('#adTitle'), kk = $('#adKicker'); if (tt) tt.textContent = tabLabel(t); if (kk) kk.textContent = `Web-Admin · ${({ b2c: 'B2C Privat', b2b: 'B2B Unternehmen', system: 'System' })[getSeg()]}`; }
   try { sessionStorage.setItem(`ia-admin-last-${getSeg()}-${g[0]}`, t); } catch { /* ignore */ }
+  { const mb = $('#adMenu span'); if (mb) mb.textContent = 'Menü'; }
   $('#adSub').innerHTML = `<span class="ad-sub-h">${g[1]}</span>${g[4].map((k) => `<button type="button" role="tab" data-t="${k}">${tabLabel(k)}</button>`).join('')}`;
   $('#adSub').querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { location.hash = b.dataset.t; });
   root.querySelectorAll('[data-t]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.t === t)));
@@ -198,12 +252,14 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
     <div class="us-tools"><div class="pc-chips" role="group" aria-label="Filter">${US_F.map(([k, l]) => `<button type="button" data-usf="${k}" aria-pressed="${k === 'alle'}">${l} <b>${us.filter((u) => usTags(u).includes(k)).length}</b></button>`).join('')}</div>
       <label class="us-sort">Sortieren<select id="usSort"><option value="created">Registrierung (neueste)</option><option value="last">Letzte Anmeldung</option><option value="mail">E-Mail A–Z</option></select></label></div>
     <div class="us-list">${us.map((u) => `<article class="us-card${u.banned ? ' banned' : ''}" data-tags="${usTags(u).join(' ')}" data-created="${esc(u.createdAt || '')}" data-last="${esc(u.lastSignIn || '')}" data-mail="${esc(u.email || '')}">
-      <div class="us-top"><strong>${esc(u.email || '(ohne E-Mail)')}</strong><span class="us-tags">${u.admin ? '<span class="st ok">Admin</span>' : ''}${u.banned ? '<span class="st bad">gesperrt</span>' : ''}${u.confirmed ? '' : '<span class="st warn">unbestätigt</span>'}${u.mfa ? '<span class="st ok">2FA</span>' : '<span class="st">ohne 2FA</span>'}</span></div>
+      <div class="us-top"><strong>${u.email ? pii(u.email, 'user', u.id, 'email') : '(ohne E-Mail)'}</strong><span class="us-tags">${u.admin ? '<span class="st ok">Admin</span>' : ''}${u.banned ? '<span class="st bad">gesperrt</span>' : ''}${u.confirmed ? '' : '<span class="st warn">unbestätigt</span>'}${u.mfa ? '<span class="st ok">2FA</span>' : '<span class="st">ohne 2FA</span>'}</span></div>
       ${u.company ? `<p class="us-co"><strong>${esc(u.company.name)}</strong> · ${esc(u.company.number || '')} · ${u.company.role === 'owner' ? 'Inhaber' : 'Berater'} · ${u.company.verified ? '<span class="st ok">verifiziert</span>' : `<span class="st warn">${esc(u.company.status || 'offen')}</span>`}</p>` : ''}
       <dl class="us-meta"><div><dt>Registriert</dt><dd>${dt(u.createdAt)}</dd></div><div><dt>Letzte Anmeldung</dt><dd>${ago(u.lastSignIn)}</dd></div></dl>
-      <div class="us-act">${seg === 'b2c' && !u.admin && !u.company ? `<button type="button" class="btn btn-dark" data-acc="${esc(u.id)}" data-mail="${esc(u.email)}">Zugriff freischalten</button>` : ''}${u.confirmed ? '' : `<button type="button" class="btn btn-dark" data-us="confirm" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Bestätigung erneut senden</button>`}<button type="button" class="btn btn-outline" data-us="reset" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Passwort-Reset senden</button>${u.admin ? '' : `<button type="button" class="btn ${u.banned ? 'btn-outline' : 'btn-danger'}" data-us="${u.banned ? 'unban' : 'ban'}" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">${u.banned ? 'Entsperren' : 'Sperren'}</button><button type="button" class="btn btn-danger" data-us="delete" data-id="${esc(u.id)}" data-mail="${esc(u.email)}" data-co="${u.company ? esc(u.company.role) : ''}">Konto löschen</button>`}</div>
+      <div class="us-act">${seg === 'b2c' && !u.admin && !u.company ? `<button type="button" class="btn btn-dark" data-acc="${esc(u.id)}" data-mail="${esc(u.email)}">Zugriff freischalten</button>` : ''}${u.confirmed ? '' : `<button type="button" class="btn btn-dark" data-us="confirm" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Bestätigung erneut senden</button>`}<button type="button" class="btn btn-outline" data-us="reset" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Passwort-Reset senden</button>${u.admin ? '' : `<button type="button" class="btn ${u.banned ? 'btn-outline' : 'btn-warn'}" data-us="${u.banned ? 'unban' : 'ban'}" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">${u.banned ? 'Entsperren' : 'Sperren'}</button>`}</div>
+      ${u.admin ? '' : `<div class="us-dz"><span>Endgültig · nicht umkehrbar</span><button type="button" class="btn btn-danger btn-sm" data-us="delete" data-id="${esc(u.id)}" data-mail="${esc(u.email)}" data-co="${u.company ? esc(u.company.role) : ''}">Konto löschen</button></div>`}
     </article>`).join('') || emptyState('Keine Konten gefunden', q ? 'Für diese Suche gibt es keinen Treffer. Bitte die E-Mail-Adresse prüfen.' : 'Sobald sich jemand registriert, erscheint das Konto hier.')}</div>
     <div class="pt-row">${page > 1 ? '<button class="btn btn-ghost" id="usPrev" type="button">← Zurück</button>' : ''}${r.data.more ? '<button class="btn btn-ghost" id="usNext" type="button">Weiter →</button>' : ''}</div></section>`;
+  bindPii(v);
   $('#usMk')?.addEventListener('click', () => (seg === 'b2c' ? openCreatePrivate(() => nutzer(v, 1, '', seg)) : openCreateAccount(null, () => nutzer(v, 1, '', seg))));
   const list = v.querySelector('.us-list');
   const applyUs = () => {
@@ -227,9 +283,8 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
     let confirmEmail;
     if (a === 'delete') {
       const warn = b.dataset.co === 'owner' ? ' Das Unternehmenskonto wird mit allen Beratern, Anfragen und Unterlagen gelöscht; Rechnungen bleiben gesetzlich archiviert.' : '';
-      confirmEmail = prompt(`Konto ${m} endgültig löschen?${warn} Profil, Objekte, Dokumente und Zugang werden entfernt – das lässt sich nicht rückgängig machen.\n\nZur Bestätigung die E-Mail-Adresse eingeben:`);
-      if (confirmEmail === null) return;
-      if (confirmEmail.trim().toLowerCase() !== m.toLowerCase()) { msg('Die E-Mail-Adresse stimmt nicht überein – nichts gelöscht.', true); return; }
+      confirmEmail = await deleteDialog({ masked: m, warn, revealFn: () => reveal('user', b.dataset.id, 'email', 'loeschen') });
+      if (!confirmEmail) return;
     } else if (!confirm(ask)) return;
     b.disabled = true;
     const x = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ action: a, id: b.dataset.id, ...(confirmEmail ? { confirmEmail } : {}) }) });
@@ -720,7 +775,7 @@ async function partner(v) {
       <div class="pc-batch" id="pcBatch" hidden><span id="pcN">0 ausgewählt</span><button type="button" class="btn btn-outline btn-sm" id="pcAll">Alle sichtbaren</button><button type="button" class="btn btn-sm pc-del" id="pcDel">Ausgewählte löschen</button></div></div>
     ${list.length ? `<div class="pc-list">${list.map((a) => { const st = a.status === 'locked' ? ['bad', 'Gesperrt'] : a.verification_status === 'eingereicht' ? ['warn', 'Wartet auf Prüfung'] : !a.verified_at ? ['warn', a.verification_status === 'abgelehnt' ? 'Abgelehnt' : 'Ungeprüft'] : ['ok', 'Aktiv']; return `<article class="pc" data-row="${a.id}" data-s="${a.status}${a.verified_at ? '' : ' unverified'}${a.verification_status === 'eingereicht' ? ' pruefen' : ''}" data-q="${esc((a.company_name + ' ' + a.city + ' ' + a.customer_number + ' ' + a.email + ' ' + (a.register_number || '') + ' ' + (a.tax_id || '')).toLowerCase())}">
       <header class="pc-h"><label class="pc-sel"><input type="checkbox" data-sel="${a.id}" data-owner="${esc(a.owner_id || '')}" data-mail="${esc(a.email)}" aria-label="${esc(a.company_name)} auswählen"></label><div><strong>${esc(a.company_name)}</strong><small>${esc(a.customer_number)} · ${esc(a.postal_code)} ${esc(a.city)}</small></div><span class="st ${st[0]}">${st[1]}</span></header>
-      <dl class="pc-meta"><div><dt>Rechtsform</dt><dd>${esc(a.legal_form)} · ${esc(a.institution_type)}</dd></div><div><dt>Register</dt><dd>${esc(a.register_number || '–')}</dd></div><div><dt>Steuer / USt-IdNr.</dt><dd>${esc(a.tax_id || '–')}</dd></div><div><dt>Berater</dt><dd>${esc(a.advisor_name || '–')}<br><small>${esc(a.email)}</small></dd></div><div><dt>Tarif</dt><dd>${a.tier ? TIER[a.tier] : '–'}${a.plan_source === 'manual' ? ' (manuell)' : ''}${a.plan_until ? ` · bis ${dt(a.plan_until)}` : ''}${a.dossier_bonus ? ` · +${a.dossier_bonus} Mappen` : ''}</dd></div><div><dt>Anfragen</dt><dd>${a.leads}${a.has_whitelabel ? ' · White-Label' : ''}${a.allow_invoice_payment ? ' · Rechnungskauf' : ''}</dd></div></dl>
+      <dl class="pc-meta"><div><dt>Rechtsform</dt><dd>${esc(a.legal_form)} · ${esc(a.institution_type)}</dd></div><div><dt>Register</dt><dd>${esc(a.register_number || '–')}</dd></div><div><dt>Steuer / USt-IdNr.</dt><dd>${pii(a.tax_id, 'b2b', a.id, 'tax_id')}</dd></div><div><dt>Berater</dt><dd>${esc(a.advisor_name || '–')}<br><small>${pii(a.email, 'b2b', a.id, 'email')}</small></dd></div><div><dt>Tarif</dt><dd>${a.tier ? TIER[a.tier] : '–'}${a.plan_source === 'manual' ? ' (manuell)' : ''}${a.plan_until ? ` · bis ${dt(a.plan_until)}` : ''}${a.dossier_bonus ? ` · +${a.dossier_bonus} Mappen` : ''}</dd></div><div><dt>Anfragen</dt><dd>${a.leads}${a.has_whitelabel ? ' · White-Label' : ''}${a.allow_invoice_payment ? ' · Rechnungskauf' : ''}</dd></div></dl>
       ${a.status === 'locked' && a.lock_reason ? `<p class="pc-lock">Gesperrt: ${esc(a.lock_reason)}</p>` : ''}
       <footer class="pc-act">${a.verified_at ? `<button class="btn btn-outline btn-sm" data-a="details" data-id="${a.id}" type="button">Details</button>` : `<button class="btn btn-dark btn-sm" data-a="details" data-id="${a.id}" type="button">Prüfen &amp; freischalten</button>`}
         <details class="pc-menu"><summary class="btn btn-outline btn-sm">Aktionen ▾</summary><div class="pc-menu-in">
@@ -735,6 +790,7 @@ async function partner(v) {
           ${a.status === 'locked' ? `<button data-a="unlock" data-id="${a.id}" type="button">Entsperren</button>` : `<button data-a="lock" data-id="${a.id}" type="button" class="pc-danger">Sperren</button>`}
         </div></details></footer></article>`; }).join('')}</div>` : emptyState('Noch keine Unternehmenskonten', 'Legen Sie ein Unternehmen an oder übernehmen Sie eine Kontoanfrage unter „Anfragen“.')}
     <div id="invForm"></div>`;
+  bindPii(v);
   let pf = '';
   const filter = () => {
     const q = $('#pq').value.toLowerCase();
@@ -755,16 +811,21 @@ async function partner(v) {
     let ok = 0; const err = [];
     for (const c of xs) {
       if (!c.dataset.owner) { err.push(`${c.dataset.mail}: kein Inhaber`); continue; }
-      const r = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ action: 'delete', id: c.dataset.owner, confirmEmail: c.dataset.mail }) });
+      const full = await reveal('user', c.dataset.owner, 'email', 'loeschen');
+      if (!full) { err.push(`${c.dataset.mail}: Adresse nicht abrufbar`); continue; }
+      const r = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ action: 'delete', id: c.dataset.owner, confirmEmail: full }) });
       if (r.ok) ok++; else err.push(`${c.dataset.mail}: ${r.data?.error || 'Fehler'}`);
     }
     msg(`${ok} gelöscht.${err.length ? ' Nicht gelöscht: ' + err.join(' · ') : ''}`, err.length > 0);
     partner(v);
   };
-  $('#pCsv').onclick = () => {
+  $('#pCsv').onclick = async () => {
+    const ex = await api('/api/admin/reveal', { method: 'POST', body: JSON.stringify({ kind: 'b2b_export' }) });
+    if (!ex.ok) { msg(ex.data?.error || 'Export nicht möglich.', true); return; }
+    const full = new Map(ex.data.rows.map((x) => [x.id, x]));
     const cell = (v) => `"${String(v ?? '').replace(/"/g, '""').replace(/^[=+\-@]/, "'$&")}"`;
     const head = ['Kundennummer', 'Firma', 'Rechtsform', 'Art', 'Registernummer', 'Steuernummer', 'Ansprechpartner', 'E-Mail', 'PLZ', 'Ort', 'Tarif', 'Quelle', 'Status', 'Geprüft', 'Anfragen', 'Angelegt'];
-    const rows = list.map((a) => [a.customer_number, a.company_name, a.legal_form, a.institution_type, a.register_number, a.tax_id, a.advisor_name, a.email, a.postal_code, a.city, a.tier || '', a.plan_source || '', a.status, a.verified_at ? 'ja' : 'nein', a.leads, a.created_at.slice(0, 10)]);
+    const rows = list.map((a) => [a.customer_number, a.company_name, a.legal_form, a.institution_type, a.register_number, full.get(a.id)?.tax_id ?? '', a.advisor_name, full.get(a.id)?.email ?? '', a.postal_code, a.city, a.tier || '', a.plan_source || '', a.status, a.verified_at ? 'ja' : 'nein', a.leads, a.created_at.slice(0, 10)]);
     const blob = new Blob(['\uFEFF' + [head, ...rows].map((r) => r.map(cell).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const el = document.createElement('a'); el.href = URL.createObjectURL(blob); el.download = 'ImmoAdv_Unternehmen.csv'; document.body.append(el); el.click(); el.remove();
   };
@@ -867,22 +928,23 @@ async function details(id) {
   const r = await api('/api/admin/b2b?id=' + id);
   if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error)}</p>`; return; }
   const { account: a, members, leads, invoices, verificationDocs: vd = [] } = r.data;
-  const rows = [['Kundennummer', a.customer_number], ['Unternehmen', `${a.company_name} (${a.legal_form})`], ['Art', a.institution_type], ['Registernummer', a.register_number || '–'], ['Steuer-/USt-IdNr.', a.tax_id || '–'],
-    ['Ansprechpartner', a.advisor_name], ['E-Mail', a.email], ['Telefon', a.phone || '–'], ['Anschrift', `${a.street || ''}, ${a.postal_code} ${a.city}`], ['Partnerseite', a.slug ? `/p/${a.slug}` : '–'],
+  const rows = [['Kundennummer', a.customer_number], ['Unternehmen', `${a.company_name} (${a.legal_form})`], ['Art', a.institution_type], ['Registernummer', a.register_number || '–'], ['Steuer-/USt-IdNr.', { h: pii(a.tax_id, 'b2b', a.id, 'tax_id') }],
+    ['Ansprechpartner', a.advisor_name], ['E-Mail', { h: pii(a.email, 'b2b', a.id, 'email') }], ['Telefon', { h: pii(a.phone, 'b2b', a.id, 'phone') }], ['Anschrift', `${a.street || ''}, ${a.postal_code} ${a.city}`], ['Partnerseite', a.slug ? `/p/${a.slug}` : '–'],
     ['Tarif', `${a.tier ? TIER[a.tier] : '–'}${a.plan_source ? ` (${a.plan_source === 'manual' ? 'manuell' : 'Stripe'})` : ''}`], ['Kreditmappen diesen Monat', String(a.dossiersThisMonth)],
     ['§ 14 BGB bestätigt', dtt(a.unternehmer_confirmed_at)], ['AVV', `${a.avv_version || '–'} am ${dtt(a.avv_accepted_at)}`], ['Herkunft', a.referral || '–'], ['Erlaubte Domains', (a.allowed_domains || []).join(', ') || 'alle'], ['Angelegt', dtt(a.created_at)]];
   box.innerHTML = `<section class="pt-card" style="margin-top:16px"><h2>${esc(a.company_name)}</h2>
-    <dl class="pt-dl">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+    <dl class="pt-dl">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v && typeof v === 'object' ? v.h : esc(v)}</dd></div>`).join('')}</dl>
     <h3>Verifizierung</h3>
     <p>Status: <strong>${{ offen: 'noch keine Unterlagen eingereicht', eingereicht: 'zur Prüfung eingereicht', geprueft: 'geprüft und freigeschaltet', abgelehnt: 'abgelehnt' }[a.verification_status] || (a.verified_at ? 'geprüft' : 'offen')}</strong>${a.verification_submitted_at ? ` · eingereicht ${dtt(a.verification_submitted_at)}` : ''}${a.verification_note ? `<br><small>Begründung: ${esc(a.verification_note)}</small>` : ''}</p>
     ${vd.length ? `<ul class="plain-list">${vd.map((d) => `<li>${d.url ? `<a class="ck-link" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">${esc({ gewerbe: 'Gewerbeanmeldung', handelsregister: 'Handelsregisterauszug', erlaubnis: 'Erlaubnis § 34c/§ 34i', sonstiges: 'Sonstiger Nachweis' }[d.kind] || d.kind)}: ${esc(d.file_name)}</a>` : esc(d.file_name)} <small>(${Math.max(1, Math.round(d.byte_size / 1024))} KB · ${dtt(d.created_at)} · SHA ${esc(d.sha256.slice(0, 10))}…)</small></li>`).join('')}</ul><p class="form-note">Links sind 5 Minuten gültig (Abruf wird protokolliert). Prüfen: Firmenname, Anschrift und Register-/Steuernummer stimmen mit den Angaben überein; bei Maklern/Vermittlern ggf. Erlaubnis.</p>` : '<p class="form-note">Noch keine Nachweise hochgeladen.</p>'}
     ${a.verified_at ? '' : `<p><button class="btn btn-dark" id="vApprove" type="button"${vd.length ? '' : ' disabled'}>Freischalten</button> <button class="btn btn-outline" id="vReject" type="button">Ablehnen mit Begründung</button></p>`}
-    <h3>Team</h3><p>${members.map((m) => `${esc(m.email)} (${m.role === 'owner' ? 'Inhaber' : 'Berater'})`).join(' · ') || '–'}</p>
+    <h3>Team</h3><p>${members.map((m) => `${pii(m.email, 'user', m.user_id, 'email')} (${m.role === 'owner' ? 'Inhaber' : 'Berater'})`).join(' · ') || '–'}</p>
     <h3>Anfragen (nur Anzahl und Status, Inhalte gehören dem Unternehmen)</h3><p>${leads.length} insgesamt · ${['neu', 'in_bearbeitung', 'abgeschlossen', 'abgelehnt'].map((s) => `${s.replace('_', ' ')}: ${leads.filter((l) => l.status === s).length}`).join(' · ')}</p>
     <h3>Rechnungen</h3>${invoices.length ? `<table class="ad-table"><tbody>${invoices.map((i) => `<tr><td>${esc(i.invoice_number)}</td><td>${dt(i.issue_date)}</td><td>${eur(i.gross_cents)}</td><td>${PAY[i.payment_status]}</td></tr>`).join('')}</tbody></table>` : '<p class="form-note">Keine.</p>'}
     <h3>Support-Ansicht</h3><p class="form-note">${a.support_access_until && new Date(a.support_access_until) > new Date() ? `Vom Unternehmen freigegeben bis ${dtt(a.support_access_until)}.` : 'Nicht freigegeben. Das Unternehmen kann den lesenden Support-Zugriff im Portal unter Profil erteilen.'}</p>
     ${a.support_access_until && new Date(a.support_access_until) > new Date() ? '<button class="btn btn-ghost" id="supView" type="button">Portal lesend ansehen (wird protokolliert)</button><div id="supOut"></div>' : ''}
     <button class="text-btn" id="detClose" type="button">Schließen</button></section>`;
+  bindPii(box);
   if ($('#supView')) $('#supView').onclick = async () => {
     const s = await api('/api/admin/support?id=' + id);
     if (!s.ok) { $('#supOut').innerHTML = `<p class="form-note">${esc(s.data?.error)}</p>`; return; }
@@ -1001,7 +1063,7 @@ async function anfragen(v) {
 const AUD = {
   b2b_verify: 'Freischaltung geändert', b2b_approve: 'Unternehmen freigeschaltet', b2b_reject: 'Prüfung abgelehnt', b2b_lock: 'Unternehmen gesperrt', b2b_unlock: 'Unternehmen entsperrt',
   b2b_whitelabel: 'White-Label geändert', b2b_invoicePayment: 'Rechnungskauf geändert', b2b_credits: 'Kontingent angepasst', b2b_plan: 'Tarif zugewiesen', b2b_request_proof_view: 'Nachweis angesehen',
-  user_create: 'Konto angelegt', user_delete: 'Konto gelöscht', user_ban: 'Konto gesperrt', user_unban: 'Konto entsperrt', user_lookup: 'Konto nachgeschlagen', users_list: 'Kontenliste geöffnet',
+  user_create: 'Konto angelegt', user_delete: 'Konto gelöscht', user_ban: 'Konto gesperrt', user_unban: 'Konto entsperrt', user_lookup: 'Konto nachgeschlagen', users_list: 'Kontenliste geöffnet', pii_reveal: 'Personendaten aufgedeckt', b2b_detail_view: 'Unternehmensdetails geöffnet',
   user_reset_password: 'Passwort-Reset gesendet', user_resend_confirmation: 'Bestätigung erneut gesendet',
   invoice_create: 'Rechnung erstellt', invoice_paid: 'Rechnung als bezahlt markiert', invoice_remind: 'Zahlungserinnerung gesendet', invoice_storno: 'Rechnung storniert', invoice_verify: 'Rechnung geprüft (SHA-256)',
   datev_export: 'DATEV-/ZIP-Export', panic_on: 'Not-Aus ausgelöst', panic_off: 'Not-Aus beendet', sec_block: 'Quelle gesperrt', sec_unblock: 'Quelle entsperrt', sec_ack: 'Vorfälle erledigt', security_overview: 'Sicherheitslage geöffnet',
@@ -1009,7 +1071,7 @@ const AUD = {
   testmail: 'Testmail gesendet', testmail_auth: 'Test Konto-E-Mail', audit_reveal: 'Klartext im Protokoll angezeigt',
   campaign_create: 'Kampagne angelegt', newsletter_send: 'Newsletter versendet', newsletter_unsub: 'Newsletter abgemeldet', crm_create: 'Akquise-Kontakt angelegt', crm_delete: 'Akquise-Kontakt gelöscht', crm_import: 'Akquise-Import', crm_letters: 'Akquise-Briefe erstellt',
 };
-const AUD_CAT = (a) => /^panic|^sec_|security/.test(a) ? 'sec' : /^invoice|datev/.test(a) ? 'fin' : /^b2b_/.test(a) ? 'b2b' : /^user|users_list/.test(a) ? 'user' : 'sys';
+const AUD_CAT = (a) => /^panic|^sec_|security|pii_reveal/.test(a) ? 'sec' : /^invoice|datev/.test(a) ? 'fin' : /^b2b_/.test(a) ? 'b2b' : /^user|users_list/.test(a) ? 'user' : 'sys';
 async function protokoll(v, reveal = false) {
   const [r, pr] = await Promise.all([api('/api/admin/misc' + (reveal ? '?reveal=1' : '')), api('/api/admin/b2b')]);
   if (!r.ok) { errState(v, r.data?.error); return; }

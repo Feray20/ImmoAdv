@@ -711,7 +711,19 @@ async function vTeam(box) {
 }
 
 // Passwort jederzeit ändern (Profil für Inhaber, Team für alle Berater).
+// Zwei-Faktor-Pflicht (B2B_MFA=required): vor dem Portal einmalig Authenticator-App einrichten.
+function mfaGate() {
+  root.innerHTML = `<div class="pt-onb"><h1>Zwei-Faktor-Schutz einrichten</h1><p>Zum Schutz der Kundendaten ist für alle Inhaber und Berater ein zweiter Faktor vorgeschrieben. Die Einrichtung dauert etwa eine Minute.</p><div id="mfaGateBox" class="pt-card"></div><p><button type="button" class="btn btn-dark" id="mfaGateGo">Weiter zum Portal</button></p></div>`;
+  import('./mfa.mjs').then((m) => m.manageUI($('#mfaGateBox'))).catch(() => { $('#mfaGateBox').innerHTML = '<p class="form-note">Konnte nicht geladen werden. Bitte neu laden.</p>'; });
+  $('#mfaGateGo').onclick = () => location.reload();
+}
+function addMfa(box) {
+  if (!box || box.querySelector('#mfaCard')) return;
+  box.insertAdjacentHTML('beforeend', '<section class="pt-card" id="mfaCard"><h2>Zwei-Faktor-Schutz</h2><div id="mfaCardBox"></div></section>');
+  import('./mfa.mjs').then((m) => m.manageUI($('#mfaCardBox'))).catch(() => {});
+}
 function addPw(box) {
+  addMfa(box);
   if (!box || box.querySelector('#pwCard')) return;
   box.insertAdjacentHTML('beforeend', `<section class="pt-card" id="pwCard"><h2>Mein Passwort</h2><p class="form-note">Angemeldet als ${esc(session()?.user?.email || '')}. Mindestens 10 Zeichen mit Groß- und Kleinbuchstaben und einer Zahl.</p>
     <form id="pwF" class="pt-row pw-row"><input id="pw1" type="password" autocomplete="new-password" placeholder="Neues Passwort" aria-label="Neues Passwort" minlength="10" required><input id="pw2" type="password" autocomplete="new-password" placeholder="Wiederholen" aria-label="Neues Passwort wiederholen" minlength="10" required><button class="btn btn-dark" type="submit">Passwort ändern</button></form></section>`);
@@ -1085,6 +1097,7 @@ async function start() {
   if (!r.ok) { root.innerHTML = `<div class="pt-onb"><h1>Unternehmensportal</h1><p>${esc(r.data?.error || 'Nicht verfügbar.')}</p></div>`; return; }
   if (!r.data.account) { noAccount(); return; }
   if (r.data.onboarding?.mustChange || r.data.onboarding?.consentsMissing) { firstLogin(r.data); return; }
+  if (r.data.onboarding?.mfaSetup) { mfaGate(); return; }
   me = r.data;
   const askBranche = !BRANCHEN[me.branche];
   if (new URLSearchParams(location.search).get('checkout') === 'success') toast('Danke! Der Tarif wird aktiviert, sobald die Zahlung bestätigt ist.');

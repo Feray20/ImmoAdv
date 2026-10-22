@@ -6,6 +6,9 @@ import { membershipFor, type B2BAccount } from '@/lib/b2b/core';
 
 export const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 
+// Zwei-Faktor-Pflicht im Unternehmensportal. Hat ein Konto bereits einen Faktor, gilt aal2 ohnehin (lib/billing/auth.ts).
+export const b2bMfaRequired = () => process.env.B2B_MFA === 'required';
+
 export type MemberCtx = { user: AuthUser; account: B2BAccount; role: 'owner' | 'advisor' };
 
 // Angemeldetes Mitglied eines Unternehmenskontos; gesperrte Konten werden abgewiesen.
@@ -18,6 +21,8 @@ export async function requireMember(req: Request, opts: { owner?: boolean; allow
   if (!m) return json({ error: 'Kein Unternehmenskonto.' }, 404);
   if (m.account.status === 'locked' && !opts.allowLocked) return json({ error: 'Das Unternehmenskonto ist gesperrt. Bitte an support@immoadv.de wenden.' }, 423);
   if (opts.owner && m.role !== 'owner') return json({ error: 'Nur der Kontoinhaber kann das ändern.' }, 403);
+  // Pflicht-2FA für Inhaber und Berater (B2B_MFA=required): ohne bestätigten zweiten Faktor nur Einrichtung möglich.
+  if (!opts.onboarding && b2bMfaRequired() && !user.mfa) return json({ error: 'Bitte zuerst den Zwei-Faktor-Schutz einrichten (Profil → Sicherheit).', code: 'mfa_setup' }, 428);
   // Vom Admin angelegte Konten: erst nach Ersteinrichtung (§ 14 BGB, AVV) nutzbar.
   if (!opts.onboarding && (!m.account.unternehmer_confirmed_at || !m.account.avv_accepted_at)) return json({ error: 'Bitte zuerst die Ersteinrichtung abschließen.', code: 'onboarding' }, 428);
   return { user, ...m };

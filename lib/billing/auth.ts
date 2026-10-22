@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { panicLevel, panicState } from '@/lib/security/panic';
 
 // Prüft das Supabase-Zugriffstoken serverseitig und liefert den angemeldeten Nutzer.
-export type AuthUser = { id: string; email: string };
+export type AuthUser = { id: string; email: string; mfa?: boolean };
 
 // Kurzzeit-Cache (30 s) je Token-Hash: spart bei mehreren Aufrufen hintereinander
 // (Dashboard lädt Dokumente, Freigaben, Abrechnung) je einen Rundweg zu Supabase.
@@ -63,7 +63,7 @@ async function verifiedUser(req: Request, allowAal1 = false): Promise<AuthUser |
   // Zwei-Faktor-Schutz: Hat das Konto einen bestätigten zweiten Faktor (App oder SMS), gilt die Sitzung erst
   // nach Eingabe des Codes (aal2). Eine Sitzung nur mit Passwort (aal1) erhält dann keinen Zugriff.
   if (!allowAal1 && (u.factors || []).some((f) => f.status === 'verified') && tokenAalOf(header) !== 'aal2') return null;
-  const user = { id: u.id, email: u.email.toLowerCase() };
+  const user = { id: u.id, email: u.email.toLowerCase(), mfa: (u.factors || []).some((f) => f.status === 'verified') };
   remember(cacheKey, user, now);
   return user;
 }
