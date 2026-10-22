@@ -1,6 +1,7 @@
 # ImmoAdv Creator Hub
 
-Stand: Phase 1 (Fundament) und Phase 2 (Attribution, Kampagnen, Asset Library, Community-Vorteil, Creator Studio, Performance).
+Stand: Phase 1 (Fundament), Phase 2 (Attribution, Kampagnen, Asset Library, Community-Vorteil, Creator Studio, Performance)
+und Phase 3 (Provision, Monatsabschluss, Rechnung/Gutschrift, Payout Center, Creator Guide).
 
 ## Einrichtung (einmalig, vor dem Livegang)
 
@@ -23,6 +24,18 @@ Stand: Phase 1 (Fundament) und Phase 2 (Attribution, Kampagnen, Asset Library, C
 6. **Stripe-Webhook**: Ereignis `charge.refunded` zusätzlich abonnieren (Stripe → Entwickler → Webhooks), damit Erstattungen Conversions automatisch zurücknehmen.
 7. **Community-Vorteil**: Für jeden Creator-Code in Stripe einen gleichnamigen *Aktionscode* (Promotion Code) mit dem gewünschten Rabatt anlegen. Die Bezahlseite erlaubt Aktionscodes bereits.
 8. Optional zum Testen im Stripe-Testmodus: `CREATOR_COUNT_TEST_PAYMENTS=1` (nur Preview). Ohne diese Variable zählen Testzahlungen nie.
+
+### Zusätzlich für Phase 3
+9. `docs/sql/2026-10-24_creator_hub_phase3.sql` ausführen (legt den privaten Bucket `creator-documents` an), danach `docs/sql/tests/creator_hub_phase3_test.sql`.
+10. **Provisionsregel festlegen**: Die Migration legt eine *Platzhalter*-Standardregel (20 % vom Netto-Umsatz) an.
+    Vor dem ersten Monatsabschluss im Admin unter **Provision** die vereinbarte Regel als neue Version anlegen (gilt nur für die Zukunft).
+11. **Abrechnungsart mit der Steuerberatung klären**: Standard ist `INVOICE` (der Creator stellt per Klick eine eigene Rechnung,
+    Nummernkreis `CR-JJJJ-NNN`). Alternativ je Creator `CREDIT_NOTE` (ImmoAdv erstellt eine Gutschrift `GS-JJJJ-NNNNN`, § 14 Abs. 2 S. 2 UStG –
+    setzt eine vorherige Vereinbarung mit dem Creator voraus). Umstellbar im Creator 360 → Abrechnung.
+12. **Auftraggeber-Konto für den SEPA-Export** (Vercel, serverseitig): `CREATOR_PAYOUT_IBAN`, `CREATOR_PAYOUT_BIC`, `CREATOR_PAYOUT_ACCOUNT_HOLDER`
+    (fällt sonst auf `INVOICE_IBAN` / `INVOICE_BIC` / `INVOICE_ACCOUNT_HOLDER` zurück). Ohne IBAN ist der Export gesperrt.
+13. **Einstellungen** (`immo_settings`): `creator_close_delay_days` (Standard 15 – Monatsabschluss frühestens 15 Tage nach Monatsende,
+    deckt die Widerrufsfrist ab) und `creator_payout_four_eyes` (Standard `false`; bei `true` darf die Person, die die Abrechnung freigegeben hat, die Auszahlung nicht selbst freigeben).
 
 Einstieg für Creator: `https://immoadv.de/creator` (nicht verlinkt, noindex, nicht in der Sitemap, in robots.txt gesperrt).
 Admin: Web-Admin → Bereich **B2B** → **Creator Operations**.
@@ -73,6 +86,33 @@ Fehler in der Creator-Zuordnung lassen Registrierung und Zahlungs-Webhook nie sc
 
 Die Sicherheitstexte im Portal beschreiben **nur** diese umgesetzten Maßnahmen und versprechen keinen absoluten Schutz.
 
+## Abrechnung und Auszahlung (Phase 3)
+
+```
+Conversions (PENDING) → Monatsabschluss (frühestens Monatsende + 15 Tage)
+  → Abrechnung READY (oder ZERO) mit Provisionen, Rückbuchungen (CLAWBACK) und Übertrag negativer Salden (CARRY_OVER)
+  → Rechnung des Creators bzw. Gutschrift von ImmoAdv (PDF, unveränderbar)
+  → Prüfung der Blocker (Zahlungsdaten geprüft, Steuerangaben, Beleg vorhanden, Betrag > 0 …) → Freigabe
+  → Auszahlung READY → APPROVED → EXPORTED (SEPA pain.001.001.09) → PAID | FAILED
+```
+
+- Provision berechnet ausschließlich der Server aus Conversions und der zum Zeitpunkt der Conversion gültigen Regel
+  (Vorrang: Creator + Kampagne > Creator > Kampagne > Standard). Regeln sind versioniert und nur für die Zukunft änderbar.
+- Steuerliche Behandlung je Abrechnung: Kleinunternehmer (§ 19 UStG), 19 % USt, Reverse Charge (EU mit USt-IdNr.), nicht steuerbar
+  oder „Prüfung nötig“ – letzteres blockiert die Freigabe.
+- Abrechnungen, Provisionen, Belege und Auszahlungsbeträge sind per Datenbank-Trigger unveränderbar; Status laufen nur vorwärts.
+  Korrekturen erfolgen als Anpassung (Bonus/Korrektur) im nächsten offenen Monat.
+- Der SEPA-Export entschlüsselt die IBAN nur für die Datei und protokolliert das (Recht `bank.reveal` + `payouts.manage`).
+  Die PDFs enthalten die IBAN nur maskiert.
+- Bei „Bezahlt“ erhält der Creator eine E-Mail; Dokumente lädt er über kurzlebige signierte Links (60 Sekunden).
+
+### Kontolöschung eines Creators
+Ohne Conversions, Abrechnungen oder Auszahlungen wird der Creator mit dem Konto vollständig gelöscht.
+Liegen solche Daten vor (Aufbewahrungspflicht nach § 147 AO / § 257 HGB), löst die Kontolöschung den Creator vom Login
+(`user_id = null`), sperrt ihn, entfernt Social-Profile, Kampagnenzuordnungen sowie Telefon, Bio, Website und protokolliert das
+(`CREATOR_ACCOUNT_DELETED`). Abrechnungen, Belege, Rechnungsanschrift und Zahlungsdaten bleiben für die Aufbewahrung erhalten;
+offene Auszahlungen können weiter bearbeitet werden. Nach Ablauf der Fristen sind diese Daten manuell zu löschen.
+
 ## Rollen
 
 | Recht | Super | Finance | Creator Mgr | Support | Read only |
@@ -90,6 +130,9 @@ Die Sicherheitstexte im Portal beschreiben **nur** diese umgesetzten Maßnahmen 
 | Beiträge prüfen | ✓ | – | ✓ | – | – |
 | Attribution, Conversions, Umsatz sehen | ✓ | ✓ | ✓ | – | ✓ |
 | Conversion zurücknehmen | ✓ | ✓ | – | – | – |
+| Abrechnungen sehen | ✓ | ✓ | ✓ | – | ✓ |
+| Monatsabschluss, Anpassungen, Freigabe, Abrechnungsart, Provisionsregeln | ✓ | ✓ | – | – | – |
+| Auszahlungen freigeben, exportieren, als bezahlt markieren | ✓ | ✓ | – | – | – |
 | Rollen vergeben | ✓ | – | – | – | – |
 
 Admins ohne Eintrag gelten als Super Admin (wie im übrigen Web-Admin). Die eigene Rolle kann niemand selbst ändern.
@@ -107,11 +150,13 @@ Aktive Creator sehen danach „Vereinbarung bestätigen“ als nächste Aufgabe.
 
 - Unit: `npm test` (u. a. `tests/creator.test.ts`: IBAN, Tresor, Rollen, Status, Audit-Filter).
 - Unit Phase 2: `tests/creator-attribution.test.ts` (Vorrang Code vor Link, Fenster, Eigenkauf, Ausschlüsse, Netto, Link-Aufbau).
-- Datenbank lokal: `PGHOST=… PGPORT=… PGUSER=postgres bash docs/sql/tests/run_local.sh` (leere PostgreSQL ≥ 15; beide Phasen inkl. Rückbau).
-- Datenbank Supabase: `docs/sql/tests/creator_hub_rls_test.sql` und `docs/sql/tests/creator_hub_phase2_test.sql` (rollen zurück).
+- Unit Phase 3: `tests/creator-billing.test.ts` (Zeiträume, Regeln, Staffeln, Steuer, Summen, Blocker, Nummern, SEPA, PDF ohne volle IBAN).
+- Datenbank lokal: `PGHOST=… PGPORT=… PGUSER=postgres bash docs/sql/tests/run_local.sh` (leere PostgreSQL ≥ 15; alle Phasen inkl. Rückbau).
+- Datenbank Supabase: `docs/sql/tests/creator_hub_rls_test.sql`, `…_phase2_test.sql`, `…_phase3_test.sql` (rollen zurück).
 
-## Nächste Phasen (noch nicht umgesetzt)
+## Noch offen
 
-- **Phase 3 – Provision & Abrechnung**: versionierte Provisionsregeln (Prozent/fix/hybrid/gestaffelt/Bonus/kampagnenbezogen), serverseitige Berechnung, Monatsabschluss, Gutschrift/Rechnung als PDF (an `immo_invoices` + GoBD-Schutz anlehnen), Statements.
-- **Phase 4 – Auszahlung**: Payout Center, Freigabe-Workflow (Vier-Augen), Zahlungsbestätigung, Export.
-Die Audit-Ereignisse dieser Phasen sind in der Tabelle bereits zugelassen. Grundlage der Provision sind die Conversions aus Phase 2 (Status `PENDING` → künftig freigegeben/ausgezahlt). Teilerstattungen werden mit der Provisionsabrechnung behandelt.
+- Rechtlich geprüfte Vereinbarung (inkl. Gutschriftverfahren, falls genutzt) und mit der Steuerberatung abgestimmte Provisionsregel.
+- Abgleich der Zahlungsbestätigung mit dem Kontoauszug (camt.053) – „Bezahlt“ wird derzeit manuell gesetzt.
+- Teilerstattungen: Nur vollständige Erstattungen nehmen eine Conversion automatisch zurück; Teilerstattungen sind derzeit per Korrektur-Anpassung zu erfassen.
+- Automatischer Monatsabschluss per Zeitplan (derzeit manuell im Admin, frühestens nach der Sperrfrist).

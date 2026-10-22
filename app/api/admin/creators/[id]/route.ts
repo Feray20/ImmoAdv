@@ -25,14 +25,15 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!c) return j({ error: 'Nicht gefunden.' }, 404);
   const db = supabaseAdmin();
   const s = await onboardingState(c, c.user_id);
-  const [reviews, acceptances, auditRows, user, benefits, memberships, content] = await Promise.all([
+  const [reviews, acceptances, auditRows, user, benefits, memberships, content, statements] = await Promise.all([
     db.from('immo_creator_reviews').select('action, message, visible_to_creator, actor_ref, created_at').eq('creator_id', id).order('created_at', { ascending: false }).limit(50),
     db.from('immo_creator_agreement_acceptances').select('accepted_at, body_sha256, immo_creator_agreements(version, title, is_draft)').eq('creator_id', id).order('accepted_at', { ascending: false }),
     can(a.role, 'audit.read') ? db.from('immo_creator_audit').select('event_type, actor_kind, actor_ref, actor_role, result, meta, created_at').eq('creator_id', id).order('created_at', { ascending: false }).limit(100) : null,
-    can(a.role, 'creators.contact') ? db.auth.admin.getUserById(c.user_id) : null,
+    can(a.role, 'creators.contact') && c.user_id ? db.auth.admin.getUserById(c.user_id) : null,
     db.from('immo_creator_benefits').select('id, code, benefit, terms, starts_at, ends_at, active, campaign_id').eq('creator_id', id).order('created_at', { ascending: false }),
     db.from('immo_creator_campaign_members').select('campaign_id, immo_creator_campaigns(name, slug, status)').eq('creator_id', id),
     db.from('immo_creator_content').select('id, platform, url, title, published_on, status, review_note, campaign_id').eq('creator_id', id).order('published_on', { ascending: false }).limit(50),
+    can(a.role, 'billing.read') ? db.from('immo_creator_statements').select('id, period, status, conversions, commission_cents, adjustments_cents, payout_cents, immo_creator_documents(id, doc_type, number), immo_creator_payouts(status, paid_at)').eq('creator_id', id).order('period', { ascending: false }).limit(24) : null,
   ]);
   const done = completeness(s.state);
   return j({
@@ -52,6 +53,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     actions: allowedAdminActions(c.status).filter((x) => can(a.role, x === 'SUSPEND' || x === 'REACTIVATE' ? 'creators.suspend' : 'creators.review')),
     can: { reveal: can(a.role, 'bank.reveal'), verify: can(a.role, 'bank.verify'), campaigns: can(a.role, 'campaigns.manage'), conversions: can(a.role, 'conversions.read'), reverse: can(a.role, 'conversions.manage'), content: can(a.role, 'content.review') },
     link: c.ref_code ? `https://immoadv.de/?ref=${c.ref_code}` : null,
+    billing: can(a.role, 'billing.read') ? { mode: (c as unknown as { billing_mode?: string }).billing_mode ?? 'INVOICE', manage: can(a.role, 'billing.manage'), statements: statements?.data ?? [] } : undefined,
     benefits: benefits.data ?? [],
     memberships: memberships.data ?? [],
     content: content.data ?? [],
@@ -85,6 +87,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const c = await load(id);
   if (!c) return j({ error: 'Nicht gefunden.' }, 404);
+  if (!c.user_id) return j({ error: 'Das Konto dieses Creators wurde gelöscht; die Abrechnungsdaten werden nur noch aufbewahrt.' }, 409);
   const to = adminTransition(c.status, action);
   if (!to) return j({ error: 'Diese Aktion ist im aktuellen Status nicht möglich.' }, 409);
 
@@ -112,7 +115,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   await audit(EVENT[action], id, a.actor, 'SUCCESS', { from: c.status, to });
 
   const mail = MAIL[action]?.(message);
-  if (mail) {
+  if (mail && c.user_id) {
     const { data: u } = await db.auth.admin.getUserById(c.user_id);
     if (u?.user?.email) await sendMail(u.user.email, mail.subject, `Hallo ${c.first_name || ''},\n\n${mail.text}`, [], { title: mail.title }).catch(() => false);
   }

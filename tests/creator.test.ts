@@ -195,3 +195,9 @@ test('Portal: nächste Aufgabe (Anmerkung > neue Kampagne > Content veröffentli
   assert.equal(portalNextAction({ contentChangesRequested: 0, campaigns: [k('alt', 30)], now })?.key, 'publish:alt');
   assert.equal(portalNextAction({ contentChangesRequested: 0, campaigns: [k('alt', 30, true)], now }), null);
 });
+
+test('Rollen Phase 3: Monatsabschluss und Auszahlungen nur Super/Finance; Abrechnung lesen ohne Support', () => {
+  assert.deepEqual(ADMIN_ROLES.filter((r) => can(r, 'billing.manage')), ['SUPER_ADMIN', 'FINANCE_ADMIN']);
+  assert.deepEqual(ADMIN_ROLES.filter((r) => can(r, 'payouts.manage')), ['SUPER_ADMIN', 'FINANCE_ADMIN']);
+  assert.deepEqual(ADMIN_ROLES.filter((r) => can(r, 'billing.read')), ['SUPER_ADMIN', 'FINANCE_ADMIN', 'CREATOR_MANAGER', 'READ_ONLY']);
+});

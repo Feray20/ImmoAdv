@@ -106,3 +106,20 @@
 @media (max-width:900px){.cr-cards{grid-template-columns:1fr}.co-kpis{grid-template-columns:1fr 1fr}.co-row{grid-template-columns:1fr auto}.co-row .co-hide-m{display:none}}
 @media (max-width:640px){.cr-hero{padding:26px 18px;border-radius:14px}.cr-wrap{margin-top:14px}.cr-review{grid-template-columns:1fr}.cr-review dt{margin-top:6px}}
 .co-360 ~ .pt-card .ad-table code,#coPerf .ad-table code{white-space:nowrap}
+
+/* Phase 3: Abrechnung, Rechnung, Guide */
+.cr-kpis6{grid-template-columns:repeat(3,minmax(0,1fr))}
+.cr-stmt{border-top:1px solid #E2E8F0;padding-top:14px;margin-top:14px}
+.cr-stmt:first-of-type{border-top:0;margin-top:6px;padding-top:0}
+.cr-invoice{border:1px solid #BAE6FD;background:#F8FBFF;border-radius:12px;padding:14px 16px;margin-top:8px}
+.cr-guide{margin:0;padding-left:22px;display:grid;gap:12px}
+.cr-guide strong{color:#0F2C59}
+.cr-guide p{margin:2px 0 0;color:#475569}
+.co-tiles6{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 14px}
+.co-tiles6 .pt-kpi strong{font-size:19px;white-space:nowrap}
+.co-tiles6 .pt-kpi small{letter-spacing:.02em}
+.co-close{border-left:4px solid #0F2C59}
+.co-close .pt-dl{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+.co-period{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width:900px){.cr-kpis6{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.co-tiles6{grid-template-columns:1fr 1fr}}

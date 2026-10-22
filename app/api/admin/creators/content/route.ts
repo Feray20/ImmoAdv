@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   await audit('CONTENT_REVIEWED', row.creator_id, a.actor, 'SUCCESS', { status: p.data.status });
   if (p.data.status === 'CHANGES_REQUESTED') {
     const { data: c } = await db.from('immo_creators').select('user_id, first_name').eq('id', row.creator_id).maybeSingle();
-    const { data: u } = c ? await db.auth.admin.getUserById(c.user_id) : { data: null };
+    const { data: u } = c?.user_id ? await db.auth.admin.getUserById(c.user_id) : { data: null };
     if (u?.user?.email) await sendMail(u.user.email, 'Anmerkung zu deinem Beitrag', `Hallo ${c?.first_name || ''},\n\nzu deinem Beitrag ${row.url} hat ImmoAdv eine Anmerkung:\n\n${p.data.note}\n\nDu kannst den Beitrag im Creator Studio anpassen: https://immoadv.de/creator#studio`, [], { title: 'Anmerkung zu deinem Beitrag' }).catch(() => false);
   }
   return j({ ok: true });
