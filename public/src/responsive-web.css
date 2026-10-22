@@ -67,3 +67,4 @@
 @media print{
   .mobile-nav,.mobile-menu,.nav-actions,.hero-actions,.toast{display:none!important}
 }
+@media(max-width:400px){.level-row strong{font-size:13px;hyphens:auto}}

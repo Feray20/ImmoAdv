@@ -74,6 +74,7 @@
 @media print{
 .mobile-nav,.mobile-menu,.nav-actions,.hero-actions,.toast{display:none!important}
 }
+@media(max-width:400px){.level-row strong{font-size:13px;hyphens:auto}}
 /* institutional.css */
 :root{
 --ia-navy:#0F172A; --ia-slate:#1E293B; --ia-text:#334155; --ia-muted:#64748B;
