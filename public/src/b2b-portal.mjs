@@ -56,8 +56,8 @@ function shell() {
   root.innerHTML = `<div class="pt">
     <aside class="pt-side"><a class="pt-brand" href="/"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a>
       <small class="pt-tag">Unternehmensportal</small>
-      <nav>${navGroups((v) => true)}<a href="mailto:support@immoadv.de">Support kontaktieren</a></nav>
-      <div class="pt-foot"><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><button type="button" class="pt-logout" id="ptLogout">Abmelden</button></div>
+      <nav>${navGroups((v) => v !== 'vorschlaege')}</nav>
+      <div class="pt-foot"><span class="pt-help"><a href="#vorschlaege" data-v="vorschlaege">Verbesserungsvorschläge</a><a href="mailto:support@immoadv.de">Support</a></span><strong>${esc(a.companyName)}</strong><small>${esc(a.customerNumber)} · ${me.role === 'owner' ? 'Inhaber' : 'Berater'}</small><button type="button" class="pt-logout" id="ptLogout">Abmelden</button></div>
     </aside>
     <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#start" aria-label="ImmoAdv Unternehmensportal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Unternehmensportal</small><h1 id="ptTitle"></h1></div><button type="button" class="pt-pres-btn" id="ptPres" hidden title="Vollbild für das Kundengespräch am Tablet"><span aria-hidden="true">⛶</span> Präsentieren</button><button type="button" class="pt-brh" id="ptBr" aria-haspopup="dialog" title="Ihre Ansicht – zum Wechseln tippen"><span class="pt-brh-i" aria-hidden="true">${B().icon}</span><span class="pt-brh-t"><small>Ansicht</small><b>${esc(B().short)}</b></span><svg class="pt-brh-l" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M7 10l5 5 5-5"/></svg></button><button type="button" class="pt-logout pt-logout-m" id="ptLogoutM" aria-label="Abmelden" title="Abmelden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Abmelden</span></button>${a.status === 'locked' ? '<span class="st bad">Gesperrt</span>' : me.tier ? `<span class="st ok">${TIER[me.tier]}</span>` : '<span class="st warn">Kein Tarif</span>'}</header>
       ${a.status === 'locked' ? `<div class="pt-alert bad"><strong>Konto gesperrt.</strong> ${esc(a.lockReason || '')} Rechnungen und AVV bleiben abrufbar. Fragen an support@immoadv.de.</div>` : ''}
@@ -147,11 +147,10 @@ if (!window.__iaPtReveal) {
   Element.prototype.scrollIntoView = function (...a) { try { reveal(this); } catch { /* ignore */ } return siv.apply(this, a); };
   HTMLElement.prototype.focus = function (...a) { try { reveal(this); } catch { /* ignore */ } return foc.apply(this, a); };
 }
-let tileT = 0;
 const tileWatch = () => {
   const box = $('#ptView'); if (!box || box.dataset.tileWatch) return;
   box.dataset.tileWatch = '1';
-  new MutationObserver((ms) => { if (ms.every((m) => [...m.addedNodes, ...m.removedNodes].every((n) => n.classList?.contains('pt-tiles')))) return; clearTimeout(tileT); tileT = setTimeout(tileView, 60); }).observe(box, { childList: true });
+  new MutationObserver((ms) => { if (ms.every((m) => [...m.addedNodes, ...m.removedNodes].every((n) => n.classList?.contains('pt-tiles')))) return; tileView(); /* sofort (Mikrotask vor dem Zeichnen) – sonst springen Karten nach dem Laden */ }).observe(box, { childList: true });
 };
 
 // ---------- Kunden: einladen und Fortschritt sehen (nur mit Einwilligung des Kunden) ----------
@@ -334,14 +333,14 @@ function vStart(box) {
   box.innerHTML = `<p class="pt-mobile-hint" role="note">${ICO(IC.monitor)} <span>Für umfangreiche Analysen empfehlen wir Tablet oder Computer.</span></p>${a.verified ? '' : `<div class="pt-alert warn"><strong>Ihr Konto ist noch nicht freigeschaltet.</strong> Bitte laden Sie Ihre Gewerbeanmeldung oder einen Handelsregisterauszug hoch. Nach unserer Prüfung schalten wir Partnerseite, Widget, Anfragen, Kreditmappen und Tarife frei. <a class="btn btn-dark" href="#verifizierung">Zur Verifizierung</a></div>`}
     <section class="pt-hello"><h2>${esc(greet())}${first ? ', ' + esc(first) : ''}</h2><p>Hier ist der aktuelle Stand Ihrer Fälle.</p></section>
     <div class="pt-kpis pt-case-kpis" id="caseKpis" aria-live="polite">${['Neue Anfragen', 'Offene Fälle', 'Dokumente fehlen', 'Bereit für nächsten Schritt'].map((l) => `<div class="pt-kpi pt-skel"><small>${l}</small><strong>&nbsp;</strong></div>`).join('')}</div>
-    <section class="pt-card todo"><div class="todo-h"><h2>Heute zu erledigen</h2><span class="form-note" id="todoSum">wird geladen …</span></div><ul class="todo-list todo-cases" id="todoList"></ul></section>
+    <section class="pt-card todo"><div class="todo-h"><h2>Heute zu erledigen</h2><span class="form-note" id="todoSum">wird geladen …</span></div><ul class="todo-list todo-cases" id="todoList">${'<li class="pt-skel-row" aria-hidden="true"></li>'.repeat(4)}</ul></section>
     <section class="pt-card"><h2 class="pt-h2s">Schnellaktionen</h2><div class="pt-quick">
       <a href="#kunden=einladen">${ICO(IC.invite)}<span>Kunden einladen</span></a>
       <a href="#fall">${ICO(IC.scan)}<span>Fall-Analyse starten</span></a>
       <a href="#faelle">${ICO(IC.cases)}<span>Fälle ansehen</span></a>
       <a href="#anfragen">${ICO(IC.inbox)}<span>Anfragen prüfen</span></a></div>
       <p class="pt-tools-row"><span>Rechner:</span> <a href="#tools">Haushaltsrechnung</a> · <a href="/rechner/kaufnebenkosten" target="_blank" rel="noopener">Kaufnebenkosten ↗</a> · <a href="/rechner/tilgungsplan" target="_blank" rel="noopener">Tilgungsplan ↗</a> · <a href="/rechner/budget" target="_blank" rel="noopener">Finanzierungsbudget ↗</a></p></section>
-    <section class="pt-card last-cases"><div class="todo-h"><h2>Letzte Fälle</h2><a class="ck-link" href="#faelle">Alle Fälle →</a></div><div id="lastCases"><p class="ia-ld sm" role="status">wird geladen …</p></div></section>
+    <section class="pt-card last-cases"><div class="todo-h"><h2>Letzte Fälle</h2><a class="ck-link" href="#faelle">Alle Fälle →</a></div><div id="lastCases"><span class="sr-only" role="status">Fälle werden geladen …</span>${'<div class="pt-skel-row" aria-hidden="true"></div>'.repeat(3)}</div></section>
     <h2 class="pt-sec-h">Konto &amp; Nutzung</h2>
     <div class="pt-kpis">
       <div class="pt-kpi"><small>Kreditmappen diesen Monat</small><strong>${quota}</strong><a href="#einreichungen">Einreichungen</a></div>
@@ -399,7 +398,10 @@ async function todo() {
   if (soon) gen.push(['hot', `${soon} Zinsbindung${soon === 1 ? '' : 'en'} enden in 12 Monaten`, 'Anschlussfinanzierung ansprechen (Bestandskunden-Radar).', '#kunden', 'Radar öffnen']);
   gen.forEach(([t, h, x, href, cta]) => items.push(`<li class="${t}"><div class="todo-row"><span class="todo-dot" aria-hidden="true"></span><span><strong>${esc(h)}</strong><small>${esc(x)}</small></span><a class="btn btn-outline btn-sm" href="${href}">${cta}</a></div></li>`));
   sum.textContent = caseItems ? `${caseItems} ${caseItems === 1 ? 'Fall benötigt' : 'Fälle benötigen'} Aufmerksamkeit` : items.length ? `${items.length} ${items.length === 1 ? 'Punkt' : 'Punkte'}` : '';
-  list.innerHTML = items.length ? items.join('') : `<li class="empty todo-done">${ICO(IC.check)}<div><strong>Alles erledigt</strong><p>Aktuell gibt es keine offenen Aufgaben.</p></div></li>`;
+  const MAXV = 4;
+  if (items.length > MAXV) items.splice(MAXV, 0, `<li class="todo-more-li"><button type="button" class="btn btn-ghost btn-sm" id="todoAll">Alle ${items.length} Aufgaben anzeigen</button></li>`);
+  list.innerHTML = items.length ? items.map((x, i) => (i > MAXV ? x.replace('<li class="', '<li hidden class="') : x)).join('') : `<li class="empty todo-done">${ICO(IC.check)}<div><strong>Alles erledigt</strong><p>Aktuell gibt es keine offenen Aufgaben.</p></div></li>`;
+  $('#todoAll')?.addEventListener('click', (e) => { list.querySelectorAll('li[hidden]').forEach((li) => { li.hidden = false; }); e.currentTarget.closest('li').remove(); });
   const recent = [...con].sort((x, y) => new Date(y.progress?.lastActive || y.since || 0) - new Date(x.progress?.lastActive || x.since || 0)).slice(0, 5);
   last.innerHTML = recent.length ? `<ul class="lc-list">${recent.map((c) => { const [cls, lbl] = stLabel(c); const best = c.progress?.best ?? 0; return `<li><a href="#faelle=${esc(c.id)}"><span class="lc-n"><strong>${esc(caseName(c))}</strong><small>${c.progress?.missing?.length ? 'Fehlt: ' + esc(c.progress.missing.slice(0, 2).join(', ')) : c.progress?.lastActive ? 'zuletzt aktiv ' + dt(c.progress.lastActive) : ''}</small></span><span class="st ${cls}">${lbl}</span><span class="lc-p"><span class="pipe-bar"><i style="width:${Math.max(3, Math.min(100, best))}%"></i></span><b>${best} %</b></span><em aria-hidden="true">→</em></a></li>`; }).join('')}</ul>`
     : `<div class="pt-empty"><strong>Noch keine Fälle</strong><p>Erstellen Sie Ihren ersten Fall oder laden Sie einen Kunden ein.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden=einladen">Kunden einladen</a><a class="btn btn-outline" href="#fall">Fall-Analyse starten</a></div></div>`;

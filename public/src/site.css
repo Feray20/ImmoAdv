@@ -1800,6 +1800,9 @@ html:not(.ia-paid) body.lp-sticky-on{padding-bottom:calc(76px + env(safe-area-in
 @media(max-width:360px){.lp-demo-in,.lp-result{padding:16px}.lp-kpi{padding:14px}.lp-kpi strong{font-size:22px}.lp-kpi-dark strong{font-size:28px}}
 @media(max-width:620px) and (min-width:360px){.lp-value-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.lp-vcard{padding:16px;gap:8px}.lp-vcard h3{font-size:17px}.lp-vcard p{font-size:14px}}
 @media(max-width:620px){.lp-docflow{gap:10px}.lp-docflow li{grid-template-columns:auto 1fr;column-gap:14px;align-items:center;padding:14px}.lp-docflow li .lp-ic{grid-row:span 2}}
+@media(max-width:1180px) and (min-width:621px){.lp-pgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.lp-plan .btn{white-space:normal;text-align:center;line-height:1.25}
+@media(max-width:360px){.lp-hero-ctas .hs-go,.lp-btns .btn,.km-go{font-size:15px;padding-left:14px;padding-right:14px;gap:6px}}
 /* b2b-landing.css */
 .bx-svg{display:block;flex:0 0 auto}
 .bx-sec{padding:76px 0}
