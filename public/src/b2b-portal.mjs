@@ -154,11 +154,11 @@ const tileWatch = () => {
 // ---------- Kunden: einladen und Fortschritt sehen (nur mit Einwilligung des Kunden) ----------
 const PH = ['Orientieren', 'Objekte prüfen', 'Bankgespräch', 'Bestand'];
 let KD_LAST = null; // zuletzt erstellte Einladung (Link bleibt nach dem Neuladen sichtbar)
-const kdLinkHtml = (x) => `<div class="pt-alert ok"><strong>${x.mailed ? 'Einladung per E-Mail gesendet.' : 'Einladung erstellt.'}</strong> ${x.mailed ? 'Zusätzlich können Sie den Link selbst weitergeben:' : 'Bitte den Link an Ihren Kunden senden (E-Mail-Versand ist noch nicht eingerichtet):'}<div class="pt-row kd-copy"><input readonly value="${esc(x.link)}" aria-label="Einladungslink"><button type="button" class="btn btn-outline" id="kdCopy">Kopieren</button></div><small>Gültig 14 Tage, nur einmal verwendbar.</small></div>`;
+const kdLinkHtml = (x) => `<div class="pt-alert ok kd-sent"><strong>${x.mailed ? 'Einladung versendet.' : 'Einladung erstellt.'}</strong> <span class="st">Wartet auf Kunde</span> ${x.mailed ? 'Zusätzlich können Sie den Link selbst weitergeben:' : 'Bitte den Link an Ihren Kunden senden (E-Mail-Versand ist noch nicht eingerichtet):'}<div class="pt-row kd-copy"><input readonly value="${esc(x.link)}" aria-label="Einladungslink"><button type="button" class="btn btn-outline" id="kdCopy">Kopieren</button></div><small>Gültig 14 Tage, nur einmal verwendbar.</small></div>`;
 async function vKunden(box) {
   if (me.modules?.crm === false) { box.innerHTML = '<div class="pt-alert warn"><strong>Die Mandantenverwaltung ist für Ihr Unternehmenskonto nicht freigeschaltet.</strong> Bitte wenden Sie sich an support@immoadv.de.</div>'; return; }
   const r = await api('/api/b2b/clients');
-  if (!r.ok) { box.innerHTML = `<p class="form-note">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
+  if (!r.ok) { box.innerHTML = `<section class="pt-card"><h2>Fälle konnten nicht geladen werden.</h2><p class="form-note">${esc(r.data?.error || 'Bitte versuchen Sie es erneut.')}</p><button type="button" class="btn btn-dark" id="kdRetry">Erneut versuchen</button></section>`; $('#kdRetry').onclick = () => { box.innerHTML = logoLoader(); vKunden(box); }; return; }
   const all = r.data.clients || [];
   const con = all.filter((c) => c.status === 'verbunden').sort((a, b) => (b.progress?.best ?? -1) - (a.progress?.best ?? -1));
   const inv = all.filter((c) => c.status === 'eingeladen');
@@ -183,16 +183,17 @@ async function vKunden(box) {
       : radarRows.length ? `<ul class="kd-rlist">${radarRows.map((x) => `<li class="${x.m <= 12 ? 'hot' : x.m <= 24 ? 'warm' : ''}"><span><strong>${esc(x.c.name || x.c.email || 'Kunde')}</strong><small>Zinsbindung endet ${x.ym.split('-').reverse().join('/')}</small></span><b>${x.m < 0 ? 'abgelaufen' : x.m === 0 ? 'diesen Monat' : `in ${x.m} Monat${x.m === 1 ? '' : 'en'}`}</b>${x.m <= 60 ? '<em>Forward möglich</em>' : ''}</li>`).join('')}</ul>`
       : '<p class="form-note">Aktuell endet bei keinem Ihrer Kunden die Zinsbindung in den nächsten 36 Monaten.</p>'}
     <p class="form-note">Kunden geben nur Monat und Jahr frei – mit eigener, widerrufbarer Einwilligung, ohne Beträge.</p></section>`;
-  box.innerHTML = radar + `<section class="pt-card"><h2>Kunde einladen</h2>
-      <p class="form-note">Ihr Kunde bereitet Finanzprofil, Objekt und Unterlagen kostenlos vor. Mit seiner Zustimmung sehen Sie den Fortschritt – nicht die Dokumente. Er kann die Verbindung jederzeit trennen.</p>
-      <form class="pt-row kd-form" id="kdF"><input id="kdMail" type="email" required placeholder="E-Mail des Kunden" aria-label="E-Mail des Kunden" autocomplete="off"><input id="kdName" type="text" placeholder="Name (optional)" aria-label="Name (optional)" maxlength="120"><button class="btn btn-dark" type="submit">Einladen</button><label class="chk kd-consent"><input type="checkbox" id="kdOk" required> Ich bestätige, dass mir die Einwilligung des Kunden für die Zusendung dieser Einladung vorliegt (Art. 6 Abs. 1 lit. a/b DSGVO).</label></form>
-      <div id="kdLink">${KD_LAST ? kdLinkHtml(KD_LAST) : ''}</div></section>
+  box.innerHTML = radar + `<section class="pt-card kd-new"><div class="kd-head"><h2>Neue Kundeneinladung</h2><span class="form-note">${esc(me.account.companyName || '')}</span></div>
+      <ol class="kd-flow" aria-label="Ablauf"><li><b>1</b>Einladung senden</li><li><b>2</b>Kunde ergänzt Profil, Objekt und Unterlagen</li><li><b>3</b>Daten erscheinen im Fall – Sie prüfen die Vollständigkeit</li></ol>
+      <form class="kd-form2" id="kdF"><label>Kundenname <span class="kd-opt">(optional)</span><input id="kdName" type="text" maxlength="120" autocomplete="off" placeholder="z. B. Familie Muster"></label><label>E-Mail des Kunden*<input id="kdMail" type="email" required autocomplete="off" placeholder="kunde@beispiel.de"></label><label class="chk kd-consent"><input type="checkbox" id="kdOk" required> Ich bestätige, dass mir die Einwilligung des Kunden für die Zusendung dieser Einladung vorliegt (Art. 6 Abs. 1 lit. a/b DSGVO).</label><button class="btn btn-dark" type="submit">Kunden einladen</button></form>
+      <p class="form-note">Ihr Kunde bereitet alles kostenlos vor. Mit seiner Zustimmung sehen Sie den Fortschritt – nicht die Dokumente. Er kann die Verbindung jederzeit trennen.</p>
+      <div id="kdLink" aria-live="polite">${KD_LAST ? kdLinkHtml(KD_LAST) : ''}</div></section>
     <section class="pt-card pipe"><div class="kd-head"><h2>Pipeline</h2><span class="pipe-exp"><button type="button" class="btn btn-ghost btn-sm" data-exp="csv">CSV (Excel, CRM)</button><button type="button" class="btn btn-ghost btn-sm" data-exp="json">JSON</button></span></div>
       <div class="pipe-board">${[['inv', 'Eingeladen'], ['missing', 'Unterlagen unvollständig'], ['check', 'Prüfbereit'], ['ready', 'Bankfertig']].map(([k, l]) => { const xs = all.filter((c) => (c.status === 'verbunden' || c.status === 'eingeladen') && stageOf(c) === k); return `<div class="pipe-col ${k}"><h3>${l}<b>${xs.length}</b></h3>${xs.length ? xs.map((c) => `<a class="pipe-card" href="${c.status === 'eingeladen' ? '#kunden' : `#kd-${esc(c.id)}`}" data-jump="${c.status === 'eingeladen' ? '' : esc(c.id)}"><strong>${esc(c.name || c.email || 'Kunde')}</strong>${c.status === 'eingeladen' ? `<small>gültig bis ${dt(c.expiresAt)}</small>` : `<span class="pipe-bar"><i style="width:${Math.max(3, Math.min(100, c.progress?.best ?? 0))}%"></i></span><small>${c.progress?.best ?? 0} % Bankreife${c.progress?.missing?.length ? ` · fehlt: ${esc(c.progress.missing.slice(0, 2).join(', '))}` : ''}</small>`}</a>`).join('') : '<p class="pipe-empty">–</p>'}</div>`; }).join('')}
         <div class="pipe-col sent"><h3>Eingereicht<b id="pipeSentN">…</b></h3><div id="pipeSent"><p class="ia-ld sm" role="status">wird geladen …</p></div></div></div></section>
     <section class="pt-card"><div class="kd-head"><h2>Ihre Kunden</h2><span class="form-note">${con.length} verbunden · ${ready} bankreif · ${inv.length} Einladung${inv.length === 1 ? '' : 'en'} offen</span></div>
-      ${con.length ? `<p class="form-note">Sortiert nach Bankreife – die abschlussreifen Fälle stehen oben.</p><div class="kd-list">${con.map(card).join('')}</div>` : '<p class="form-note">Noch keine verbundenen Kunden. Laden Sie Ihren ersten Kunden oben ein.</p>'}
-      ${inv.length ? `<h3 class="kd-sub">Offene Einladungen</h3><ul class="kd-inv">${inv.map((c) => `<li><span><strong>${esc(c.name || c.email)}</strong><small>${c.name ? esc(c.email) + ' · ' : ''}gültig bis ${dt(c.expiresAt)}</small></span><button type="button" class="btn btn-ghost" data-kd-end="${esc(c.id)}">Zurückziehen</button></li>`).join('')}</ul>` : ''}</section>`;
+      ${con.length ? `<p class="form-note">Sortiert nach Bankreife – die abschlussreifen Fälle stehen oben.</p><div class="kd-list">${con.map(card).join('')}</div>` : '<div class="pt-empty"><strong>Noch keine Fälle</strong><p>Erstellen Sie Ihren ersten Fall oder laden Sie einen Kunden ein.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden" data-focus-invite>Kunden einladen</a><a class="btn btn-outline" href="#fall">Neuen Fall anlegen</a></div></div>'}
+      ${inv.length ? `<h3 class="kd-sub">Offene Einladungen</h3><ul class="kd-inv">${inv.map((c) => `<li><span><strong>${esc(c.name || c.email)}</strong><small>${c.name ? esc(c.email) + ' · ' : ''}gültig bis ${dt(c.expiresAt)}</small></span><span class="st">Wartet auf Kunde</span><button type="button" class="btn btn-ghost" data-kd-end="${esc(c.id)}">Zurückziehen</button></li>`).join('')}</ul>` : ''}</section>`;
   box.querySelectorAll('[data-jump]').forEach((l) => l.onclick = (e) => { if (!l.dataset.jump) return; e.preventDefault(); const el = document.getElementById('kd-' + l.dataset.jump); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); el?.classList.add('kd-flash'); setTimeout(() => el?.classList.remove('kd-flash'), 1600); });
   const STG = { inv: 'Eingeladen', missing: 'Unterlagen unvollständig', check: 'Prüfbereit', ready: 'Bankfertig' };
   const rows = all.filter((c) => c.status === 'verbunden' || c.status === 'eingeladen').map((c) => ({ name: c.name || '', email: c.email || '', stufe: STG[stageOf(c)], bankreife: c.progress?.best ?? null, objekte: c.progress?.objects ?? null, unterlagen: c.progress?.docs ?? null, fehlend: (c.progress?.missing || []).join('; '), verbunden_seit: c.since || '', zinsbindung_endet: Array.isArray(c.radar) ? c.radar.join('; ') : '' }));
@@ -215,6 +216,7 @@ async function vKunden(box) {
     KD_LAST = x.data;
     await vKunden(box);
   }); };
+  box.querySelectorAll('[data-focus-invite]').forEach((l) => l.onclick = (e) => { e.preventDefault(); $('#kdMail')?.focus(); });
   $('#kdCopy')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(KD_LAST.link); toast('Link kopiert.'); } catch { toast('Bitte den Link markieren und kopieren.', true); } });
   box.querySelectorAll('[data-kd-req]').forEach((b) => b.onclick = () => {
     const note = prompt('Optional: kurze Nachricht an Ihren Kunden (z. B. „Bitte bis Freitag“). Leer lassen für die Standard-Erinnerung.');
@@ -261,14 +263,24 @@ const stageOf = (c) => {
   return 'check';
 };
 
-// Startseite: zuerst, was heute zu tun ist – danach Kennzahlen, Branchen-Fokus und Einladungs-Vorschau.
+// Fallstatus in Worten (nie nur Farbe): gleiche Stufen wie die Pipeline.
+const CASE_ST = { inv: ['', 'Wartet auf Kunde'], missing: ['warn', 'Dokumente fehlen'], check: ['', 'Prüfung'], ready: ['ok', 'Bereit'] };
+const caseName = (c) => c.name || c.email || 'Kunde';
+const greet = () => { const h = new Date().getHours(); return h < 11 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend'; };
+
+// Startseite: Begrüßung, Fall-Kennzahlen, was heute zu tun ist (mit Namen), letzte Fälle – danach Konto & Nutzung.
 function vStart(box) {
   const a = me.account, u = me.usage, lim = me.limits;
   const quota = lim ? (lim.dossiersPerMonth == null ? 'unbegrenzt' : `${u.dossiersThisMonth} von ${lim.dossiersPerMonth + (a.dossierBonus || 0)}`) : '–';
   const done = setupSteps().filter(([ok]) => ok).length;
   const col = me.limits?.cobranding && a.brandColor ? a.brandColor : '#0F2C59';
+  const first = me.role === 'owner' ? String(a.advisorName || '').trim().split(/\s+/)[0] : '';
   box.innerHTML = `<p class="pt-mobile-hint" role="note"><span aria-hidden="true">💻</span> Für die bestmögliche Performance und komplexe Votierungsanalysen empfehlen wir Tablet oder Computer. Die mobile Ansicht wird laufend optimiert.</p>${a.verified ? '' : `<div class="pt-alert warn"><strong>Ihr Konto ist noch nicht freigeschaltet.</strong> Bitte laden Sie Ihre Gewerbeanmeldung oder einen Handelsregisterauszug hoch. Nach unserer Prüfung schalten wir Partnerseite, Widget, Anfragen, Kreditmappen und Tarife frei. <a class="btn btn-dark" href="#verifizierung">Zur Verifizierung</a></div>`}
-    <section class="pt-card todo"><div class="todo-h"><h2>Heute zu tun</h2><span class="form-note" id="todoSum">wird geladen …</span></div><ul class="todo-list" id="todoList"></ul></section>
+    <section class="pt-hello"><h2>${esc(greet())}${first ? ', ' + esc(first) : ''}</h2><p>Ihre Übersicht</p></section>
+    <div class="pt-kpis pt-case-kpis" id="caseKpis" aria-live="polite">${['Offene Fälle', 'Wartende Kundeneinladungen', 'Unvollständige Fälle', 'Bereit für nächsten Schritt'].map((l) => `<div class="pt-kpi"><small>${l}</small><strong>…</strong></div>`).join('')}</div>
+    <section class="pt-card todo"><div class="todo-h"><h2>Heute zu erledigen</h2><span class="form-note" id="todoSum">wird geladen …</span></div><ul class="todo-list" id="todoList"></ul><p class="todo-more" id="todoMore" hidden><a class="btn btn-dark" href="#kunden">Fälle anzeigen</a></p></section>
+    <section class="pt-card last-cases"><div class="todo-h"><h2>Letzte Fälle</h2><a class="ck-link" href="#kunden">Alle Fälle →</a></div><div id="lastCases"><p class="ia-ld sm" role="status">wird geladen …</p></div></section>
+    <h2 class="pt-sec-h">Konto &amp; Nutzung</h2>
     <div class="pt-kpis">
       <div class="pt-kpi"><small>Neue Anfragen</small><strong>${u.leadsNew}</strong><a href="#anfragen">Ansehen</a></div>
       <div class="pt-kpi"><small>Kreditmappen diesen Monat</small><strong>${quota}</strong><a href="#fall">Fall anlegen</a></div>
@@ -288,25 +300,45 @@ function vStart(box) {
   todo();
 }
 async function todo() {
-  const list = $('#todoList'), sum = $('#todoSum');
+  const list = $('#todoList'), sum = $('#todoSum'), kp = $('#caseKpis'), last = $('#lastCases'), more = $('#todoMore');
   if (!list) return;
   const items = [];
   if (!me.account.verified) items.push(['warn', 'Konto verifizieren', 'Gewerbenachweis hochladen – danach sind alle Funktionen frei.', '#verifizierung']);
   if (me.usage.leadsNew) items.push(['hot', `${me.usage.leadsNew} neue Anfrage${me.usage.leadsNew === 1 ? '' : 'n'}`, 'Interessenten mit Eckdaten aus Widget, QR-Code oder Partnerseite.', '#anfragen']);
   const r = await api('/api/b2b/clients').catch(() => null);
+  let attention = 0;
   if (r?.ok) {
-    const all = r.data.clients || [];
-    const by = (k) => all.filter((c) => (c.status === 'verbunden' || c.status === 'eingeladen') && stageOf(c) === k);
+    const all = (r.data.clients || []).filter((c) => c.status === 'verbunden' || c.status === 'eingeladen');
+    const by = (k) => all.filter((c) => stageOf(c) === k);
     const ready = by('ready'), miss = by('missing'), check = by('check'), inv = by('inv');
-    if (ready.length) items.push(['ok', `${ready.length} Fall${ready.length === 1 ? '' : 'e'} bankfertig`, 'Kreditmappe erstellen und einreichen.', '#einreichungen']);
-    if (check.length) items.push(['', `${check.length} Fall${check.length === 1 ? '' : 'e'} prüfbereit`, 'Kennzahlen gerechnet – Ihr Blick als Berater fehlt noch.', '#kunden']);
-    if (miss.length) items.push(['warn', `${miss.length} Fall${miss.length === 1 ? '' : 'e'} mit fehlenden Unterlagen`, 'Mit einem Klick erinnern.', '#kunden']);
+    const con = all.filter((c) => c.status === 'verbunden');
+    if (kp) kp.innerHTML = [['Offene Fälle', con.length - ready.length], ['Wartende Kundeneinladungen', inv.length], ['Unvollständige Fälle', miss.length], ['Bereit für nächsten Schritt', ready.length]]
+      .map(([l, n]) => `<div class="pt-kpi"><small>${l}</small><strong>${n}</strong><a href="#kunden">Anzeigen</a></div>`).join('');
+    // Fälle mit Namen: zuerst fehlende Unterlagen (fast fertige oben), dann offene Prüfungen, dann ältere Einladungen.
+    const named = [
+      ...miss.sort((x, y) => (y.progress?.best ?? 0) - (x.progress?.best ?? 0)).map((c) => ['warn', caseName(c), c.progress?.missing?.length ? `${c.progress.missing.slice(0, 2).join(', ')} fehlt` : `Bankreife ${c.progress?.best ?? 0} %`]),
+      ...check.map((c) => ['', caseName(c), 'Fallprüfung offen']),
+      ...inv.filter((c) => c.expiresAt && new Date(c.expiresAt).getTime() - Date.now() < 11 * 864e5).map((c) => ['', caseName(c), `Einladung noch nicht angenommen · gültig bis ${dt(c.expiresAt)}`]),
+    ];
+    attention = named.length;
+    named.slice(0, 5).forEach(([t, n, x]) => items.push([t, n, x, '#kunden']));
+    if (named.length > 5) items.push(['', `${named.length - 5} weitere Fälle`, 'In der Fallübersicht ansehen.', '#kunden']);
+    if (ready.length) items.push(['ok', `${ready.length} ${ready.length === 1 ? 'Fall' : 'Fälle'} bankfertig`, 'Kreditmappe erstellen und einreichen.', '#einreichungen']);
     const mon = (ym) => { const [y, m] = ym.split('-').map(Number); const n = new Date(); return (y - n.getFullYear()) * 12 + (m - 1 - n.getMonth()); };
-    const soon = r.data.radarOn ? all.flatMap((c) => (Array.isArray(c.radar) ? c.radar : []).map((ym) => mon(ym))).filter((m) => m >= -1 && m <= 12).length : 0;
+    const soon = r.data.radarOn ? con.flatMap((c) => (Array.isArray(c.radar) ? c.radar : []).map((ym) => mon(ym))).filter((m) => m >= -1 && m <= 12).length : 0;
     if (soon) items.push(['hot', `${soon} Zinsbindung${soon === 1 ? '' : 'en'} enden in 12 Monaten`, 'Anschlussfinanzierung jetzt ansprechen (Bestandskunden-Radar).', '#kunden']);
-    if (inv.length) items.push(['', `${inv.length} Einladung${inv.length === 1 ? '' : 'en'} offen`, 'Kunde hat noch nicht angenommen.', '#kunden']);
+    // Letzte Fälle: zuletzt aktive verbundene Kunden, dazu offene Einladungen.
+    const recent = [...con].sort((x, y) => new Date(y.progress?.lastActive || y.since || 0) - new Date(x.progress?.lastActive || x.since || 0)).slice(0, 5);
+    if (last) last.innerHTML = recent.length ? `<ul class="lc-list">${recent.map((c) => { const [cls, lbl] = CASE_ST[stageOf(c)]; const best = c.progress?.best ?? 0; return `<li><a href="#kunden"><span class="lc-n"><strong>${esc(caseName(c))}</strong><small>${c.progress?.missing?.length ? 'Fehlt: ' + esc(c.progress.missing.slice(0, 2).join(', ')) : c.progress?.lastActive ? 'zuletzt aktiv ' + dt(c.progress.lastActive) : ''}</small></span><span class="st ${cls}">${lbl}</span><span class="lc-p"><span class="pipe-bar"><i style="width:${Math.max(3, Math.min(100, best))}%"></i></span><b>${best} %</b></span><em aria-hidden="true">→</em></a></li>`; }).join('')}</ul>`
+      : `<div class="pt-empty"><strong>Noch keine Fälle</strong><p>Erstellen Sie Ihren ersten Fall oder laden Sie einen Kunden ein.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden">Kunden einladen</a><a class="btn btn-outline" href="#fall">Neuen Fall anlegen</a></div></div>`;
+  } else {
+    const retry = '<button type="button" class="btn btn-outline btn-sm" data-retry-start>Erneut versuchen</button>';
+    if (kp) kp.innerHTML = `<div class="pt-alert warn pt-kpi-err">Fälle konnten nicht geladen werden. ${retry}</div>`;
+    if (last) last.innerHTML = `<p class="form-note">Fälle konnten nicht geladen werden. ${retry}</p>`;
+    $('#ptView')?.querySelectorAll('[data-retry-start]').forEach((b) => b.onclick = () => vStart($('#ptView')));
   }
-  sum.textContent = items.length ? `${items.length} Punkt${items.length === 1 ? '' : 'e'}` : 'Alles erledigt';
+  sum.textContent = attention ? `${attention} ${attention === 1 ? 'Fall' : 'Fälle'} benötig${attention === 1 ? 't' : 'en'} Aufmerksamkeit` : items.length ? `${items.length} Punkt${items.length === 1 ? '' : 'e'}` : 'Alles erledigt';
+  if (more) more.hidden = !attention;
   list.innerHTML = items.length ? items.map(([t, h, x, href]) => `<li class="${t}"><a href="${href}"><span class="todo-dot" aria-hidden="true"></span><span><strong>${esc(h)}</strong><small>${esc(x)}</small></span><em aria-hidden="true">→</em></a></li>`).join('')
     : '<li class="empty"><p>Keine offenen Aufgaben.</p><div class="todo-empty-a"><a class="btn btn-dark" href="#kunden">Neue Kunden einladen</a><a class="btn btn-outline" href="#werkzeuge">Widget einbinden</a></div></li>';
 }
@@ -789,7 +821,8 @@ function portalGate() {
   root.querySelectorAll('[data-gt]').forEach((b) => b.onclick = () => { history.replaceState(null, '', location.pathname + (b.dataset.gt === 'anfrage' ? '#anfrage' : '')); portalGate(); });
   const box = $('#ptGate');
   if (tab === 'login') {
-    loginForm(box, { title: 'Unternehmensportal', lead: 'Anmeldung mit den Zugangsdaten, die Sie von ImmoAdv erhalten haben.', noteHtml: 'Noch kein Zugang? <a class="ck-link" href="#anfrage" id="toReq">Unternehmenskonto anfragen</a>', onUnknown: (v) => { history.replaceState(null, '', location.pathname + '#anfrage'); portalGate(); const f = root.querySelector('#reqF [name=email]'); if (f) f.value = v; } });
+    loginForm(box, { title: 'Unternehmensportal', lead: 'Melden Sie sich an, um Ihre Fälle und Kunden zu verwalten.', noteHtml: 'Noch kein Zugang? <a class="ck-link" href="#anfrage" id="toReq">Unternehmenskonto anfragen</a>', onUnknown: (v) => { history.replaceState(null, '', location.pathname + '#anfrage'); portalGate(); const f = root.querySelector('#reqF [name=email]'); if (f) f.value = v; } });
+    box.querySelector('.area-login')?.insertAdjacentHTML('beforeend', '<p class="pt-sec-note"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Verschlüsselte Verbindung, Server in Frankfurt. Ihre Fälle sind strikt von anderen Unternehmen getrennt. <a href="/sicherheit">Sicherheit</a> · <a href="/b2b#demo">Demo ohne Anmeldung</a></span></p>');
     box.querySelector('#toReq')?.addEventListener('click', (e) => { e.preventDefault(); history.replaceState(null, '', location.pathname + '#anfrage'); portalGate(); });
     return;
   }
