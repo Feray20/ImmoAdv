@@ -793,6 +793,8 @@ html:not(.ia-paid) .nav-actions a[href="/auth/login"],html.ia-user:not(.ia-paid)
 body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a.nav-acc,
 body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a[href^="/app/dashboard"]{display:none!important}}
 .btn,a.btn,button.btn,.hs-go,a.hs-go,.btn-pay,.km-go{border-radius:999px!important}
+.mobile-menu{border-radius:999px!important;padding-left:14px;padding-right:16px}
+.mobile-nav a[href="/app/dashboard"],html:not(.ia-user) .mobile-nav a[href="/auth/login"]{border-radius:999px!important}
 .bx-svg{display:block;flex:0 0 auto}
 .bx-sec{padding:76px 0}
 .bx-sub{color:#475569;font-size:17px;max-width:720px;margin:-4px 0 28px}

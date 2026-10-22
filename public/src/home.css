@@ -941,3 +941,6 @@ html:not(.ia-paid) body.lp-sticky-on{padding-bottom:calc(76px + env(safe-area-in
 @media(max-width:380px){.hero3 .home-cta.lp-hero-ctas .hs-go,.lp-btns .btn,.km-go{font-size:15px;padding-left:12px;padding-right:12px;gap:6px}}
 @media(max-width:600px){body.lp-hero-in .cw-fab{display:none}}
 .btn,a.btn,button.btn,.hs-go,a.hs-go,.btn-pay,.km-go{border-radius:999px!important}
+.mobile-menu{border-radius:999px!important;padding-left:14px;padding-right:16px}
+.mobile-nav .lp-mnav-cta{border-radius:999px!important;margin:10px 0 6px;padding-left:22px!important;padding-right:18px!important;border-bottom:0!important;background:#0284C7!important}
+.mobile-nav a[href="/app/dashboard"],html:not(.ia-user) .mobile-nav a[href="/auth/login"]{border-radius:999px!important}

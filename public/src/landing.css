@@ -264,3 +264,8 @@
 
 /* Einheitliche Knopfform auf der ganzen Website: abgerundet (Pillenform) statt eckig – passend zur Bezahlseite. */
 .btn,a.btn,button.btn,.hs-go,a.hs-go,.btn-pay,.km-go{border-radius:999px!important}
+
+/* Handy-Menü: runde Kanten wie alle Knöpfe (Menü/Schließen-Knopf, hervorgehobener Eintrag, Konto-Knöpfe) */
+.mobile-menu{border-radius:999px!important;padding-left:14px;padding-right:16px}
+.mobile-nav .lp-mnav-cta{border-radius:999px!important;margin:10px 0 6px;padding-left:22px!important;padding-right:18px!important;border-bottom:0!important;background:#0284C7!important}
+.mobile-nav a[href="/app/dashboard"],html:not(.ia-user) .mobile-nav a[href="/auth/login"]{border-radius:999px!important}
