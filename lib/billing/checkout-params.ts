@@ -18,6 +18,9 @@ export function checkoutParams(o: {
     client_reference_id: o.clientRef,
     line_items: [{ price: o.price, quantity: 1, tax_rates: [o.taxRate] }, ...(o.addonPrice && def.mode === 'payment' ? [{ price: o.addonPrice, quantity: 1, tax_rates: [o.taxRate] }] : [])],
     locale: 'de',
+    // Gutscheincode-Feld auf der Bezahlseite: Aktionscodes (z. B. für Kooperationspartner) werden im Stripe-Dashboard angelegt;
+    // Einlösungen je Code sind dort auswertbar (Grundlage für Partnerprovisionen).
+    allow_promotion_codes: true,
     billing_address_collection: 'required',
     tax_id_collection: { enabled: true },
     customer_update: { address: 'auto', name: 'auto' },
