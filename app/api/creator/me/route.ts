@@ -38,7 +38,11 @@ export async function GET(req: Request) {
   const g = await requireCreatorUser(req, 'me', 120);
   if (!('user' in g)) return g;
   const c = await ownCreator(g.user.id);
-  if (!c) return j({ email: g.user.email, creator: null });
+  if (!c) {
+    // Unternehmenskonten können sich nicht als Creator bewerben – die Seite zeigt das sofort statt erst beim Klick.
+    const { data: b2b } = await supabaseAdmin().from('immo_b2b_members').select('user_id').eq('user_id', g.user.id).maybeSingle();
+    return j({ email: g.user.email, creator: null, b2b: Boolean(b2b) });
+  }
   return j(view(c, g.user.email, await onboardingState(c, g.user.id)));
 }
 
