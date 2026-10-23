@@ -363,14 +363,14 @@ const SECURITY_BOX = `<div class="cr-sec" role="note"><h3><span aria-hidden="tru
   <button type="button" class="link-btn" data-sec>Mehr über Sicherheit erfahren</button></div>`;
 
 const SECURITY_ITEMS = [
-  ['⇄', 'Verschlüsselte Übertragung', 'Deine Daten werden ausschließlich über geschützte Verbindungen (HTTPS/TLS) übertragen.'],
-  ['⚿', 'Zugriffskontrolle', 'Nur autorisierte Benutzer und Systeme erhalten Zugriff entsprechend ihrer Berechtigung. Administratoren melden sich mit zweitem Faktor an.'],
-  ['▣', 'Geschützte Speicherung', 'Deine IBAN wird verschlüsselt gespeichert und ist an dein Creator-Konto gebunden. Sie ist nie öffentlich zugänglich.'],
-  ['••', 'Maskierte Darstellung', 'Im normalen Portal wird deine IBAN beispielsweise so dargestellt: DE••••••••••4821'],
-  ['✎', 'Audit', 'Sicherheitsrelevante Zugriffe und Änderungen werden nachvollziehbar protokolliert – zum Beispiel jedes Anzeigen der vollständigen Zahlungsdaten im Admin-Bereich.'],
-  ['⊘', 'Keine Social-Media-Verbindung', 'Deine Social-Media-Accounts werden nicht benötigt, um deine Auszahlung zu verwalten.'],
+  ['transfer', 'Verschlüsselte Übertragung', 'Deine Daten werden ausschließlich über geschützte Verbindungen (HTTPS/TLS) übertragen.'],
+  ['key', 'Zugriffskontrolle', 'Nur autorisierte Benutzer und Systeme erhalten Zugriff entsprechend ihrer Berechtigung. Administratoren melden sich mit zweitem Faktor an.'],
+  ['lock', 'Geschützte Speicherung', 'Deine IBAN wird verschlüsselt gespeichert und ist an dein Creator-Konto gebunden. Sie ist nie öffentlich zugänglich.'],
+  ['eye', 'Maskierte Darstellung', 'Im normalen Portal wird deine IBAN beispielsweise so dargestellt: DE••••••••••4821'],
+  ['log', 'Protokoll', 'Sicherheitsrelevante Zugriffe und Änderungen werden nachvollziehbar protokolliert – zum Beispiel jedes Anzeigen der vollständigen Zahlungsdaten im Admin-Bereich.'],
+  ['nolink', 'Keine Social-Media-Verbindung', 'Deine Social-Media-Accounts werden nicht benötigt, um deine Auszahlung zu verwalten.'],
 ];
-const securityList = () => `<ul class="cr-sec-list">${SECURITY_ITEMS.map(([i, t, d]) => `<li><span aria-hidden="true">${i}</span><div><strong>${esc(t)}</strong><p>${esc(d)}</p></div></li>`).join('')}</ul>`;
+const securityList = () => `<ul class="cr-sec-list">${SECURITY_ITEMS.map(([i, t, d]) => `<li><span aria-hidden="true">${svg(i)}</span><div><strong>${esc(t)}</strong><p>${esc(d)}</p></div></li>`).join('')}</ul>`;
 
 function securityModal() {
   const d = document.createElement('dialog');
@@ -469,9 +469,21 @@ function secAgreement(el, o) {
   el.innerHTML = `<h2>${esc(a.title)}</h2><p class="form-note">Fassung ${esc(a.version)}${a.accepted ? ' · <span class="st ok">von dir bestätigt</span>' : ''}</p>
     ${a.is_draft ? '<div class="pt-alert warn"><strong>Entwurf.</strong> Diese Fassung ist noch nicht final. Vor dem Start erhältst du die geprüfte Fassung zur Bestätigung.</div>' : ''}
     <div class="cr-agree" tabindex="0" aria-label="Text der Vereinbarung">${esc(a.body)}</div>
+    <p class="pt-row" style="margin:8px 0 12px"><button type="button" class="btn btn-outline btn-sm" data-agree-dl>Als Textdatei speichern</button><button type="button" class="btn btn-outline btn-sm" data-agree-print>Drucken</button></p>
+    <div data-comm></div>
     <form novalidate>${a.accepted ? '' : '<label class="consent"><input type="checkbox" name="ok" required> Ich habe die Vereinbarung gelesen und stimme ihr zu.</label>'}
     <p class="cr-msg pt-alert bad" hidden></p><div class="wiz-nav">${o.back ? '<button type="button" class="btn btn-outline" data-back>Zurück</button>' : '<span></span>'}<button type="submit" class="btn btn-dark">${a.accepted ? (o.wizard ? 'Weiter' : 'OK') : 'Vereinbarung bestätigen'}</button></div></form>`;
   bindBack(el, o);
+  el.querySelector('[data-agree-dl]').onclick = () => {
+    const blob = new Blob([`${a.title}\nFassung ${a.version}\n\n${a.body}\n`], { type: 'text/plain;charset=utf-8' });
+    const u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = `ImmoAdv-Creator-Partnervereinbarung-${a.version}.txt`; document.body.append(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 2000);
+  };
+  el.querySelector('[data-agree-print]').onclick = () => {
+    const w = window.open('', '_blank'); if (!w) { toast('Bitte Pop-ups erlauben.', true); return; }
+    w.document.write(`<!doctype html><meta charset="utf-8"><title>${esc(a.title)}</title><body style="font:14px/1.6 system-ui,sans-serif;max-width:760px;margin:32px auto;padding:0 16px;white-space:pre-wrap"><h1 style="font-size:20px">${esc(a.title)}</h1><p>Fassung ${esc(a.version)}</p>${esc(a.body)}</body>`);
+    w.document.close(); w.focus(); w.print();
+  };
+  if (me.creator?.status === 'ACTIVE') api('/api/creator/billing').then((r) => { const c = r.ok ? r.data.commission : null; const box = el.querySelector('[data-comm]'); if (box && c) box.innerHTML = commissionCard(c).replace('pt-card cr-comm', 'cr-comm cr-comm-in'); });
   const f = el.querySelector('form');
   f.onsubmit = async (e) => {
     e.preventDefault();
@@ -520,7 +532,7 @@ function closed(s) {
 }
 
 // ---------- Creator-Portal (nach Freigabe) ----------
-// Hauptbereiche (Handy: untere Leiste) Home · Studio · Performance · Assets · Mehr; Desktop: Seitenleiste mit allen Bereichen.
+// Hauptbereiche (Handy: untere Leiste) Start · Kampagnen · Statistik · Material · Mehr; Tablet/Desktop: Seitenleiste mit allen Bereichen.
 // Provision, Abrechnung und Auszahlungen folgen mit der nächsten Ausbaustufe.
 const IC = {
   home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
@@ -533,10 +545,22 @@ const IC = {
   sicherheit: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
   abrechnung: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
   guide: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M9 7h6"/>',
+  support: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+  logout: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>',
+  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  log: '<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7M9 8h3"/>',
+  nolink: '<path d="M9 15l6-6"/><path d="M11 6l1-1a4 4 0 0 1 6 6l-1 1M13 18l-1 1a4 4 0 0 1-6-6l1-1"/><path d="M3 3l18 18"/>',
+  transfer: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
   more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
 };
-const MAIN = [['home', 'Übersicht', 'Start'], ['studio', 'Kampagnen & Beiträge', 'Kampagnen'], ['performance', 'Statistik', 'Statistik'], ['assets', 'Material', 'Material']];
-const MORE = [['abrechnung', 'Abrechnung'], ['guide', 'Leitfaden'], ['profil', 'Profil'], ['auszahlung', 'Zahlungsdaten'], ['vereinbarung', 'Vereinbarung'], ['sicherheit', 'Sicherheit']];
+// [Schlüssel, Menüname, Kurzname für die untere Leiste am Handy]
+const MAIN = [['home', 'Übersicht', 'Start'], ['studio', 'Kampagnen', 'Kampagnen'], ['performance', 'Statistik', 'Statistik'], ['assets', 'Material', 'Material']];
+const MORE = [['abrechnung', 'Abrechnung'], ['profil', 'Profil'], ['auszahlung', 'Zahlungsdaten'], ['vereinbarung', 'Vereinbarung'], ['sicherheit', 'Sicherheit'], ['guide', 'Leitfaden']];
+// Seitentitel, wo der kurze Menüname allein zu knapp wäre
+const TITLE = { studio: 'Kampagnen & Beiträge', guide: 'Leitfaden für Creator', sicherheit: 'Sicherheit & Datenschutz', vereinbarung: 'Partnervereinbarung' };
+const GROUPS = [['Arbeiten', ['home', 'studio', 'performance', 'assets', 'abrechnung']], ['Konto', ['profil', 'auszahlung', 'vereinbarung', 'sicherheit']], ['Hilfe', ['guide']]];
 const ALL = [...MAIN.map(([k, l]) => [k, l]), ...MORE];
 const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
 const PLAT = { youtube: 'YouTube', tiktok: 'TikTok', instagram: 'Instagram', x: 'X', linkedin: 'LinkedIn', other: 'Andere' };
@@ -566,18 +590,19 @@ function portal() {
   const inMore = MORE.some(([k]) => k === view);
   root.innerHTML = `<div class="pt">
     <aside class="pt-side"><a class="pt-brand" href="#home"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><small class="pt-tag">Creator Portal</small>
-      <nav class="cr-side-nav"><span class="cr-side-h">Arbeiten</span>${ALL.slice(0, 5).map(([k, l]) => `<a href="#${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${svg(k)}<span>${esc(l)}</span></a>`).join('')}
-        <span class="cr-side-h">Konto</span>${ALL.slice(5).map(([k, l]) => `<a href="#${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${svg(k)}<span>${esc(l)}</span></a>`).join('')}</nav>
-      <div class="pt-foot"><a href="mailto:support@immoadv.de">Support</a><strong>${esc(name)}</strong><small>Creator Partner seit ${dt(me.creator.approved_at)}</small><button type="button" class="pt-logout" id="crOut">Abmelden</button></div></aside>
-    <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#home" aria-label="Creator Portal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Creator Portal</small><h1>${esc(ALL.find(([k]) => k === view)[1])}</h1></div><button type="button" class="pt-logout pt-logout-m" id="crOutM" aria-label="Abmelden" title="Abmelden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Abmelden</span></button></header>
+      <nav class="cr-side-nav" aria-label="Creator Portal">${GROUPS.map(([g, ks]) => `<span class="cr-side-h">${g}</span>${ks.map((k) => `<a href="#${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${svg(k)}<span>${esc(ALL.find(([x]) => x === k)[1])}</span></a>`).join('')}`).join('')}
+        <a href="mailto:support@immoadv.de">${svg('support')}<span>Support</span></a></nav>
+      <div class="pt-foot cr-foot"><span class="cr-avatar" aria-hidden="true">${esc((name || '?').trim().charAt(0).toUpperCase())}</span><div class="cr-foot-t"><strong>${esc(name)}</strong><small>Creator Partner seit ${dt(me.creator.approved_at)}</small></div><button type="button" class="pt-logout" id="crOut">${svg('logout')}<span>Abmelden</span></button></div></aside>
+    <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#home" aria-label="Creator Portal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Creator Portal</small><h1>${esc(TITLE[view] || ALL.find(([k]) => k === view)[1])}</h1></div><button type="button" class="pt-logout pt-logout-m" id="crOutM" aria-label="Abmelden" title="Abmelden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Abmelden</span></button></header>
       <div id="crView"><div class="ad-skel" aria-busy="true"><div class="ad-skel-kpis"><span></span><span></span><span></span><span></span></div></div></div></section>
     <nav class="pt-tabs" aria-label="Bereiche">${MAIN.map(([k, , s]) => `<a href="#${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${svg(k)}<span>${esc(s)}</span></a>`).join('')}<button type="button" id="crMore" aria-expanded="false" aria-controls="crSheet"${inMore ? ' class="on"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>Mehr</span></button></nav>
     <div class="pt-sheet" id="crSheet" hidden><div class="pt-sheet-bg" data-close></div><div class="pt-sheet-in" role="dialog" aria-label="Weitere Bereiche"><div class="pt-sheet-h"><span class="pt-sheet-t"><strong>Mehr</strong></span><button type="button" class="stage-x" data-close aria-label="Schließen">×</button></div>
-      <nav class="cr-sheet-nav">${MORE.map(([k, l]) => `<a href="#${k}"${k === view ? ' class="on"' : ''}>${svg(k)}<span>${esc(l)}</span></a>`).join('')}<a href="mailto:support@immoadv.de">Support kontaktieren</a><button type="button" class="pt-logout" id="crOutS">Abmelden</button></nav></div></div></div>`;
+      <nav class="cr-sheet-nav">${MORE.map(([k, l]) => `<a href="#${k}"${k === view ? ' class="on"' : ''}>${svg(k)}<span>${esc(l)}</span></a>`).join('')}<a href="mailto:support@immoadv.de">${svg('support')}<span>Support kontaktieren</span></a><button type="button" class="pt-logout" id="crOutS">${svg('logout')}<span>Abmelden</span></button></nav></div></div></div>`;
   ['#crOut', '#crOutM', '#crOutS'].forEach((s) => { const b = $(s); if (b) b.onclick = logout; });
   const sheet = $('#crSheet'), more = $('#crMore');
   more.onclick = () => { sheet.hidden = false; more.setAttribute('aria-expanded', 'true'); };
   sheet.querySelectorAll('[data-close], nav a').forEach((x) => x.addEventListener('click', () => { sheet.hidden = true; more.setAttribute('aria-expanded', 'false'); }));
+  document.title = `${TITLE[view] || ALL.find(([k]) => k === view)[1]} | ImmoAdv Creator`;
   const v = $('#crView');
   const o = { wizard: false };
   if (view === 'home') home(v);
@@ -631,7 +656,7 @@ async function studio(v) {
         ${k.brief ? `<h3>Briefing</h3><p style="white-space:pre-wrap">${esc(k.brief)}</p>` : ''}
         <div class="pt-grid2">${k.dos ? `<div><h3>Bitte so</h3><p style="white-space:pre-wrap">${esc(k.dos)}</p></div>` : ''}${k.donts ? `<div><h3>Bitte nicht</h3><p style="white-space:pre-wrap">${esc(k.donts)}</p></div>` : ''}</div>
         ${k.link ? `<div class="cr-copy"><code>${esc(k.link)}</code><button type="button" class="btn btn-outline btn-sm" data-copy="${esc(k.link)}">Kampagnen-Link kopieren</button></div>` : ''}
-        <p class="pt-row" style="margin-top:10px">${k.assets ? `<a class="btn btn-outline btn-sm" href="#assets" data-camp="${esc(k.id)}">${k.assets} Assets ansehen</a>` : ''}<button type="button" class="btn btn-dark btn-sm" data-add="${esc(k.id)}">Beitrag eintragen</button></p></details>`).join('') : '<div class="pt-empty">Gerade ist keine Kampagne für dich freigegeben. Du kannst trotzdem Inhalte mit deinem persönlichen Link veröffentlichen.</div>'}</section>
+        <p class="pt-row" style="margin-top:10px">${k.assets ? `<a class="btn btn-outline btn-sm" href="#assets" data-camp="${esc(k.id)}">Material ansehen (${k.assets})</a>` : ''}<button type="button" class="btn btn-dark btn-sm" data-add="${esc(k.id)}">Beitrag eintragen</button></p></details>`).join('') : '<div class="pt-empty">Gerade ist keine Kampagne für dich freigegeben. Du kannst trotzdem Inhalte mit deinem persönlichen Link veröffentlichen.</div>'}</section>
     <section class="pt-card cr-form" id="crContentForm"></section>
     <section class="pt-card"><h2>Deine Beiträge</h2>${(h.content || []).length ? `<ul class="co-social">${h.content.map((c) => `<li class="cr-content"><div><strong>${esc(PLAT[c.platform] || c.platform)}</strong> · ${dt(c.published_on)} <span class="st ${CST[c.status]?.[0]}" style="margin-left:6px">${esc(CST[c.status]?.[1] || c.status)}</span><br><a href="${/^https:\/\//.test(c.url) ? esc(c.url) : '#'}" target="_blank" rel="noopener noreferrer">${esc(c.title || c.url)}</a>${c.review_note ? `<p class="pt-alert warn" style="margin:8px 0 0"><strong>Anmerkung von ImmoAdv:</strong> ${esc(c.review_note)}</p>` : ''}</div>${c.status === 'CHANGES_REQUESTED' ? `<button type="button" class="btn btn-outline btn-sm" data-fix="${esc(c.id)}">Überarbeitet einreichen</button>` : ''}</li>`).join('')}</ul>` : '<p class="form-note">Noch keine Beiträge eingetragen.</p>'}</section>`;
   bindCopy(v);
@@ -647,7 +672,7 @@ function contentForm(el, camps, campId, focus = false) {
     <label>Plattform*<select name="platform" required>${Object.entries(PLAT).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('')}</select></label>
     <label>Kampagne<select name="campaign_id"><option value="">ohne Kampagne</option>${camps.map((k) => `<option value="${esc(k.id)}"${k.id === campId ? ' selected' : ''}>${esc(k.name)}</option>`).join('')}</select></label>
     <label class="full">Link zum Beitrag*<input name="url" type="url" inputmode="url" required maxlength="300" placeholder="https://"></label>
-    <label>Titel <small class="hint">optional</small><input name="title" maxlength="160"></label>
+    <label>Titel (optional)<input name="title" maxlength="160"></label>
     <label>Veröffentlicht am*<input name="published_on" type="date" required max="${today}" value="${today}"></label></div>
     <label class="consent"><input type="checkbox" name="ad" required> Der Beitrag ist als Werbung bzw. Kooperation mit ImmoAdv gekennzeichnet.</label>
     <p class="cr-msg pt-alert bad" hidden></p><div class="wiz-nav"><span></span><button type="submit" class="btn btn-dark">Beitrag eintragen</button></div></form>`;
@@ -705,11 +730,16 @@ async function openDoc(btn, body) {
   location.href = r.data.url;
 }
 
+// Provisionsregel (Anlage zu § 8 der Partnervereinbarung) – verständlich formuliert, mit Abweichungen je Kampagne.
+const commissionCard = (c) => c ? `<section class="pt-card cr-comm"><small class="pt-top-k">Deine Provision</small><h2 style="margin:4px 0 6px">${esc(c.text)}</h2>
+  <p class="form-note" style="margin:0">Gilt seit ${dt(c.since)}${c.own ? ' · individuell für dich vereinbart' : ''}. Netto-Umsatz = gezahlter Betrag ohne Umsatzsteuer, abzüglich Rabatten und Erstattungen (§ 8 der Partnervereinbarung).</p>
+  ${c.campaigns?.length ? `<ul class="pt-check" style="margin:10px 0 0">${c.campaigns.map((x) => `<li>Kampagne „${esc(x.campaign)}“: ${esc(x.text)}</li>`).join('')}</ul>` : ''}</section>` : '';
+
 async function billingView(v) {
   const r = await api('/api/creator/billing');
   if (!r.ok) { v.innerHTML = `<div class="pt-alert bad">${esc(r.data?.error || 'Abrechnung konnte nicht geladen werden.')}</div>`; return; }
   const b = r.data;
-  v.innerHTML = `<div class="pt-kpis">
+  v.innerHTML = `${commissionCard(b.commission)}<div class="pt-kpis">
       <div class="pt-kpi"><small>Ausstehend</small><strong>${eurC(b.totals.pending_cents)}</strong><small>inkl. vorläufiger Monate</small></div>
       <div class="pt-kpi"><small>Freigegeben</small><strong>${eurC(b.totals.approved_cents)}</strong><small>zur Auszahlung</small></div>
       <div class="pt-kpi"><small>Ausgezahlt</small><strong>${eurC(b.totals.paid_cents)}</strong><small>gesamt</small></div>
@@ -755,10 +785,10 @@ function invoiceForm(v, b, s, btn) {
 
 function guideView(v) {
   const steps = [
-    ['Link oder Code teilen', 'Verwende deinen persönlichen Link (Übersicht oder Kampagnen) oder deinen Vorteilscode. Für Kampagnen gibt es eigene Links, damit wir sehen, was funktioniert.'],
-    ['Werbung kennzeichnen', 'Jeder Beitrag über ImmoAdv ist Werbung und wird als solche gekennzeichnet. Trage veröffentlichte Beiträge im Studio ein – wir prüfen sie.'],
+    ['Link oder Code teilen', 'Verwende deinen persönlichen Link (unter „Übersicht“ oder „Kampagnen“) oder deinen Vorteilscode. Für Kampagnen gibt es eigene Links, damit wir sehen, was funktioniert.'],
+    ['Werbung kennzeichnen', 'Jeder Beitrag über ImmoAdv ist Werbung und wird als solche gekennzeichnet. Trage veröffentlichte Beiträge unter „Kampagnen“ ein – wir prüfen sie.'],
     ['Was gezählt wird', 'Bezahlte Käufe von Kunden, die über deinen Link kamen (bis 90 Tage nach ihrer Registrierung) oder deinen Code eingelöst haben. Eigene Käufe und erstattete Käufe zählen nicht; bei einer Teilerstattung zählt der verbleibende Betrag.'],
-    ['Provision', 'Je Kauf nach der für dich hinterlegten Regel (z. B. Prozent vom Netto-Umsatz). Ausstehende Beträge siehst du laufend unter Performance und Abrechnung.'],
+    ['Provision', 'Je Kauf nach der für dich hinterlegten Regel (z. B. Prozent vom Netto-Umsatz). Ausstehende Beträge siehst du laufend unter „Statistik“ und „Abrechnung“.'],
     ['Monatsabschluss', 'Ein Monat wird abgerechnet, wenn die 14-tägige Widerrufsfrist aller Käufe vorbei ist – in der Regel ab dem 15. des Folgemonats. Spätere Erstattungen werden im nächsten Monat anteilig verrechnet. Sobald deine Abrechnung bereit ist, bekommst du eine E-Mail.'],
     ['Rechnung oder Gutschrift', 'Je nach Vereinbarung erstellst du mit einem Klick eine vorausgefüllte Rechnung, oder ImmoAdv stellt dir eine Gutschrift aus.'],
     ['Auszahlung', 'Nach der Freigabe überweisen wir auf dein hinterlegtes, geprüftes Konto. Du bekommst eine E-Mail, sobald die Überweisung raus ist.'],
@@ -779,7 +809,7 @@ async function assetsView(v) {
     <div class="pc-chips" role="group" aria-label="Filter" style="margin-bottom:12px"><button type="button" data-f="" aria-pressed="${!assetCamp}">Alle</button><button type="button" data-f="general" aria-pressed="${assetCamp === 'general'}">Allgemein</button>${camps.map((k) => `<button type="button" data-f="${esc(k.id)}" aria-pressed="${assetCamp === k.id}">${esc(k.name)}</button>`).join('')}</div>
     ${list.length ? `<div class="cr-assets">${list.map((a) => `<article class="pt-card"><small class="pt-top-k">${esc(KIND[a.kind] || a.kind)}${a.size_bytes ? ` · ${mb(a.size_bytes)}` : ''}</small><h3 style="margin:4px 0">${esc(a.title)}</h3>${a.description ? `<p class="form-note" style="margin:0 0 6px">${esc(a.description)}</p>` : ''}
         ${a.kind === 'text' ? `<div class="cr-agree" style="max-height:180px">${esc(a.text_body)}</div><p><button type="button" class="btn btn-outline btn-sm" data-copy="${esc(a.text_body)}">Text kopieren</button></p>` : `<p><button type="button" class="btn btn-dark btn-sm" data-dl="${esc(a.id)}">Herunterladen</button></p>`}
-        ${a.usage_notes ? `<p class="form-note"><strong>Nutzung:</strong> ${esc(a.usage_notes)}</p>` : ''}</article>`).join('')}</div>` : '<div class="pt-empty">Hier sind noch keine Assets freigegeben.</div>'}`;
+        ${a.usage_notes ? `<p class="form-note"><strong>Nutzung:</strong> ${esc(a.usage_notes)}</p>` : ''}</article>`).join('')}</div>` : '<div class="pt-empty">Hier ist noch kein Material freigegeben.</div>'}`;
   bindCopy(v);
   v.querySelectorAll('[data-f]').forEach((b) => b.onclick = () => { assetCamp = b.dataset.f; assetsView(v); });
   v.querySelectorAll('[data-dl]').forEach((b) => b.onclick = async () => {

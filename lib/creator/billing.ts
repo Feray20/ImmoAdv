@@ -198,3 +198,14 @@ export function partialClawback(commissionCents: number, baseCents: number, refu
   const share = Math.round((commissionCents * Math.min(refundNetCents, baseCents)) / baseCents);
   return Math.max(0, Math.min(share, commissionCents - Math.max(0, alreadyClawedCents)));
 }
+
+// Regel als verständlicher Satz für das Creator-Portal (z. B. „20 % vom Netto-Umsatz je Kauf“).
+export function describeRule(r: Pick<Rule, 'kind' | 'percent_bps' | 'fixed_cents' | 'tiers'>): string {
+  const pct = (bps: number) => `${(bps / 100).toLocaleString('de-DE', { maximumFractionDigits: 2 })} %`;
+  const eur = (c: number) => (c / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+  if (r.kind === 'PERCENT') return `${pct(r.percent_bps)} vom Netto-Umsatz je Kauf`;
+  if (r.kind === 'FIXED') return `${eur(r.fixed_cents)} je Kauf`;
+  if (r.kind === 'HYBRID') return `${eur(r.fixed_cents)} plus ${pct(r.percent_bps)} vom Netto-Umsatz je Kauf`;
+  const tiers = [...(r.tiers || [])].sort((a, b) => a.min_conversions - b.min_conversions);
+  return `${pct(r.percent_bps)} vom Netto-Umsatz je Kauf${tiers.map((t) => `, ab ${t.min_conversions} Käufen im Monat ${pct(t.percent_bps)}`).join('')}`;
+}

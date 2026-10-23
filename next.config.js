@@ -56,6 +56,8 @@ module.exports = {
   serverExternalPackages: ['@react-pdf/renderer'],
   // pdfkit lädt seine Standardschriften dynamisch; ohne diese Angabe fehlen sie im Serverpaket.
   outputFileTracingIncludes: {
+    '/api/creator/hub': ['./public/creator-kit/**/*'],
+    '/api/admin/creators/assets': ['./public/creator-kit/**/*'],
     '/api/kreditmappe': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
     '/api/kreditmappe/preview': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
     '/api/mustermappe': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
