@@ -842,7 +842,10 @@ body:not(.is-app) #app>footer{margin-top:auto}
 .ia-legal{background:#0B1F3F;color:#94A3B8;margin-top:auto}
 .ia-legal small{display:block;font-size:12px;line-height:1.6;letter-spacing:.02em;color:#94A3B8;text-transform:none}
 body.is-app main .ia-legal{margin:40px -28px -48px;border-radius:0}
-@media (max-width:900px){body.is-app main .ia-legal{margin:32px -14px calc(-88px - env(safe-area-inset-bottom))}}
+@media (max-width:900px){body.is-app main{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+body.is-app main>*{min-width:0}
+body.is-app main>:has(+.ia-legal){margin-bottom:32px}
+body.is-app main .ia-legal{margin:auto -14px calc(-88px - env(safe-area-inset-bottom))}}
 @media print{.ia-legal{display:none}}
 .ia-ld{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:100px 16px 32px;min-height:180px;color:var(--ia-muted,#64748B);font-size:14px;text-align:center;margin:0}
 .ia-ld::before,.ia-ld::after{content:"";position:absolute;left:50%;top:28px;width:56px;height:56px;margin-left:-28px}
@@ -905,8 +908,9 @@ html:not(.ia-paid) .nav-actions a[href="/auth/login"],html.ia-user:not(.ia-paid)
 @media (max-width:900px){body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a[href="/auth/login"],
 body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a.nav-acc,
 body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a[href^="/app/dashboard"]{display:none!important}}
-@media(min-width:901px){body.is-app main{display:flex;flex-direction:column;min-height:100vh}
+@media(min-width:901px){body.is-app main{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
 body.is-app main>*:not(.ia-legal){width:100%;max-width:1320px;margin-left:auto;margin-right:auto}
+body.is-app main>:has(+.ia-legal){margin-bottom:40px}
 body.is-app main .container{max-width:1320px}
 body.is-app main>.section{padding-bottom:40px}
 body.is-app main .ia-legal{margin:auto -28px -48px}}

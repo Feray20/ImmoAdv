@@ -121,7 +121,7 @@ export function loginForm(root, opts) {
       <form id="areaForm" method="post" action="#" autocomplete="on" novalidate>
         <label>E-Mail<input id="aEmail" name="email" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
         <label>Passwort<span class="pw-wrap"><input id="aPw" name="password" type="password" minlength="8" autocomplete="${mode === 'signup' ? 'new-password' : 'current-password'}" required><button type="button" class="pw-eye" id="aEye">Anzeigen</button></span></label>
-        ${mode === 'login' ? `<label class="chk remember"><input id="aRem" type="checkbox"${localStorage.getItem(REM) === '1' ? ' checked' : ''}> Angemeldet bleiben <small>(nur auf eigenem Gerät)</small></label>` : ''}
+        ${mode === 'login' ? `<label class="chk remember"><input id="aRem" type="checkbox"${localStorage.getItem(REM) !== '0' ? ' checked' : ''}> Angemeldet bleiben <small>(nur auf eigenem Gerät)</small></label>` : ''}
         <div class="auth-message" id="aMsg" role="alert" hidden></div>
         <button class="btn btn-dark btn-lg" type="submit">${mode === 'signup' ? 'Konto anlegen' : 'Anmelden'}</button>
       </form>
