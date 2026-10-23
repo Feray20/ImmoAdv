@@ -26,7 +26,7 @@ export function adminPasswordError(pw: string | undefined | null): string | null
 
 // Zugang anlegen. Ohne eigenes Passwort wird ein Startpasswort erzeugt, das bei der ersten Anmeldung geändert werden muss.
 // Mit eigenem Passwort entscheidet der Admin, ob es bei der ersten Anmeldung geändert werden muss (mustChange).
-export async function createB2BLogin(email: string, name: string, area: 'b2b' | 'app' | 'creator' = 'b2b', opts: { password?: string | null; mustChange?: boolean } = {}): Promise<LoginResult> {
+export async function createB2BLogin(email: string, name: string, area: 'b2b' | 'app' | 'creator' = 'b2b', opts: { password?: string | null; mustChange?: boolean; meta?: Record<string, unknown> } = {}): Promise<LoginResult> {
   const own = opts.password || null;
   const bad = adminPasswordError(own);
   if (bad) return { ok: false, status: 400, error: bad };
@@ -34,10 +34,10 @@ export async function createB2BLogin(email: string, name: string, area: 'b2b' | 
   const mustChange = own ? opts.mustChange !== false : true;
   const { data, error } = await supabaseAdmin().auth.admin.createUser({
     email, password, email_confirm: true,
-    user_metadata: { must_change_password: mustChange, area, name: name.slice(0, 120), created_by_admin: true },
+    user_metadata: { must_change_password: mustChange, area, name: name.slice(0, 120), created_by_admin: true, ...(opts.meta || {}) },
   });
   if (error || !data.user) {
-    if (/already|exists|registered/i.test(error?.message || '')) return { ok: false, status: 409, error: 'Für diese E-Mail-Adresse gibt es bereits ein ImmoAdv-Konto. Bitte eine andere Adresse verwenden.' };
+    if (/already|exists|registered/i.test(error?.message || '')) return { ok: false, status: 409, error: area === 'creator' ? 'Für diese E-Mail-Adresse gibt es bereits ein Creator-Konto.' : area === 'b2b' ? 'Für diese E-Mail-Adresse gibt es bereits ein Konto im Unternehmensportal.' : 'Für diese E-Mail-Adresse gibt es bereits ein Konto im Kundenbereich.' };
     if (/password/i.test(error?.message || '')) return { ok: false, status: 400, error: 'Das Passwort wurde abgelehnt (zu schwach oder bekannt aus Datenlecks). Bitte ein anderes wählen.' };
     return { ok: false, status: 502, error: 'Zugang konnte nicht angelegt werden.' };
   }

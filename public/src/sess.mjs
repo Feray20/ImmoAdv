@@ -137,7 +137,7 @@ export function loginForm(root, opts) {
       </form>
       ${AREA === 'creator' ? `<div class="sso-box" id="aSso" hidden><div class="sso-or"><span>oder schneller</span></div><button type="button" class="btn sso-btn" data-sso="google" hidden>${SSO_ICON.google} Weiter mit Google</button><button type="button" class="btn sso-btn" data-sso="apple" hidden>${SSO_ICON.apple} Weiter mit Apple</button><button type="button" class="btn sso-btn" data-sso="azure" hidden>${SSO_ICON.azure} Weiter mit Microsoft</button><p class="form-note sso-legal">Noch kein Creator-Konto? Es wird dabei automatisch angelegt.</p></div>` : ''}
       ${AREA === 'b2b' && mode === 'login' ? `<div class="sso-box" id="aSso" hidden><div class="sso-or"><span>oder</span></div><button type="button" class="btn sso-btn" data-sso="google" hidden>${SSO_ICON.google} Mit Google anmelden</button><button type="button" class="btn sso-btn" data-sso="azure" hidden>${SSO_ICON.azure} Mit Microsoft anmelden</button><p class="form-note sso-legal">Nur für bestehende Unternehmenszugänge: Die E-Mail-Adresse des Google- bzw. Microsoft-Kontos muss Ihrem Zugang entsprechen.</p></div>` : ''}
-      <p class="form-note area-links">${mode === 'login' ? `<a class="ck-link" href="/auth/forgot${AREA === 'b2b' ? '?bereich=b2b' : ''}">Passwort vergessen?</a> · ` : ''}${opts.noteHtml || esc(opts.note || '')}</p></div>`;
+      <p class="form-note area-links">${mode === 'login' ? `<a class="ck-link" href="${AREA === 'creator' ? '/creator#passwort' : `/auth/forgot${AREA === 'b2b' ? '?bereich=b2b' : ''}`}">Passwort vergessen?</a> · ` : ''}${opts.noteHtml || esc(opts.note || '')}</p></div>`;
     if ((AREA === 'b2b' && mode === 'login') || AREA === 'creator') ssoBind(root);
     const f = root.querySelector('#areaForm'), em = root.querySelector('#aEmail'), pw = root.querySelector('#aPw'), m = root.querySelector('#aMsg');
     const show = (t, kind = 'error') => { m.hidden = false; m.className = 'auth-message ' + kind; m.textContent = t; if (kind === 'error') { f.classList.remove('shake'); void f.offsetWidth; f.classList.add('shake'); [em, pw].forEach((x) => x.classList.add('bad')); } };
@@ -153,6 +153,15 @@ export function loginForm(root, opts) {
       if (password.length < 8) { show(mode === 'signup' ? 'Bitte ein Passwort mit mindestens 8 Zeichen wählen.' : 'Falsche Anmeldedaten: Das Passwort ist zu kurz.'); pw.focus(); return; }
       f.dataset.busy = '1'; const btn = f.querySelector('button[type=submit]'); btn.disabled = true; show('Bitte warten …', 'info');
       try {
+        if (AREA === 'creator') {
+          // Creator-Bereich: eigene Konten – Anmeldung und Registrierung über den Server (interne Kontokennung).
+          const r = await fetch('/api/creator/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: mode === 'signup' ? 'signup' : 'login', email, password }) });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok) throw Error(d.error || (mode === 'signup' ? 'Registrierung fehlgeschlagen.' : 'Anmeldung fehlgeschlagen.'));
+          if (mode === 'signup') { show('Fast geschafft: Wir haben dir eine E-Mail geschickt. Bitte bestätige darin deine E-Mail-Adresse – danach bist du direkt im Creator-Bereich angemeldet.', 'success'); return; }
+          try { localStorage.setItem(REM, root.querySelector('#aRem')?.checked ? '1' : '0'); } catch { /* ignore */ }
+          setSession(d.session); location.reload(); return;
+        }
         if (mode === 'signup') {
           const r = await fetch('/api/auth/mail', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'signup', email, password, next: signup.next }) });
           if (r.status === 503) {
@@ -185,7 +194,7 @@ export function loginForm(root, opts) {
       finally { delete f.dataset.busy; btn.disabled = false; }
     };
     // Express-Login: erkennt beim Eintippen, ob die E-Mail schon ein Konto hat (gemeinsam für Privat- und Unternehmensbereich).
-    if (AREA !== 'admin') import('./email-detect.mjs').then((x) => x.attach(em, { mode: mode === 'signup' ? 'register' : 'login', actions: {
+    if (AREA !== 'admin' && AREA !== 'creator') import('./email-detect.mjs').then((x) => x.attach(em, { mode: mode === 'signup' ? 'register' : 'login', actions: {
       ...(signup ? { register: (v) => { draw('signup'); root.querySelector('#aEmail').value = v; root.querySelector('#aPw')?.focus(); }, login: (v) => { draw('login'); root.querySelector('#aEmail').value = v; root.querySelector('#aPw')?.focus(); } } : {}),
       ...(opts.onUnknown ? { register: (v) => opts.onUnknown(v) } : {}),
       sso: (p) => root.querySelector(`[data-sso="${p}"]`)?.click(),

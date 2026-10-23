@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { completeness, creatorCanEdit, creatorCanSubmit, missingSteps, nextBestAction, STEP_ORDER } from '@/lib/creator/model';
 import { SectionInput, firstIssue } from '@/lib/creator/schema';
 import { ensureOwnCreator, j, maskedPayout, onboardingState, ownCreator, requireCreatorUser, type CreatorRow } from '@/lib/creator/server';
+import { contactEmail } from '@/lib/creator/identity';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,9 +42,9 @@ export async function GET(req: Request) {
   if (!c) {
     // Unternehmenskonten können sich nicht als Creator bewerben – die Seite zeigt das sofort statt erst beim Klick.
     const { data: b2b } = await supabaseAdmin().from('immo_b2b_members').select('user_id').eq('user_id', g.user.id).maybeSingle();
-    return j({ email: g.user.email, creator: null, b2b: Boolean(b2b) });
+    return j({ email: await contactEmail(g.user), creator: null, b2b: Boolean(b2b) });
   }
-  return j(view(c, g.user.email, await onboardingState(c, g.user.id)));
+  return j(view(c, await contactEmail(g.user), await onboardingState(c, g.user.id)));
 }
 
 // Bewerbung beginnen (legt den Creator-Datensatz an). Bot-Schutz: Honigtopf-Feld + Zeitfalle.
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
   const { data: b2b } = await supabaseAdmin().from('immo_b2b_members').select('user_id').eq('user_id', g.user.id).maybeSingle();
   if (b2b) return j({ error: 'Dieses Konto gehört zu einem Unternehmenszugang. Bitte mit einer eigenen E-Mail-Adresse als Creator bewerben.' }, 409);
   const c = await ensureOwnCreator(g.user);
-  return j(view(c, g.user.email, await onboardingState(c, g.user.id)), 201);
+  return j(view(c, await contactEmail(g.user), await onboardingState(c, g.user.id)), 201);
 }
 
 // Einen Abschnitt speichern (Konto, Profil, Social Media, Rechnungsdaten). Zahlungsdaten: /api/creator/payout.
@@ -85,5 +86,5 @@ export async function PATCH(req: Request) {
   }
   if (error) return j({ error: 'Speichern fehlgeschlagen. Bitte erneut versuchen.' }, 500);
   const fresh = (await ownCreator(g.user.id))!;
-  return j(view(fresh, g.user.email, await onboardingState(fresh, g.user.id)));
+  return j(view(fresh, await contactEmail(g.user), await onboardingState(fresh, g.user.id)));
 }

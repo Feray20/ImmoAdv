@@ -5,6 +5,7 @@ import { creatorCanEdit } from '@/lib/creator/model';
 import { PayoutInput, firstIssue } from '@/lib/creator/schema';
 import { fingerprint, seal, vaultConfigured } from '@/lib/creator/vault';
 import { audit, creatorActor, currentPayout, j, maskedPayout, ownCreator, requireCreatorUser } from '@/lib/creator/server';
+import { contactEmail } from '@/lib/creator/identity';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
 
   // Sicherheits-Hinweis bei Änderung (nie mit vollständiger IBAN).
   if (before) {
-    await sendMail(g.user.email, 'Deine Zahlungsdaten bei ImmoAdv wurden geändert',
+    await sendMail(await contactEmail(g.user), 'Deine Zahlungsdaten bei ImmoAdv wurden geändert',
       `Hallo${c.first_name ? ' ' + c.first_name : ''},\n\nim ImmoAdv Creator-Portal wurden soeben deine Zahlungsdaten geändert. Neues Konto: ${maskIban(chk.country, chk.last4)}.\n\nWenn du das nicht selbst warst, antworte bitte sofort auf diese E-Mail oder schreibe an support@immoadv.de. Ausstehende Auszahlungen halten wir bis zur Klärung an.`,
       [], { title: 'Zahlungsdaten geändert' }).catch(() => false);
   }

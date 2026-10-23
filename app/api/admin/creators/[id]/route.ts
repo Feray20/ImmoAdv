@@ -4,6 +4,7 @@ import { actionNeedsMessage, adminTransition, allowedAdminActions, completeness,
 import { can } from '@/lib/creator/roles';
 import { AdminActionInput, firstIssue } from '@/lib/creator/schema';
 import { audit, j, maskedPayout, uniqueRefCode, onboardingState, requireCreatorAdmin, UUID_RE, type AuditEvent, type CreatorRow } from '@/lib/creator/server';
+import { contactEmail } from '@/lib/creator/identity';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,7 +43,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       id: c.id, status: c.status, display_name: c.display_name, company: c.company, website: c.website, bio: c.bio, categories: c.categories,
       country: c.country, ref_code: c.ref_code, info_request: c.info_request,
       submitted_at: c.submitted_at, reviewed_at: c.reviewed_at, approved_at: c.approved_at, created_at: c.created_at,
-      ...(can(a.role, 'creators.contact') ? { first_name: c.first_name, last_name: c.last_name, phone: c.phone, email: user?.data?.user?.email ?? null, email_confirmed: s.state.emailConfirmed } : {}),
+      ...(can(a.role, 'creators.contact') ? { first_name: c.first_name, last_name: c.last_name, phone: c.phone, email: user?.data?.user ? (await contactEmail(user.data.user)) || null : null, email_confirmed: s.state.emailConfirmed } : {}),
     },
     socials: s.socials,
     business: can(a.role, 'creators.business') ? s.business : undefined,
@@ -117,7 +118,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const mail = MAIL[action]?.(message);
   if (mail && c.user_id) {
     const { data: u } = await db.auth.admin.getUserById(c.user_id);
-    if (u?.user?.email) await sendMail(u.user.email, mail.subject, `Hallo ${c.first_name || ''},\n\n${mail.text}`, [], { title: mail.title }).catch(() => false);
+    if (u?.user?.email) await sendMail(await contactEmail(u.user), mail.subject, `Hallo ${c.first_name || ''},\n\n${mail.text}`, [], { title: mail.title }).catch(() => false);
   }
   return j({ ok: true, status: to });
 }
