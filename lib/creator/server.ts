@@ -58,10 +58,25 @@ async function adminActor(email: string, role: AdminRole): Promise<Actor> {
 }
 
 // ---------------- Creator-Zugang ----------------
+// Ist die Datenbank für den Creator Hub eingerichtet (Migrationen angewendet)? Solange nicht, antworten alle
+// Creator-Schnittstellen mit einem freundlichen Hinweis statt mit Fehlern. Positiv wird dauerhaft, negativ 60 s gemerkt.
+let schemaReadyAt = 0, schemaMissingAt = 0;
+export async function creatorSchemaReady(): Promise<boolean> {
+  if (schemaReadyAt) return true;
+  if (schemaMissingAt && Date.now() - schemaMissingAt < 60_000) return false;
+  const { error } = await supabaseAdmin().from('immo_creators').select('id', { head: true, count: 'exact' }).limit(1);
+  const missing = !!error && (error.code === '42P01' || error.code === 'PGRST205' || /does not exist|schema cache|Could not find the table/i.test(error.message));
+  if (missing) { schemaMissingAt = Date.now(); return false; }
+  if (!error) schemaReadyAt = Date.now();
+  return true; // andere Fehler normal weiterreichen
+}
+export const SETUP_PENDING = { error: 'Der Creator-Bereich wird gerade eingerichtet. Bitte schau in Kürze wieder vorbei.', code: 'setup' } as const;
+
 export async function requireCreatorUser(req: Request, bucket: string, limit = 60): Promise<{ user: AuthUser } | NextResponse> {
   if (!adminConfigured()) return j({ error: 'Nicht verfügbar.' }, 503);
   const user = await userFromRequest(req);
   if (!user) return j({ error: 'Bitte anmelden.' }, 401);
+  if (!(await creatorSchemaReady())) return j(SETUP_PENDING, 503);
   if (!allowRequest(`creator-${bucket}:${user.id}`, limit, 60_000)) return j({ error: 'Zu viele Anfragen. Bitte kurz warten.' }, 429);
   if (!allowRequest(`creator-ip:${anonymizedIpHash(req) ?? 'x'}`, 240, 60_000)) return j({ error: 'Zu viele Anfragen. Bitte kurz warten.' }, 429);
   return { user };
@@ -172,6 +187,7 @@ export async function requireCreatorAdmin(req: Request, perm: Permission, creato
   const auth = await requireAdmin(req);
   if (auth instanceof NextResponse) return auth;
   if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
+  if (!(await creatorSchemaReady())) return j({ error: 'Der Creator Hub ist noch nicht eingerichtet: Bitte die Datenbank-Migrationen aus docs/sql (2026-10-22 bis 2026-10-25) im Supabase SQL Editor ausführen.', code: 'setup' }, 503);
   const email = auth.user.email;
   const role = await adminRoleOf(email);
   const actor = await adminActor(email, role);

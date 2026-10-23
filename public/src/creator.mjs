@@ -68,6 +68,7 @@ async function boot() {
   if (!token()) { landing(false); return; }
   const r = await api('/api/creator/me');
   if (r.status === 401) { landing(false); return; }
+  if (r.data?.code === 'setup') { root.innerHTML = `<div class="cr-wrap"><section class="pt-card cr-setup"><h1>Gleich geht's los</h1><p>${esc(r.data.error)}</p><p class="form-note">Deine Anmeldung bleibt bestehen. Fragen? <a href="mailto:support@immoadv.de">support@immoadv.de</a></p></section></div>`; return; }
   if (!r.ok) { root.innerHTML = `<div class="cr-wrap"><div class="pt-alert bad">${esc(r.data?.error || 'Der Creator-Bereich konnte nicht geladen werden.')} <button type="button" class="btn btn-outline" id="crRetry">Erneut versuchen</button></div></div>`; $('#crRetry').onclick = boot; return; }
   me = r.data;
   routeByStatus();
