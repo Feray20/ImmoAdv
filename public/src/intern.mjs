@@ -201,7 +201,7 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
       <div class="us-top"><strong>${esc(u.email || '(ohne E-Mail)')}</strong><span class="us-tags">${u.admin ? '<span class="st ok">Admin</span>' : ''}${u.banned ? '<span class="st bad">gesperrt</span>' : ''}${u.confirmed ? '' : '<span class="st warn">unbestätigt</span>'}${u.mfa ? '<span class="st ok">2FA</span>' : '<span class="st">ohne 2FA</span>'}</span></div>
       ${u.company ? `<p class="us-co"><strong>${esc(u.company.name)}</strong> · ${esc(u.company.number || '')} · ${u.company.role === 'owner' ? 'Inhaber' : 'Berater'} · ${u.company.verified ? '<span class="st ok">verifiziert</span>' : `<span class="st warn">${esc(u.company.status || 'offen')}</span>`}</p>` : ''}
       <dl class="us-meta"><div><dt>Registriert</dt><dd>${dt(u.createdAt)}</dd></div><div><dt>Letzte Anmeldung</dt><dd>${ago(u.lastSignIn)}</dd></div></dl>
-      <div class="us-act">${seg === 'b2c' && !u.admin && !u.company ? `<button type="button" class="btn btn-dark" data-acc="${esc(u.id)}" data-mail="${esc(u.email)}">Zugriff freischalten</button>` : ''}${u.confirmed ? '' : `<button type="button" class="btn btn-dark" data-us="confirm" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Bestätigung erneut senden</button>`}<button type="button" class="btn btn-outline" data-us="reset" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Passwort-Reset senden</button>${u.admin ? '' : `<button type="button" class="btn ${u.banned ? 'btn-outline' : 'btn-danger'}" data-us="${u.banned ? 'unban' : 'ban'}" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">${u.banned ? 'Entsperren' : 'Sperren'}</button><button type="button" class="btn btn-danger" data-us="delete" data-id="${esc(u.id)}" data-mail="${esc(u.email)}" data-co="${u.company ? esc(u.company.role) : ''}">Konto löschen</button>`}</div>
+      <div class="us-act">${seg === 'b2c' && !u.admin && !u.company ? `<button type="button" class="btn btn-dark" data-acc="${esc(u.id)}" data-mail="${esc(u.email)}">Zugriff freischalten</button>` : ''}${u.company && u.company.role === 'owner' && !u.company.verified ? `<button type="button" class="btn btn-dark" data-coapprove="${esc(u.company.id)}" data-name="${esc(u.company.name)}">Unternehmen freischalten</button>` : ''}${u.company ? `<button type="button" class="btn btn-outline" data-coopen="${esc(u.company.id)}">Zugänge &amp; Module</button>` : ''}${u.confirmed ? '' : `<button type="button" class="btn btn-dark" data-us="confirm" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Bestätigung erneut senden</button>`}<button type="button" class="btn btn-outline" data-us="reset" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Passwort-Reset senden</button>${u.admin ? '' : `<button type="button" class="btn ${u.banned ? 'btn-outline' : 'btn-danger'}" data-us="${u.banned ? 'unban' : 'ban'}" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">${u.banned ? 'Entsperren' : 'Sperren'}</button><button type="button" class="btn btn-danger" data-us="delete" data-id="${esc(u.id)}" data-mail="${esc(u.email)}" data-co="${u.company ? esc(u.company.role) : ''}">Konto löschen</button>`}</div>
     </article>`).join('') || emptyState('Keine Konten gefunden', q ? 'Für diese Suche gibt es keinen Treffer. Bitte die E-Mail-Adresse prüfen.' : 'Sobald sich jemand registriert, erscheint das Konto hier.')}</div>
     <div class="pt-row">${page > 1 ? '<button class="btn btn-ghost" id="usPrev" type="button">← Zurück</button>' : ''}${r.data.more ? '<button class="btn btn-ghost" id="usNext" type="button">Weiter →</button>' : ''}</div></section>`;
   $('#usMk')?.addEventListener('click', () => (seg === 'b2c' ? openCreatePrivate(() => nutzer(v, 1, '', seg)) : openCreateAccount(null, () => nutzer(v, 1, '', seg))));
@@ -221,6 +221,14 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
   $('#usPrev')?.addEventListener('click', () => nutzer(v, page - 1, q, seg));
   $('#usNext')?.addEventListener('click', () => nutzer(v, page + 1, q, seg));
   v.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => import('./intern-feedback.mjs').then((m) => m.accessDialog(b.dataset.acc, b.dataset.mail, msg)));
+  v.querySelectorAll('[data-coapprove]').forEach((b) => b.onclick = async () => {
+    if (!confirm(`${b.dataset.name} freischalten? Das Unternehmen erhält eine E-Mail.`)) return;
+    b.disabled = true;
+    const x = await api('/api/admin/b2b', { method: 'POST', body: JSON.stringify({ action: 'approve', id: b.dataset.coapprove }) });
+    if (!x.ok) { msg(x.data?.error || 'Freischalten fehlgeschlagen.', true); b.disabled = false; return; }
+    msg('Unternehmen freigeschaltet.'); nutzer(v, page, q, seg);
+  });
+  v.querySelectorAll('[data-coopen]').forEach((b) => b.onclick = () => { try { sessionStorage.setItem('ia-admin-open-partner', b.dataset.coopen); } catch { /* ignore */ } location.hash = 'partner'; });
   v.querySelectorAll('[data-us]').forEach((b) => b.onclick = async () => {
     const a = b.dataset.us, m = b.dataset.mail;
     const ask = { ban: `Konto ${m} sperren? Anmelden ist dann nicht mehr möglich; offene Sitzungen laufen spätestens nach einer Stunde aus.`, unban: `Konto ${m} wieder freigeben?`, confirm: `Bestätigungs-E-Mail erneut an ${m} senden?`, reset: `E-Mail zum Zurücksetzen des Passworts an ${m} senden?` }[a];
@@ -771,6 +779,8 @@ async function partner(v) {
     const q = $('#pq').value.toLowerCase();
     v.querySelectorAll('[data-row]').forEach((tr) => { tr.hidden = (q && !tr.dataset.q.includes(q)) || (pf && !tr.dataset.s.split(' ').includes(pf)); });
   };
+  { let open = null; try { open = sessionStorage.getItem('ia-admin-open-partner'); sessionStorage.removeItem('ia-admin-open-partner'); } catch { /* ignore */ }
+    if (open) setTimeout(() => { details(open); $('#invForm')?.scrollIntoView({ block: 'start' }); }, 0); }
   $('#pq').oninput = filter;
   if ($('#ps')) $('#ps').onchange = () => { pf = $('#ps').value; filter(); };
   v.querySelectorAll('[data-pf]').forEach((b) => b.onclick = () => { pf = b.dataset.pf; v.querySelectorAll('[data-pf]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); filter(); });

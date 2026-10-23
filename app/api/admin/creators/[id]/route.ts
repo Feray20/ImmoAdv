@@ -52,7 +52,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     completeness: done,
     missing: missingSteps(s.state),
     actions: allowedAdminActions(c.status).filter((x) => can(a.role, x === 'SUSPEND' || x === 'REACTIVATE' ? 'creators.suspend' : 'creators.review')),
-    can: { reveal: can(a.role, 'bank.reveal'), verify: can(a.role, 'bank.verify'), campaigns: can(a.role, 'campaigns.manage'), conversions: can(a.role, 'conversions.read'), reverse: can(a.role, 'conversions.manage'), content: can(a.role, 'content.review') },
+    can: { reveal: can(a.role, 'bank.reveal'), verify: can(a.role, 'bank.verify'), campaigns: can(a.role, 'campaigns.manage'), conversions: can(a.role, 'conversions.read'), reverse: can(a.role, 'conversions.manage'), content: can(a.role, 'content.review'), delete: can(a.role, 'creators.suspend') && Boolean(c.user_id) },
     link: c.ref_code ? `https://immoadv.de/?ref=${c.ref_code}` : null,
     billing: can(a.role, 'billing.read') ? { mode: (c as unknown as { billing_mode?: string }).billing_mode ?? 'INVOICE', manage: can(a.role, 'billing.manage'), statements: statements?.data ?? [] } : undefined,
     benefits: benefits.data ?? [],
