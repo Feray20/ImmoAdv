@@ -92,21 +92,49 @@ async function refresh() {
 // ---------- Landingpage ----------
 function landing(loggedIn) {
   document.title = 'ImmoAdv Creator Partner';
-  root.innerHTML = `<div class="cr-wrap">
+  const stepLi = (n, t, d) => `<li><span class="cr-step-n" aria-hidden="true">${n}</span><div><h3>${t}</h3><p>${d}</p></div></li>`;
+  const get = (t, d) => `<article class="pt-card"><h3>${t}</h3><p>${d}</p></article>`;
+  root.innerHTML = `<header class="cr-bar"><a class="cr-brand" href="/" aria-label="ImmoAdv – zur Startseite"><img src="/logo-icon.svg" alt="" width="32" height="27"><span>Immo<span>Adv</span></span></a>
+      <button type="button" class="btn btn-outline btn-sm" id="crLogin">${loggedIn ? 'Weiter zur Bewerbung' : 'Anmelden'}</button></header>
+    <div class="cr-wrap">
     <section class="cr-hero"><span class="cr-kick">Creator Partner</span>
       <h1>ImmoAdv Creator Partner</h1>
       <p class="lead">Erstelle Content in deinem eigenen Stil und erhalte Zugang zu ImmoAdv Tools, Kampagnen, Assets und einem transparenten Creator-System.</p>
       <p>Du bringst deine Community und deinen eigenen Content-Stil mit. ImmoAdv stellt dir die notwendigen Informationen, Tools, Assets und Unterstützung bereit.</p>
-      <form id="crStart"><div class="cr-hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
-        <button class="btn btn-dark btn-lg" type="submit">Als Creator bewerben</button></form>
+      <form id="crStart" class="cr-hero-cta"><div class="cr-hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+        <button class="btn btn-lg cr-cta" type="submit">Als Creator bewerben</button><a class="cr-hero-link" href="#so-gehts">So funktioniert’s</a></form>
       <p class="cr-msg pt-alert bad" hidden></p>
+      <ul class="cr-facts" aria-label="Auf einen Blick"><li>Bewerbung in ca. 10 Minuten</li><li>Keine Social-Media-Verbindung</li><li>Monatliche Abrechnung</li></ul>
     </section>
-    <div class="cr-cards">
-      <article class="pt-card"><h3>Einmal eingeben</h3><p>Du gibst deine Angaben einmal ein. Wir verwenden sie danach überall wieder – für Profil, Abrechnung und Auszahlung.</p></article>
-      <article class="pt-card"><h3>Keine Konto-Verbindung</h3><p>Wir brauchen nur öffentliche Profilangaben. Keine Passwörter, kein Login mit deinen Social-Media-Konten.</p></article>
-      <article class="pt-card"><h3>Transparent</h3><p>Nach der Freigabe siehst du im Creator-Portal jederzeit deinen Stand, deine Vereinbarung und deine Zahlungsdaten.</p></article>
-    </div>
-    <p class="form-note">Du hast schon ein Creator-Konto? Klicke auf „Als Creator bewerben“ und melde dich an – dein Stand bleibt erhalten.</p>
+
+    <section class="cr-sec-block" id="so-gehts" aria-labelledby="crHow"><h2 id="crHow">So funktioniert’s</h2>
+      <ol class="cr-steps-list">
+        ${stepLi(1, 'Bewerben', 'Profil, Social-Media-Kanäle, Rechnungs- und Auszahlungsdaten einmal eingeben und die Vereinbarung bestätigen.')}
+        ${stepLi(2, 'Prüfung durch ImmoAdv', 'Wir sehen uns deine Bewerbung an und melden uns – bei Rückfragen direkt im Portal.')}
+        ${stepLi(3, 'Loslegen', 'Nach der Freigabe erhältst du deinen persönlichen Link, Kampagnen, Briefings und freigegebene Materialien.')}
+        ${stepLi(4, 'Abrechnung und Auszahlung', 'Provision wird monatlich serverseitig berechnet. Rechnung per Klick erstellen, Auszahlung per Überweisung.')}
+      </ol></section>
+
+    <section class="cr-sec-block" aria-labelledby="crGet"><h2 id="crGet">Was du bekommst</h2>
+      <div class="cr-cards cr-cards-6">
+        ${get('Kampagnen und Briefings', 'Klare Themen, Do’s und Don’ts – den Content gestaltest du in deinem Stil.')}
+        ${get('Asset Library', 'Logos, Screenshots, Videos und Texte, die du verwenden darfst – immer aktuell.')}
+        ${get('Persönlicher Link und Vorteil', 'Dein Link und ein Community-Vorteil für deine Zuschauer, ohne personenbezogene Daten im Link.')}
+        ${get('Performance', 'Besuche, Registrierungen und Käufe je Kampagne – als Summen, ohne Kundendaten.')}
+        ${get('Transparente Provision', 'Versionierte Regeln, monatliche Abrechnung mit PDF und Rechnung per Klick.')}
+        ${get('Auszahlung', 'Auf dein hinterlegtes Konto. Du siehst jederzeit, wann das Geld kommt.')}
+      </div></section>
+
+    <section class="cr-sec-block" aria-labelledby="crTrust"><h2 id="crTrust">Darauf kannst du dich verlassen</h2>
+      <div class="cr-cards">
+        ${get('Einmal eingeben', 'Du gibst deine Angaben einmal ein. Wir verwenden sie danach überall wieder – für Profil, Abrechnung und Auszahlung.')}
+        ${get('Keine Konto-Verbindung', 'Wir brauchen nur öffentliche Profilangaben. Keine Passwörter, kein Login mit deinen Social-Media-Konten.')}
+        ${get('Geschützte Zahlungsdaten', 'Deine IBAN wird verschlüsselt gespeichert und nur maskiert angezeigt. Jeder Zugriff wird protokolliert.')}
+      </div></section>
+
+    <section class="cr-end"><h2>Bereit?</h2><p>Die Bewerbung dauert etwa 10 Minuten. Du kannst jederzeit unterbrechen – dein Stand bleibt gespeichert.</p>
+      <button type="button" class="btn btn-dark btn-lg" id="crStart2">Als Creator bewerben</button>
+      <p class="form-note">Schon ein Creator-Konto? <button type="button" class="link-btn" id="crLogin2">Hier anmelden</button></p></section>
   </div>`;
   const ts = Date.now();
   $('#crStart').onsubmit = async (e) => {
@@ -118,6 +146,9 @@ function landing(loggedIn) {
     if (!r.ok) { const m = $('.cr-msg'); m.hidden = false; m.textContent = r.data?.error || 'Das hat nicht geklappt. Bitte erneut versuchen.'; return; }
     me = r.data; step = 'account'; routeByStatus();
   };
+  const go = () => $('#crStart').requestSubmit();
+  for (const id of ['#crLogin', '#crStart2', '#crLogin2']) $(id)?.addEventListener('click', go);
+  $('.cr-hero-link')?.addEventListener('click', (e) => { e.preventDefault(); $('#so-gehts')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
 }
 
 function authForm() {
