@@ -249,7 +249,7 @@ async function detail(v, id) {
       ${c.status === 'SUBMITTED' || c.status === 'UNDER_REVIEW' ? '<p class="form-note" style="margin:4px 0 0">Neue Creator-Bewerbung</p>' : ''}
       <ul class="cr-done" style="display:flex;flex-wrap:wrap;gap:6px 16px">${Object.entries(steps).map(([k, l]) => `<li class="${d.completeness[k] ? '' : 'miss'}"><span aria-hidden="true">${d.completeness[k] ? '✓' : '!'}</span>${esc(l)}</li>`).join('')}</ul>
       ${c.info_request ? `<div class="pt-alert warn"><strong>Offene Rückfrage:</strong> ${esc(c.info_request)}</div>` : ''}
-      <div class="co-actions" id="coAct">${d.actions.map((a) => `<button type="button" class="btn ${ACT[a][1]}" data-a="${a}">${ACT[a][0]}</button>`).join('') || '<span class="form-note">Keine Aktion in diesem Status bzw. für Ihre Rolle.</span>'}</div></section>
+      <div class="co-actions" id="coAct">${d.actions.map((a) => `<button type="button" class="btn ${ACT[a][1]}" data-a="${a}">${ACT[a][0]}</button>`).join('') || '<span class="form-note">Keine Aktion in diesem Status bzw. für Ihre Rolle.</span>'}${d.can.delete ? '<button type="button" class="btn btn-danger" id="coDel">Konto löschen</button>' : ''}</div></section>
     <div class="pt-grid2 co-360">
       <section class="pt-card"><h3>Profil</h3>${dl([
         ['Name', c.first_name !== undefined ? esc([c.first_name, c.last_name].filter(Boolean).join(' ')) : '<span class="form-note">für Ihre Rolle ausgeblendet</span>'],
@@ -287,6 +287,16 @@ async function detail(v, id) {
     ${d.audit ? `<section class="pt-card"><h3>Audit</h3><p class="form-note">Unveränderbares Protokoll. Akteure pseudonymisiert, keine Zahlungsdaten.</p><div style="overflow-x:auto"><table class="ad-table co-audit"><thead><tr><th>Zeit</th><th>Ereignis</th><th>Wer</th><th>Ergebnis</th></tr></thead><tbody>${d.audit.map((a) => `<tr><td>${dtt(a.created_at)}</td><td>${esc(EV[a.event_type] || a.event_type)}</td><td>${esc(a.actor_kind === 'creator' ? 'Creator' : `${a.actor_role || ''} ${a.actor_ref}`)}</td><td>${a.result === 'SUCCESS' ? '<span class="st ok" style="margin:0">ok</span>' : `<span class="st bad" style="margin:0">${esc(a.result)}</span>`}</td></tr>`).join('')}</tbody></table></div></section>` : ''}`;
 
   v.querySelectorAll('[data-a]').forEach((btn) => btn.onclick = () => decide(v, id, btn.dataset.a, c));
+  v.querySelector('#coDel')?.addEventListener('click', async (e) => {
+    const m = c.email || '';
+    const typed = prompt(`Creator-Konto ${c.display_name || ''} endgültig löschen?\n\nZugang, Profil, Social, Beiträge und Zahlungsdaten werden entfernt. Bereits erstellte Abrechnungen, Gutschriften und Auszahlungen bleiben wegen der gesetzlichen Aufbewahrung erhalten. Das lässt sich nicht rückgängig machen.\n\nZur Bestätigung die E-Mail-Adresse${m ? ` (${m})` : ''} eingeben:`);
+    if (typed === null) return;
+    e.target.disabled = true;
+    const x = await api(`/api/admin/creators/${id}/delete`, { method: 'POST', body: JSON.stringify({ confirmEmail: typed.trim() }) });
+    if (!x.ok) { alert(x.data?.error || 'Löschen fehlgeschlagen.'); e.target.disabled = false; return; }
+    alert(x.data.mode === 'retained' ? 'Konto gelöscht. Die Abrechnungsdaten werden gesetzlich aufbewahrt.' : 'Creator-Konto vollständig gelöscht.');
+    location.hash = '#creator';
+  });
   const benefitDlg = (b) => dialog(`<h2 style="margin:0;color:#0F2C59">${b ? 'Vorteil bearbeiten' : 'Community-Vorteil anlegen'}</h2><div class="ad-grid2">
       <label>Code*<input name="code" required maxlength="20" pattern="[A-Za-z0-9]{3,20}" value="${esc(b?.code || (c.display_name || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12))}"></label>
       <label>Status<select name="active"><option value="1"${!b || b.active ? ' selected' : ''}>aktiv</option><option value="0"${b && !b.active ? ' selected' : ''}>inaktiv</option></select></label>

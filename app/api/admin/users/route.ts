@@ -49,7 +49,7 @@ export async function GET(req: Request) {
       mfa: (u.factors || []).some((f) => f.status === 'verified'),
       banned: Boolean((u as { banned_until?: string }).banned_until && new Date((u as { banned_until?: string }).banned_until!).getTime() > now),
       admin: isAdminEmail(u.email || ''),
-      company: (() => { const m = memByUser.get(u.id); const a = m ? accById.get(m.account_id) : null; return a ? { name: a.company_name, number: a.customer_number, role: m!.role, verified: Boolean(a.verified_at), status: a.verification_status } : null; })(),
+      company: (() => { const m = memByUser.get(u.id); const a = m ? accById.get(m.account_id) : null; return a ? { id: a.id, name: a.company_name, number: a.customer_number, role: m!.role, verified: Boolean(a.verified_at), status: a.verification_status } : null; })(),
     }))
     // Creator-Konten (eigene Kennung) werden in Creator Operations verwaltet, nicht in den Kundenlisten.
     .filter((u) => !isCreatorAuthEmail(u.email))
