@@ -914,6 +914,11 @@ body.is-app main>:has(+.ia-legal){margin-bottom:40px}
 body.is-app main .container{max-width:1320px}
 body.is-app main>.section{padding-bottom:40px}
 body.is-app main .ia-legal{margin:auto -28px -48px}}
+html:has(dialog.ad-dlg[open]),html:has(dialog.buy-dlg[open]){overflow:hidden}
+.ad-dlg[open],.buy-dlg[open]{display:flex;flex-direction:column;overflow:hidden;max-height:calc(100vh - 24px);max-height:calc(100svh - 24px)}
+.ad-dlg[open]>*,.buy-dlg[open]>*{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+@media (max-width:640px){.ad-dlg[open],.buy-dlg[open]{max-height:calc(100vh - 12px);max-height:calc(100svh - 12px)}
+.ad-dlg[open]>*,.buy-dlg[open]>*{padding-bottom:calc(28px + env(safe-area-inset-bottom))}}
 .btn,a.btn,button.btn,.hs-go,a.hs-go,.btn-pay,.km-go{border-radius:999px!important}
 .mobile-menu{border-radius:999px!important;padding-left:14px;padding-right:16px}
 .mobile-nav a[href="/app/dashboard"],html:not(.ia-user) .mobile-nav a[href="/auth/login"]{border-radius:999px!important}
