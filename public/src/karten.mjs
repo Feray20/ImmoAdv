@@ -61,7 +61,7 @@ async function landing() {
 async function preise() {
   const meta = $('#pvMeta'), list = $('#pvList');
   let d;
-  try { const r = await fetch('/api/karten/preise'); if (!r.ok) throw 0; d = await r.json(); }
+  try { const r = await fetch('/api/karten/preise'); if (!r.ok) throw 0; d = await r.json(); if (!d || !Array.isArray(d.chapters)) throw 0; }
   catch { list.innerHTML = '<div class="k-empty"><strong>Das Preisverzeichnis konnte nicht geladen werden.</strong><span>Bitte laden Sie die Seite neu oder nutzen Sie den PDF-Download.</span><button class="k-btn ghost" type="button" id="pvRetry">Erneut versuchen</button></div>'; meta.hidden = true; $('#pvRetry').onclick = () => location.reload(); return; }
   const draft = d.status !== 'PUBLISHED';
   meta.innerHTML = `<div class="k-rows"><div><span>Dokument-ID</span><b>${esc(d.documentId)}</b></div><div><span>Version</span><b>${esc(d.version)}</b></div><div><span>Status</span><b>${draft ? '<span class="k-chip warn">Entwurf – noch nicht gültig</span>' : '<span class="k-chip ok">Veröffentlicht</span>'}</b></div><div><span>Gültig ab</span><b>${d.effectiveFrom ? new Date(d.effectiveFrom).toLocaleDateString('de-DE') : 'noch nicht festgelegt'}</b></div><div><span>Prüfsumme (SHA-256)</span><b class="k-mask" style="letter-spacing:0;font-size:12.5px;word-break:break-all">${esc(String(d.hash || "").slice(0, 32))}…</b></div></div>`;
