@@ -68,7 +68,7 @@ const mask = (c, l4) => `${c}${'•'.repeat(10)}${l4}`;
 // ---------- Start ----------
 const DIRECT_LOGIN = new URLSearchParams(location.search).has('anmelden') || location.hash === '#anmelden';
 async function boot() {
-  if (!token()) { landing(false); if (DIRECT_LOGIN) authForm('login'); return; }
+  if (!token()) { landing(false); if (DIRECT_LOGIN) { history.replaceState(null, '', '/creator'); authForm('login'); } return; }
   const r = await api('/api/creator/me');
   if (r.status === 401) { landing(false); return; }
   if (r.data?.code === 'setup') { root.innerHTML = `<div class="cr-wrap"><section class="pt-card cr-setup"><h1>Gleich geht's los</h1><p>${esc(r.data.error)}</p><p class="form-note">Deine Anmeldung bleibt bestehen. Fragen? <a href="mailto:support@immoadv.de">support@immoadv.de</a></p></section></div>`; return; }
@@ -144,8 +144,14 @@ function switchAccount() {
   authForm('login', 'Bitte melde dich mit deinem Creator-Konto an oder lege ein neues an.');
 }
 
+// Zurück aus dem Anmeldeformular: eigener Verlaufseintrag, damit auch die Zurück-Taste/Wischgeste des Browsers zur Seite führt.
+function backToLanding() { if (history.state?.crAuth) history.back(); else { history.replaceState(null, '', '/creator'); landing(Boolean(token())); } }
+window.addEventListener('popstate', () => { if (!history.state?.crAuth && $('#areaForm', root)) { landing(Boolean(token()) && Boolean(me)); window.scrollTo({ top: 0 }); } });
+
 function authForm(mode = 'signup', notice = '') {
+  if (!history.state?.crAuth) history.pushState({ crAuth: true }, '', mode === 'signup' ? '#registrieren' : '#anmelden');
   loginForm(root, {
+    back: { label: 'Zurück zur Übersicht', go: backToLanding },
     title: 'Creator-Konto',
     lead: 'Melde dich mit deinem Creator-Konto an, um deine Bewerbung zu beginnen oder fortzusetzen. Der Creator-Bereich hat eine eigene Anmeldung.',
     signupLead: 'Lege dein Creator-Konto an. Danach bestätigst du deine E-Mail-Adresse und kannst deine Bewerbung ausfüllen.',

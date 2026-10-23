@@ -96,6 +96,7 @@ function authError(d) {
 // opts: { title, lead, signupLead, note, check(session) -> Promise<string|null> (Fehlertext, wenn kein Zugang), signup: { next } }
 // Express-Anmeldung im Unternehmensportal (Google, Microsoft/Azure AD). Knöpfe erscheinen nur, wenn der Anbieter in Supabase aktiviert ist.
 const SSO_ICON = {
+  apple: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9s-2.1-.9-3.4-.9c-1.8 0-3.4 1-4.3 2.6-1.8 3.2-.5 7.9 1.3 10.5.9 1.3 1.9 2.7 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.4.8c1.4 0 2.3-1.3 3.1-2.6 1-1.5 1.4-2.9 1.4-3-.1 0-2.6-1-2.6-4.2zM14 4.9c.7-.9 1.2-2 1.1-3.2-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.1.1 2.3-.6 3-1.5z"/></svg>',
   google: '<svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>',
   azure: '<svg viewBox="0 0 21 21" width="18" height="18" aria-hidden="true"><path fill="#F25022" d="M1 1h9v9H1z"/><path fill="#7FBA00" d="M11 1h9v9h-9z"/><path fill="#00A4EF" d="M1 11h9v9H1z"/><path fill="#FFB900" d="M11 11h9v9h-9z"/></svg>',
 };
@@ -111,7 +112,10 @@ async function ssoBind(root) {
     b.onclick = () => {
       try { localStorage.setItem(REM, root.querySelector('#aRem')?.checked ? '1' : '0'); } catch { /* ohne Speicher */ }
       const scopes = prov === 'azure' ? '&scopes=' + encodeURIComponent('email openid profile') : '';
-      location.href = c.url + '/auth/v1/authorize?provider=' + prov + scopes + '&redirect_to=' + encodeURIComponent(location.origin + '/b2b-portal');
+      // Creator-Bereich: Rückkehr über /auth/callback (in Supabase freigegeben), die Sitzung landet dort in der Creator-Sitzung.
+      let back = location.origin + '/b2b-portal';
+      if (AREA === 'creator') { try { sessionStorage.setItem('ia-next', '/creator'); } catch { /* ohne Speicher */ } back = location.origin + '/auth/callback'; }
+      location.href = c.url + '/auth/v1/authorize?provider=' + prov + scopes + '&redirect_to=' + encodeURIComponent(back);
     };
   });
   box.hidden = !any;
@@ -121,6 +125,7 @@ export function loginForm(root, opts) {
   const signup = opts.signup;
   const draw = (mode = 'login') => {
     root.innerHTML = `<div class="area-login"><a class="pt-brand dark" href="/"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a>
+      ${opts.back ? `<button type="button" class="area-back" id="aBack">← ${esc(opts.back.label)}</button>` : ''}
       <h1>${esc(opts.title)}</h1><p class="form-note">${esc(mode === 'signup' ? (opts.signupLead || 'Neues Konto für Ihr Unternehmen anlegen. Danach registrieren Sie hier Ihr Unternehmen.') : opts.lead)}</p>
       ${signup ? `<div class="seg area-seg" role="tablist"><button type="button" role="tab" data-mode="login" aria-selected="${mode === 'login'}">Anmelden</button><button type="button" role="tab" data-mode="signup" aria-selected="${mode === 'signup'}">Konto anlegen</button></div>` : ''}
       <form id="areaForm" method="post" action="#" autocomplete="on" novalidate>
@@ -130,14 +135,16 @@ export function loginForm(root, opts) {
         <div class="auth-message" id="aMsg" role="alert" hidden></div>
         <button class="btn btn-dark btn-lg" type="submit">${mode === 'signup' ? 'Konto anlegen' : 'Anmelden'}</button>
       </form>
+      ${AREA === 'creator' ? `<div class="sso-box" id="aSso" hidden><div class="sso-or"><span>oder schneller</span></div><button type="button" class="btn sso-btn" data-sso="google" hidden>${SSO_ICON.google} Weiter mit Google</button><button type="button" class="btn sso-btn" data-sso="apple" hidden>${SSO_ICON.apple} Weiter mit Apple</button><button type="button" class="btn sso-btn" data-sso="azure" hidden>${SSO_ICON.azure} Weiter mit Microsoft</button><p class="form-note sso-legal">Noch kein Creator-Konto? Es wird dabei automatisch angelegt.</p></div>` : ''}
       ${AREA === 'b2b' && mode === 'login' ? `<div class="sso-box" id="aSso" hidden><div class="sso-or"><span>oder</span></div><button type="button" class="btn sso-btn" data-sso="google" hidden>${SSO_ICON.google} Mit Google anmelden</button><button type="button" class="btn sso-btn" data-sso="azure" hidden>${SSO_ICON.azure} Mit Microsoft anmelden</button><p class="form-note sso-legal">Nur für bestehende Unternehmenszugänge: Die E-Mail-Adresse des Google- bzw. Microsoft-Kontos muss Ihrem Zugang entsprechen.</p></div>` : ''}
       <p class="form-note area-links">${mode === 'login' ? `<a class="ck-link" href="/auth/forgot${AREA === 'b2b' ? '?bereich=b2b' : ''}">Passwort vergessen?</a> · ` : ''}${opts.noteHtml || esc(opts.note || '')}</p></div>`;
-    if (AREA === 'b2b' && mode === 'login') ssoBind(root);
+    if ((AREA === 'b2b' && mode === 'login') || AREA === 'creator') ssoBind(root);
     const f = root.querySelector('#areaForm'), em = root.querySelector('#aEmail'), pw = root.querySelector('#aPw'), m = root.querySelector('#aMsg');
     const show = (t, kind = 'error') => { m.hidden = false; m.className = 'auth-message ' + kind; m.textContent = t; if (kind === 'error') { f.classList.remove('shake'); void f.offsetWidth; f.classList.add('shake'); [em, pw].forEach((x) => x.classList.add('bad')); } };
     [em, pw].forEach((x) => x.addEventListener('input', () => { x.classList.remove('bad'); m.hidden = true; }));
     root.querySelector('#aEye').onclick = (e) => { const sh = pw.type === 'password'; pw.type = sh ? 'text' : 'password'; e.target.textContent = sh ? 'Verbergen' : 'Anzeigen'; };
     root.querySelectorAll('[data-mode]').forEach((b) => b.onclick = () => draw(b.dataset.mode));
+    root.querySelector('#aBack')?.addEventListener('click', () => opts.back.go());
     f.onsubmit = async (e) => {
       e.preventDefault();
       if (f.dataset.busy) return;
