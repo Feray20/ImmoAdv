@@ -72,6 +72,7 @@ module.exports = {
   async redirects() {
     return [
       { source: '/fuer-banken', destination: '/b2b', permanent: true },
+      { source: '/agb', destination: '/nutzungsbedingungen', permanent: true },
       // Direkte Anmeldung für Creator (Link zum Weitergeben): öffnet /creator gleich mit dem Anmeldeformular.
       { source: '/creator/anmelden', destination: '/creator?anmelden', permanent: false },
       { source: '/creator/login', destination: '/creator?anmelden', permanent: false },
