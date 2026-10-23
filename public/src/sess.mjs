@@ -32,7 +32,8 @@ export async function supa(path, opts = {}) {
 export async function refresh() {
   const s = session();
   if (!s?.refresh_token) return false;
-  const r = await supa('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: JSON.stringify({ refresh_token: s.refresh_token }) });
+  let r;
+  try { r = await supa('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: JSON.stringify({ refresh_token: s.refresh_token }) }); } catch { return false; }
   if (!r.ok) return false;
   setSession(await r.json());
   return true;
@@ -44,7 +45,10 @@ export async function api(path, opts = {}, retry = true) {
   let scope = null;
   if (AREA === 'admin' && path.startsWith('/api/admin/')) { try { scope = localStorage.getItem('ia-admin-seg'); } catch { /* ignore */ } scope = ['b2c', 'b2b', 'system'].includes(scope) ? scope : 'b2c'; }
   const headers = { Authorization: 'Bearer ' + token(), ...(scope ? { 'x-admin-scope': scope } : {}), ...(opts.body && typeof opts.body === 'string' ? { 'content-type': 'application/json' } : {}), ...(opts.headers || {}) };
-  const res = await fetch(path, { cache: 'no-store', ...opts, headers });
+  let res;
+  // Netzausfall (Funkloch, Tunnel, Safari „Load failed“): als normale Fehlermeldung zurückgeben statt Absturz.
+  try { res = await fetch(path, { cache: 'no-store', ...opts, headers }); }
+  catch { return { ok: false, status: 0, data: { error: 'Keine Verbindung. Bitte Netz prüfen und erneut versuchen.' }, res: null }; }
   if (res.status === 401 && retry && (await refresh())) return api(path, opts, false);
   const ct = res.headers.get('content-type') || '';
   const data = ct.includes('json') ? await res.json().catch(() => ({})) : null;
