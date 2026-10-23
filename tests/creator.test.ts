@@ -176,3 +176,22 @@ test('Protokoll-Metadaten: keine IBAN, keine Nachricht, keine Kontaktdaten', () 
   const m = sanitizeMeta({ iban: 'DE89', iban_last4: '3000', holder_name: 'X', from: 'DRAFT', to: 'ACTIVE', message: 'geheim', email: 'a@b.de', ok: true, n: 3, obj: { a: 1 } });
   assert.deepEqual(m, { from: 'DRAFT', to: 'ACTIVE', ok: true, n: 3 });
 });
+
+// ---------------- Phase 2 ----------------
+import { portalNextAction } from '../lib/creator/model';
+
+test('Rollen Phase 2: Kampagnen nur Super/Creator Manager, Conversions zurücknehmen nur Super/Finance', () => {
+  assert.deepEqual(ADMIN_ROLES.filter((r) => can(r, 'campaigns.manage')), ['SUPER_ADMIN', 'CREATOR_MANAGER']);
+  assert.deepEqual(ADMIN_ROLES.filter((r) => can(r, 'content.review')), ['SUPER_ADMIN', 'CREATOR_MANAGER']);
+  assert.deepEqual(ADMIN_ROLES.filter((r) => can(r, 'conversions.manage')), ['SUPER_ADMIN', 'FINANCE_ADMIN']);
+  assert.equal(can('SUPPORT', 'conversions.read'), false);
+});
+
+test('Portal: nächste Aufgabe (Anmerkung > neue Kampagne > Content veröffentlichen)', () => {
+  const now = new Date('2026-10-23T12:00:00Z');
+  const k = (slug: string, days: number, has = false) => ({ slug, name: slug, created_at: new Date(now.getTime() - days * 86_400_000).toISOString(), hasMyContent: has });
+  assert.equal(portalNextAction({ contentChangesRequested: 1, campaigns: [k('a', 1)], now })?.key, 'content-fix');
+  assert.equal(portalNextAction({ contentChangesRequested: 0, campaigns: [k('alt', 30), k('neu', 2)], now })?.key, 'campaign:neu');
+  assert.equal(portalNextAction({ contentChangesRequested: 0, campaigns: [k('alt', 30)], now })?.key, 'publish:alt');
+  assert.equal(portalNextAction({ contentChangesRequested: 0, campaigns: [k('alt', 30, true)], now }), null);
+});

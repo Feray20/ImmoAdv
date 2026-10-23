@@ -32,3 +32,8 @@ create function public.immo_mfa_ok() returns boolean language sql stable securit
       or not exists (select 1 from auth.mfa_factors f where f.user_id = auth.uid() and f.status = 'verified');
 $$;
 grant execute on function public.immo_mfa_ok() to anon, authenticated;
+
+-- Für Phase 2: Reichweitenmessung und Storage-Buckets (vereinfacht)
+create table public.immo_analytics (id bigserial primary key, ts timestamptz not null default now(), seg text not null default 'b2c', ev text not null, visitor text, path text, ref text, src text, med text, camp text, device text, browser text, os text, country text, plan text, region text, city text);
+create schema storage;
+create table storage.buckets (id text primary key, name text not null, public boolean default false, file_size_limit bigint, allowed_mime_types text[]);

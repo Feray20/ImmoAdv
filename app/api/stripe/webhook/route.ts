@@ -40,9 +40,14 @@ export async function POST(req: Request) {
       const s = event.data.object as Stripe.Checkout.Session;
       console.info('billing_paid', { session: s.id, plan: s.metadata?.plan, status: s.payment_status });
       await sendReviewRequest(s).catch((e) => console.warn('review_mail', e instanceof Error ? e.message : e));
+      // Creator-Zuordnung (Vorteilscode oder Creator-Link) – Fehler dürfen den Webhook nie scheitern lassen.
+      await import('@/lib/creator/attribution').then((x) => x.recordCheckoutConversion(stripe(), s)).catch((e) => console.warn('creator_conversion', e instanceof Error ? e.message : e));
       if (s.payment_status === 'paid' && s.metadata?.immoadv_test !== '1') await track({ seg: s.metadata?.b2b_account_id ? 'b2b' : 'b2c', ev: 'purchase', plan: s.metadata?.plan || (s.metadata?.b2b_account_id ? 'b2b' : null) });
       break;
     }
+    case 'charge.refunded':
+      await import('@/lib/creator/attribution').then((x) => x.reverseForCharge(event.data.object as Stripe.Charge)).catch((e) => console.warn('creator_reverse', e instanceof Error ? e.message : e));
+      break;
     case 'checkout.session.async_payment_failed':
     case 'invoice.payment_failed':
       console.warn('billing_payment_failed', { event: event.id, type: event.type });

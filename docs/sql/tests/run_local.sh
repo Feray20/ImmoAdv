@@ -11,6 +11,12 @@ $P -d "$DB" -f docs/sql/tests/local_supabase_stub.sql
 $P -d "$DB" -f docs/sql/2026-10-22_creator_hub.sql 2>&1 | grep -v NOTICE || true
 $P -d "$DB" -f docs/sql/2026-10-22_creator_hub.sql 2>&1 | grep -v NOTICE || true
 $P -d "$DB" -f docs/sql/tests/creator_hub_rls_test.sql 2>&1 | grep -E "ok:|FAIL|ERROR|PASSED" | sed 's/.*NOTICE:  //'
+echo "--- Phase 2"
+$P -d "$DB" -f docs/sql/2026-10-23_creator_hub_phase2.sql 2>&1 | grep -v NOTICE || true
+$P -d "$DB" -f docs/sql/2026-10-23_creator_hub_phase2.sql 2>&1 | grep -v NOTICE || true
+$P -d "$DB" -f docs/sql/tests/creator_hub_rls_test.sql 2>&1 | grep -E "FAIL|ERROR|PASSED" | sed 's/.*NOTICE:  //'
+$P -d "$DB" -f docs/sql/tests/creator_hub_phase2_test.sql 2>&1 | grep -E "ok:|FAIL|ERROR|PASSED" | sed 's/.*NOTICE:  //'
+$P -d "$DB" -f docs/sql/2026-10-23_creator_hub_phase2_rollback.sql 2>&1 | grep -v NOTICE || true
 $P -d "$DB" -f docs/sql/2026-10-22_creator_hub_rollback.sql 2>&1 | grep -v NOTICE || true
 left=$($P -d "$DB" -tAc "select count(*) from pg_tables where tablename like 'immo_creator%'")
 [ "$left" = "0" ] && echo "ok: Rückbau vollständig" || { echo "FAIL: Rückbau unvollständig ($left Tabellen)"; exit 1; }

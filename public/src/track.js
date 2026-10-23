@@ -17,6 +17,16 @@
     } catch (e) { /* nie stören */ }
   }
   window.iaTrack = send;
+  // Empfehlungs-Code (?ref=) für diese Sitzung merken, damit er bei der Registrierung ankommt (nur sessionStorage,
+  // endet mit dem Schließen des Tabs; bei „Do Not Track“/GPC nicht).
+  try {
+    var rf = q.get('ref');
+    if (!off && rf && /^[a-z0-9-]{3,40}$/.test(rf)) {
+      sessionStorage.setItem('ia-ref', rf);
+      var cp = (q.get('utm_campaign') || '').toLowerCase();
+      if (/^[a-z0-9-]{3,40}$/.test(cp)) sessionStorage.setItem('ia-camp', cp); else sessionStorage.removeItem('ia-camp');
+    }
+  } catch (e) { /* ohne Speicher */ }
   if (/^\/intern\b/.test(p)) { off = true; return; }
   send('pv');
   if (/^\/angebote/.test(p)) send('offer_view');

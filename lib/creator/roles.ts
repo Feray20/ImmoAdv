@@ -23,14 +23,18 @@ export type Permission =
   | 'bank.reveal'          // vollständige Zahlungsdaten (protokolliert)
   | 'bank.verify'          // Zahlungsdaten als geprüft markieren
   | 'audit.read'           // Audit-Protokoll lesen
+  | 'campaigns.manage'     // Kampagnen, Assets, Community-Vorteile pflegen
+  | 'content.review'       // veröffentlichte Inhalte prüfen
+  | 'conversions.read'     // Attribution, Conversions, Umsatz je Creator
+  | 'conversions.manage'   // Conversion manuell zurücknehmen
   | 'roles.manage';        // Rollen vergeben
 
 const MATRIX: Record<AdminRole, readonly Permission[]> = {
-  SUPER_ADMIN: ['creators.list', 'creators.contact', 'creators.business', 'creators.review', 'creators.suspend', 'bank.masked', 'bank.reveal', 'bank.verify', 'audit.read', 'roles.manage'],
-  FINANCE_ADMIN: ['creators.list', 'creators.contact', 'creators.business', 'bank.masked', 'bank.reveal', 'bank.verify', 'audit.read'],
-  CREATOR_MANAGER: ['creators.list', 'creators.contact', 'creators.business', 'creators.review', 'creators.suspend', 'bank.masked', 'audit.read'],
+  SUPER_ADMIN: ['creators.list', 'creators.contact', 'creators.business', 'creators.review', 'creators.suspend', 'bank.masked', 'bank.reveal', 'bank.verify', 'audit.read', 'roles.manage', 'campaigns.manage', 'content.review', 'conversions.read', 'conversions.manage'],
+  FINANCE_ADMIN: ['creators.list', 'creators.contact', 'creators.business', 'bank.masked', 'bank.reveal', 'bank.verify', 'audit.read', 'conversions.read', 'conversions.manage'],
+  CREATOR_MANAGER: ['creators.list', 'creators.contact', 'creators.business', 'creators.review', 'creators.suspend', 'bank.masked', 'audit.read', 'campaigns.manage', 'content.review', 'conversions.read'],
   SUPPORT: ['creators.list', 'creators.contact', 'bank.masked'],
-  READ_ONLY: ['creators.list', 'bank.masked'],
+  READ_ONLY: ['creators.list', 'bank.masked', 'conversions.read'],
 };
 
 export const isAdminRole = (v: unknown): v is AdminRole => typeof v === 'string' && (ADMIN_ROLES as readonly string[]).includes(v);
