@@ -143,15 +143,6 @@ if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/aut
   window.__iaAccess = { check: () => check(true) };
 })();
 
-// Footer-Akkordeon: auf allen Geräten ist immer nur ein Bereich geöffnet.
-document.addEventListener('toggle', (e) => {
-  const d = e.target;
-  if (!(d instanceof HTMLDetailsElement) || !d.classList.contains('foot-col') || !d.open) return;
-  // Ab Tablet-Breite sind alle Spalten offen; nur auf dem Handy bleibt immer nur eine Spalte aufgeklappt.
-  if (window.matchMedia && matchMedia('(min-width:761px)').matches) return;
-  document.querySelectorAll('details.foot-col[open]').forEach((x) => { if (x !== d) x.open = false; });
-}, true);
-
 // Technische Fehlermeldungen (ohne Personendaten) an ImmoAdv melden: Meldung, Datei, Zeile, Seite (ohne Parameter), Browser-Typ.
 // Höchstens 5 je Seitenaufruf, gleiche Meldung nur einmal. Fehler von Browser-Erweiterungen und fremden Skripten werden ignoriert.
 (function(){if(window.__iaErr)return;window.__iaErr=1;var sent={},n=0;function rep(m,s,l,c){try{m=String(m||'').slice(0,300);s=String(s||'');if(!m||n>=5||sent[m])return;if(/ResizeObserver loop|^Script error\.?$/i.test(m))return;if(s&&s.indexOf(location.origin)!==0&&!/^\/src\//.test(s))return;sent[m]=1;n++;var b=JSON.stringify({m:m,s:s.replace(location.origin,'').split('?')[0].slice(0,200),l:l|0,c:c|0,p:location.pathname.slice(0,120)});if(navigator.sendBeacon)navigator.sendBeacon('/api/errors',new Blob([b],{type:'application/json'}));else fetch('/api/errors',{method:'POST',headers:{'content-type':'application/json'},body:b,keepalive:true}).catch(function(){})}catch(e){}}
@@ -162,8 +153,3 @@ addEventListener('error',function(e){if(e&&e.message)rep(e.message,e.filename,e.
 
 // Kontakt-Widget (unten rechts) auf öffentlichen Seiten; lädt als eigenes Modul.
 (function(){if(window.__iaCw)return;window.__iaCw=1;if(/^\/(app|b2b-portal|intern|auth|partner|datenraum|p|verify|pruefen|kuendigen|widerrufen|b2b)(\/|$)/.test(location.pathname))return;var s=document.createElement('script');s.type='module';s.src='/src/contact-widget.mjs';document.head.appendChild(s)})();
-
-// Fußzeile: Ab Tablet-Breite sind alle Linkspalten offen (Aufklappen nur auf dem Handy).
-(function(){var mq=window.matchMedia&&matchMedia('(min-width:761px)');if(!mq)return;var set=function(){document.querySelectorAll('footer .foot-col').forEach(function(d){if(mq.matches)d.setAttribute('open','');else if(!d.dataset.user)d.removeAttribute('open')})};var go=function(){set();document.querySelectorAll('footer .foot-col>summary').forEach(function(s){s.addEventListener('click',function(e){if(mq.matches)e.preventDefault();else s.parentNode.dataset.user='1'})})};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);else go();if(mq.addEventListener)mq.addEventListener('change',set);
-// Seiten, die ihren Inhalt erst per Skript zeichnen, setzen die Fußzeile neu ein: kurz danach erneut öffnen.
-new MutationObserver(function(){if(mq.matches)document.querySelectorAll('footer .foot-col:not([open])').forEach(function(d){d.setAttribute('open','')})}).observe(document.documentElement,{childList:true,subtree:true})})();
