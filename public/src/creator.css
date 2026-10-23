@@ -169,3 +169,35 @@ body.is-portal>#creator{flex:1 0 auto}
 .cr-end .link-btn{background:none;border:0;padding:0;font:inherit;font-weight:700;color:#0F2C59;text-decoration:underline;cursor:pointer;min-height:32px}
 @media (max-width:900px){.cr-steps-list{grid-template-columns:1fr 1fr}.cr-cards-6{grid-template-columns:1fr 1fr}}
 @media (max-width:560px){.cr-steps-list,.cr-cards-6{grid-template-columns:1fr}.cr-end{padding:22px 16px}.cr-hero-cta .cr-cta{width:100%}}
+/* Landingpage: Optimierung (Produkt, FAQ, Vertrauen, mobiler Bewerben-Knopf) */
+.cr-hero h1{max-width:20ch;line-height:1.12}
+.cr-hero .lead{font-weight:500;color:#E2E8F0;max-width:58ch}
+.cr-what{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;align-items:start}
+.cr-what p{color:#334155;margin:0 0 12px;max-width:60ch}
+.cr-fit{font-size:14px;font-weight:600;color:#0F2C59!important}
+.cr-fit span{display:block;font-weight:500;color:#64748B;font-size:13px;margin-bottom:2px}
+.cr-prod{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.cr-prod li{background:#fff;border:1px solid #E2E8F0;border-left:4px solid #0284C7;border-radius:12px;padding:12px 14px;display:grid;gap:2px}
+.cr-prod strong{color:#0F2C59;font-size:15px}
+.cr-prod span{color:#475569;font-size:14px}
+.cr-trust{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.cr-trust li{position:relative;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:12px 14px 12px 44px;color:#14532D;font-size:14px;line-height:1.5}
+.cr-trust li::before{content:"✓";position:absolute;left:14px;top:12px;width:20px;height:20px;border-radius:50%;background:#DCFCE7;color:#166534;font-weight:700;display:grid;place-items:center;font-size:12px}
+.cr-trust strong{color:#14532D}
+.cr-faq{display:grid;gap:8px}
+.cr-faq-i{background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:0 16px}
+.cr-faq-i summary{cursor:pointer;list-style:none;min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700;color:#0F2C59;font-size:15px}
+.cr-faq-i summary::-webkit-details-marker{display:none}
+.cr-faq-i summary::after{content:"+";font-size:22px;font-weight:400;color:#64748B;flex:none;transition:transform .15s}
+.cr-faq-i[open] summary::after{transform:rotate(45deg)}
+.cr-faq-i summary:focus-visible{outline:3px solid rgba(15,44,89,.25);outline-offset:2px;border-radius:8px}
+.cr-faq-i p{margin:0 0 14px;color:#475569;font-size:14.5px;line-height:1.55}
+.cr-end a{color:#0F2C59;font-weight:600}
+.cr-sticky{display:none}
+@media (max-width:900px){.cr-what{grid-template-columns:1fr}}
+@media (max-width:640px){
+  .cr-sticky:not([hidden]){display:block;position:fixed;left:0;right:0;bottom:0;z-index:40;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:rgba(241,245,249,.94);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid #E2E8F0}
+  .cr-sticky .btn{width:100%}
+  .cr-cards-6 .pt-card{padding:14px 16px}
+}
+@media (prefers-reduced-motion:reduce){.cr-faq-i summary::after{transition:none}}

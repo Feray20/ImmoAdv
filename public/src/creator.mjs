@@ -91,67 +91,97 @@ async function refresh() {
 
 // ---------- Landingpage ----------
 function landing(loggedIn) {
-  document.title = 'ImmoAdv Creator Partner';
+  document.title = 'Creator werden | ImmoAdv Creator Partner';
   const stepLi = (n, t, d) => `<li><span class="cr-step-n" aria-hidden="true">${n}</span><div><h3>${t}</h3><p>${d}</p></div></li>`;
   const get = (t, d) => `<article class="pt-card"><h3>${t}</h3><p>${d}</p></article>`;
+  const prod = (t, d) => `<li><strong>${t}</strong><span>${d}</span></li>`;
+  const faq = (q, a) => `<details class="cr-faq-i"><summary>${q}</summary><p>${a}</p></details>`;
+  const cta = (id, cls = '') => `<button type="button" class="btn btn-dark btn-lg ${cls}" id="${id}">${loggedIn ? 'Bewerbung starten' : 'Als Creator bewerben'}</button>`;
   root.innerHTML = `<header class="cr-bar"><a class="cr-brand" href="/" aria-label="ImmoAdv – zur Startseite"><img src="/logo-icon.svg" alt="" width="32" height="27"><span>Immo<span>Adv</span></span></a>
-      <button type="button" class="btn btn-outline btn-sm" id="crLogin">${loggedIn ? 'Weiter zur Bewerbung' : 'Anmelden'}</button></header>
+      <button type="button" class="btn btn-outline btn-sm" id="crLogin">${loggedIn ? 'Zur Bewerbung' : 'Anmelden'}</button></header>
     <div class="cr-wrap">
-    <section class="cr-hero"><span class="cr-kick">Creator Partner</span>
-      <h1>ImmoAdv Creator Partner</h1>
-      <p class="lead">Erstelle Content in deinem eigenen Stil und erhalte Zugang zu ImmoAdv Tools, Kampagnen, Assets und einem transparenten Creator-System.</p>
-      <p>Du bringst deine Community und deinen eigenen Content-Stil mit. ImmoAdv stellt dir die notwendigen Informationen, Tools, Assets und Unterstützung bereit.</p>
+    <section class="cr-hero"><span class="cr-kick">ImmoAdv Creator Partner</span>
+      <h1>Sprich über Immobilien – und verdiene an jeder Empfehlung.</h1>
+      <p class="lead">Zeig deiner Community, wie man eine Immobilie richtig prüft und finanziert. Für Käufe über deinen persönlichen Link bekommst du Provision, monatlich abgerechnet.</p>
       <form id="crStart" class="cr-hero-cta"><div class="cr-hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
-        <button class="btn btn-lg cr-cta" type="submit">Als Creator bewerben</button><a class="cr-hero-link" href="#so-gehts">So funktioniert’s</a></form>
+        <button class="btn btn-lg cr-cta" type="submit">${loggedIn ? 'Bewerbung starten' : 'Als Creator bewerben'}</button><a class="cr-hero-link" href="#so-gehts">So funktioniert’s</a></form>
       <p class="cr-msg pt-alert bad" hidden></p>
-      <ul class="cr-facts" aria-label="Auf einen Blick"><li>Bewerbung in ca. 10 Minuten</li><li>Keine Social-Media-Verbindung</li><li>Monatliche Abrechnung</li></ul>
+      <ul class="cr-facts" aria-label="Auf einen Blick"><li>Kostenlos teilnehmen</li><li>Bewerbung in ca. 10 Minuten</li><li>Dein Stil, deine Inhalte</li><li>Monatliche Abrechnung</li></ul>
     </section>
+
+    <section class="cr-sec-block cr-what" aria-labelledby="crWhat">
+      <div><h2 id="crWhat">Was du empfiehlst</h2>
+        <p>ImmoAdv hilft Käufern und Anlegern, eine Immobilie vor dem Kauf durchzurechnen: Kaufnebenkosten, Finanzierung, Rendite und die Unterlagen für die Bank. Ein Thema, das deine Zuschauer wirklich brauchen – und bei dem sie gern einen Tipp annehmen.</p>
+        <p class="cr-fit"><span>Passt besonders zu Kanälen über</span> Immobilien · Finanzen · Geldanlage · Business · Entrepreneurship</p></div>
+      <ul class="cr-prod">
+        ${prod('Kostenlos starten', 'Rechner, Wissensartikel und ein Konto mit zwei Objekten – ohne Hürde für deine Community.')}
+        ${prod('BankReady Kreditmappe', 'Die fertige Unterlage für das Bankgespräch, einmalig je Objekt.')}
+        ${prod('Käufer-Pass &amp; Investor Pro', 'Alle Kauf-Werkzeuge für 90 Tage oder laufend für Portfolio-Anleger.')}
+      </ul></section>
 
     <section class="cr-sec-block" id="so-gehts" aria-labelledby="crHow"><h2 id="crHow">So funktioniert’s</h2>
       <ol class="cr-steps-list">
-        ${stepLi(1, 'Bewerben', 'Profil, Social-Media-Kanäle, Rechnungs- und Auszahlungsdaten einmal eingeben und die Vereinbarung bestätigen.')}
-        ${stepLi(2, 'Prüfung durch ImmoAdv', 'Wir sehen uns deine Bewerbung an und melden uns – bei Rückfragen direkt im Portal.')}
-        ${stepLi(3, 'Loslegen', 'Nach der Freigabe erhältst du deinen persönlichen Link, Kampagnen, Briefings und freigegebene Materialien.')}
-        ${stepLi(4, 'Abrechnung und Auszahlung', 'Provision wird monatlich serverseitig berechnet. Rechnung per Klick erstellen, Auszahlung per Überweisung.')}
+        ${stepLi(1, 'Bewerben', 'Profil, Kanäle und Auszahlungsdaten einmal eingeben, Vereinbarung lesen und bestätigen.')}
+        ${stepLi(2, 'Freigabe', 'Wir sehen uns deine Bewerbung an. Rückfragen bekommst du direkt im Portal.')}
+        ${stepLi(3, 'Content erstellen', 'Du bekommst deinen Link, einen Vorteil für deine Community, Briefings und Material.')}
+        ${stepLi(4, 'Geld erhalten', 'Jeden Monat siehst du deine Abrechnung, erstellst die Rechnung per Klick und bekommst das Geld überwiesen.')}
       </ol></section>
 
     <section class="cr-sec-block" aria-labelledby="crGet"><h2 id="crGet">Was du bekommst</h2>
       <div class="cr-cards cr-cards-6">
-        ${get('Kampagnen und Briefings', 'Klare Themen, Do’s und Don’ts – den Content gestaltest du in deinem Stil.')}
-        ${get('Asset Library', 'Logos, Screenshots, Videos und Texte, die du verwenden darfst – immer aktuell.')}
-        ${get('Persönlicher Link und Vorteil', 'Dein Link und ein Community-Vorteil für deine Zuschauer, ohne personenbezogene Daten im Link.')}
-        ${get('Performance', 'Besuche, Registrierungen und Käufe je Kampagne – als Summen, ohne Kundendaten.')}
-        ${get('Transparente Provision', 'Versionierte Regeln, monatliche Abrechnung mit PDF und Rechnung per Klick.')}
-        ${get('Auszahlung', 'Auf dein hinterlegtes Konto. Du siehst jederzeit, wann das Geld kommt.')}
+        ${get('Persönlicher Link', 'Käufe über deinen Link werden dir zugeordnet. Der Link enthält keine Daten über deine Zuschauer.')}
+        ${get('Vorteil für deine Community', 'Ein eigener Code, mit dem deine Zuschauer beim Kauf profitieren.')}
+        ${get('Kampagnen und Briefings', 'Klare Themen und Hinweise, was geht und was nicht. Wie du es umsetzt, entscheidest du.')}
+        ${get('Fertiges Material', 'Logos, Screenshots, Videos und Texte, die du verwenden darfst – immer aktuell.')}
+        ${get('Deine Zahlen', 'Besuche, Registrierungen und Käufe je Kampagne, jederzeit im Portal.')}
+        ${get('Klare Abrechnung', 'Monatliche Abrechnung als PDF. Du siehst, wofür du Provision bekommst und wann das Geld kommt.')}
       </div></section>
 
     <section class="cr-sec-block" aria-labelledby="crTrust"><h2 id="crTrust">Darauf kannst du dich verlassen</h2>
-      <div class="cr-cards">
-        ${get('Einmal eingeben', 'Du gibst deine Angaben einmal ein. Wir verwenden sie danach überall wieder – für Profil, Abrechnung und Auszahlung.')}
-        ${get('Keine Konto-Verbindung', 'Wir brauchen nur öffentliche Profilangaben. Keine Passwörter, kein Login mit deinen Social-Media-Konten.')}
-        ${get('Geschützte Zahlungsdaten', 'Deine IBAN wird verschlüsselt gespeichert und nur maskiert angezeigt. Jeder Zugriff wird protokolliert.')}
+      <ul class="cr-trust">
+        <li><strong>Kein Login mit deinen Social-Media-Konten.</strong> Wir brauchen nur deine öffentlichen Profile, keine Passwörter.</li>
+        <li><strong>Deine Bankdaten sind geschützt.</strong> Die IBAN wird verschlüsselt gespeichert und nur gekürzt angezeigt. Jeder Zugriff wird protokolliert.</li>
+        <li><strong>Einmal eingeben reicht.</strong> Deine Angaben gelten danach für Profil, Abrechnung und Auszahlung.</li>
+      </ul></section>
+
+    <section class="cr-sec-block" aria-labelledby="crFaq"><h2 id="crFaq">Häufige Fragen</h2>
+      <div class="cr-faq">
+        ${faq('Kostet die Teilnahme etwas?', 'Nein. Bewerbung, Portal, Material und Auszahlung sind für dich kostenlos.')}
+        ${faq('Wie viel Provision bekomme ich?', 'Die Provisionsregel steht in der Partnervereinbarung. Du liest sie in der Bewerbung, bevor du etwas bestätigst. Im Portal siehst du danach jeden Monat genau, wofür du Provision bekommst.')}
+        ${faq('Wann und wie wird ausgezahlt?', 'Einmal im Monat. Du prüfst deine Abrechnung, erstellst die Rechnung mit einem Klick und bekommst das Geld auf dein hinterlegtes Konto überwiesen.')}
+        ${faq('Muss ich meine Beiträge als Werbung kennzeichnen?', 'Ja. Jeder Beitrag über ImmoAdv ist Werbung und wird so gekennzeichnet. Im Portal zeigen wir dir, worauf es ankommt.')}
+        ${faq('Brauche ich ein Gewerbe?', 'In der Bewerbung gibst du deinen Steuerstatus an, zum Beispiel Kleinunternehmer. Ob du ein Gewerbe brauchst, klärst du am besten mit deiner Steuerberatung.')}
+        ${faq('Kann ich die Bewerbung unterbrechen?', 'Ja. Jeder Schritt wird gespeichert. Du kannst später weitermachen, wo du aufgehört hast.')}
       </div></section>
 
-    <section class="cr-end"><h2>Bereit?</h2><p>Die Bewerbung dauert etwa 10 Minuten. Du kannst jederzeit unterbrechen – dein Stand bleibt gespeichert.</p>
-      <button type="button" class="btn btn-dark btn-lg" id="crStart2">Als Creator bewerben</button>
-      <p class="form-note">Schon ein Creator-Konto? <button type="button" class="link-btn" id="crLogin2">Hier anmelden</button></p></section>
-  </div>`;
+    <section class="cr-end"><h2>Bereit für deine erste Kampagne?</h2><p>Die Bewerbung dauert etwa 10 Minuten. Fragen vorab? Schreib uns an <a href="mailto:support@immoadv.de">support@immoadv.de</a>.</p>
+      ${cta('crStart2')}
+      ${loggedIn ? '' : '<p class="form-note">Schon ein Creator-Konto? <button type="button" class="link-btn" id="crLogin2">Hier anmelden</button></p>'}</section>
+  </div>
+  <div class="cr-sticky" id="crSticky" hidden>${cta('crStart3', 'btn-block')}</div>`;
   const ts = Date.now();
-  $('#crStart').onsubmit = async (e) => {
-    e.preventDefault();
-    if (!loggedIn) { authForm(); return; }
-    const btn = e.target.querySelector('button'); btn.disabled = true;
-    const r = await api('/api/creator/me', { method: 'POST', body: JSON.stringify({ website: e.target.elements.website.value, ts }) });
+  const apply = async (mode = 'signup') => {
+    if (!loggedIn) { authForm(mode); return; }
+    const btn = $('#crStart button'); btn.disabled = true;
+    const r = await api('/api/creator/me', { method: 'POST', body: JSON.stringify({ website: $('#crStart').elements.website.value, ts }) });
     btn.disabled = false;
-    if (!r.ok) { const m = $('.cr-msg'); m.hidden = false; m.textContent = r.data?.error || 'Das hat nicht geklappt. Bitte erneut versuchen.'; return; }
-    me = r.data; step = 'account'; routeByStatus();
+    if (!r.ok) { const m = $('.cr-msg'); m.hidden = false; m.textContent = r.data?.error || 'Das hat nicht geklappt. Bitte erneut versuchen.'; $('.cr-hero').scrollIntoView(); return; }
+    me = r.data; step = 'account'; routeByStatus(); window.scrollTo({ top: 0 });
   };
-  const go = () => $('#crStart').requestSubmit();
-  for (const id of ['#crLogin', '#crStart2', '#crLogin2']) $(id)?.addEventListener('click', go);
+  $('#crStart').onsubmit = (e) => { e.preventDefault(); apply(); };
+  for (const id of ['#crStart2', '#crStart3']) $(id)?.addEventListener('click', () => apply());
+  for (const id of ['#crLogin', '#crLogin2']) $(id)?.addEventListener('click', () => apply('login'));
   $('.cr-hero-link')?.addEventListener('click', (e) => { e.preventDefault(); $('#so-gehts')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
+  // Mobile: Bewerben-Knopf bleibt unten sichtbar, sobald der Knopf im Kopfbereich aus dem Bild ist und bevor der Schluss-Knopf erscheint.
+  const sticky = $('#crSticky');
+  if ('IntersectionObserver' in window) {
+    const seen = new Map();
+    const io = new IntersectionObserver((es) => { es.forEach((e) => seen.set(e.target, e.isIntersecting)); sticky.hidden = [...seen.values()].some(Boolean); });
+    [$('.cr-hero'), $('.cr-end'), $('footer.ia-legal')].filter(Boolean).forEach((el) => { seen.set(el, true); io.observe(el); });
+  }
 }
 
-function authForm() {
+function authForm(mode = 'signup') {
   loginForm(root, {
     title: 'Creator-Konto',
     lead: 'Melde dich mit deinem ImmoAdv-Konto an, um deine Bewerbung zu beginnen oder fortzusetzen.',
@@ -159,7 +189,8 @@ function authForm() {
     note: 'Nach der Registrierung erhältst du eine E-Mail zur Bestätigung deiner Adresse.',
     signup: { next: '/creator' },
   });
-  $('[data-mode="signup"]', root)?.click();
+  if (mode === 'signup') $('[data-mode="signup"]', root)?.click();
+  window.scrollTo({ top: 0 });
 }
 
 // ---------- Onboarding-Assistent ----------
