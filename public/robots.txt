@@ -11,5 +11,6 @@ Disallow: /partner
 Disallow: /intern
 Disallow: /b2b-portal
 Disallow: /karten
+Disallow: /creator
 
 Sitemap: https://immoadv.de/sitemap.xml

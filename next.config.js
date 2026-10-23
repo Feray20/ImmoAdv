@@ -101,6 +101,9 @@ module.exports = {
         { source: '/karten/preise.pdf', destination: '/api/karten/preise-pdf' },
         { source: '/karten/konto', destination: '/karten/konto/index.html' },
         { source: '/b2b-portal', destination: '/b2b-portal/index.html' },
+        // Creator Partner: eigener, nicht verlinkter Bereich (nicht im Menü, nicht in der Sitemap, noindex).
+        { source: '/creator', destination: '/creator/index.html' },
+        { source: '/creator/apply', destination: '/creator/index.html' },
         { source: '/auth/login', destination: '/auth-login.html' },
         { source: '/auth/callback', destination: '/auth-login.html' },
         { source: '/auth/confirm', destination: '/auth-login.html' },
@@ -120,6 +123,8 @@ module.exports = {
       // Admin-Zentrale: nie indexieren, nie zwischenspeichern.
       { source: '/intern/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }, { key: 'Cache-Control', value: 'no-store' }] },
       { source: '/karten', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
+      { source: '/creator', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }, { key: 'Cache-Control', value: 'no-store' }] },
+      { source: '/creator/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }, { key: 'Cache-Control', value: 'no-store' }] },
       { source: '/karten/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] },
       // Next.js-Seiten (Cockpit) brauchen Inline-Skripte für die Hydrierung; alle übrigen Seiten laufen ohne.
       { source: '/cockpit', headers: [{ key: 'Content-Security-Policy', value: cspValue.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'") }] },
