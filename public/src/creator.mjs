@@ -106,6 +106,8 @@ function landing(loggedIn) {
   const apply = async (mode = 'signup') => {
     if (!loggedIn) { authForm(mode); return; }
     const btn = $('#crStart button'); btn.disabled = true;
+    // Der Spam-Schutz des Servers lehnt Anfragen unter 1,5 s nach dem Laden ab – sehr schnelle Klicks kurz abwarten.
+    const wait = 1700 - (Date.now() - ts); if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     const r = await api('/api/creator/me', { method: 'POST', body: JSON.stringify({ website: $('#crStart').elements.website.value, ts }) });
     btn.disabled = false;
     if (!r.ok) { const m = $('.cr-msg'); m.hidden = false; m.textContent = r.data?.error || 'Das hat nicht geklappt. Bitte erneut versuchen.'; $('.cr-hero').scrollIntoView(); return; }
