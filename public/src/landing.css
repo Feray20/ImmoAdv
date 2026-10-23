@@ -315,3 +315,11 @@
 .uu-block .uu-btns{margin-top:12px}
 .kt-addr{margin-top:12px!important}
 .kt-btns + .uu-small{margin-top:12px}
+.uu-foot{display:flex;align-items:center;gap:14px;padding:18px 20px;border-radius:16px;background:#F1F5F9}
+.uu-foot-logo{flex:none;width:38px;height:32px}
+.uu-foot-txt{display:grid;gap:2px;min-width:0;flex:1}
+.uu-foot-txt strong{color:#0F2C59;font-size:16px}
+.uu-foot-addr{display:flex;align-items:center;gap:6px;color:#475569;font-size:14px}
+.uu-foot-addr svg{flex:none;color:#0284C7}
+.uu-wrap a.uu-foot-link{flex:none;font-size:14px;font-weight:600}
+@media(max-width:420px){.uu-foot{flex-wrap:wrap}.uu-wrap a.uu-foot-link{flex-basis:100%;padding-left:52px}}
