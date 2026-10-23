@@ -928,4 +928,4 @@ html:not(.ia-paid) body.lp-sticky-on{padding-bottom:calc(76px + env(safe-area-in
 @media(max-width:520px){.lp-founder-card{flex-direction:column;text-align:center;padding:20px}}
 .lp-more{margin:10px 0 0;font-size:15px;color:#475569}
 .lp-more a{color:#0369A1;font-weight:600}
-.lp-founder-body .ck-link,.uu-wrap a{color:#0369A1;text-decoration:underline;text-underline-offset:3px}
+.lp-founder-body .ck-link,.uu-wrap a:not(.uu-btn){color:#0369A1;text-decoration:underline;text-underline-offset:3px}

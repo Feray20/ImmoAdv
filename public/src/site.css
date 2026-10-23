@@ -1855,7 +1855,14 @@ html:not(.ia-paid) body.lp-sticky-on{padding-bottom:calc(76px + env(safe-area-in
 .kt-list li{display:grid;grid-template-columns:96px 1fr;gap:12px;overflow-wrap:anywhere}
 .kt-list span{color:#64748B;font-size:14px}
 @media(max-width:520px){.uu-card{flex-direction:column;text-align:center;padding:20px}.uu-img{width:128px;height:128px}.uu-block{padding:20px}.kt-list li{grid-template-columns:1fr;gap:2px}}
-.lp-founder-body .ck-link,.uu-wrap a{color:#0369A1;text-decoration:underline;text-underline-offset:3px}
+.lp-founder-body .ck-link,.uu-wrap a:not(.uu-btn){color:#0369A1;text-decoration:underline;text-underline-offset:3px}
+.uu-btns{display:flex;flex-wrap:wrap;gap:12px}
+.uu-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 22px;border-radius:999px;font-weight:700;font-size:16px;text-decoration:none;border:1.5px solid #0F2C59}
+.uu-btn-pri{background:#0F2C59;color:#fff}
+.uu-btn-pri:hover{background:#0B3A6E}
+.uu-btn-sec{background:#fff;color:#0F2C59}
+.uu-btn-sec:hover{background:#F1F5F9}
+@media(max-width:520px){.uu-btn{flex:1 1 100%}}
 /* b2b-landing.css */
 .bx-svg{display:block;flex:0 0 auto}
 .bx-sec{padding:76px 0}

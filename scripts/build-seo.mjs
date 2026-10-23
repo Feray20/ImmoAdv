@@ -15,7 +15,7 @@ const today = new Date().toISOString().slice(0, 10);
 
 const ORG = {
   '@type': 'Organization', '@id': `${ORIGIN}/#org`, name: 'ImmoAdv', url: `${ORIGIN}/`,
-  logo: { '@type': 'ImageObject', url: `${ORIGIN}/icon-512.png`, width: 512, height: 512 }, email: 'support@immoadv.de',
+  logo: { '@type': 'ImageObject', url: `${ORIGIN}/icon-512.png`, width: 512, height: 512 }, email: 'support@immoadv.de', sameAs: ['https://www.linkedin.com/company/immoadv/'],
   address: { '@type': 'PostalAddress', streetAddress: 'Georg-August-Zinn-Str. 25', postalCode: '64354', addressLocality: 'Reinheim', addressCountry: 'DE' },
 };
 const APP = {
