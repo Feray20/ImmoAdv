@@ -147,6 +147,8 @@ if(/[#&]type=recovery(&|$)/.test(location.hash)&&location.pathname.indexOf('/aut
 document.addEventListener('toggle', (e) => {
   const d = e.target;
   if (!(d instanceof HTMLDetailsElement) || !d.classList.contains('foot-col') || !d.open) return;
+  // Ab Tablet-Breite sind alle Spalten offen; nur auf dem Handy bleibt immer nur eine Spalte aufgeklappt.
+  if (window.matchMedia && matchMedia('(min-width:761px)').matches) return;
   document.querySelectorAll('details.foot-col[open]').forEach((x) => { if (x !== d) x.open = false; });
 }, true);
 
@@ -160,3 +162,8 @@ addEventListener('error',function(e){if(e&&e.message)rep(e.message,e.filename,e.
 
 // Kontakt-Widget (unten rechts) auf öffentlichen Seiten; lädt als eigenes Modul.
 (function(){if(window.__iaCw)return;window.__iaCw=1;if(/^\/(app|b2b-portal|intern|auth|partner|datenraum|p|verify|pruefen|kuendigen|widerrufen|b2b)(\/|$)/.test(location.pathname))return;var s=document.createElement('script');s.type='module';s.src='/src/contact-widget.mjs';document.head.appendChild(s)})();
+
+// Fußzeile: Ab Tablet-Breite sind alle Linkspalten offen (Aufklappen nur auf dem Handy).
+(function(){var mq=window.matchMedia&&matchMedia('(min-width:761px)');if(!mq)return;var set=function(){document.querySelectorAll('footer .foot-col').forEach(function(d){if(mq.matches)d.setAttribute('open','');else if(!d.dataset.user)d.removeAttribute('open')})};var go=function(){set();document.querySelectorAll('footer .foot-col>summary').forEach(function(s){s.addEventListener('click',function(e){if(mq.matches)e.preventDefault();else s.parentNode.dataset.user='1'})})};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);else go();if(mq.addEventListener)mq.addEventListener('change',set);
+// Seiten, die ihren Inhalt erst per Skript zeichnen, setzen die Fußzeile neu ein: kurz danach erneut öffnen.
+new MutationObserver(function(){if(mq.matches)document.querySelectorAll('footer .foot-col:not([open])').forEach(function(d){d.setAttribute('open','')})}).observe(document.documentElement,{childList:true,subtree:true})})();

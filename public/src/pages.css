@@ -815,6 +815,11 @@ main table td{min-width:max-content}}
 .cmp .cmp-table td.n{color:#CBD5E1}
 .cmp .cmp-table .hl,.cmp .cmp-table tbody tr:nth-child(even) .hl{background:#E0F2FE}
 .cmp .cmp-table thead th.hl{color:#0369A1}
+.hero3 small,.qz small,.km-show small,.seals small{text-transform:none;letter-spacing:0}
+.qz{background:#fff;color:#0F172A;border-radius:20px;padding:20px;box-shadow:0 24px 60px rgba(2,6,23,.35);display:grid;gap:14px;scroll-margin-top:84px}
+.qz select{width:100%;min-height:48px;border:1px solid #CBD5E1;border-radius:10px;padding:0 12px;font-size:16px;background:#fff;color:#0F172A}
+.qz .tip{width:22px;height:22px;font-size:12px}
+@media(max-width:420px){.qz{padding:16px;border-radius:16px}}
 .km-guar,.buy-guar{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;margin:0;padding:12px 14px;border-radius:12px;background:#ECFDF5;border:1px solid #A7F3D0;color:#064E3B;font-size:14px;line-height:1.5}
 .km-guar>span:first-child,.buy-guar>span:first-child{width:26px;height:26px;border-radius:50%;background:#10B981;color:#fff;display:grid;place-items:center;font-weight:800}
 .offer-for{margin:-4px 0 10px;font-size:13.5px;font-weight:700;color:#0369A1;line-height:1.4}
@@ -897,10 +902,10 @@ body.is-app main .ia-legal{margin:auto -14px calc(-88px - env(safe-area-inset-bo
 .ia-ld.full::before,.ia-ld.full::after{top:calc(50% - 56px)}
 @media (prefers-reduced-motion:reduce){.ia-ld::before{animation-duration:2.4s}
 .ia-ld::after{animation:none}}
-@font-face{font-family:"IA Inter";src:url("/fonts/Inter-Regular.woff") format("woff");font-weight:400;font-style:normal;font-display:swap}
-@font-face{font-family:"IA Inter";src:url("/fonts/Inter-SemiBold.woff") format("woff");font-weight:500 600;font-style:normal;font-display:swap}
-@font-face{font-family:"IA Inter";src:url("/fonts/Inter-Bold.woff") format("woff");font-weight:700;font-style:normal;font-display:swap}
-@font-face{font-family:"IA Inter Display";src:url("/fonts/InterDisplay-ExtraBold.woff") format("woff");font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:"IA Inter";src:url("/fonts/Inter-Regular.woff2") format("woff2"),url("/fonts/Inter-Regular.woff") format("woff");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"IA Inter";src:url("/fonts/Inter-SemiBold.woff2") format("woff2"),url("/fonts/Inter-SemiBold.woff") format("woff");font-weight:500 600;font-style:normal;font-display:swap}
+@font-face{font-family:"IA Inter";src:url("/fonts/Inter-Bold.woff2") format("woff2"),url("/fonts/Inter-Bold.woff") format("woff");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"IA Inter Display";src:url("/fonts/InterDisplay-ExtraBold.woff2") format("woff2"),url("/fonts/InterDisplay-ExtraBold.woff") format("woff");font-weight:800;font-style:normal;font-display:swap}
 @media (max-width:760px){body:not(.is-app):not(.is-portal){font-family:"IA Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 body:not(.is-app):not(.is-portal) :is(input,select,textarea,button){font-family:inherit}
 body:not(.is-app):not(.is-portal) :is(h1,h2){font-family:"IA Inter Display","IA Inter",-apple-system,BlinkMacSystemFont,sans-serif;font-weight:800}}
@@ -962,6 +967,41 @@ html:has(dialog.ad-dlg[open]),html:has(dialog.buy-dlg[open]){overflow:hidden}
 @media (max-width:640px){.ad-dlg[open],.buy-dlg[open]{max-height:calc(100vh - 12px);max-height:calc(100svh - 12px)}
 .ad-dlg[open]>*,.buy-dlg[open]>*{padding-bottom:calc(28px + env(safe-area-inset-bottom))}}
 @media (max-width:640px){.bill-table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}}
+footer.footer .foot-brand p{color:#CBD5E1;margin:0}
+footer.footer .foot-addr{font-style:normal;color:#94A3B8;font-size:13.5px;line-height:1.6;margin:0}
+footer.footer .foot-addr a{color:#CBD5E1;padding:0;min-height:0;display:inline}
+footer.footer .foot-addr a:hover{color:#fff}
+footer.footer .foot-note{border-top:1px solid rgba(255,255,255,.12);margin-top:14px;padding-top:14px}
+footer.footer .foot-note p{margin:0;max-width:900px;color:#94A3B8;font-size:13px;line-height:1.55;text-transform:none;letter-spacing:0}
+footer.footer .foot-must{align-items:center;margin-top:10px}
+footer.footer .foot-copy{color:#94A3B8;font-size:13.5px;margin-right:auto}
+footer.footer .foot-must a{color:#E2E8F0}
+footer.footer .foot-must a:hover{color:#fff}
+footer.footer .foot-col .foot-links a:focus-visible,footer.footer .foot-must a:focus-visible,footer.footer summary:focus-visible{outline:2px solid #7DD3FC;outline-offset:2px;border-radius:4px}
+@media (max-width:760px){footer.footer .foot-brand{display:grid;gap:8px}
+footer.footer .foot-col .foot-links a{min-height:40px;display:flex;align-items:center}
+footer.footer .foot-must{gap:4px 18px}
+footer.footer .foot-copy{flex-basis:100%;order:3;margin:6px 0 0}
+footer.footer{padding-bottom:calc(84px + env(safe-area-inset-bottom))}}
+@media (min-width:761px){footer.footer .foot-col>summary{cursor:default;padding:18px 0 8px;font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:#7DD3FC}
+footer.footer .foot-col>summary::after{display:none}
+footer.footer .foot-col{border-bottom:0}
+footer.footer .foot-col[open] .foot-links,footer.footer .foot-col .foot-links{grid-template-columns:1fr;gap:0;padding-bottom:8px}
+footer.footer .foot-col .foot-links a{padding:5px 0;font-size:14.5px}
+footer.footer .foot-brand{grid-template-columns:auto minmax(0,1fr) auto!important;gap:6px 32px}
+footer.footer .foot-brand .brand{grid-row:auto}
+footer.footer .foot-addr{text-align:right}
+footer.footer.footer-b2b .footer-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.crumbs a{display:inline-block;padding:6px 2px;margin:-6px 0}
+.tip{position:relative}
+.tip::after{content:"";position:absolute;inset:-6px}
+.desktop-nav a{display:inline-flex;align-items:center;min-height:40px}
+footer.footer{padding-bottom:88px}
+.area-login label.remember,.auth-card label.remember{flex-wrap:wrap}
+.area-login label.remember small,.auth-card label.remember small{flex-basis:100%;padding-left:32px;margin-top:-4px}
+.area-links a,.auth-card .form-note a{display:inline-block;padding:3px 0}
+footer.footer .foot-addr a{display:inline-block;padding:4px 0}
+.auth-card a:not(.btn){display:inline-block;padding-top:3px;padding-bottom:3px}
 .home-3 h3{font-size:22px;margin:10px 0 6px;color:var(--ia-navy,#0F2C59)}
 .btn,a.btn,button.btn,.hs-go,a.hs-go,.btn-pay,.km-go{border-radius:999px!important}
 .mobile-menu{border-radius:999px!important;padding-left:14px;padding-right:16px}

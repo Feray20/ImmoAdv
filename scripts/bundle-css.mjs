@@ -64,6 +64,8 @@ const always = ['/src/menu.js', '/src/track.js', '/src/contact-widget.mjs', '/sr
 const PAGES = [
   { out: 'home.css', html: 'index.html', css: ['site.css'] },
   { out: 'b2b-page.css', html: 'b2b/index.html', css: ['site.css', 'b2b.css'], extra: ['/src/routes.js'] },
+  // Creator-Bereich: Website- und Portal-Stile nur, soweit Seite und Creator-Skripte sie verwenden (creator.css bleibt vollständig).
+  { out: 'creator-page.css', html: 'creator/index.html', css: ['site.css', 'b2b.css'] },
 ];
 // Alle übrigen Inhaltsseiten (Rechner, Wissen, Rechtstexte …) mit dem Standard-Skriptsatz teilen sich pages.css.
 import { readdirSync, statSync } from 'node:fs';
