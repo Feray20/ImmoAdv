@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { ASSET_BUCKET, audit, j, requireCreatorAdmin } from '@/lib/creator/server';
+import { ensureCreatorKit } from '@/lib/creator/kit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,7 @@ const Input = z.discriminatedUnion('action', [
 export async function GET(req: Request) {
   const a = await requireCreatorAdmin(req, 'creators.list');
   if (!('role' in a)) return a;
+  await ensureCreatorKit(new URL(req.url).origin).catch(() => null);
   const { data } = await supabaseAdmin().from('immo_creator_assets').select('id, campaign_id, title, description, kind, mime, size_bytes, text_body, usage_notes, active, created_at, storage_path').order('created_at', { ascending: false }).limit(500);
   return j({ assets: ((data ?? []) as { storage_path: string | null }[]).map(({ storage_path, ...x }) => ({ ...x, file: storage_path ? storage_path.split('/').pop() : null })) });
 }

@@ -240,3 +240,32 @@ body.is-portal>#creator{flex:1 0 auto}
 .area-login .sso-btn{background:#fff;border:1.5px solid #CBD5E1;color:#0F172A;margin:0 0 10px}
 .area-login .sso-btn:hover{border-color:#0F2C59;background:#F8FAFC}
 .area-login .sso-btn[data-sso="apple"]{background:#000;color:#fff;border-color:#000}
+/* Creator-Portal: Navigation für Handy, Tablet und Desktop */
+#creator .cr-side-nav a{justify-content:flex-start;gap:12px}
+#creator .cr-side-nav a svg{flex:none;width:20px;height:20px;opacity:.85}
+#creator .cr-side-nav a.on svg{opacity:1}
+#creator .cr-side-h{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7FA3D1;padding:14px 12px 4px}
+#creator .cr-side-h:first-child{padding-top:6px}
+#creator .pt-main a.ck-link,#creator .pt-card a.ck-link{color:#0369A1;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+#creator .cr-kpi-txt{font-size:16px!important;color:#0F172A}
+#creator .pt-kpi .ck-link{font-size:13px}
+/* Mehr-Blatt: Einträge mit Symbol */
+#creator .cr-sheet-nav a{display:flex;align-items:center;gap:12px}
+#creator .cr-sheet-nav a svg{flex:none;width:20px;height:20px;color:#0F2C59}
+/* Handy: fünf gleich breite Felder in der unteren Leiste */
+@media (max-width:759px){
+  #creator .pt-tabs{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+  #creator .pt-tabs a,#creator .pt-tabs button{font-size:11px;padding:6px 0;gap:3px}
+}
+/* Tablet (760–900 px): Seitenleiste statt Handy-Leiste */
+@media (min-width:760px) and (max-width:900px){
+  #creator .pt{display:grid;grid-template-columns:212px minmax(0,1fr);min-height:100vh}
+  #creator .pt-side{display:flex;position:sticky;top:0;height:100vh;padding:16px 10px}
+  #creator .pt-tabs,#creator .pt-sheet{display:none!important}
+  #creator .pt-main{padding:0 22px 40px}
+  #creator .pt-top-brand,#creator .pt-logout-m{display:none!important}
+  #creator .cr-kpis6{grid-template-columns:1fr 1fr}
+}
+/* Vereinbarung: großes, gut lesbares Lesefeld */
+#creator .cr-agree{max-height:min(70vh,680px);font-size:14.5px;line-height:1.7;color:#1E293B;padding:18px 20px}
+@media (max-width:640px){#creator .cr-agree{max-height:62vh;padding:14px 14px;font-size:14px}}
