@@ -286,7 +286,8 @@
 /* /ueber-uns und /kontakt */
 .uu-wrap{max-width:760px;display:grid;gap:20px}
 .uu-card{display:flex;gap:24px;align-items:center;padding:24px;border:1px solid #E2E8F0;border-radius:20px;background:#fff}
-.uu-img{width:160px;height:160px;border-radius:50%;object-fit:cover;flex:none;display:block}
+.uu-card>picture{flex:none;display:block;line-height:0}
+.uu-img{width:160px;height:160px;max-width:none;border-radius:50%;object-fit:cover;object-position:50% 35%;flex:none;display:block;box-shadow:0 0 0 4px #fff,0 0 0 5px #E2E8F0}
 .uu-role{margin:0;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#64748B;font-weight:700}
 .uu-name{margin:2px 0 8px;font-size:26px;color:#0F172A}
 .uu-block{padding:24px;border:1px solid #E2E8F0;border-radius:20px;background:#fff}
