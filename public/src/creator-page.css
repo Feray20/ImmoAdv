@@ -457,14 +457,8 @@ html:has(dialog.ad-dlg[open]),html:has(dialog.buy-dlg[open]){overflow:hidden}
 .ad-dlg[open]>*,.buy-dlg[open]>*{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 @media (max-width:640px){.ad-dlg[open],.buy-dlg[open]{max-height:calc(100vh - 12px);max-height:calc(100svh - 12px)}
 .ad-dlg[open]>*,.buy-dlg[open]>*{padding-bottom:calc(28px + env(safe-area-inset-bottom))}}
-footer.footer .foot-col .foot-links a:focus-visible,footer.footer .foot-must a:focus-visible,footer.footer summary:focus-visible{outline:2px solid #7DD3FC;outline-offset:2px;border-radius:4px}
-@media (max-width:760px){footer.footer{padding-bottom:calc(84px + env(safe-area-inset-bottom))}}
-@media (min-width:761px){footer.footer .foot-col>summary{cursor:default;padding:18px 0 8px;font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:#7DD3FC}
-footer.footer .foot-col>summary::after{display:none}
-footer.footer .foot-col{border-bottom:0}}
 .ia-copy{white-space:nowrap}
 .desktop-nav a{display:inline-flex;align-items:center;min-height:40px}
-footer.footer{padding-bottom:88px}
 .area-login label.remember,.auth-card label.remember{flex-wrap:wrap}
 .area-login label.remember small,.auth-card label.remember small{flex-basis:100%;padding-left:32px;margin-top:-4px}
 .area-links a,.auth-card .form-note a{display:inline-block;padding:3px 0}
