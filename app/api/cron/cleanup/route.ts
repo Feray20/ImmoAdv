@@ -36,7 +36,9 @@ export async function GET(req: Request) {
   const exportsRemoved = await cleanupExports().catch(() => -1);
   const retention = await leadRetention().catch((e) => ({ error: String(e instanceof Error ? e.message : e) }));
   const radar = await radarNotify(today).catch((e) => ({ error: String(e instanceof Error ? e.message : e) }));
-  return NextResponse.json({ ok: true, cleanup, reminders, overdue, retention, exportsRemoved, radar }, { headers: { 'Cache-Control': 'no-store' } });
+  // Creator Hub: automatischer Monatsabschluss (falls eingeschaltet), Hinweise „Abrechnung bereit“ und Rechnungs-Erinnerungen.
+  const creator = await import('@/lib/creator/billing-server').then((m) => m.runCreatorBilling()).catch((e) => ({ error: String(e instanceof Error ? e.message : e) }));
+  return NextResponse.json({ ok: true, cleanup, reminders, overdue, retention, exportsRemoved, radar, creator }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 // Bestandskunden-Radar: Am 1. jedes Monats erhält jedes Unternehmen mit Radar-Tarif eine Übersicht der Kunden,

@@ -355,7 +355,7 @@ async function perfBox(box, id, canReverse, range) {
 
 // ---------- Phase 3: Abrechnung, Auszahlungen, Provisionsregeln ----------
 const SST = { READY: ['warn', 'Bereit'], INVOICED: ['warn', 'Rechnung da'], APPROVED: ['ok', 'Freigegeben'], PAID: ['ok', 'Bezahlt'], ZERO: ['', 'Kein Betrag'] };
-const PST = { READY: ['warn', 'Bereit'], APPROVED: ['ok', 'Freigegeben'], EXPORTED: ['ok', 'Exportiert'], PAID: ['ok', 'Bezahlt'], FAILED: ['bad', 'Fehlgeschlagen'] };
+const PST = { READY: ['warn', 'Bereit'], APPROVED: ['ok', 'Freigegeben'], EXPORTED: ['ok', 'Exportiert'], PAID: ['ok', 'Bezahlt'], FAILED: ['bad', 'Fehlgeschlagen'], RETURNED: ['bad', 'Zurückgekommen'] };
 const DOCT = { STATEMENT: 'Abrechnung', INVOICE: 'Rechnung', CREDIT_NOTE: 'Gutschrift', CANCELLATION: 'Storno' };
 const prevPeriod = (p) => { const [y, m] = p.split('-').map(Number); return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`; };
 const nextPeriod = (p) => { const [y, m] = p.split('-').map(Number); return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`; };
@@ -377,6 +377,22 @@ function adjustDialog(creatorId, done, period) {
   });
 }
 
+// Automatik und Kontrollen der Abrechnung (ändern dürfen nur Super Admins)
+function settingsCard(d) {
+  const c = d.settings;
+  if (!c) return '';
+  const on = (b) => (b ? '<span class="st ok" style="margin:0">an</span>' : '<span class="st" style="margin:0">aus</span>');
+  if (!d.me.settings) {
+    return `<section class="pt-card"><h2>Automatik</h2><dl class="pt-dl"><div><dt>Automatischer Monatsabschluss</dt><dd>${on(c.auto_close)}</dd></div><div><dt>Sperrfrist nach Monatsende</dt><dd>${num(c.close_delay_days)} Tage</dd></div><div><dt>Erinnerung „Rechnung fehlt“</dt><dd>nach ${num(c.invoice_reminder_days)} Tagen</dd></div><div><dt>Vier-Augen-Prinzip</dt><dd>${on(c.four_eyes)}</dd></div></dl><p class="form-note">Ändern können nur Super Admins.</p></section>`;
+  }
+  return `<section class="pt-card"><h2>Automatik</h2><form id="coSet" class="co-set">
+    <label class="co-switch"><input type="checkbox" name="auto_close"${c.auto_close ? ' checked' : ''}><span><strong>Automatischer Monatsabschluss</strong><small>Täglicher Lauf schließt den Vormonat nach Ablauf der Sperrfrist ab. Creator erhalten danach eine E-Mail „Abrechnung bereit“.</small></span></label>
+    <label class="co-switch"><input type="checkbox" name="four_eyes"${c.four_eyes ? ' checked' : ''}><span><strong>Vier-Augen-Prinzip</strong><small>Wer eine Abrechnung freigibt, darf die Auszahlung nicht selbst freigeben.</small></span></label>
+    <div class="ad-grid2"><label>Sperrfrist nach Monatsende (Tage)<input type="number" name="close_delay_days" min="14" max="60" value="${num(c.close_delay_days)}"></label><label>Erinnerung „Rechnung fehlt“ nach (Tagen)<input type="number" name="invoice_reminder_days" min="3" max="30" value="${num(c.invoice_reminder_days)}"></label></div>
+    <div class="pt-row"><button type="submit" class="btn btn-dark btn-sm">Speichern</button><span class="form-note" id="coSetMsg" role="status"></span></div>
+    <p class="form-note">Die Sperrfrist beträgt mindestens 14 Tage, damit Widerrufe vor dem Abschluss berücksichtigt werden. Hinweise und Erinnerungen werden nur verschickt, wenn der E-Mail-Versand eingerichtet ist.</p></form></section>`;
+}
+
 async function billingAdmin(v) {
   const r = await api(`/api/admin/creators/billing${billPeriod ? `?period=${billPeriod}` : ''}`);
   if (!r.ok) return errBox(v, r.data?.error);
@@ -390,12 +406,14 @@ async function billingAdmin(v) {
       <div class="co-period"><button type="button" class="btn btn-outline btn-sm" data-per="${prevPeriod(d.period)}" aria-label="Vormonat">←</button><button type="button" class="btn btn-outline btn-sm" data-per="${nextPeriod(d.period)}" aria-label="Folgemonat">→</button></div></div>
       <dl class="pt-dl"><div><dt>Creator</dt><dd>${num(o.creators)}</dd></div><div><dt>Provision</dt><dd>${eurC(o.commission_cents)}</dd></div><div><dt>Rechnungen offen</dt><dd>${num(o.invoices_open)}</dd></div><div><dt>Payout Ready</dt><dd>${eurC(o.payout_ready_cents)}</dd></div><div><dt>Blockiert</dt><dd>${eurC(o.blocked_cents)}</dd></div><div><dt>Bezahlt</dt><dd>${eurC(o.paid_cents)}</dd></div></dl>
       ${d.unbilled.conversions ? `<p class="form-note">Noch nicht abgerechnet: ${num(d.unbilled.conversions)} Conversions (${eurC(d.unbilled.revenue_net_cents)} netto).</p>` : ''}
+      ${d.open_refunds ? `<p class="form-note">${num(d.open_refunds)} Erstattung(en) aus Stripe werden beim nächsten Abschluss verrechnet (geringere Grundlage bzw. anteilige Rückforderung).</p>` : ''}
       ${d.me.manage ? (canClose ? `<button type="button" class="btn btn-dark" id="coClose">${o.closed ? 'Nachzügler abrechnen' : 'Monatsabschluss durchführen'}</button>` : `<button type="button" class="btn btn-dark" disabled>Monatsabschluss ab ${dt(d.close_allowed_at)}</button><span class="form-note"> Widerrufsfrist der Käufe läuft noch.</span>`) : ''}</section>
     <section class="pt-card"><h2>Abrechnungen ${esc(d.label)}</h2>${d.statements.length ? `<div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Creator</th><th>Status</th><th>Conv.</th><th>Provision</th><th>Anpass.</th><th>USt</th><th>Auszahlung</th><th>Offen</th><th>Dokumente</th><th></th></tr></thead><tbody>
       ${d.statements.map((s) => `<tr><td><a class="ck-link" href="#creator-${esc(s.creator_id)}">${esc(s.name)}</a><br><small class="form-note">${s.billing_mode === 'CREDIT_NOTE' ? 'Gutschrift' : 'Rechnung'}</small></td><td>${chip(SST, s.status)}</td><td>${num(s.conversions)}</td><td>${eurC(s.commission_cents)}</td><td>${eurC(s.adjustments_cents)}</td><td>${eurC(s.vat_cents)}</td><td><strong>${eurC(s.payout_cents)}</strong></td>
         <td>${s.blockers.length ? s.blockers.map((b) => `<span class="st bad" style="margin:0 4px 4px 0">${esc(b.text)}</span>`).join('') : (s.status === 'READY' || s.status === 'INVOICED' ? '<span class="st ok" style="margin:0">bereit</span>' : '')}</td>
         <td>${s.documents.filter((x) => x.doc_type !== 'STATEMENT').map((x) => `<small>${esc(DOCT[x.doc_type])} ${esc(x.number)}</small>`).join('<br>') || '–'}</td>
         <td>${d.me.manage && (s.status === 'READY' || s.status === 'INVOICED') && !s.blockers.length ? `<span class="ad-actions"><button type="button" data-ap="${esc(s.id)}">Freigeben</button></span>` : ''}</td></tr>`).join('')}</tbody></table></div>` : `<p class="form-note">${o.closed ? 'Keine Abrechnungen.' : 'Dieser Monat ist noch nicht abgeschlossen.'}</p>`}</section>
+    ${settingsCard(d)}
     <section class="pt-card"><div class="ad-h-row"><h2 style="margin:0">Offene Anpassungen</h2></div>${d.open_adjustments.length ? `<ul class="co-social" style="margin-top:8px">${d.open_adjustments.map((x) => `<li>${esc(x.immo_creators?.display_name || 'Creator')} · ${esc(x.period)} · ${esc(x.kind)} <strong>${eurC(x.amount_cents)}</strong> – ${esc(x.reason)} ${d.me.manage && (x.kind === 'BONUS' || x.kind === 'CORRECTION') ? `<span class="ad-actions"><button type="button" data-deladj="${esc(x.id)}">Löschen</button></span>` : ''}</li>`).join('')}</ul>` : '<p class="form-note">Keine. Boni und Korrekturen legen Sie in Creator 360 an; Rückforderungen und Überträge entstehen automatisch beim Abschluss.</p>'}</section>`;
   v.querySelectorAll('[data-per]').forEach((b) => b.onclick = () => { billPeriod = b.dataset.per; billingAdmin(v); });
   v.querySelector('#coClose')?.addEventListener('click', () => dialog(`<h2 style="margin:0;color:#0F2C59">Monatsabschluss ${esc(d.label)}</h2><p>Für alle Creator mit Käufen oder Anpassungen wird eine Abrechnung erstellt. Beträge sind danach festgeschrieben; spätere Erstattungen werden im Folgemonat verrechnet.</p><p class="form-note">Rechnungs-Creator erhalten danach die Aufgabe „Rechnung erstellen“.</p>`,
@@ -406,6 +424,13 @@ async function billingAdmin(v) {
     if (!x.ok) { alert([x.data?.error, ...(x.data?.blockers || [])].filter(Boolean).join('\n')); b.disabled = false; return; }
     billingAdmin(v);
   });
+  v.querySelector('#coSet')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = e.target, msg = v.querySelector('#coSetMsg');
+    const body = { action: 'settings', auto_close: f.auto_close.checked, four_eyes: f.four_eyes.checked, close_delay_days: Number(f.close_delay_days.value), invoice_reminder_days: Number(f.invoice_reminder_days.value) };
+    const x = await api('/api/admin/creators/billing', { method: 'POST', body: JSON.stringify(body) });
+    msg.textContent = x.ok ? 'Gespeichert und protokolliert.' : (x.data?.error || 'Nicht möglich.');
+  });
   v.querySelectorAll('[data-deladj]').forEach((b) => b.onclick = async () => { const x = await api('/api/admin/creators/billing', { method: 'POST', body: JSON.stringify({ action: 'delete_adjustment', id: b.dataset.deladj }) }); if (x.ok) billingAdmin(v); else alert(x.data?.error || 'Nicht möglich.'); });
 }
 
@@ -413,13 +438,17 @@ async function payoutsAdmin(v) {
   const r = await api('/api/admin/creators/payouts');
   if (!r.ok) return errBox(v, r.data?.error);
   const d = r.data;
-  const open = d.payouts.filter((p) => p.status !== 'PAID');
-  v.innerHTML = `${subnav('creator-auszahlungen')}<section class="pt-card"><div class="ad-h-row"><h2 style="margin:0">Payout Center</h2><span class="form-note">${d.four_eyes ? 'Vier-Augen-Prinzip aktiv' : 'Vier-Augen-Prinzip aus (Einstellung creator_payout_four_eyes)'}</span></div>
+  v.innerHTML = `${subnav('creator-auszahlungen')}<section class="pt-card"><div class="ad-h-row"><h2 style="margin:0">Payout Center</h2><span class="form-note">${d.four_eyes ? 'Vier-Augen-Prinzip aktiv' : 'Vier-Augen-Prinzip aus (Abrechnung → Automatik)'}</span></div>
     ${d.debtor_configured ? '' : '<div class="pt-alert warn">Für den SEPA-Export fehlt das Auszahlungskonto von ImmoAdv (CREATOR_PAYOUT_IBAN oder INVOICE_IBAN in Vercel).</div>'}
-    <p class="form-note">Ablauf: Abrechnung freigeben → Auszahlung freigeben → SEPA-Datei im Online-Banking hochladen und dort freigeben → hier als bezahlt markieren. ImmoAdv löst selbst keine Zahlung aus.</p>
+    <p class="form-note">Ablauf: Abrechnung freigeben → Auszahlung freigeben → SEPA-Datei im Online-Banking hochladen und dort freigeben → hier als bezahlt markieren oder unten den Kontoauszug abgleichen. ImmoAdv löst selbst keine Zahlung aus.</p>
     ${d.payouts.length ? `<div style="overflow-x:auto"><table class="ad-table"><thead><tr><th><input type="checkbox" id="poAll" aria-label="Alle offenen wählen"></th><th>Creator</th><th>Monat</th><th>Betrag</th><th>Konto</th><th>Bankdaten</th><th>Status</th><th>Verwendungszweck</th></tr></thead><tbody>
-    ${d.payouts.map((p) => `<tr><td>${p.status !== 'PAID' ? `<input type="checkbox" data-po="${esc(p.id)}" aria-label="Auswählen">` : ''}</td><td><a class="ck-link" href="#creator-${esc(p.creator_id)}">${esc(p.immo_creators?.display_name || 'Creator')}</a></td><td>${esc(p.period_label)}</td><td><strong>${eurC(p.amount_cents)}</strong></td><td><span class="cr-mask">${esc(p.iban_masked)}</span></td><td>${p.bank_status === 'VERIFIED' ? '<span class="st ok" style="margin:0">geprüft</span>' : p.bank_status === 'VERIFICATION_REQUIRED' ? '<span class="st bad" style="margin:0">Prüfung nötig</span>' : p.bank_status ? '<span class="st warn" style="margin:0">hinterlegt</span>' : '<span class="st bad" style="margin:0">abgelöst</span>'}</td><td>${chip(PST, p.status)}${p.failed_reason ? `<br><small class="form-note">${esc(p.failed_reason)}</small>` : ''}${p.paid_at ? `<br><small class="form-note">${dt(p.paid_at)}</small>` : ''}</td><td><small>${esc(p.reference)}</small></td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine Auszahlungen. Sie entstehen mit der Freigabe einer Abrechnung.</p>'}
-    ${d.me.manage && open.length ? `<div class="pt-row" style="margin-top:12px"><button type="button" class="btn btn-outline" data-act="approve">Freigeben</button><label class="form-note">Ausführung am <input type="date" id="poDate" value="${new Date(Date.now() + 86400000).toISOString().slice(0, 10)}"></label><button type="button" class="btn btn-dark" data-act="export">SEPA-Datei erstellen</button><button type="button" class="btn btn-outline" data-act="paid">Als bezahlt markieren</button><button type="button" class="btn btn-outline" data-act="failed">Fehlgeschlagen</button></div><p class="form-note" id="poMsg" role="status"></p>` : ''}</section>`;
+    ${d.payouts.map((p) => `<tr><td><input type="checkbox" data-po="${esc(p.id)}" aria-label="Auswählen"></td><td><a class="ck-link" href="#creator-${esc(p.creator_id)}">${esc(p.immo_creators?.display_name || 'Creator')}</a></td><td>${esc(p.period_label)}</td><td><strong>${eurC(p.amount_cents)}</strong></td><td><span class="cr-mask">${esc(p.iban_masked)}</span></td><td>${p.bank_status === 'VERIFIED' ? '<span class="st ok" style="margin:0">geprüft</span>' : p.bank_status === 'VERIFICATION_REQUIRED' ? '<span class="st bad" style="margin:0">Prüfung nötig</span>' : p.bank_status ? '<span class="st warn" style="margin:0">hinterlegt</span>' : '<span class="st bad" style="margin:0">abgelöst</span>'}</td><td>${chip(PST, p.status)}${p.failed_reason ? `<br><small class="form-note">${esc(p.failed_reason)}</small>` : ''}${p.paid_at ? `<br><small class="form-note">${dt(p.paid_at)}${p.paid_via === 'BANK_STATEMENT' ? ' · laut Kontoauszug' : ''}</small>` : ''}</td><td><small>${esc(p.reference)}</small></td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine Auszahlungen. Sie entstehen mit der Freigabe einer Abrechnung.</p>'}
+    ${d.me.manage && d.payouts.length ? `<div class="pt-row" style="margin-top:12px"><button type="button" class="btn btn-outline" data-act="approve">Freigeben</button><label class="form-note">Ausführung am <input type="date" id="poDate" value="${new Date(Date.now() + 86400000).toISOString().slice(0, 10)}"></label><button type="button" class="btn btn-dark" data-act="export">SEPA-Datei erstellen</button><button type="button" class="btn btn-outline" data-act="paid">Als bezahlt markieren</button><button type="button" class="btn btn-outline" data-act="failed">Fehlgeschlagen</button><button type="button" class="btn btn-outline" data-act="returned">Zurückgekommen</button><button type="button" class="btn btn-outline" data-act="reissue">Erneut auszahlen</button></div>
+    <p class="form-note">„Zurückgekommen“: Die Bank hat eine bereits bezahlte Überweisung zurückgegeben. Die Abrechnung wird wieder offen, die Zahlungsdaten gehen in die Prüfung und der Creator wird gebeten, sie zu prüfen. „Erneut auszahlen“ stößt dieselbe Auszahlung danach auf das aktuelle, geprüfte Konto neu an.</p><p class="form-note" id="poMsg" role="status"></p>` : ''}</section>
+    ${d.me.manage ? `<section class="pt-card"><h2>Kontoauszug abgleichen</h2><p class="form-note">Kontoauszug im Format camt.053 (XML) aus dem Online-Banking hochladen. Exportierte Auszahlungen werden über die Referenz der SEPA-Datei erkannt und nach Ihrer Bestätigung mit Buchungsdatum als bezahlt markiert. Rückläufer werden mit übernommen (bezahlte Auszahlungen gelten dann als zurückgekommen); abweichende Beträge werden nur angezeigt.</p>
+      <div class="pt-row"><label class="btn btn-outline btn-sm co-file">Datei wählen<input type="file" id="camtFile" accept=".xml,application/xml,text/xml" hidden></label><span class="form-note" id="camtName">Keine Datei gewählt</span></div>
+      <div id="camtOut" aria-live="polite"></div></section>` : ''}`;
+  bankStatement(v);
   const sel = () => [...v.querySelectorAll('[data-po]:checked')].map((x) => x.dataset.po);
   v.querySelector('#poAll')?.addEventListener('change', (e) => v.querySelectorAll('[data-po]').forEach((x) => { x.checked = e.target.checked; }));
   const m = (t) => { const el = v.querySelector('#poMsg'); if (el) el.textContent = t; };
@@ -433,13 +462,46 @@ async function payoutsAdmin(v) {
     }
     if (act === 'failed') return dialog('<h2 style="margin:0;color:#0F2C59">Zahlung fehlgeschlagen</h2><label class="pt-field">Grund*<textarea name="reason" rows="2" maxlength="300" required></textarea></label>',
       async (f) => { const x = await api('/api/admin/creators/payouts', { method: 'POST', body: JSON.stringify({ action: 'failed', ids, reason: fv(f, 'reason') }) }); if (!x.ok) return x.data?.error || 'Nicht möglich.'; payoutsAdmin(v); return null; });
+    if (act === 'returned') return dialog('<h2 style="margin:0;color:#0F2C59">Auszahlung zurückgekommen</h2><p class="form-note">Nur für bereits bezahlte Auszahlungen. Der Creator erhält eine E-Mail mit der Bitte, die Zahlungsdaten zu prüfen.</p><label class="pt-field">Grund*<textarea name="reason" rows="2" maxlength="300" required placeholder="z. B. Rückläufer AC04 – Konto erloschen"></textarea></label>',
+      async (f) => { const x = await api('/api/admin/creators/payouts', { method: 'POST', body: JSON.stringify({ action: 'returned', ids, reason: fv(f, 'reason') }) }); if (!x.ok) return x.data?.error || 'Nicht möglich.'; payoutsAdmin(v); return null; });
     if (act === 'paid') return dialog(`<h2 style="margin:0;color:#0F2C59">Als bezahlt markieren</h2><p>${ids.length} Auszahlung(en). Bitte nur markieren, wenn die Überweisung im Online-Banking ausgeführt wurde. Creator erhalten eine E-Mail.</p>`,
       async () => { const x = await api('/api/admin/creators/payouts', { method: 'POST', body: JSON.stringify({ action: 'paid', ids }) }); if (!x.ok) return x.data?.error || 'Nicht möglich.'; payoutsAdmin(v); return null; });
     const x = await api('/api/admin/creators/payouts', { method: 'POST', body: JSON.stringify({ action: act, ids }) });
     if (!x.ok) { m(x.data?.error || 'Nicht möglich.'); return; }
+    if (act === 'reissue') { m(`${x.data.reissued} Auszahlung(en) neu angestoßen – bitte wie gewohnt freigeben.`); setTimeout(() => payoutsAdmin(v), 1500); return; }
     if (x.data.skipped) m(`${x.data.approved} freigegeben, ${x.data.skipped} übersprungen${x.data.four_eyes ? ' (Vier-Augen-Prinzip: Freigabe durch eine zweite Person)' : ''}.`);
     setTimeout(() => payoutsAdmin(v), x.data.skipped ? 1800 : 0);
   });
+}
+
+// Kontoauszug (camt.053): Vorschau, dann Übernahme. Der Server liest die Datei bei der Übernahme erneut.
+const ISSUE = { amount_mismatch: 'Betrag weicht ab', returned: 'Rückläufer', not_booked: 'Noch nicht gebucht' };
+function bankStatement(v) {
+  const input = v.querySelector('#camtFile'), out = v.querySelector('#camtOut');
+  if (!input) return;
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    v.querySelector('#camtName').textContent = file.name;
+    if (file.size > 3 * 1024 * 1024) { out.innerHTML = '<p class="pt-alert bad">Die Datei ist zu groß (höchstens 3 MB).</p>'; return; }
+    const xml = await file.text();
+    out.innerHTML = '<p class="form-note">Wird gelesen …</p>';
+    const r = await api('/api/admin/creators/payouts/bank-statement', { method: 'POST', body: JSON.stringify({ xml, confirm: false }) });
+    if (!r.ok) { out.innerHTML = `<p class="pt-alert bad">${esc(r.data?.error || 'Nicht möglich.')}</p>`; return; }
+    const d = r.data;
+    out.innerHTML = `${d.account_warning ? `<div class="pt-alert warn">${esc(d.account_warning)}</div>` : ''}${d.already_imported ? `<div class="pt-alert warn">Diese Datei wurde bereits am ${dt(d.already_imported)} übernommen.</div>` : ''}
+      <dl class="pt-dl"><div><dt>Buchungen</dt><dd>${num(d.transactions)}</dd></div><div><dt>Erkannt</dt><dd>${num(d.matches.length)}</dd></div><div><dt>Zu prüfen</dt><dd>${num(d.issues.length)}</dd></div><div><dt>Andere Buchungen</dt><dd>${num(d.unrelated)}</dd></div></dl>
+      ${d.matches.length ? `<div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Creator</th><th>Monat</th><th>Betrag</th><th>Gebucht</th><th>Erkannt über</th></tr></thead><tbody>${d.matches.map((m) => `<tr><td>${esc(m.creator || '')}</td><td>${esc(m.period || '')}</td><td><strong>${esc(m.amount)}</strong></td><td>${m.booking_date ? dt(m.booking_date) : '–'}</td><td>${m.via === 'end_to_end' ? 'Referenz der SEPA-Datei' : 'Verwendungszweck + Betrag'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Keine offenen Auszahlungen in diesem Auszug gefunden.</p>'}
+      ${d.issues.length ? `<ul class="co-social">${d.issues.map((i) => `<li><span class="st bad" style="margin:0 6px 0 0">${esc(ISSUE[i.kind] || i.kind)}</span>${esc(i.creator || 'Unbekannt')} · ${esc(i.amount)} – ${esc(i.note)}</li>`).join('')}</ul>` : ''}
+      ${d.matches.length || d.issues.some((i) => i.kind === 'returned') ? '<div class="pt-row"><button type="button" class="btn btn-dark btn-sm" id="camtGo">Übernehmen</button><span class="form-note">Creator erhalten eine E-Mail.</span></div>' : ''}`;
+    out.querySelector('#camtGo')?.addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      const x = await api('/api/admin/creators/payouts/bank-statement', { method: 'POST', body: JSON.stringify({ xml, confirm: true }) });
+      if (!x.ok) { e.target.disabled = false; out.insertAdjacentHTML('beforeend', `<p class="pt-alert bad">${esc(x.data?.error || 'Nicht möglich.')}</p>`); return; }
+      out.innerHTML = `<p class="pt-alert ok">${num(x.data.paid)} Auszahlung(en) als bezahlt übernommen${x.data.returned ? `, ${num(x.data.returned)} Rückläufer vermerkt` : ''}.</p>`;
+      setTimeout(() => payoutsAdmin(v), 1500);
+    });
+  };
 }
 
 async function rulesAdmin(v) {
