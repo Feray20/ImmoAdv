@@ -960,7 +960,7 @@ async function onboarding(avvVersion) {
 // Portal ohne Anmeldung: „Anmelden“ (Zugangsdaten von ImmoAdv) oder „Unternehmenskonto anfragen“.
 function portalGate() {
   const tab = /anfrage/.test(location.hash) ? 'anfrage' : 'login';
-  root.innerHTML = `<div class="pt-gate"><div class="seg area-seg pt-gate-tabs" role="tablist"><button type="button" role="tab" data-gt="login" aria-selected="${tab === 'login'}">Anmelden</button><button type="button" role="tab" data-gt="anfrage" aria-selected="${tab === 'anfrage'}">Unternehmenskonto anfragen</button></div><div id="ptGate"></div></div>`;
+  root.innerHTML = `<div class="pt-gate"><div class="seg area-seg pt-gate-tabs" role="tablist"><button type="button" role="tab" data-gt="login" aria-selected="${tab === 'login'}">Anmelden</button><button type="button" role="tab" data-gt="anfrage" aria-selected="${tab === 'anfrage'}">Zugang anfragen</button></div><div id="ptGate"></div></div>`;
   root.querySelectorAll('[data-gt]').forEach((b) => b.onclick = () => { history.replaceState(null, '', location.pathname + (b.dataset.gt === 'anfrage' ? '#anfrage' : '')); portalGate(); });
   const box = $('#ptGate');
   if (tab === 'login') {

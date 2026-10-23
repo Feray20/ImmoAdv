@@ -1278,3 +1278,4 @@ body:has(.pt-main .ia-legal-in-main)>footer.ia-legal-b2b{display:none}
   .pt-main>.ia-legal{margin:auto -28px -48px}
 }
 @media(max-width:900px){.pt-main>.ia-legal{margin:32px -14px 0}.pt-main>.ia-legal .ia-legal-in{padding-left:14px!important;padding-right:14px!important}}
+.ia-copy{white-space:nowrap}

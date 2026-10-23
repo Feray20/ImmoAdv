@@ -1475,10 +1475,10 @@ body[data-mode="profi"] .app-top .mode-chip{background:#fff;color:#0F2C59;border
 @media (max-width:360px){.app-top .mode-chip b{display:none}.app-top .mode-chip{min-width:44px;justify-content:center;font-size:18px;padding:6px 10px}}
 
 /* Handy-Schrift der öffentlichen Seiten: Inter (selbst gehostet, keine externen Server). Wird nur auf schmalen Bildschirmen geladen. */
-@font-face{font-family:"IA Inter";src:url("/fonts/Inter-Regular.woff") format("woff");font-weight:400;font-style:normal;font-display:swap}
-@font-face{font-family:"IA Inter";src:url("/fonts/Inter-SemiBold.woff") format("woff");font-weight:500 600;font-style:normal;font-display:swap}
-@font-face{font-family:"IA Inter";src:url("/fonts/Inter-Bold.woff") format("woff");font-weight:700;font-style:normal;font-display:swap}
-@font-face{font-family:"IA Inter Display";src:url("/fonts/InterDisplay-ExtraBold.woff") format("woff");font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:"IA Inter";src:url("/fonts/Inter-Regular.woff2") format("woff2"),url("/fonts/Inter-Regular.woff") format("woff");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"IA Inter";src:url("/fonts/Inter-SemiBold.woff2") format("woff2"),url("/fonts/Inter-SemiBold.woff") format("woff");font-weight:500 600;font-style:normal;font-display:swap}
+@font-face{font-family:"IA Inter";src:url("/fonts/Inter-Bold.woff2") format("woff2"),url("/fonts/Inter-Bold.woff") format("woff");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"IA Inter Display";src:url("/fonts/InterDisplay-ExtraBold.woff2") format("woff2"),url("/fonts/InterDisplay-ExtraBold.woff") format("woff");font-weight:800;font-style:normal;font-display:swap}
 @media (max-width:760px){
   body:not(.is-app):not(.is-portal){font-family:"IA Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
   body:not(.is-app):not(.is-portal) :is(input,select,textarea,button){font-family:inherit}
@@ -1690,3 +1690,51 @@ html:has(dialog.ad-dlg[open]),html:has(dialog.buy-dlg[open]){overflow:hidden}
 }
 /* Tabellen ohne eigenen Scroll-Rahmen (Rechnungen, Einreichungen): auf schmalen Bildschirmen seitlich wischbar statt abgeschnitten */
 @media (max-width:640px){.bill-table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}}
+
+/* ---------- Fußzeile (einheitlich für alle Website-Seiten) ---------- */
+footer.footer .foot-brand p{color:#CBD5E1;margin:0}
+footer.footer .foot-addr{font-style:normal;color:#94A3B8;font-size:13.5px;line-height:1.6;margin:0}
+footer.footer .foot-addr a{color:#CBD5E1;padding:0;min-height:0;display:inline}
+footer.footer .foot-addr a:hover{color:#fff}
+footer.footer .foot-note{border-top:1px solid rgba(255,255,255,.12);margin-top:14px;padding-top:14px}
+footer.footer .foot-note p{margin:0;max-width:900px;color:#94A3B8;font-size:13px;line-height:1.55;text-transform:none;letter-spacing:0}
+footer.footer .foot-must{align-items:center;margin-top:10px}
+footer.footer .foot-copy{color:#94A3B8;font-size:13.5px;margin-right:auto}
+footer.footer .foot-must a{color:#E2E8F0}
+footer.footer .foot-must a:hover{color:#fff}
+footer.footer .foot-col .foot-links a:focus-visible,footer.footer .foot-must a:focus-visible,footer.footer summary:focus-visible{outline:2px solid #7DD3FC;outline-offset:2px;border-radius:4px}
+@media (max-width:760px){
+  footer.footer .foot-brand{display:grid;gap:8px}
+  footer.footer .foot-col .foot-links a{min-height:40px;display:flex;align-items:center}
+  footer.footer .foot-must{gap:4px 18px}
+  footer.footer .foot-copy{flex-basis:100%;order:3;margin:6px 0 0}
+  /* Platz für „Fragen?“ und die untere Schnellnavigation, damit nichts verdeckt wird */
+  footer.footer{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+}
+@media (min-width:761px){
+  footer.footer .foot-col>summary{cursor:default;padding:18px 0 8px;font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:#7DD3FC}
+  footer.footer .foot-col>summary::after{display:none}
+  footer.footer .foot-col{border-bottom:0}
+  footer.footer .foot-col[open] .foot-links,footer.footer .foot-col .foot-links{grid-template-columns:1fr;gap:0;padding-bottom:8px}
+  footer.footer .foot-col .foot-links a{padding:5px 0;font-size:14.5px}
+  footer.footer .foot-brand{grid-template-columns:auto minmax(0,1fr) auto!important;gap:6px 32px}
+  footer.footer .foot-brand .brand{grid-row:auto}
+  footer.footer .foot-addr{text-align:right}
+  footer.footer.footer-b2b .footer-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+.ia-copy{white-space:nowrap}
+
+/* Klickflächen: mindestens 24 × 24 px (WCAG 2.2), ohne das Aussehen zu ändern */
+.crumbs a{display:inline-block;padding:6px 2px;margin:-6px 0}
+.tip{position:relative}
+.tip::after{content:"";position:absolute;inset:-6px}
+.desktop-nav a{display:inline-flex;align-items:center;min-height:40px}
+/* Platz unter der Fußzeile, damit der „Fragen?“-Knopf nichts verdeckt */
+footer.footer{padding-bottom:88px}
+/* Anmeldeformulare: Hinweis zu „Angemeldet bleiben“ unter dem Kästchen statt in einer gequetschten zweiten Spalte */
+.area-login label.remember,.auth-card label.remember{flex-wrap:wrap}
+.area-login label.remember small,.auth-card label.remember small{flex-basis:100%;padding-left:32px;margin-top:-4px}
+.area-links a,.auth-card .form-note a{display:inline-block;padding:3px 0}
+footer.footer .foot-addr a{display:inline-block;padding:4px 0}
+.auth-card a:not(.btn){display:inline-block;padding-top:3px;padding-bottom:3px}

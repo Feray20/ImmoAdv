@@ -140,6 +140,14 @@ module.exports = {
       { source: '/p/:slug', headers: [{ key: 'Content-Security-Policy', value: cspValue.replace("frame-ancestors 'none'", 'frame-ancestors *') }, { key: 'X-Frame-Options', value: 'SAMEORIGIN' }] },
       { source: '/widget.js', headers: [{ key: 'Cache-Control', value: 'public, max-age=3600' }, { key: 'Access-Control-Allow-Origin', value: '*' }] },
       { source: '/src/:file*', headers: swr },
+      // Mit Versionsnummer (?v=…, beim Build gesetzt) ändert sich eine Datei nie: ein Jahr zwischenspeichern.
+      // Steht weiter unten, damit diese Regel die kurze Frische oben überschreibt; Aufrufe ohne ?v behalten die kurze Frische.
+      { source: '/src/:file*', has: [{ type: 'query', key: 'v' }], headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
+      // Bilder, Logos, Favicons und Creator-Material ändern sich selten.
+      { source: '/img/:file*', headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=2592000' }] },
+      { source: '/creator-kit/:file*', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=2592000' }] },
+      { source: '/brand/:file*', headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=2592000' }] },
+      { source: '/:icon(logo-icon.svg|favicon.svg|favicon.ico|favicon-32x32.png|favicon-48x48.png|favicon-96x96.png|og-image.png)', headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=2592000' }] },
       // Fremdbibliotheken mit Versionsnummer im Pfad (z. B. pdf.js) ändern sich nie: lange zwischenspeichern.
       { source: '/vendor/:file*', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
       { source: '/fonts/:file*', headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=31536000' }] },
