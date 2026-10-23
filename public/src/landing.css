@@ -305,3 +305,13 @@
 .uu-btn-sec{background:#fff;color:#0F2C59}
 .uu-btn-sec:hover{background:#F1F5F9}
 @media(max-width:520px){.uu-btn{flex:1 1 100%}}
+.kt-btns{display:grid;gap:10px;margin-top:14px}
+.uu-wrap a.kt-btn{display:flex;align-items:center;gap:14px;min-height:56px;padding:10px 18px;border:1.5px solid #CBD5E1;border-radius:16px;background:#fff;color:#0F2C59;text-decoration:none}
+.uu-wrap a.kt-btn:hover{border-color:#0F2C59;background:#F8FAFC}
+.kt-btn svg{flex:none;color:#0284C7}
+.kt-btn span{display:grid;min-width:0}
+.kt-btn strong{font-size:16px}
+.kt-btn small{font-size:14px;color:#64748B;overflow-wrap:anywhere;text-transform:none;letter-spacing:0;font-weight:400}
+.uu-block .uu-btns{margin-top:12px}
+.kt-addr{margin-top:12px!important}
+.kt-btns + .uu-small{margin-top:12px}
