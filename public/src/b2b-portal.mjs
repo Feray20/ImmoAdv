@@ -850,7 +850,7 @@ async function vTarif(box) {
       <li><b>GoBD-gerechtes Rechnungsarchiv</b><span>Rechnungen unveränderbar gespeichert, SHA-256-geprüft</span></li>
       <li><b>Hosting in Frankfurt am Main</b><span>Anwendung (Vercel, Region fra1) und Datenbank (Supabase, eu-central-1) in der EU</span></li>
       <li><b>USt-IdNr. ${esc(a.taxId || '–')}</b><span id="vatSt">${/^[A-Z]{2}[0-9A-Z]{2,12}$/.test(String(a.taxId || '').replace(/\s+/g, '')) ? '<button type="button" class="text-btn" id="vatChk">Beim EU-System VIES prüfen</button>' : 'im Profil hinterlegen, um sie per VIES prüfen zu lassen'}</span></li></ul></section>
-    <label class="consent b2b-terms" id="termsL"><input type="checkbox" id="terms"> <span>Ich buche als <strong>Unternehmer (§ 14 BGB)</strong> zu den <a href="/nutzungsbedingungen#b2b" target="_blank">Nutzungsbedingungen für Unternehmen</a>. Preise netto zzgl. 19 % USt. – auf der Bezahlseite sehen Sie Netto, USt. und Brutto. Ein Widerrufsrecht besteht nicht.</span></label>
+    <label class="consent b2b-terms" id="termsL"><input type="checkbox" id="terms"> <span>Ich buche als <strong>Unternehmer (§ 14 BGB)</strong> zu den <a href="/nutzungsbedingungen#b2b" target="_blank">AGB für Unternehmen</a>. Preise netto zzgl. 19 % USt. – auf der Bezahlseite sehen Sie Netto, USt. und Brutto. Ein Widerrufsrecht besteht nicht.</span></label>
     <div class="seg" role="tablist" id="ivl"><button type="button" data-i="month" aria-selected="true">Monatlich</button><button type="button" data-i="year" aria-selected="false">Jährlich (2 Monate gespart)</button></div>
     <div class="offers">${tiers.map((t) => b2b.plans.filter((p) => p.tier === t).map((p) => `<div class="offer${t === 'PRO' ? ' rec' : ''}" data-ivl="${p.interval}"${p.interval === 'year' ? ' hidden' : ''}>${t === 'PRO' ? '<span class="offer-rec">Empfohlen für Kanzleien &amp; Baufi-Teams</span>' : ''}
         <h4>${esc(p.name.replace(' (Jahr)', ''))}</h4><div class="offer-price">${net(p.netto_cents)} <small>netto ${esc(p.intervall)}</small></div>
@@ -931,7 +931,7 @@ async function onboarding(avvVersion) {
       <label class="consent"><input type="checkbox" name="richtig" required> Ich versichere, dass alle Angaben zum Unternehmen und zu meiner Person vollständig und richtig sind. Mir ist bekannt, dass ImmoAdv das Konto bei falschen Angaben sperren kann.</label>
       <label class="consent"><input type="checkbox" name="unternehmer" required> Ich bestätige, dass ich als Unternehmer im Sinne des § 14 BGB handele. Mir ist bekannt, dass kein Widerrufsrecht besteht.</label>
       <label class="consent"><input type="checkbox" name="avv" required> Ich schließe für das Unternehmen den Auftragsverarbeitungsvertrag (Art. 28 DSGVO) in der oben angezeigten Fassung ab und bin dazu berechtigt.</label>
-      <label class="consent"><input type="checkbox" name="agb" required> Ich habe die <a href="/nutzungsbedingungen#b2b" target="_blank">Nutzungsbedingungen für Unternehmen</a> und die <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen.</label>
+      <label class="consent"><input type="checkbox" name="agb" required> Ich habe die <a href="/nutzungsbedingungen#b2b" target="_blank">AGB für Unternehmen</a> und die <a href="/datenschutz" target="_blank">Datenschutzhinweise</a> gelesen.</label>
       <p class="form-note">Nach dem Absenden erhalten Sie einen schriftlichen Nachweis über alle Angaben und Erklärungen als PDF per E-Mail.</p>
       <button class="btn btn-dark" type="submit">Unternehmenskonto anlegen</button>
       <p class="form-note">ImmoAdv ist ein technisches Analyse- und Vorbereitungsinstrument. Keine Kreditvermittlung, keine Kreditzusage, keine Steuer- oder Rechtsberatung.</p>
@@ -1022,7 +1022,7 @@ function firstLogin(d) {
       ${owner && cons ? `<label class="consent"><input type="checkbox" name="unternehmer" required> Ich bestätige, dass das Unternehmen als Unternehmer im Sinne des § 14 BGB handelt. Mir ist bekannt, dass kein Widerrufsrecht besteht.</label>
       <label class="consent"><input type="checkbox" name="avv" required> Ich schließe für das Unternehmen den Auftragsverarbeitungsvertrag (Art. 28 DSGVO, Version ${esc(d.avvVersion)}) ab und bin dazu berechtigt.</label>
       <details class="pt-avv" id="avvBox"><summary>Auftragsverarbeitungsvertrag lesen</summary><div id="avvTxt"><p class="ia-ld" role="status">Wird geladen …</p></div></details>
-      <label class="consent"><input type="checkbox" name="agb" required> Ich habe die <a class="ck-link" href="/nutzungsbedingungen#b2b" target="_blank" rel="noopener">Nutzungsbedingungen für Unternehmen</a> und die <a class="ck-link" href="/datenschutz" target="_blank" rel="noopener">Datenschutzhinweise</a> gelesen.</label>` : ''}
+      <label class="consent"><input type="checkbox" name="agb" required> Ich habe die <a class="ck-link" href="/nutzungsbedingungen#b2b" target="_blank" rel="noopener">AGB für Unternehmen</a> und die <a class="ck-link" href="/datenschutz" target="_blank" rel="noopener">Datenschutzhinweise</a> gelesen.</label>` : ''}
       <p class="auth-message error" id="firstMsg" hidden></p>
       <button class="btn btn-dark btn-lg" type="submit">Speichern und Portal öffnen</button></form></div>`;
   $('#avvBox')?.addEventListener('toggle', async (e) => {

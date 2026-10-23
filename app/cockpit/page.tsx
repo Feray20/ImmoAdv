@@ -267,7 +267,7 @@ export default function Cockpit() {
 
         <footer className="ck-foot">
           <p>{DISCLAIMER}</p>
-          <p><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/nutzungsbedingungen">Nutzungsbedingungen</a> · <a href="/kuendigen">Verträge hier kündigen</a></p>
+          <p><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/nutzungsbedingungen">AGB</a> · <a href="/kuendigen">Verträge hier kündigen</a></p>
         </footer>
       </main>
     </div>
