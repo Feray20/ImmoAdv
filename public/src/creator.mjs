@@ -68,13 +68,14 @@ const mask = (c, l4) => `${c}${'•'.repeat(10)}${l4}`;
 // ---------- Start ----------
 const DIRECT_LOGIN = new URLSearchParams(location.search).has('anmelden') || location.hash === '#anmelden';
 async function boot() {
-  if (!token()) { landing(false); if (DIRECT_LOGIN) { history.replaceState(null, '', '/creator'); authForm('login'); } return; }
+  root.dataset.booted = '1';
+  if (!token()) { if (DIRECT_LOGIN && !AUTH_HASH[location.hash.slice(1)]) { history.replaceState(null, '', '/creator'); landing(false); authForm('login'); } else route(); return; }
   const r = await api('/api/creator/me');
   if (r.status === 401) { landing(false); return; }
   if (r.data?.code === 'setup') { root.innerHTML = `<div class="cr-wrap"><section class="pt-card cr-setup"><h1>Gleich geht's los</h1><p>${esc(r.data.error)}</p><p class="form-note">Deine Anmeldung bleibt bestehen. Fragen? <a href="mailto:support@immoadv.de">support@immoadv.de</a></p></section></div>`; return; }
   if (!r.ok) { root.innerHTML = `<div class="cr-wrap"><div class="pt-alert bad">${esc(r.data?.error || 'Der Creator-Bereich konnte nicht geladen werden.')} <button type="button" class="btn btn-outline" id="crRetry">Erneut versuchen</button></div></div>`; $('#crRetry').onclick = boot; return; }
   me = r.data;
-  routeByStatus();
+  route();
 }
 
 function routeByStatus() {
@@ -96,6 +97,7 @@ async function refresh() {
 function landing(loggedIn) {
   document.title = 'Creator werden | ImmoAdv Creator Partner';
   document.documentElement.classList.remove('cr-auth');
+  if (loggedIn && AUTH_HASH[location.hash.slice(1)]) history.replaceState(null, '', location.pathname);
   if (!$('#crLanding', root)) root.innerHTML = LANDING;
   $('.cr-ld', root)?.remove();
   const b2b = loggedIn && me?.b2b;
@@ -121,7 +123,7 @@ function landing(loggedIn) {
     const r = await api('/api/creator/me', { method: 'POST', body: JSON.stringify({ website: $('#crStart').elements.website.value, ts }) });
     btn.disabled = false;
     if (!r.ok) { const m = $('.cr-msg'); m.hidden = false; m.textContent = r.data?.error || 'Das hat nicht geklappt. Bitte erneut versuchen.'; $('.cr-hero').scrollIntoView(); return; }
-    me = r.data; step = 'account'; routeByStatus(); window.scrollTo({ top: 0 });
+    me = r.data; step = 'account'; go('bewerbung-account'); window.scrollTo({ top: 0 });
   };
   $('#crStart').onsubmit = (e) => { e.preventDefault(); apply(); };
   for (const id of ['#crStart2', '#crStart3']) $(id)?.addEventListener('click', () => apply());
@@ -144,14 +146,38 @@ function switchAccount() {
   authForm('login', 'Bitte melde dich mit deinem Creator-Konto an oder lege ein neues an.');
 }
 
-// Zurück aus dem Anmeldeformular: eigener Verlaufseintrag, damit auch die Zurück-Taste/Wischgeste des Browsers zur Seite führt.
-function backToLanding() { if (history.state?.crAuth) history.back(); else { history.replaceState(null, '', '/creator'); landing(Boolean(token())); } }
-window.addEventListener('popstate', () => { if (!history.state?.crAuth && $('#areaForm', root)) { landing(Boolean(token()) && Boolean(me)); window.scrollTo({ top: 0 }); } });
+// ---------- Navigation ----------
+// Jede Ansicht hat eine eigene Adresse: Start (ohne #), #anmelden, #registrieren, #bewerbung-<schritt>, Portal-Reiter (#home …).
+// So funktionieren Zurück und Vorwärts des Browsers (und die Wischgeste auf dem Handy) überall im Creator-Bereich.
+const AUTH_HASH = { anmelden: 'login', registrieren: 'signup' };
+let pendingNotice = '';
+let authFromStart = false;
+function go(hash) {
+  const h = hash ? '#' + hash : '';
+  if (location.hash === h) { route(); return; }
+  if (h) location.hash = h; else { history.pushState(null, '', location.pathname + location.search); route(); }
+}
+function route() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (!token() || !me) { if (AUTH_HASH[h]) renderAuth(AUTH_HASH[h]); else landing(false); return; }
+  if (!me.creator) { landing(true); return; }
+  const s = me.creator.status;
+  if ((s === 'DRAFT' || s === 'INFO_REQUESTED') && h.startsWith('bewerbung-') && STEPS.some(([k]) => k === h.slice(10))) step = h.slice(10);
+  routeByStatus();
+}
+window.addEventListener('hashchange', () => { if (root.dataset.booted) { route(); window.scrollTo({ top: 0 }); } });
 
 function authForm(mode = 'signup', notice = '') {
-  if (!history.state?.crAuth) history.pushState({ crAuth: true }, '', mode === 'signup' ? '#registrieren' : '#anmelden');
+  pendingNotice = notice;
+  authFromStart = !AUTH_HASH[location.hash.slice(1)];
+  go(mode === 'signup' ? 'registrieren' : 'anmelden');
+}
+
+function renderAuth(mode) {
+  const notice = pendingNotice; pendingNotice = '';
+  document.title = mode === 'signup' ? 'Konto anlegen | ImmoAdv Creator' : 'Anmelden | ImmoAdv Creator';
   loginForm(root, {
-    back: { label: 'Zurück zur Übersicht', go: backToLanding },
+    back: { label: 'Zurück zur Übersicht', go: () => { if (authFromStart) history.back(); else go(''); } },
     title: 'Creator-Konto',
     lead: 'Melde dich mit deinem Creator-Konto an, um deine Bewerbung zu beginnen oder fortzusetzen. Der Creator-Bereich hat eine eigene Anmeldung.',
     signupLead: 'Lege dein Creator-Konto an. Danach bestätigst du deine E-Mail-Adresse und kannst deine Bewerbung ausfüllen.',
@@ -169,6 +195,7 @@ function wizard() {
   const st = me.steps;
   if (!step) step = me.creator.status === 'INFO_REQUESTED' ? 'review' : (STEPS.find(([k]) => k !== 'review' && !st[k].done)?.[0] || 'review');
   const idx = STEPS.findIndex(([k]) => k === step);
+  if (location.hash !== '#bewerbung-' + step) history.replaceState(null, '', '#bewerbung-' + step);
   root.innerHTML = `<div class="cr-wrap">
     <div class="ad-h-row" style="margin-bottom:12px"><a class="pt-brand dark" href="/creator"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><button type="button" class="btn btn-outline btn-sm" id="crOut">Abmelden</button></div>
     ${me.creator.status === 'INFO_REQUESTED' ? `<div class="pt-alert warn"><strong>ImmoAdv benötigt noch eine Information von dir.</strong>${me.creator.info_request ? `<p style="margin:6px 0 0;white-space:pre-wrap">${esc(me.creator.info_request)}</p>` : ''}${step === 'review' ? '<p style="margin:10px 0 0"><button type="button" class="btn btn-dark btn-sm" data-step="account">Angabe ergänzen</button></p>' : ''}</div>` : ''}
@@ -176,9 +203,9 @@ function wizard() {
     <section class="pt-card cr-form" id="crStep"></section>
     <p class="form-note">Schritt ${idx + 1} von ${STEPS.length} · Deine Angaben werden mit jedem Schritt gespeichert.</p></div>`;
   $('#crOut').onclick = logout;
-  root.querySelectorAll('[data-step]').forEach((b) => b.onclick = () => { step = b.dataset.step; wizard(); });
-  const next = async () => { await refresh(); const i = STEPS.findIndex(([k]) => k === step); step = STEPS[Math.min(i + 1, STEPS.length - 1)][0]; routeByStatus(); window.scrollTo({ top: 0 }); };
-  const back = idx > 0 ? () => { step = STEPS[idx - 1][0]; wizard(); } : null;
+  root.querySelectorAll('[data-step]').forEach((b) => b.onclick = () => go('bewerbung-' + b.dataset.step));
+  const next = async () => { await refresh(); const i = STEPS.findIndex(([k]) => k === step); const nx = STEPS[Math.min(i + 1, STEPS.length - 1)][0]; if (['DRAFT', 'INFO_REQUESTED'].includes(me.creator?.status)) go('bewerbung-' + nx); else { step = nx; routeByStatus(); } window.scrollTo({ top: 0 }); };
+  const back = idx > 0 ? () => go('bewerbung-' + STEPS[idx - 1][0]) : null;
   renderSection(step, $('#crStep'), { onSaved: next, back, wizard: true });
   $('#crStep').querySelector('input:not([readonly]),select,textarea')?.focus({ preventScroll: true });
 }
@@ -435,7 +462,7 @@ function secReview(el, o) {
     ${me.email_confirmed ? '' : '<div class="pt-alert warn">Bitte bestätige zuerst deine E-Mail-Adresse über den Link in unserer E-Mail.</div>'}
     <form><p class="cr-msg pt-alert bad" hidden></p><div class="wiz-nav">${o.back ? '<button type="button" class="btn btn-outline" data-back>Zurück</button>' : '<span></span>'}<button type="submit" class="btn btn-dark btn-lg"${me.can_submit ? '' : ' disabled'}>${me.creator.status === 'INFO_REQUESTED' ? 'Erneut einreichen' : 'Bewerbung einreichen'}</button></div></form>`;
   bindBack(el, o);
-  el.querySelectorAll('[data-go]').forEach((b) => b.onclick = () => { step = b.dataset.go; wizard(); });
+  el.querySelectorAll('[data-go]').forEach((b) => b.onclick = () => go('bewerbung-' + b.dataset.go));
   const f = el.querySelector('form');
   f.onsubmit = async (e) => {
     e.preventDefault();
@@ -732,5 +759,4 @@ async function assetsView(v) {
   });
 }
 
-window.addEventListener('hashchange', () => { if (me?.creator?.status === 'ACTIVE') { portal(); window.scrollTo({ top: 0 }); } });
 boot();
