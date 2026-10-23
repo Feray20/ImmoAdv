@@ -13,9 +13,9 @@ if (!window.__iaOtp) {
   });
 }
 
-const AREA = location.pathname.startsWith('/intern') ? 'admin' : location.pathname.startsWith('/b2b-portal') ? 'b2b' : 'app';
-const KEY = AREA === 'admin' ? 'immoadv-admin-session-v1' : 'immoadv-auth-session-v1';
-const ACT = AREA === 'admin' ? 'ia-last-active-admin' : 'ia-last-active';
+const AREA = location.pathname.startsWith('/intern') ? 'admin' : location.pathname.startsWith('/creator') ? 'creator' : location.pathname.startsWith('/b2b-portal') ? 'b2b' : 'app';
+const KEY = AREA === 'admin' ? 'immoadv-admin-session-v1' : AREA === 'creator' ? 'immoadv-creator-session-v1' : 'immoadv-auth-session-v1';
+const ACT = AREA === 'admin' ? 'ia-last-active-admin' : AREA === 'creator' ? 'ia-last-active-creator' : 'ia-last-active';
 // SMS als zweiter Faktor ist vorbereitet, aber ausgeblendet (verursacht Kosten pro SMS). Zum Aktivieren auf true setzen.
 const SMS_ENABLED = false;
 let cfg = null;

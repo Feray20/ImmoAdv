@@ -2,7 +2,7 @@
 // Eigene Datei, weil die Sicherheitsregel (CSP script-src 'self') keine Inline-Skripte erlaubt.
 (function () {
   try {
-    var k = 'immoadv-auth-session-v1', v = localStorage.getItem(k) || sessionStorage.getItem(k);
+    var k = 'immoadv-creator-session-v1', v = localStorage.getItem(k) || sessionStorage.getItem(k);
     if (v && JSON.parse(v).access_token) document.documentElement.classList.add('cr-auth');
   } catch (e) { /* ohne Speicher: Landingpage zeigen */ }
 })();

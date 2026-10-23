@@ -13,6 +13,6 @@ export async function POST(req: Request) {
   const ip = anonymizedIpHash(req);
   if (!ip || !allowRequest(`loginfail:${ip}`, 30, 60_000)) return new NextResponse(null, { status: 204 });
   const area = new URL(req.url).searchParams.get('area');
-  logSecurity('login_flood', `login:${ip}`, { ipHash: ip, detail: area === 'admin' ? 'Anmeldung Web-Admin' : area === 'b2b' ? 'Anmeldung Unternehmensportal' : 'Anmeldung' });
+  logSecurity('login_flood', `login:${ip}`, { ipHash: ip, detail: area === 'admin' ? 'Anmeldung Web-Admin' : area === 'b2b' ? 'Anmeldung Unternehmensportal' : area === 'creator' ? 'Anmeldung Creator-Bereich' : 'Anmeldung' });
   return new NextResponse(null, { status: 204 });
 }

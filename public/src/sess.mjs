@@ -1,9 +1,10 @@
 // Gemeinsame Sitzungs-Helfer für Portal und internen Bereich (Supabase-Sitzung aus localStorage).
 // Privatbereich und Unternehmensportal teilen sich eine Anmeldung (einmal anmelden, beide Bereiche nutzen).
 // Nur der Web-Admin hat aus Sicherheitsgründen eine eigene Sitzung.
-export const AREA = location.pathname.startsWith('/intern') ? 'admin' : location.pathname.startsWith('/b2b-portal') ? 'b2b' : 'app';
-const SFX = AREA === 'admin' ? '-admin' : '';
-const SESSION = AREA === 'admin' ? 'immoadv-admin-session-v1' : 'immoadv-auth-session-v1';
+// Creator-Bereich: bewusst eigene Sitzung – keine Verknüpfung mit Kundenbereich oder Unternehmensportal.
+export const AREA = location.pathname.startsWith('/intern') ? 'admin' : location.pathname.startsWith('/creator') ? 'creator' : location.pathname.startsWith('/b2b-portal') ? 'b2b' : 'app';
+const SFX = AREA === 'admin' ? '-admin' : AREA === 'creator' ? '-creator' : '';
+const SESSION = AREA === 'admin' ? 'immoadv-admin-session-v1' : AREA === 'creator' ? 'immoadv-creator-session-v1' : 'immoadv-auth-session-v1';
 const ACT = 'ia-last-active' + SFX;
 const REM = 'ia-remember' + SFX;
 let cfg = null;
@@ -160,7 +161,7 @@ export function loginForm(root, opts) {
         const r = await supa('/auth/v1/token?grant_type=password', { method: 'POST', body: JSON.stringify({ email, password }) });
         const d = await r.json().catch(() => ({}));
         // Fehlversuch melden (nur anonymisierte IP; ab 10 Versuchen in 15 Min. wird die Quelle gesperrt).
-        if (r.status === 400 || r.status === 401) fetch('/api/sec/login-fail?area=' + (AREA === 'b2b' ? 'b2b' : AREA === 'admin' ? 'admin' : 'app'), { method: 'POST', keepalive: true }).catch(() => {});
+        if (r.status === 400 || r.status === 401) fetch('/api/sec/login-fail?area=' + (AREA === 'b2b' ? 'b2b' : AREA === 'admin' ? 'admin' : AREA === 'creator' ? 'creator' : 'app'), { method: 'POST', keepalive: true }).catch(() => {});
         if (!r.ok) throw Error(authError(d));
         if (AREA === 'b2b') try { window.iaTrack?.('b2b_login'); } catch { /* ignore */ }
         if (opts.check) { const why = await opts.check(d); if (why) { show(why); return; } }
