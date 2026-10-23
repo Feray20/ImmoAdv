@@ -5,6 +5,7 @@ import { createElement } from 'react';
 import { Document, Image, Page, StyleSheet, Text, View, renderToBuffer } from '@react-pdf/renderer';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { BRAND, Logo } from '@/lib/pdf/brand';
+import { pdfSafeDeep, pdfText } from '@/lib/pdf/text';
 import { epcPayload, totals, VAT_RATE } from '@/lib/b2b/epc';
 export { epcPayload, totals, VAT_RATE };
 
@@ -64,7 +65,9 @@ const s = StyleSheet.create({
   footer: { position: 'absolute', bottom: 24, left: 50, right: 50, borderTopWidth: 0.5, borderTopColor: BRAND.hair, paddingTop: 5, flexDirection: 'row', justifyContent: 'space-between', fontSize: 7, color: BRAND.muted },
 });
 
-function InvoiceDocument({ r, refNumber, qr, bank }: { r: InvoiceRow; refNumber?: string; qr?: string; bank: ReturnType<typeof bankDetails> }) {
+function InvoiceDocument({ r: input, refNumber: refIn, qr, bank }: { r: InvoiceRow; refNumber?: string; qr?: string; bank: ReturnType<typeof bankDetails> }) {
+  // Firmen- und Personennamen (z. B. „Yılmaz GmbH“) und Positionstexte in der PDF-Schrift darstellbar machen.
+  const r = pdfSafeDeep(input), refNumber = refIn ? pdfText(refIn) : refIn;
   const b = r.buyer;
   const title = r.kind === 'storno' ? 'Stornorechnung' : r.kind === 'credit' ? 'Gutschrift' : 'Rechnung';
   return (

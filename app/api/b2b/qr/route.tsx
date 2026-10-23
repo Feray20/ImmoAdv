@@ -4,6 +4,7 @@ import { Document, Image, Page, Text, View, renderToBuffer } from '@react-pdf/re
 import { effectiveTier } from '@/lib/b2b/core';
 import { json, requireMember } from '@/lib/b2b/http';
 import { BRAND } from '@/lib/pdf/brand';
+import { pdfText } from '@/lib/pdf/text';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -46,11 +47,11 @@ export async function GET(req: Request) {
     const doc = (
       <Document title={name}>
         <Page size="A6" style={{ padding: 24, fontFamily: 'Helvetica', alignItems: 'center' }}>
-          <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: a.brand_color || BRAND.navy, marginBottom: 6 }}>{a.company_name}</Text>
+          <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: a.brand_color || BRAND.navy, marginBottom: 6 }}>{pdfText(a.company_name)}</Text>
           <Image src={dataUrl} style={{ width: 190, height: 190 }} />
           <View style={{ marginTop: 8, alignItems: 'center' }}>
             <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold' }}>Finanzierung in 2 Minuten durchrechnen</Text>
-            {ref ? <Text style={{ fontSize: 8, color: BRAND.muted, marginTop: 3 }}>Objekt: {ref}</Text> : null}
+            {ref ? <Text style={{ fontSize: 8, color: BRAND.muted, marginTop: 3 }}>Objekt: {pdfText(ref)}</Text> : null}
             <Text style={{ fontSize: 6.5, color: BRAND.muted, marginTop: 6, textAlign: 'center' }}>Rechnerische Orientierung, keine Kreditzusage. Technik: ImmoAdv</Text>
           </View>
         </Page>

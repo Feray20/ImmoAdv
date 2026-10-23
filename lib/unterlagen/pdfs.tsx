@@ -204,7 +204,7 @@ export function KreditmappeVorlage() {
         <Calc l="Makler (Käuferanteil)" f="laut Exposé, z. B. 3,57 %" />
         <Calc l="Gesamtkosten" f="Summe der Zeilen oben" />
         <Calc l="Eigenkapital" f="mind. Nebenkosten, besser + 10–20 % Kaufpreis" />
-        <Calc l="Darlehen" f="Gesamtkosten − Eigenkapital" />
+        <Calc l="Darlehen" f="Gesamtkosten – Eigenkapital" />
         <Calc l="Monatsrate" f="Darlehen × (Sollzins + Tilgung) ÷ 12" />
         <Footer />
       </Page>
@@ -214,10 +214,10 @@ export function KreditmappeVorlage() {
         <Calc l="Nettoeinkommen (alle Antragsteller)" f="laut letzten 3 Gehaltsabrechnungen" />
         <Calc l="+ Kindergeld, sonstige Einnahmen" f="nur dauerhafte Einnahmen" />
         <Calc l="+ Mieteinnahmen" f="Banken rechnen meist mit 70–80 % der Kaltmiete" />
-        <Calc l="− Lebenshaltung" f="Pauschale der Bank, z. B. je Person" />
-        <Calc l="− Wohnkosten (falls weiter zur Miete)" f="Warmmiete" />
-        <Calc l="− bestehende Kredite, Versicherungen, Sparraten" f="laut Verträgen" />
-        <Calc l="− Rate der neuen Finanzierung" f="aus Abschnitt 3" />
+        <Calc l="– Lebenshaltung" f="Pauschale der Bank, z. B. je Person" />
+        <Calc l="– Wohnkosten (falls weiter zur Miete)" f="Warmmiete" />
+        <Calc l="– bestehende Kredite, Versicherungen, Sparraten" f="laut Verträgen" />
+        <Calc l="– Rate der neuen Finanzierung" f="aus Abschnitt 3" />
         <Calc l="= Überschuss" f="sollte deutlich positiv sein" />
         <Text style={fs.sec}>5. Vermögen und Verbindlichkeiten</Text>
         <View style={fs.grid}><F l="Bankguthaben / Wertpapiere" /><F l="Bausparverträge / Lebensversicherungen" /><F l="Weitere Immobilien (Wert / Restschuld)" /><F l="Sonstige Verbindlichkeiten" /></View>
@@ -248,14 +248,14 @@ export function AnalyseVorlage() {
         <Calc l="Preis pro m²" f="Kaufpreis ÷ Wohnfläche" />
         <Calc l="Jahreskaltmiete" f="Kaltmiete × 12" />
         <Calc l="Bruttomietrendite" f="Jahreskaltmiete ÷ Kaufpreis × 100" />
-        <Calc l="Kaufpreisfaktor" f="Kaufpreis ÷ Jahreskaltmiete (≤ 22 eher günstig)" />
+        <Calc l="Kaufpreisfaktor" f="Kaufpreis ÷ Jahreskaltmiete (bis 22 eher günstig)" />
         <Calc l="Kaufnebenkosten" f="Kaufpreis × (GrESt + Notar/Grundbuch + Makler)" />
-        <Calc l="Darlehen" f="Kaufpreis + Nebenkosten − Eigenkapital" />
+        <Calc l="Darlehen" f="Kaufpreis + Nebenkosten – Eigenkapital" />
         <Calc l="Monatsrate" f="Darlehen × (Zins + Tilgung) ÷ 12" />
         <Calc l="Instandhaltung + Mietausfall" f="ca. 1 €/m² + 2 % der Miete pro Monat" />
-        <Calc l="Cashflow vor Steuern" f="Miete − Kosten − Instandhaltung − Mietausfall − Rate" />
-        <Calc l="Kapitaldienstdeckung (DSCR)" f="(Miete − Kosten) ÷ Rate (≥ 1,2 solide)" />
-        <Calc l="Nettomietrendite" f="(Jahresmiete − Jahreskosten) ÷ Gesamtkosten × 100" />
+        <Calc l="Cashflow vor Steuern" f="Miete – Kosten – Instandhaltung – Mietausfall – Rate" />
+        <Calc l="Kapitaldienstdeckung (DSCR)" f="(Miete – Kosten – Instandhaltung – Mietausfall) ÷ Rate (ab 1,2 solide)" />
+        <Calc l="Nettomietrendite" f="(Jahresmiete – Jahreskosten) ÷ Gesamtkosten × 100" />
         <Text style={fs.sec}>Notizen</Text>
         <View style={fs.grid}><F l="" full /><F l="" full /><F l="" full /></View>
         <Text style={[s.p, { color: C.muted }]}>Ampelgrenzen sind Orientierungswerte (ImmoAdv-Annahmen). Rechnerische Orientierung, keine Anlage- oder Finanzierungsberatung.</Text>

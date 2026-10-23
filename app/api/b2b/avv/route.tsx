@@ -5,6 +5,7 @@ import { AVV_SECTIONS, AVV_TITLE } from '@/lib/b2b/avv-text';
 import { AVV_VERSION, type B2BAccount } from '@/lib/b2b/core';
 import { requireMember } from '@/lib/b2b/http';
 import { BRAND, Logo, stamp } from '@/lib/pdf/brand';
+import { pdfSafeDeep } from '@/lib/pdf/text';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,8 @@ const s = StyleSheet.create({
   footer: { position: 'absolute', bottom: 20, left: 50, right: 50, fontSize: 7, color: BRAND.muted, flexDirection: 'row', justifyContent: 'space-between' },
 });
 
-function AvvPdf({ a }: { a: B2BAccount }) {
+function AvvPdf({ a: input }: { a: B2BAccount }) {
+  const a = pdfSafeDeep(input);
   return (
     <Document title={`AVV ${a.company_name}`} author="ImmoAdv">
       <Page size="A4" style={s.page}>

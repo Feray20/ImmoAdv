@@ -1,6 +1,7 @@
 // Allgemeiner, gebrandeter Bericht aus bereits formatierten Abschnitten (z. B. Objekt-Analyse).
 import { Document, Link, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import { BRAND, BrandFooter, BrandHeader, SecureWatermark, type PartnerBrand } from '@/lib/pdf/brand';
+import { pdfSafeDeep } from '@/lib/pdf/text';
 
 export type ReportInput = {
   title: string;
@@ -32,7 +33,9 @@ const s = StyleSheet.create({
   note: { marginTop: 10, fontSize: 7, color: BRAND.muted },
 });
 
-export function ReportDocument({ r, reportId, createdAt, hash, partner, reportType = 'Objekt-Analyse', watermark, clean }: { r: ReportInput; reportId: string; createdAt: string; hash?: string; partner?: PartnerBrand | null; reportType?: string; watermark?: string; clean?: boolean }) {
+export function ReportDocument({ r: input, reportId, createdAt, hash, partner, reportType = 'Objekt-Analyse', watermark, clean }: { r: ReportInput; reportId: string; createdAt: string; hash?: string; partner?: PartnerBrand | null; reportType?: string; watermark?: string; clean?: boolean }) {
+  // Werte kommen teils aus dem Browser: nur darstellbare Zeichen ausgeben (sonst fehlen z. B. negative Beträge).
+  const r = pdfSafeDeep(input);
   return (
     <Document title={`ImmoAdv – ${r.title}`} author="ImmoAdv" language="de">
       <Page size="A4" style={s.page}>

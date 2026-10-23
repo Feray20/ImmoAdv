@@ -2,6 +2,7 @@ import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/render
 import type { Kreditmappe } from './model';
 import { LIVING_BASE, LIVING_PER_PERSON, RENT_RECOGNITION } from './model';
 import { BRAND, BrandFooter, BrandHeader, SecureWatermark, type PartnerBrand } from '@/lib/pdf/brand';
+import { pdfSafeDeep } from '@/lib/pdf/text';
 
 const C = {
   navy: BRAND.navy, slate: '#1E3A8A', text: '#334155', muted: '#64748B', hair: '#CBD5E1', line: '#E2E8F0', bg: '#F8FAFC',
@@ -72,7 +73,9 @@ function Frame({ m, reportId, watermark, partner, clean }: { m: Kreditmappe; rep
 
 export type Verification = { versionNo: number; versionId: string; url: string; qrDataUrl: string };
 
-export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { m: Kreditmappe; verify?: Verification; watermark?: string; partner?: PartnerBrand | null; clean?: boolean }) {
+export function KreditmappeDocument({ m: input, verify, watermark, partner, clean }: { m: Kreditmappe; verify?: Verification; watermark?: string; partner?: PartnerBrand | null; clean?: boolean }) {
+  // Nutzereingaben (Objektname, Grundbuch, Dateinamen …) auf darstellbare Zeichen der PDF-Schrift abbilden.
+  const m = pdfSafeDeep(input);
   const rid = verify?.versionId ?? m.reportId;
   const { object: o, profile: p, financing: f, metrics: x, household: h } = m;
   const vetoTone: Tone = m.vetoLevel === 'HARD_VETO' ? 'bad' : m.vetoLevel === 'CONDITIONAL_VETO' ? 'warn' : m.vetoLevel === 'WARNING' ? 'warn' : 'ok';
@@ -181,7 +184,7 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
           <>
             <Text style={[s.h2, { fontSize: 10.5 }]} minPresenceAhead={80}>4a. Ertragswert (vereinfacht, Systematik ImmoWertV)</Text>
             <Rows head={['Position', 'Wert']} rows={[
-              ['Reinertrag p. a. (Miete − Bewirtschaftung inkl. mind. 2 % Mietausfall)', eur(m.valuation.reinertrag)],
+              ['Reinertrag p. a. (Miete – Bewirtschaftung inkl. mind. 2 % Mietausfall)', eur(m.valuation.reinertrag)],
               [`Bodenwert (Kaufpreis × ${fmt(100 - o.buildingSharePct, 0)} %)`, eur(m.valuation.landValue)],
               [`Bodenwertverzinsung (${fmt(m.valuation.capRatePct)} %)`, eur(m.valuation.bodenverzinsung)],
               [`Barwertfaktor (${fmt(m.valuation.remainingLife, 0)} Jahre Restnutzungsdauer)`, fmt(m.valuation.faktor, 4)],
@@ -263,9 +266,9 @@ export function KreditmappeDocument({ m, verify, watermark, partner, clean }: { 
         <Rows head={['Position', 'Betrag']} rows={[
           ['Nettoeinkommen', eur(h.income)],
           [`Mieteinnahme, angesetzt mit ${fmt(RENT_RECOGNITION * 100, 0)} %`, eur(h.recognizedRent)],
-          ['Lebenshaltungspauschale', `− ${eur(h.living)}`],
-          ['Objektkosten (nicht umlagefähig und Instandhaltung)', `− ${eur(h.costs)}`],
-          ['Darlehensrate', `− ${eur(h.rate)}`],
+          ['Lebenshaltungspauschale', `– ${eur(h.living)}`],
+          ['Objektkosten (nicht umlagefähig und Instandhaltung)', `– ${eur(h.costs)}`],
+          ['Darlehensrate', `– ${eur(h.rate)}`],
           ['Überschuss', eur(h.surplus)],
         ]} />
         <Text style={s.small}>
