@@ -100,13 +100,14 @@ function landing(loggedIn) {
   $('.cr-ld', root)?.remove();
   const b2b = loggedIn && me?.b2b;
   if (loggedIn) {
-    // Wer angemeldet ist, sieht mit welchem Konto – und kann wechseln (die Anmeldung gilt für die ganze Website).
-    $('#crLogin').outerHTML = `<div class="cr-who"><span>Angemeldet als <strong>${esc(me?.email || '')}</strong></span><button type="button" class="btn btn-outline btn-sm" id="crSwitch">Konto wechseln</button></div>`;
-    for (const b of root.querySelectorAll('#crStart button, #crStart2, #crStart3')) b.textContent = b2b ? 'Mit anderem Konto anmelden' : 'Bewerbung starten';
+    // Wer angemeldet ist, sieht mit welchem Konto – und kann wechseln (eigene Creator-Sitzung, getrennt von Kundenbereich und Unternehmensportal).
+    $('#crLogin').outerHTML = `<div class="cr-who"><span>Angemeldet als <strong>${esc(me?.email || '')}</strong></span><button type="button" class="btn btn-outline btn-sm" id="crSwitch">Abmelden</button></div>`;
+    for (const b of root.querySelectorAll('#crStart button[type=submit], #crStart2, #crStart3')) b.textContent = b2b ? 'Mit anderem Konto anmelden' : 'Bewerbung starten';
     $('#crLogin2')?.closest('p')?.remove();
+    $('#crLogin3')?.remove();
     if (b2b) {
       const m = $('.cr-msg'); m.hidden = false; m.className = 'cr-msg pt-alert warn';
-      m.innerHTML = `Du bist mit <strong>${esc(me.email)}</strong> angemeldet – das ist ein Unternehmenskonto. Für die Creator-Bewerbung brauchst du ein eigenes, privates Konto. Melde dich mit einer anderen E-Mail-Adresse an oder lege ein neues Konto an.`;
+      m.innerHTML = `Du bist mit <strong>${esc(me.email)}</strong> angemeldet – diese E-Mail-Adresse gehört zu einem Unternehmenszugang. Für den Creator-Bereich brauchst du ein eigenes Konto mit einer anderen E-Mail-Adresse.`;
       m.style.margin = '0 0 16px'; $('#crStart').before(m);
     }
   }
@@ -114,7 +115,7 @@ function landing(loggedIn) {
   const apply = async (mode = 'signup') => {
     if (!loggedIn) { authForm(mode); return; }
     if (b2b) { switchAccount(); return; }
-    const btn = $('#crStart button'); btn.disabled = true;
+    const btn = $('#crStart button[type=submit]'); btn.disabled = true;
     // Der Spam-Schutz des Servers lehnt Anfragen unter 1,5 s nach dem Laden ab – sehr schnelle Klicks kurz abwarten.
     const wait = 1700 - (Date.now() - ts); if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     const r = await api('/api/creator/me', { method: 'POST', body: JSON.stringify({ website: $('#crStart').elements.website.value, ts }) });
@@ -124,8 +125,8 @@ function landing(loggedIn) {
   };
   $('#crStart').onsubmit = (e) => { e.preventDefault(); apply(); };
   for (const id of ['#crStart2', '#crStart3']) $(id)?.addEventListener('click', () => apply());
-  for (const id of ['#crLogin', '#crLogin2']) $(id)?.addEventListener('click', () => apply('login'));
-  $('#crSwitch')?.addEventListener('click', switchAccount);
+  for (const id of ['#crLogin', '#crLogin2', '#crLogin3']) $(id)?.addEventListener('click', () => apply('login'));
+  $('#crSwitch')?.addEventListener('click', () => { setSession(null); location.href = '/creator'; });
   $('.cr-hero-link')?.addEventListener('click', (e) => { e.preventDefault(); $('#so-gehts')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
   // Mobile: Bewerben-Knopf bleibt unten sichtbar, sobald der Knopf im Kopfbereich aus dem Bild ist und bevor der Schluss-Knopf erscheint.
   const sticky = $('#crSticky');
@@ -140,13 +141,13 @@ function landing(loggedIn) {
 function switchAccount() {
   setSession(null);
   me = null;
-  authForm('login', 'Du wurdest abgemeldet. Melde dich jetzt mit deinem Creator-Konto an oder lege ein neues an.');
+  authForm('login', 'Bitte melde dich mit deinem Creator-Konto an oder lege ein neues an.');
 }
 
 function authForm(mode = 'signup', notice = '') {
   loginForm(root, {
     title: 'Creator-Konto',
-    lead: 'Melde dich mit deinem ImmoAdv-Konto an, um deine Bewerbung zu beginnen oder fortzusetzen.',
+    lead: 'Melde dich mit deinem Creator-Konto an, um deine Bewerbung zu beginnen oder fortzusetzen. Der Creator-Bereich hat eine eigene Anmeldung.',
     signupLead: 'Lege dein Creator-Konto an. Danach bestätigst du deine E-Mail-Adresse und kannst deine Bewerbung ausfüllen.',
     note: 'Nach der Registrierung erhältst du eine E-Mail zur Bestätigung deiner Adresse.',
     signup: { next: '/creator' },

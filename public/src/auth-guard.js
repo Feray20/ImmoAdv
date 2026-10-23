@@ -6,10 +6,10 @@
 //  - Abmeldung in einem Tab meldet alle Tabs ab; das Refresh-Token wird bei Supabase widerrufen.
 (function () {
   'use strict';
-  var AREA = location.pathname.indexOf('/intern') === 0 ? 'admin' : location.pathname.indexOf('/b2b-portal') === 0 ? 'b2b' : 'app';
-  // Privatbereich und Unternehmensportal: eine gemeinsame Sitzung. Admin-Zentrale: eigene Sitzung.
-  var SFX = AREA === 'admin' ? '-admin' : '';
-  var K = AREA === 'admin' ? 'immoadv-admin-session-v1' : 'immoadv-auth-session-v1', ACT = 'ia-last-active' + SFX, REM = 'ia-remember' + SFX, WHY = 'ia-logout-reason' + SFX;
+  var AREA = location.pathname.indexOf('/intern') === 0 ? 'admin' : location.pathname.indexOf('/creator') === 0 ? 'creator' : location.pathname.indexOf('/b2b-portal') === 0 ? 'b2b' : 'app';
+  // Privatbereich und Unternehmensportal: eine gemeinsame Sitzung. Admin-Zentrale und Creator-Bereich: jeweils eigene Sitzung.
+  var SFX = AREA === 'admin' ? '-admin' : AREA === 'creator' ? '-creator' : '';
+  var K = AREA === 'admin' ? 'immoadv-admin-session-v1' : AREA === 'creator' ? 'immoadv-creator-session-v1' : 'immoadv-auth-session-v1', ACT = 'ia-last-active' + SFX, REM = 'ia-remember' + SFX, WHY = 'ia-logout-reason' + SFX;
   var MIN = 60 * 1000, DAY = 24 * 60 * MIN;
   var path = location.pathname.replace(/\/+$/, '') || '/';
   var isAdmin = path.indexOf('/intern') === 0;
@@ -17,7 +17,7 @@
   var ls = (function () { try { var t = '__ia'; localStorage.setItem(t, '1'); localStorage.removeItem(t); return localStorage; } catch (e) { return null; } })();
   // Einmalige Übernahme einer früheren, getrennten Unternehmensportal-Sitzung in die gemeinsame Sitzung.
   try {
-    if (ls && AREA !== 'admin') {
+    if (ls && AREA !== 'admin' && AREA !== 'creator') {
       var oldB = ls.getItem('immoadv-b2b-session-v1');
       if (oldB) {
         if (!ls.getItem('immoadv-auth-session-v1')) {
