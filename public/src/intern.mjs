@@ -335,8 +335,9 @@ function mailSetup(m) {
     <p class="form-note">${m.ready ? `Eigener Versand aktiv: <strong>${esc(m.from)}</strong>. Alle E-Mails von ImmoAdv kommen im ImmoAdv-Design mit Logo.` : 'Noch nicht eingerichtet – Konto-E-Mails kommen übergangsweise vom Absender „Supabase Auth“, andere E-Mails (Nachweise, Rechnungen, Kündigungen) werden nicht gesendet.'}</p>
     ${steps.length ? '' : ''}<ol class="ad-steps">${steps.map(([t, b, s2]) => `<li><div class="ad-step-h"><strong>${t}</strong><span class="ad-step-st">${s2}</span></div><p>${b}</p></li>`).join('')}</ol>
     <h3 class="ad-sub">Testen</h3>
-    <div class="pt-row"><button class="btn btn-dark" id="sysMail" type="button">Test 1: ImmoAdv-E-Mail an mich</button><button class="btn btn-outline" id="sysAuthMail" type="button">Test 2: Konto-E-Mail über Supabase an mich</button></div>
+    <div class="pt-row"><button class="btn btn-dark" id="sysMail" type="button">Test 1: ImmoAdv-E-Mail an mich</button><button class="btn btn-outline" id="sysAuthMail" type="button">Test 2: Konto-E-Mail über Supabase an mich</button><button class="btn btn-outline" id="sysAllMail" type="button">Test 3: Alle E-Mail-Vorlagen an mich</button></div>
     <p class="form-note">Test 1 prüft Resend und Ihren Absender. Test 2 schickt einen Passwort-Link über Supabase – kommt er als „ImmoAdv“ mit Logo an, sind SMTP und Vorlagen richtig (Link einfach ignorieren, wenn Sie das Passwort nicht ändern möchten).</p>
+    <p class="form-note">Test 3 schickt jede E-Mail, die ImmoAdv verschicken kann (Privatkunden, Unternehmen, Creator und Benachrichtigungen an Sie), einmal mit Beispieldaten an Ihre Admin-Adresse. Betreff beginnt mit „[Test 1/…]“; Links darin sind Beispiele und funktionieren nicht. Dauert etwa eine Minute.</p>
     <h3 class="ad-sub">Vorlagen für Supabase</h3>
     <div class="ad-wrap"><table class="ad-table ad-tpl"><thead><tr><th>Vorlage in Supabase</th><th>Betreff</th><th></th></tr></thead><tbody>
     ${(m.templates || []).map((t) => `<tr><td><strong>${esc(t.supabase)}</strong><br><small>${esc(t.label)}</small></td><td><code class="ad-subj">${esc(t.subject)}</code></td><td class="ad-tpl-act"><button type="button" class="btn btn-ghost" data-copy-subj="${esc(t.subject)}">Betreff kopieren</button><button type="button" class="btn btn-outline" data-tpl="${esc(t.id)}" data-act="copy">HTML kopieren</button><button type="button" class="btn btn-ghost" data-tpl="${esc(t.id)}" data-act="dl">Herunterladen</button></td></tr>`).join('')}
@@ -354,6 +355,20 @@ function bindMailSetup(root2) {
     e.target.disabled = true;
     const x = await api('/api/admin/system', { method: 'POST', body: JSON.stringify({ action: 'testauth' }) });
     done(x.ok ? `Konto-E-Mail an ${x.data.to} angestoßen – Absender und Design prüfen.` : x.data?.error || 'Fehler', !x.ok); e.target.disabled = false;
+  };
+  $('#sysAllMail', root2).onclick = async (e) => {
+    if (!confirm('Alle E-Mail-Vorlagen (rund 60 E-Mails) als Test an Ihre Admin-Adresse senden?')) return;
+    const b = e.target, label = b.textContent; b.disabled = true;
+    let from = 0, sent = 0, total = 0, to = ''; const failed = [];
+    try {
+      while (from !== null) {
+        b.textContent = total ? `Sende … ${from}/${total}` : 'Sende …';
+        const x = await api('/api/admin/system', { method: 'POST', body: JSON.stringify({ action: 'testall', from }) });
+        if (!x.ok) { done(x.data?.error || 'Fehler beim Senden', true); break; }
+        ({ total, to } = x.data); sent += x.data.sent; failed.push(...(x.data.failed || [])); from = x.data.next;
+        if (from === null) done(`${sent} von ${total} Test-E-Mails an ${to} gesendet${failed.length ? ` – nicht gesendet: ${failed.join(', ')}` : ''}. Bitte Posteingang (und Spam) prüfen.`, failed.length > 0);
+      }
+    } finally { b.disabled = false; b.textContent = label; }
   };
   const copy = async (text, b) => {
     try { await navigator.clipboard.writeText(text); const o = b.textContent; b.textContent = 'Kopiert ✓'; setTimeout(() => { b.textContent = o; }, 1600); }
@@ -1022,7 +1037,7 @@ const AUD = {
   invoice_create: 'Rechnung erstellt', invoice_paid: 'Rechnung als bezahlt markiert', invoice_remind: 'Zahlungserinnerung gesendet', invoice_storno: 'Rechnung storniert', invoice_verify: 'Rechnung geprüft (SHA-256)',
   datev_export: 'DATEV-/ZIP-Export', panic_on: 'Not-Aus ausgelöst', panic_off: 'Not-Aus beendet', sec_block: 'Quelle gesperrt', sec_unblock: 'Quelle entsperrt', sec_ack: 'Vorfälle erledigt', security_overview: 'Sicherheitslage geöffnet',
   support_view: 'Support-Einsicht', setup_mark: 'Einrichtung abgehakt', setup_livecheck: 'Live-Prüfung', testkauf_start: 'Testkauf gestartet', testkauf_selftest: 'Test-Transaktion',
-  testmail: 'Testmail gesendet', testmail_auth: 'Test Konto-E-Mail', audit_reveal: 'Klartext im Protokoll angezeigt',
+  testmail: 'Testmail gesendet', testmail_all: 'Alle E-Mail-Vorlagen getestet', testmail_auth: 'Test Konto-E-Mail', audit_reveal: 'Klartext im Protokoll angezeigt',
   campaign_create: 'Kampagne angelegt', newsletter_send: 'Newsletter versendet', newsletter_unsub: 'Newsletter abgemeldet', crm_create: 'Akquise-Kontakt angelegt', crm_delete: 'Akquise-Kontakt gelöscht', crm_import: 'Akquise-Import', crm_letters: 'Akquise-Briefe erstellt',
 };
 const AUD_CAT = (a) => /^panic|^sec_|security/.test(a) ? 'sec' : /^invoice|datev/.test(a) ? 'fin' : /^b2b_/.test(a) ? 'b2b' : /^user|users_list/.test(a) ? 'user' : 'sys';

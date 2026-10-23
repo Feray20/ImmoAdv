@@ -5,12 +5,14 @@ import { requireAdmin, adminList, mfaRequired } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { fromAddress, mailConfigured, sendMail } from '@/lib/notify/mail';
 import { SUPABASE_TEMPLATES } from '@/lib/notify/supabase-templates';
+import { sampleMails } from '@/lib/notify/catalog';
 import { billingEnabled } from '@/lib/billing/stripe';
 import { panicState } from '@/lib/security/panic';
 import { adminAudit } from '@/lib/b2b/core';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 const j = (b: unknown, s = 200) => NextResponse.json(b, { status: s, headers: { 'Cache-Control': 'no-store' } });
 const has = (k: string) => Boolean(process.env[k] && String(process.env[k]).trim());
@@ -130,8 +132,22 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const auth = await requireAdmin(req);
   if (auth instanceof NextResponse) return auth;
-  const p = z.object({ action: z.enum(['testmail', 'testauth']) }).safeParse(await req.json().catch(() => null));
+  const p = z.object({ action: z.enum(['testmail', 'testauth', 'testall']), from: z.number().int().min(0).max(500).optional() }).safeParse(await req.json().catch(() => null));
   if (!p.success) return j({ error: 'Ungültig.' }, 400);
+  // Alle E-Mail-Vorlagen mit Beispieldaten an die eigene Admin-Adresse (je Aufruf 8 Stück, die Oberfläche ruft nacheinander auf).
+  if (p.data.action === 'testall') {
+    if (!mailConfigured()) return j({ error: 'E-Mail-Versand ist nicht eingerichtet (RESEND_API_KEY, NOTIFY_FROM_EMAIL).' }, 503);
+    const all = sampleMails(), from = p.data.from ?? 0, part = all.slice(from, from + 8);
+    let sent = 0; const failed: string[] = [];
+    for (const [k, m] of part.entries()) {
+      const n = from + k + 1;
+      const ok = await sendMail(auth.user.email, `[Test ${n}/${all.length}] ${m.subject}`, m.text, [], { ...m.opts, replyTo: m.opts?.replyTo, headers: { 'X-ImmoAdv-Test': m.group } });
+      if (ok) sent++; else failed.push(`${m.group}: ${m.label}`);
+      await new Promise((r) => setTimeout(r, 550)); // Resend erlaubt wenige E-Mails pro Sekunde
+    }
+    if (from === 0) await adminAudit(auth.user.email, 'testmail_all', null, { total: all.length });
+    return j({ ok: true, to: auth.user.email, total: all.length, next: from + part.length < all.length ? from + part.length : null, sent, failed });
+  }
   // Konto-E-Mail über Supabase (prüft „Custom SMTP“ und die Vorlagen): Passwort-Link an die eigene Admin-Adresse.
   if (p.data.action === 'testauth') {
     if (!adminConfigured()) return j({ error: 'Nicht konfiguriert.' }, 503);
