@@ -815,11 +815,6 @@ main table td{min-width:max-content}}
 .cmp .cmp-table td.n{color:#CBD5E1}
 .cmp .cmp-table .hl,.cmp .cmp-table tbody tr:nth-child(even) .hl{background:#E0F2FE}
 .cmp .cmp-table thead th.hl{color:#0369A1}
-.hero3 small,.qz small,.km-show small,.seals small{text-transform:none;letter-spacing:0}
-.qz{background:#fff;color:#0F172A;border-radius:20px;padding:20px;box-shadow:0 24px 60px rgba(2,6,23,.35);display:grid;gap:14px;scroll-margin-top:84px}
-.qz select{width:100%;min-height:48px;border:1px solid #CBD5E1;border-radius:10px;padding:0 12px;font-size:16px;background:#fff;color:#0F172A}
-.qz .tip{width:22px;height:22px;font-size:12px}
-@media(max-width:420px){.qz{padding:16px;border-radius:16px}}
 .km-guar,.buy-guar{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;margin:0;padding:12px 14px;border-radius:12px;background:#ECFDF5;border:1px solid #A7F3D0;color:#064E3B;font-size:14px;line-height:1.5}
 .km-guar>span:first-child,.buy-guar>span:first-child{width:26px;height:26px;border-radius:50%;background:#10B981;color:#fff;display:grid;place-items:center;font-weight:800}
 .offer-for{margin:-4px 0 10px;font-size:13.5px;font-weight:700;color:#0369A1;line-height:1.4}
@@ -994,8 +989,6 @@ html:has(dialog.ad-dlg[open]),html:has(dialog.buy-dlg[open]){overflow:hidden}
 .lp-founder-body .ck-link,.uu-wrap a:not(.uu-btn){color:#0369A1;text-decoration:underline;text-underline-offset:3px}
 .uu-btns{display:flex;flex-wrap:wrap;gap:12px}
 .uu-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 22px;border-radius:999px;font-weight:700;font-size:16px;text-decoration:none;border:1.5px solid #0F2C59}
-.uu-btn-pri{background:#0F2C59;color:#fff}
-.uu-btn-pri:hover{background:#0B3A6E}
 .uu-btn-sec{background:#fff;color:#0F2C59}
 .uu-btn-sec:hover{background:#F1F5F9}
 @media(max-width:520px){.uu-btn{flex:1 1 100%}}
