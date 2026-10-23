@@ -1,7 +1,8 @@
 // Konto endgültig löschen (Art. 17 DSGVO) – gemeinsam für „Konto löschen“ im Konto und für den Web-Admin.
 // Dateien, Protokolle ohne Fremdschlüssel und der Zugang werden entfernt; Profil, Objekte, Dokumente, Freigaben,
 // Versionen und ein eigenes Unternehmenskonto folgen per CASCADE. Rechnungen bleiben nach § 147 AO erhalten
-// (Fremdschlüssel auf das Unternehmenskonto wird auf NULL gesetzt).
+// (Fremdschlüssel auf das Unternehmenskonto wird auf NULL gesetzt). Creator mit Abrechnungsdaten werden
+// vom Login gelöst und bereinigt statt gelöscht (siehe immo_creator_account_deleted).
 import { DOCUMENT_BUCKET, supabaseAdmin } from '@/lib/supabase/admin';
 
 async function removeFolder(bucket: string, prefix: string): Promise<void> {
@@ -46,6 +47,11 @@ export async function purgeUser(userId: string, b2bAccountId: string | null, ema
     await db.from('immo_bank_pdf_audit').delete().in('package_id', ids);
     await db.from('immo_bank_pdf_versions').delete().in('package_id', ids);
   }
+
+  // Creator Hub: ohne Abrechnungsdaten vollständig löschen, sonst vom Login lösen und bereinigen
+  // (Abrechnungen und Belege unterliegen der Aufbewahrungspflicht und blockieren sonst die Kaskade).
+  const cr = await db.rpc('immo_creator_account_deleted', { p_user: userId });
+  if (cr.error && !/immo_creator_account_deleted|does not exist|schema cache/i.test(cr.error.message)) throw new Error(cr.error.message);
 
   const del = await db.auth.admin.deleteUser(userId);
   if (del.error) throw new Error(del.error.message);

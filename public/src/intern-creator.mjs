@@ -1,6 +1,6 @@
 // Web-Admin → Creator Operations: Bewerbungen prüfen, Creator 360, Zahlungsdaten (maskiert / geschützt anzeigen), Rollen.
 // Rechte prüft ausschließlich der Server (Rolle im Creator-Bereich). Die Oberfläche blendet nur aus, was die Rolle nicht darf.
-import { api, dt, dtt, esc } from './sess.mjs';
+import { api, download, dt, dtt, esc } from './sess.mjs';
 
 const ST = {
   DRAFT: ['', 'Entwurf'], SUBMITTED: ['warn', 'Eingereicht'], UNDER_REVIEW: ['warn', 'In Prüfung'], INFO_REQUESTED: ['warn', 'Rückfrage offen'],
@@ -32,11 +32,14 @@ export async function creatorOps(v) {
   if (location.hash === '#creator-kampagnen') return campaigns(v);
   if (location.hash === '#creator-assets') return assetsAdmin(v);
   if (location.hash === '#creator-inhalte') return contentAdmin(v);
+  if (location.hash === '#creator-abrechnung') return billingAdmin(v);
+  if (location.hash === '#creator-auszahlungen') return payoutsAdmin(v);
+  if (location.hash === '#creator-provision') return rulesAdmin(v);
   return list(v);
 }
 
 // Unternavigation von Creator Operations
-const SUBNAV = [['creator', 'Creator'], ['creator-kampagnen', 'Kampagnen'], ['creator-assets', 'Assets'], ['creator-inhalte', 'Beiträge'], ['creator-rollen', 'Rollen']];
+const SUBNAV = [['creator', 'Creator'], ['creator-kampagnen', 'Kampagnen'], ['creator-assets', 'Assets'], ['creator-inhalte', 'Beiträge'], ['creator-abrechnung', 'Abrechnung'], ['creator-auszahlungen', 'Auszahlungen'], ['creator-provision', 'Provision'], ['creator-rollen', 'Rollen']];
 const subnav = (cur) => `<nav class="co-sub" aria-label="Creator Operations">${SUBNAV.map(([k, l]) => `<a href="#${k}"${k === cur ? ' aria-current="page"' : ''}>${l}</a>`).join('')}</nav>`;
 const eurC = (c) => (Number(c || 0) / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 const num = (n) => Number(n || 0).toLocaleString('de-DE');
@@ -240,6 +243,9 @@ async function detail(v, id) {
         ${d.benefits.length ? `<ul class="co-social" style="margin-top:8px">${d.benefits.map((b) => `<li><strong class="cr-mask">${esc(b.code)}</strong> ${b.active ? '<span class="st ok" style="margin:0">aktiv</span>' : '<span class="st" style="margin:0">inaktiv</span>'}<br>${esc(b.benefit)}<br><small class="form-note">ab ${dt(b.starts_at)}${b.ends_at ? ` bis ${dt(b.ends_at)}` : ''}</small>${d.can.campaigns ? ` <span class="ad-actions"><button type="button" data-ben="${esc(b.id)}">Bearbeiten</button></span>` : ''}</li>`).join('')}</ul>` : '<p class="form-note">Kein Vorteil hinterlegt.</p>'}
         <p class="form-note">Damit der Code an der Kasse wirkt, muss in Stripe ein gleichnamiger Aktionscode existieren.</p></section>
     </div>
+    ${d.billing ? `<section class="pt-card"><div class="ad-h-row"><h3 style="margin:0">Abrechnung</h3>${d.billing.manage ? `<span class="pt-row"><label class="form-note">Verfahren <select id="coMode"><option value="INVOICE"${d.billing.mode === 'INVOICE' ? ' selected' : ''}>Rechnung des Creators</option><option value="CREDIT_NOTE"${d.billing.mode === 'CREDIT_NOTE' ? ' selected' : ''}>Gutschrift durch ImmoAdv</option></select></label><button type="button" class="btn btn-outline btn-sm" id="coAdj">+ Bonus / Korrektur</button></span>` : ''}</div>
+      ${d.billing.statements.length ? `<div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Monat</th><th>Status</th><th>Conv.</th><th>Provision</th><th>Anpassungen</th><th>Auszahlung</th><th>Dokumente</th><th>Zahlung</th></tr></thead><tbody>${d.billing.statements.map((x) => `<tr><td>${esc(x.period)}</td><td>${chip(SST, x.status)}</td><td>${num(x.conversions)}</td><td>${eurC(x.commission_cents)}</td><td>${eurC(x.adjustments_cents)}</td><td><strong>${eurC(x.payout_cents)}</strong></td><td>${(x.immo_creator_documents || []).map((doc) => `<small>${esc(DOCT[doc.doc_type] || doc.doc_type)} ${esc(doc.number)}</small>`).join('<br>') || '–'}</td><td>${x.immo_creator_payouts?.[0] ? chip(PST, x.immo_creator_payouts[0].status) : (Array.isArray(x.immo_creator_payouts) ? '–' : x.immo_creator_payouts ? chip(PST, x.immo_creator_payouts.status) : '–')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine abgeschlossenen Monate.</p>'}
+      <p><a class="ck-link" href="#creator-abrechnung">Zu Creator Billing</a></p></section>` : ''}
     <section class="pt-card"><h3>Beiträge</h3>${d.content.length ? `<ul class="co-social">${d.content.map((x) => `<li>${dt(x.published_on)} ${chip(CST, x.status)} <a href="${/^https:\/\//.test(x.url) ? esc(x.url) : '#'}" target="_blank" rel="noopener noreferrer">${esc(x.title || x.url)}</a></li>`).join('')}</ul><p><a class="ck-link" href="#creator-inhalte">Zur Beitragsprüfung</a></p>` : '<p class="form-note">Noch keine Beiträge.</p>'}</section>
     ${d.audit ? `<section class="pt-card"><h3>Audit</h3><p class="form-note">Unveränderbares Protokoll. Akteure pseudonymisiert, keine Zahlungsdaten.</p><div style="overflow-x:auto"><table class="ad-table co-audit"><thead><tr><th>Zeit</th><th>Ereignis</th><th>Wer</th><th>Ergebnis</th></tr></thead><tbody>${d.audit.map((a) => `<tr><td>${dtt(a.created_at)}</td><td>${esc(EV[a.event_type] || a.event_type)}</td><td>${esc(a.actor_kind === 'creator' ? 'Creator' : `${a.actor_role || ''} ${a.actor_ref}`)}</td><td>${a.result === 'SUCCESS' ? '<span class="st ok" style="margin:0">ok</span>' : `<span class="st bad" style="margin:0">${esc(a.result)}</span>`}</td></tr>`).join('')}</tbody></table></div></section>` : ''}`;
 
@@ -259,6 +265,12 @@ async function detail(v, id) {
   v.querySelector('#coBen')?.addEventListener('click', () => benefitDlg(null));
   v.querySelectorAll('[data-ben]').forEach((b) => b.onclick = () => benefitDlg(d.benefits.find((x) => x.id === b.dataset.ben)));
   if (d.can.conversions) perfBox(v.querySelector('#coPerf'), id, d.can.reverse, '30d');
+  v.querySelector('#coMode')?.addEventListener('change', async (e) => {
+    const x = await api('/api/admin/creators/billing', { method: 'POST', body: JSON.stringify({ action: 'billing_mode', creator_id: id, mode: e.target.value }) });
+    if (!x.ok) { alert(x.data?.error || 'Nicht möglich.'); return; }
+    detail(v, id);
+  });
+  v.querySelector('#coAdj')?.addEventListener('click', () => adjustDialog(id, () => detail(v, id)));
   v.querySelector('#coVerify')?.addEventListener('click', async (e) => {
     e.target.disabled = true;
     const x = await api(`/api/admin/creators/${id}/bank`, { method: 'POST', body: JSON.stringify({ action: 'verify' }) });
@@ -339,4 +351,120 @@ async function perfBox(box, id, canReverse, range) {
   box.querySelectorAll('[data-pr]').forEach((b) => b.onclick = () => perfBox(box, id, canReverse, b.dataset.pr));
   box.querySelectorAll('[data-rv]').forEach((b) => b.onclick = () => dialog('<h2 style="margin:0;color:#0F2C59">Conversion zurücknehmen</h2><p class="form-note">Endgültig und protokolliert. Erstattungen über Stripe werden automatisch zurückgenommen.</p><label class="pt-field">Grund*<textarea name="reason" rows="3" maxlength="300" required></textarea></label>',
     async (f) => { const x = await api(`/api/admin/creators/${id}/conversions`, { method: 'POST', body: JSON.stringify({ conversion_id: b.dataset.rv, reason: fv(f, 'reason') }) }); if (!x.ok) return x.data?.error || 'Nicht möglich.'; perfBox(box, id, canReverse, range); return null; }));
+}
+
+// ---------- Phase 3: Abrechnung, Auszahlungen, Provisionsregeln ----------
+const SST = { READY: ['warn', 'Bereit'], INVOICED: ['warn', 'Rechnung da'], APPROVED: ['ok', 'Freigegeben'], PAID: ['ok', 'Bezahlt'], ZERO: ['', 'Kein Betrag'] };
+const PST = { READY: ['warn', 'Bereit'], APPROVED: ['ok', 'Freigegeben'], EXPORTED: ['ok', 'Exportiert'], PAID: ['ok', 'Bezahlt'], FAILED: ['bad', 'Fehlgeschlagen'] };
+const DOCT = { STATEMENT: 'Abrechnung', INVOICE: 'Rechnung', CREDIT_NOTE: 'Gutschrift', CANCELLATION: 'Storno' };
+const prevPeriod = (p) => { const [y, m] = p.split('-').map(Number); return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`; };
+const nextPeriod = (p) => { const [y, m] = p.split('-').map(Number); return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`; };
+let billPeriod = null;
+
+function adjustDialog(creatorId, done, period) {
+  const now = new Date();
+  const def = period || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  dialog(`<h2 style="margin:0;color:#0F2C59">Bonus oder Korrektur</h2><p class="form-note">Wird mit dem Abschluss des gewählten Monats (oder später) verrechnet. Negative Beträge für Korrekturen zu Ungunsten des Creators.</p>
+    <div class="ad-grid2"><label>Art<select name="kind"><option value="BONUS">Bonus</option><option value="CORRECTION">Korrektur</option></select></label><label>Monat<input name="period" pattern="20[0-9]{2}-(0[1-9]|1[0-2])" value="${esc(def)}"></label>
+    <label>Betrag in € (netto)*<input name="amount" inputmode="decimal" required placeholder="z. B. 50,00 oder -12,50"></label></div>
+    <label class="pt-field">Begründung*<textarea name="reason" rows="2" maxlength="300" required></textarea></label>`,
+  async (f) => {
+    const cents = Math.round(Number(fv(f, 'amount').replace(/\./g, '').replace(',', '.')) * 100);
+    if (!Number.isFinite(cents) || !cents) return 'Bitte einen Betrag angeben.';
+    const x = await api('/api/admin/creators/billing', { method: 'POST', body: JSON.stringify({ action: 'adjust', creator_id: creatorId, period: fv(f, 'period'), kind: fv(f, 'kind'), amount_cents: cents, reason: fv(f, 'reason') }) });
+    if (!x.ok) return x.data?.error || 'Nicht möglich.';
+    done(); return null;
+  });
+}
+
+async function billingAdmin(v) {
+  const r = await api(`/api/admin/creators/billing${billPeriod ? `?period=${billPeriod}` : ''}`);
+  if (!r.ok) return errBox(v, r.data?.error);
+  const d = r.data, o = d.overview;
+  billPeriod = d.period;
+  const canClose = new Date(d.close_allowed_at) <= new Date();
+  const tile = (l, val, sub) => `<div class="pt-kpi"><small>${l}</small><strong>${val}</strong>${sub ? `<small>${sub}</small>` : ''}</div>`;
+  v.innerHTML = `${subnav('creator-abrechnung')}
+    <div class="co-tiles6">${tile('Provision offen', eurC(o.pending_total_cents + o.approved_total_cents), 'gesamt')}${tile('Ausstehend', eurC(o.pending_total_cents))}${tile('Freigegeben', eurC(o.approved_total_cents))}${tile('Rechnungen offen', num(o.invoices_open), d.label)}${tile('Payout Ready', eurC(o.payout_ready_cents), d.label)}${tile('Bezahlt', eurC(o.paid_total_cents), 'gesamt')}</div>
+    <section class="pt-card co-close"><div class="ad-h-row"><div><small class="pt-top-k">Creator Monatsabschluss</small><h2 style="margin:2px 0 0">${esc(d.label)}</h2></div>
+      <div class="co-period"><button type="button" class="btn btn-outline btn-sm" data-per="${prevPeriod(d.period)}" aria-label="Vormonat">←</button><button type="button" class="btn btn-outline btn-sm" data-per="${nextPeriod(d.period)}" aria-label="Folgemonat">→</button></div></div>
+      <dl class="pt-dl"><div><dt>Creator</dt><dd>${num(o.creators)}</dd></div><div><dt>Provision</dt><dd>${eurC(o.commission_cents)}</dd></div><div><dt>Rechnungen offen</dt><dd>${num(o.invoices_open)}</dd></div><div><dt>Payout Ready</dt><dd>${eurC(o.payout_ready_cents)}</dd></div><div><dt>Blockiert</dt><dd>${eurC(o.blocked_cents)}</dd></div><div><dt>Bezahlt</dt><dd>${eurC(o.paid_cents)}</dd></div></dl>
+      ${d.unbilled.conversions ? `<p class="form-note">Noch nicht abgerechnet: ${num(d.unbilled.conversions)} Conversions (${eurC(d.unbilled.revenue_net_cents)} netto).</p>` : ''}
+      ${d.me.manage ? (canClose ? `<button type="button" class="btn btn-dark" id="coClose">${o.closed ? 'Nachzügler abrechnen' : 'Monatsabschluss durchführen'}</button>` : `<button type="button" class="btn btn-dark" disabled>Monatsabschluss ab ${dt(d.close_allowed_at)}</button><span class="form-note"> Widerrufsfrist der Käufe läuft noch.</span>`) : ''}</section>
+    <section class="pt-card"><h2>Abrechnungen ${esc(d.label)}</h2>${d.statements.length ? `<div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Creator</th><th>Status</th><th>Conv.</th><th>Provision</th><th>Anpass.</th><th>USt</th><th>Auszahlung</th><th>Offen</th><th>Dokumente</th><th></th></tr></thead><tbody>
+      ${d.statements.map((s) => `<tr><td><a class="ck-link" href="#creator-${esc(s.creator_id)}">${esc(s.name)}</a><br><small class="form-note">${s.billing_mode === 'CREDIT_NOTE' ? 'Gutschrift' : 'Rechnung'}</small></td><td>${chip(SST, s.status)}</td><td>${num(s.conversions)}</td><td>${eurC(s.commission_cents)}</td><td>${eurC(s.adjustments_cents)}</td><td>${eurC(s.vat_cents)}</td><td><strong>${eurC(s.payout_cents)}</strong></td>
+        <td>${s.blockers.length ? s.blockers.map((b) => `<span class="st bad" style="margin:0 4px 4px 0">${esc(b.text)}</span>`).join('') : (s.status === 'READY' || s.status === 'INVOICED' ? '<span class="st ok" style="margin:0">bereit</span>' : '')}</td>
+        <td>${s.documents.filter((x) => x.doc_type !== 'STATEMENT').map((x) => `<small>${esc(DOCT[x.doc_type])} ${esc(x.number)}</small>`).join('<br>') || '–'}</td>
+        <td>${d.me.manage && (s.status === 'READY' || s.status === 'INVOICED') && !s.blockers.length ? `<span class="ad-actions"><button type="button" data-ap="${esc(s.id)}">Freigeben</button></span>` : ''}</td></tr>`).join('')}</tbody></table></div>` : `<p class="form-note">${o.closed ? 'Keine Abrechnungen.' : 'Dieser Monat ist noch nicht abgeschlossen.'}</p>`}</section>
+    <section class="pt-card"><div class="ad-h-row"><h2 style="margin:0">Offene Anpassungen</h2></div>${d.open_adjustments.length ? `<ul class="co-social" style="margin-top:8px">${d.open_adjustments.map((x) => `<li>${esc(x.immo_creators?.display_name || 'Creator')} · ${esc(x.period)} · ${esc(x.kind)} <strong>${eurC(x.amount_cents)}</strong> – ${esc(x.reason)} ${d.me.manage && (x.kind === 'BONUS' || x.kind === 'CORRECTION') ? `<span class="ad-actions"><button type="button" data-deladj="${esc(x.id)}">Löschen</button></span>` : ''}</li>`).join('')}</ul>` : '<p class="form-note">Keine. Boni und Korrekturen legen Sie in Creator 360 an; Rückforderungen und Überträge entstehen automatisch beim Abschluss.</p>'}</section>`;
+  v.querySelectorAll('[data-per]').forEach((b) => b.onclick = () => { billPeriod = b.dataset.per; billingAdmin(v); });
+  v.querySelector('#coClose')?.addEventListener('click', () => dialog(`<h2 style="margin:0;color:#0F2C59">Monatsabschluss ${esc(d.label)}</h2><p>Für alle Creator mit Käufen oder Anpassungen wird eine Abrechnung erstellt. Beträge sind danach festgeschrieben; spätere Erstattungen werden im Folgemonat verrechnet.</p><p class="form-note">Rechnungs-Creator erhalten danach die Aufgabe „Rechnung erstellen“.</p>`,
+    async () => { const x = await api('/api/admin/creators/billing', { method: 'POST', body: JSON.stringify({ action: 'close', period: d.period }) }); if (!x.ok) return x.data?.error || 'Nicht möglich.'; billingAdmin(v); return null; }));
+  v.querySelectorAll('[data-ap]').forEach((b) => b.onclick = async () => {
+    b.disabled = true;
+    const x = await api('/api/admin/creators/billing', { method: 'POST', body: JSON.stringify({ action: 'approve', statement_id: b.dataset.ap }) });
+    if (!x.ok) { alert([x.data?.error, ...(x.data?.blockers || [])].filter(Boolean).join('\n')); b.disabled = false; return; }
+    billingAdmin(v);
+  });
+  v.querySelectorAll('[data-deladj]').forEach((b) => b.onclick = async () => { const x = await api('/api/admin/creators/billing', { method: 'POST', body: JSON.stringify({ action: 'delete_adjustment', id: b.dataset.deladj }) }); if (x.ok) billingAdmin(v); else alert(x.data?.error || 'Nicht möglich.'); });
+}
+
+async function payoutsAdmin(v) {
+  const r = await api('/api/admin/creators/payouts');
+  if (!r.ok) return errBox(v, r.data?.error);
+  const d = r.data;
+  const open = d.payouts.filter((p) => p.status !== 'PAID');
+  v.innerHTML = `${subnav('creator-auszahlungen')}<section class="pt-card"><div class="ad-h-row"><h2 style="margin:0">Payout Center</h2><span class="form-note">${d.four_eyes ? 'Vier-Augen-Prinzip aktiv' : 'Vier-Augen-Prinzip aus (Einstellung creator_payout_four_eyes)'}</span></div>
+    ${d.debtor_configured ? '' : '<div class="pt-alert warn">Für den SEPA-Export fehlt das Auszahlungskonto von ImmoAdv (CREATOR_PAYOUT_IBAN oder INVOICE_IBAN in Vercel).</div>'}
+    <p class="form-note">Ablauf: Abrechnung freigeben → Auszahlung freigeben → SEPA-Datei im Online-Banking hochladen und dort freigeben → hier als bezahlt markieren. ImmoAdv löst selbst keine Zahlung aus.</p>
+    ${d.payouts.length ? `<div style="overflow-x:auto"><table class="ad-table"><thead><tr><th><input type="checkbox" id="poAll" aria-label="Alle offenen wählen"></th><th>Creator</th><th>Monat</th><th>Betrag</th><th>Konto</th><th>Bankdaten</th><th>Status</th><th>Verwendungszweck</th></tr></thead><tbody>
+    ${d.payouts.map((p) => `<tr><td>${p.status !== 'PAID' ? `<input type="checkbox" data-po="${esc(p.id)}" aria-label="Auswählen">` : ''}</td><td><a class="ck-link" href="#creator-${esc(p.creator_id)}">${esc(p.immo_creators?.display_name || 'Creator')}</a></td><td>${esc(p.period_label)}</td><td><strong>${eurC(p.amount_cents)}</strong></td><td><span class="cr-mask">${esc(p.iban_masked)}</span></td><td>${p.bank_status === 'VERIFIED' ? '<span class="st ok" style="margin:0">geprüft</span>' : p.bank_status === 'VERIFICATION_REQUIRED' ? '<span class="st bad" style="margin:0">Prüfung nötig</span>' : p.bank_status ? '<span class="st warn" style="margin:0">hinterlegt</span>' : '<span class="st bad" style="margin:0">abgelöst</span>'}</td><td>${chip(PST, p.status)}${p.failed_reason ? `<br><small class="form-note">${esc(p.failed_reason)}</small>` : ''}${p.paid_at ? `<br><small class="form-note">${dt(p.paid_at)}</small>` : ''}</td><td><small>${esc(p.reference)}</small></td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">Noch keine Auszahlungen. Sie entstehen mit der Freigabe einer Abrechnung.</p>'}
+    ${d.me.manage && open.length ? `<div class="pt-row" style="margin-top:12px"><button type="button" class="btn btn-outline" data-act="approve">Freigeben</button><label class="form-note">Ausführung am <input type="date" id="poDate" value="${new Date(Date.now() + 86400000).toISOString().slice(0, 10)}"></label><button type="button" class="btn btn-dark" data-act="export">SEPA-Datei erstellen</button><button type="button" class="btn btn-outline" data-act="paid">Als bezahlt markieren</button><button type="button" class="btn btn-outline" data-act="failed">Fehlgeschlagen</button></div><p class="form-note" id="poMsg" role="status"></p>` : ''}</section>`;
+  const sel = () => [...v.querySelectorAll('[data-po]:checked')].map((x) => x.dataset.po);
+  v.querySelector('#poAll')?.addEventListener('change', (e) => v.querySelectorAll('[data-po]').forEach((x) => { x.checked = e.target.checked; }));
+  const m = (t) => { const el = v.querySelector('#poMsg'); if (el) el.textContent = t; };
+  v.querySelectorAll('[data-act]').forEach((b) => b.onclick = async () => {
+    const ids = sel();
+    if (!ids.length) { m('Bitte zuerst Auszahlungen auswählen.'); return; }
+    const act = b.dataset.act;
+    if (act === 'export') {
+      try { await download('/api/admin/creators/payouts', { method: 'POST', body: JSON.stringify({ action: 'export', ids, execution_date: v.querySelector('#poDate').value }) }, 'sepa.xml'); m('SEPA-Datei erstellt. Bitte im Online-Banking hochladen und freigeben.'); setTimeout(() => payoutsAdmin(v), 1200); } catch (e) { m(e.message); }
+      return;
+    }
+    if (act === 'failed') return dialog('<h2 style="margin:0;color:#0F2C59">Zahlung fehlgeschlagen</h2><label class="pt-field">Grund*<textarea name="reason" rows="2" maxlength="300" required></textarea></label>',
+      async (f) => { const x = await api('/api/admin/creators/payouts', { method: 'POST', body: JSON.stringify({ action: 'failed', ids, reason: fv(f, 'reason') }) }); if (!x.ok) return x.data?.error || 'Nicht möglich.'; payoutsAdmin(v); return null; });
+    if (act === 'paid') return dialog(`<h2 style="margin:0;color:#0F2C59">Als bezahlt markieren</h2><p>${ids.length} Auszahlung(en). Bitte nur markieren, wenn die Überweisung im Online-Banking ausgeführt wurde. Creator erhalten eine E-Mail.</p>`,
+      async () => { const x = await api('/api/admin/creators/payouts', { method: 'POST', body: JSON.stringify({ action: 'paid', ids }) }); if (!x.ok) return x.data?.error || 'Nicht möglich.'; payoutsAdmin(v); return null; });
+    const x = await api('/api/admin/creators/payouts', { method: 'POST', body: JSON.stringify({ action: act, ids }) });
+    if (!x.ok) { m(x.data?.error || 'Nicht möglich.'); return; }
+    if (x.data.skipped) m(`${x.data.approved} freigegeben, ${x.data.skipped} übersprungen${x.data.four_eyes ? ' (Vier-Augen-Prinzip: Freigabe durch eine zweite Person)' : ''}.`);
+    setTimeout(() => payoutsAdmin(v), x.data.skipped ? 1800 : 0);
+  });
+}
+
+async function rulesAdmin(v) {
+  const r = await api('/api/admin/creators/rules');
+  if (!r.ok) return errBox(v, r.data?.error);
+  const d = r.data;
+  const KIND = { PERCENT: 'Prozent', FIXED: 'Fester Betrag', HYBRID: 'Prozent + fest', TIERED: 'Gestaffelt' };
+  const val = (x) => x.kind === 'FIXED' ? eurC(x.fixed_cents) : x.kind === 'HYBRID' ? `${(x.percent_bps / 100).toLocaleString('de-DE')} % + ${eurC(x.fixed_cents)}` : x.kind === 'TIERED' ? `${(x.percent_bps / 100).toLocaleString('de-DE')} %; ${(x.tiers || []).map((t) => `ab ${t.min_conversions}: ${(t.percent_bps / 100).toLocaleString('de-DE')} %`).join(', ')}` : `${(x.percent_bps / 100).toLocaleString('de-DE')} %`;
+  const active = (x) => !x.valid_to || new Date(x.valid_to) > new Date();
+  v.innerHTML = `${subnav('creator-provision')}<section class="pt-card"><div class="ad-h-row"><h2 style="margin:0">Provisionsregeln</h2>${d.me.manage ? '<button type="button" class="btn btn-dark" id="ruNew">+ Regel</button>' : ''}</div>
+    <p class="form-note">Es gilt die spezifischste Regel: Creator + Kampagne vor Creator vor Kampagne vor Standard. Änderungen erzeugen eine neue Version ab jetzt – abgeschlossene Monate bleiben unverändert. Grundlage ist der Netto-Umsatz je Kauf.</p>
+    <div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Geltung</th><th>Art</th><th>Wert</th><th>Version</th><th>Gültig</th><th>Notiz</th></tr></thead><tbody>
+    ${d.rules.map((x) => `<tr${active(x) ? '' : ' style="opacity:.55"'}><td>${x.creator_id ? esc(x.immo_creators?.display_name || 'Creator') : '<strong>Alle Creator</strong>'}${x.campaign_slug ? ` · Kampagne ${esc(x.campaign_slug)}` : ''}</td><td>${esc(KIND[x.kind])}</td><td>${esc(val(x))}</td><td>v${x.version}</td><td>${dt(x.valid_from)} – ${x.valid_to ? dt(x.valid_to) : 'offen'}</td><td><small>${esc(x.note || '')}</small></td></tr>`).join('')}</tbody></table></div></section>`;
+  v.querySelector('#ruNew')?.addEventListener('click', () => dialog(`<h2 style="margin:0;color:#0F2C59">Neue Provisionsregel</h2><div class="ad-grid2">
+      <label>Creator<select name="creator_id"><option value="">Alle Creator (Standard)</option>${d.creators.map((c) => `<option value="${esc(c.id)}">${esc(c.display_name || 'Ohne Namen')}</option>`).join('')}</select></label>
+      <label>Kampagne<select name="campaign_slug"><option value="">alle Kampagnen</option>${d.campaigns.map((k) => `<option value="${esc(k.slug)}">${esc(k.name)}</option>`).join('')}</select></label>
+      <label>Art<select name="kind"><option value="PERCENT">Prozent vom Netto-Umsatz</option><option value="FIXED">Fester Betrag je Kauf</option><option value="HYBRID">Prozent + fester Betrag</option><option value="TIERED">Gestaffelt nach Anzahl im Monat</option></select></label>
+      <label>Prozent<input name="percent" inputmode="decimal" placeholder="z. B. 20"></label><label>Fester Betrag (€)<input name="fixed" inputmode="decimal" placeholder="z. B. 5,00"></label>
+      <label class="full">Staffeln (nur bei „Gestaffelt“), eine pro Zeile<textarea name="tiers" rows="3" placeholder="ab 10: 25&#10;ab 25: 30"></textarea></label></div>
+      <label class="pt-field">Notiz<input name="note" maxlength="300"></label>`,
+  async (f) => {
+    const n = (x) => Number(String(x || '0').replace(',', '.'));
+    const tiers = fv(f, 'tiers').split('\n').map((l) => /ab\s*(\d+)\s*:\s*([\d.,]+)/i.exec(l)).filter(Boolean).map((m2) => ({ min_conversions: Number(m2[1]), percent_bps: Math.round(n(m2[2]) * 100) }));
+    const x = await api('/api/admin/creators/rules', { method: 'POST', body: JSON.stringify({ creator_id: fv(f, 'creator_id') || null, campaign_slug: fv(f, 'campaign_slug') || null, kind: fv(f, 'kind'), percent_bps: Math.round(n(fv(f, 'percent')) * 100), fixed_cents: Math.round(n(fv(f, 'fixed')) * 100), tiers, note: fv(f, 'note') || null }) });
+    if (!x.ok) return x.data?.error || 'Nicht möglich.';
+    rulesAdmin(v); return null;
+  }));
 }

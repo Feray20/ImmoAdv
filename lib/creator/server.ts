@@ -15,7 +15,7 @@ export const noStore = { 'Cache-Control': 'no-store, private', 'X-Robots-Tag': '
 export const j = (b: unknown, s = 200) => NextResponse.json(b, { status: s, headers: noStore });
 
 export type CreatorRow = {
-  id: string; user_id: string; status: CreatorStatus;
+  id: string; user_id: string | null; status: CreatorStatus; // null: Login gelöscht (archiviert)
   first_name: string | null; last_name: string | null; country: string | null; phone: string | null;
   display_name: string | null; company: string | null; website: string | null; bio: string | null; categories: string[];
   ref_code: string | null; info_request: string | null;
@@ -32,7 +32,10 @@ export type AuditEvent =
   | 'CREATOR_SUSPENDED' | 'CREATOR_REACTIVATED' | 'AGREEMENT_ACCEPTED'
   | 'BANK_DATA_ADDED' | 'BANK_DATA_CHANGED' | 'BANK_DETAILS_VIEWED' | 'BANK_DATA_VERIFIED' | 'ADMIN_ROLE_CHANGED' | 'ACCESS_DENIED'
   | 'CAMPAIGN_CHANGED' | 'CAMPAIGN_MEMBERS_CHANGED' | 'ASSET_CHANGED' | 'ASSET_DOWNLOADED' | 'BENEFIT_CHANGED'
-  | 'CONTENT_SUBMITTED' | 'CONTENT_REVIEWED' | 'CONVERSION_RECORDED' | 'CONVERSION_REVERSED';
+  | 'CONTENT_SUBMITTED' | 'CONTENT_REVIEWED' | 'CONVERSION_RECORDED' | 'CONVERSION_REVERSED'
+  | 'COMMISSION_CHANGED' | 'ADJUSTMENT_CREATED' | 'PERIOD_CLOSED' | 'BILLING_MODE_CHANGED' | 'STATEMENT_APPROVED' | 'DOCUMENT_DOWNLOADED'
+  | 'INVOICE_CREATED' | 'INVOICE_APPROVED' | 'INVOICE_REJECTED' | 'PAYOUT_CREATED' | 'PAYOUT_APPROVED' | 'PAYOUT_EXPORTED' | 'PAYOUT_PAID' | 'PAYOUT_FAILED'
+  | 'CREATOR_ACCOUNT_DELETED';
 
 export type Actor = { kind: 'creator' | 'admin' | 'system'; ref: string; role: AdminRole | 'CREATOR' | 'SYSTEM' };
 
@@ -102,13 +105,14 @@ export const maskedPayout = (p: PayoutRow | null) => p ? {
   bic: p.bic, status: p.status, confirmed_at: p.confirmed_at, verified_at: p.verified_at, created_at: p.created_at,
 } : null;
 
-export async function emailConfirmed(userId: string): Promise<boolean> {
+export async function emailConfirmed(userId: string | null): Promise<boolean> {
+  if (!userId) return false;
   const { data } = await supabaseAdmin().auth.admin.getUserById(userId);
   return Boolean(data?.user?.email_confirmed_at);
 }
 
 // Gesamtzustand des eigenen Onboardings (Grundlage für Vollständigkeit und Next Best Action).
-export async function onboardingState(c: CreatorRow, userId: string) {
+export async function onboardingState(c: CreatorRow, userId: string | null) {
   const db = supabaseAdmin();
   const [soc, bus, pay, agr, confirmed, reviews] = await Promise.all([
     db.from('immo_creator_socials').select('id, platform, platform_label, channel_name, handle, url, follower_range').eq('creator_id', c.id).order('created_at'),

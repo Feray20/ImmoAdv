@@ -445,7 +445,7 @@ const IC = {
   sicherheit: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
 };
 const MAIN = [['home', 'Übersicht', 'Home'], ['studio', 'Creator Studio', 'Studio'], ['performance', 'Performance', 'Performance'], ['assets', 'Asset Library', 'Assets']];
-const MORE = [['profil', 'Profil'], ['auszahlung', 'Auszahlung'], ['vereinbarung', 'Vereinbarung'], ['sicherheit', 'Sicherheit']];
+const MORE = [['abrechnung', 'Abrechnung'], ['guide', 'Creator Guide'], ['profil', 'Profil'], ['auszahlung', 'Zahlungsdaten'], ['vereinbarung', 'Vereinbarung'], ['sicherheit', 'Sicherheit']];
 const ALL = [...MAIN.map(([k, l]) => [k, l]), ...MORE];
 const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
 const PLAT = { youtube: 'YouTube', tiktok: 'TikTok', instagram: 'Instagram', x: 'X', linkedin: 'LinkedIn', other: 'Andere' };
@@ -492,6 +492,8 @@ function portal() {
   else if (view === 'studio') studio(v);
   else if (view === 'performance') performance(v);
   else if (view === 'assets') assetsView(v);
+  else if (view === 'abrechnung') billingView(v);
+  else if (view === 'guide') guideView(v);
   else if (view === 'profil') { v.innerHTML = '<section class="pt-card cr-form" id="p1"></section><section class="pt-card cr-form" id="p2"></section><section class="pt-card cr-form" id="p3"></section>'; const ok = { ...o, onSaved: () => toast('Gespeichert') }; secProfile($('#p1'), ok); secSocial($('#p2'), ok); secBusiness($('#p3'), ok); }
   else if (view === 'auszahlung') { v.innerHTML = '<section class="pt-card cr-form" id="p1"></section>'; secPayout($('#p1'), o); }
   else if (view === 'vereinbarung') { v.innerHTML = '<section class="pt-card cr-form" id="p1"></section>'; secAgreement($('#p1'), { ...o, onSaved: () => portal() }); }
@@ -507,20 +509,23 @@ const benefitCard = (h) => (h.benefits || []).map((b) => `<section class="pt-car
   ${b.ends_at ? `<p class="form-note">Gültig bis ${dt(b.ends_at)}</p>` : ''}${b.terms ? `<details><summary class="form-note">Bedingungen</summary><p class="form-note" style="white-space:pre-wrap">${esc(b.terms)}</p></details>` : ''}</section>`).join('');
 
 async function home(v) {
-  const [h, pr] = await Promise.all([loadHub(), api('/api/creator/performance?range=30d')]);
-  const p = me.payout, perf = pr.ok ? pr.data : null;
-  const n = me.next || h.next;
-  const target = n ? ({ payout: '#auszahlung', 'payout-review': '#auszahlung', agreement: '#vereinbarung' })[n.key] || (n.target === 'studio' ? '#studio' : null) : null;
+  const [h, pr, br] = await Promise.all([loadHub(), api('/api/creator/performance?range=30d'), api('/api/creator/billing')]);
+  const p = me.payout, perf = pr.ok ? pr.data : null, bill = br.ok ? br.data : null;
+  const invoiceDue = bill?.statements?.find((x) => x.status === 'READY' && x.billing_mode === 'INVOICE' && x.payout_cents > 0);
+  const n = me.next || (invoiceDue ? { key: 'invoice', title: 'Rechnung erstellen', text: `Deine Abrechnung ${invoiceDue.label} ist fertig: ${eurC(invoiceDue.payout_cents)}.`, target: 'abrechnung' } : null) || h.next || (bill?.next_payout ? { key: 'payout-view', title: 'Auszahlung ansehen', text: `${eurC(bill.next_payout.amount_cents)} sind freigegeben.`, target: 'abrechnung' } : null);
+  const target = n ? ({ payout: '#auszahlung', 'payout-review': '#auszahlung', agreement: '#vereinbarung' })[n.key] || (n.target === 'studio' ? '#studio' : n.target === 'abrechnung' ? '#abrechnung' : null) : null;
   v.innerHTML = `<div class="pt-hello"><h2>Willkommen bei ImmoAdv${me.creator.first_name ? `, ${esc(me.creator.first_name)}` : ''}</h2><p>Deine Übersicht</p></div>
     <section class="pt-card cr-next"><small class="pt-top-k">Nächste Aufgabe</small>${n ? `<h2 style="margin:4px 0">${esc(n.title)}</h2><p style="margin:0">${esc(n.text)}</p>${target ? `<a class="btn btn-dark" href="${target}">Ansehen</a>` : ''}` : '<h2 style="margin:4px 0">Alles erledigt</h2><p style="margin:0">Teile deinen Link oder schau in die Kampagnen.</p>'}</section>
-    <div class="pt-kpis">
+    <div class="pt-kpis cr-kpis6">
+      <div class="pt-kpi"><small>Provision (ausstehend)</small><strong>${bill ? eurC(bill.totals.pending_cents) : '–'}</strong><small>${bill ? `${eurC(bill.totals.paid_cents)} bereits ausgezahlt` : ''}</small></div>
+      <div class="pt-kpi"><small>Nächste Auszahlung</small><strong>${bill?.next_payout ? eurC(bill.next_payout.amount_cents) : '–'}</strong><small>${bill?.next_payout ? esc(PO_TEXT[bill.next_payout.status] || '') : bill ? `Abschluss ${esc(bill.next_close.label)} ab ${dt(bill.next_close.from)}` : ''}</small></div>
       <div class="pt-kpi"><small>Umsatz (30 Tage, netto)</small><strong>${perf ? eurC(perf.revenue_net_cents) : '–'}</strong><small>über dich zugeordnet</small></div>
       <div class="pt-kpi"><small>Conversions (30 Tage)</small><strong>${perf ? num(perf.conversions) : '–'}</strong><small>${perf ? `${num(perf.registrations)} Registrierungen` : ''}</small></div>
       <div class="pt-kpi"><small>Aktive Kampagnen</small><strong>${num((h.campaigns || []).length)}</strong><small>für dich freigegeben</small></div>
       <div class="pt-kpi"><small>Auszahlungskonto</small><strong class="cr-mask">${esc(p?.iban_masked || 'fehlt')}</strong><small>${p ? `<span class="st ${PAY_STATUS[p.status]?.[0] || ''}" style="margin:0">${esc(PAY_STATUS[p.status]?.[1] || '')}</span>` : ''}</small></div>
     </div>
     ${benefitCard(h)}${linkCard(h)}
-    <section class="pt-card"><h2>Provision und Auszahlung</h2><p class="cr-soon">Provision, Monatsabrechnung und Auszahlungen werden hier freigeschaltet, sobald die Abrechnung für dich startet. Deine bisherigen Conversions bleiben dafür gespeichert.</p></section>`;
+    <section class="pt-card"><div class="ad-h-row"><h2 style="margin:0">Abrechnung</h2><a class="btn btn-outline btn-sm" href="#abrechnung">Alle Abrechnungen</a></div><p class="form-note">Abgerechnet wird monatlich, sobald die 14-tägige Widerrufsfrist aller Käufe abgelaufen ist. <a class="ck-link" href="#guide">So funktioniert die Kooperation</a></p></section>`;
   bindCopy(v);
 }
 
@@ -580,8 +585,8 @@ function fixContent(btn, c) {
 
 async function performance(v) {
   const RANGES = [['30d', '30 Tage'], ['90d', '90 Tage'], ['month', 'Dieser Monat'], ['last_month', 'Vormonat'], ['all', 'Gesamt']];
-  const [r, h] = await Promise.all([api(`/api/creator/performance?range=${perfRange}`), loadHub()]);
-  const p = r.ok ? r.data : null;
+  const [r, h, br] = await Promise.all([api(`/api/creator/performance?range=${perfRange}`), loadHub(), api('/api/creator/billing')]);
+  const p = r.ok ? r.data : null, bill = br.ok ? br.data : null;
   const names = new Map((h.campaigns || []).map((k) => [k.slug, k.name]));
   v.innerHTML = `<div class="pc-chips" role="group" aria-label="Zeitraum" style="margin-bottom:12px">${RANGES.map(([k, l]) => `<button type="button" data-r="${k}" aria-pressed="${k === perfRange}">${l}</button>`).join('')}</div>
     ${p ? `<div class="pt-kpis">
@@ -590,10 +595,86 @@ async function performance(v) {
       <div class="pt-kpi"><small>Conversions</small><strong>${num(p.conversions)}</strong><small>${num(p.via_code)} über deinen Code</small></div>
       <div class="pt-kpi"><small>Umsatz (netto)</small><strong>${eurC(p.revenue_net_cents)}</strong><small>${p.reversed ? `${num(p.reversed)} erstattet (nicht gezählt)` : 'ohne Erstattungen'}</small></div></div>
     <section class="pt-card"><h2>Nach Kampagne</h2>${(p.by_campaign || []).length ? `<div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Kampagne</th><th>Besuche</th><th>Registr.</th><th>Conversions</th><th>Umsatz</th></tr></thead><tbody>${p.by_campaign.map((x) => `<tr><td>${esc(x.campaign ? names.get(x.campaign) || x.campaign : 'Ohne Kampagne')}</td><td>${num(x.visits)}</td><td>${num(x.registrations)}</td><td>${num(x.conversions)}</td><td>${eurC(x.revenue_net_cents)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">In diesem Zeitraum noch keine Daten.</p>'}</section>
-    <section class="pt-card"><h2>Provision</h2><dl class="pt-dl"><div><dt>Ausstehend</dt><dd>–</dd></div><div><dt>Freigegeben</dt><dd>–</dd></div><div><dt>Ausgezahlt</dt><dd>–</dd></div></dl><p class="cr-soon">Provisionen werden mit dem Start der Abrechnung aus deinen Conversions berechnet.</p></section>
+    <section class="pt-card"><h2>Provision</h2><dl class="pt-dl"><div><dt>Ausstehend</dt><dd>${bill ? eurC(bill.totals.pending_cents) : '–'}</dd></div><div><dt>Freigegeben</dt><dd>${bill ? eurC(bill.totals.approved_cents) : '–'}</dd></div><div><dt>Ausgezahlt</dt><dd>${bill ? eurC(bill.totals.paid_cents) : '–'}</dd></div></dl><p class="form-note">Ausstehend enthält vorläufige Beträge noch nicht abgeschlossener Monate. <a class="ck-link" href="#abrechnung">Zur Abrechnung</a></p></section>
     <p class="form-note">So zählen wir: Besuche über deinen Link (ohne Cookies, bei „Do Not Track“ nicht gezählt) · Registrierungen über deinen Link · bezahlte Käufe von Kunden, die über deinen Link oder Code kamen (innerhalb von 90 Tagen nach Registrierung). Eigene Käufe zählen nicht. Du siehst nur Summen, keine Personen.</p>`
     : `<div class="pt-alert bad">${esc(r.data?.error || 'Kennzahlen konnten nicht geladen werden.')}</div>`}`;
   v.querySelectorAll('[data-r]').forEach((b) => b.onclick = () => { perfRange = b.dataset.r; performance(v); });
+}
+
+const PO_TEXT = { READY: 'wird zur Zahlung vorbereitet', APPROVED: 'zur Zahlung freigegeben', EXPORTED: 'Überweisung beauftragt', PAID: 'überwiesen', FAILED: 'Zahlung fehlgeschlagen – wir melden uns' };
+const ST_TEXT = { READY: ['warn', 'Bereit'], INVOICED: ['warn', 'Rechnung eingereicht'], APPROVED: ['ok', 'Freigegeben'], PAID: ['ok', 'Ausgezahlt'], ZERO: ['', 'Kein Betrag'] };
+const DOC_TEXT = { STATEMENT: 'Abrechnung', INVOICE: 'Rechnung', CREDIT_NOTE: 'Gutschrift', CANCELLATION: 'Storno' };
+
+async function openDoc(btn, body) {
+  btn.disabled = true;
+  const r = await api('/api/creator/billing/document', { method: 'POST', body: JSON.stringify(body) });
+  btn.disabled = false;
+  if (!r.ok) { toast(r.data?.error || 'Download nicht möglich.', true); return; }
+  location.href = r.data.url;
+}
+
+async function billingView(v) {
+  const r = await api('/api/creator/billing');
+  if (!r.ok) { v.innerHTML = `<div class="pt-alert bad">${esc(r.data?.error || 'Abrechnung konnte nicht geladen werden.')}</div>`; return; }
+  const b = r.data;
+  v.innerHTML = `<div class="pt-kpis">
+      <div class="pt-kpi"><small>Ausstehend</small><strong>${eurC(b.totals.pending_cents)}</strong><small>inkl. vorläufiger Monate</small></div>
+      <div class="pt-kpi"><small>Freigegeben</small><strong>${eurC(b.totals.approved_cents)}</strong><small>zur Auszahlung</small></div>
+      <div class="pt-kpi"><small>Ausgezahlt</small><strong>${eurC(b.totals.paid_cents)}</strong><small>gesamt</small></div>
+      <div class="pt-kpi"><small>Nächste Auszahlung</small><strong>${b.next_payout ? eurC(b.next_payout.amount_cents) : '–'}</strong><small>${b.next_payout ? `${esc(PO_TEXT[b.next_payout.status] || '')} · ${esc(b.next_payout.iban_masked)}` : `Abschluss ${esc(b.next_close.label)} ab ${dt(b.next_close.from)}`}</small></div></div>
+    ${b.open.length ? `<section class="pt-card"><h2>Laufende Monate <small class="form-note">(vorläufig)</small></h2><div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Monat</th><th>Conversions</th><th>Umsatz netto</th><th>Provision voraussichtlich</th><th>Abschluss ab</th></tr></thead><tbody>${b.open.map((o) => `<tr><td>${esc(o.label)}</td><td>${num(o.conversions)}</td><td>${eurC(o.revenue_net_cents)}</td><td>${eurC(o.commission_cents)}</td><td>${dt(o.close_from)}</td></tr>`).join('')}</tbody></table></div><p class="form-note">Vorläufig, weil Käufe innerhalb der Widerrufsfrist noch erstattet werden können.</p></section>` : ''}
+    <section class="pt-card"><h2>Deine Abrechnungen</h2><p class="form-note" style="margin-top:0">Verfahren: ${b.mode === 'CREDIT_NOTE' ? 'ImmoAdv erstellt für dich eine Gutschrift – du musst keine Rechnung schreiben.' : 'Du erstellst je Monat eine Rechnung an ImmoAdv – mit einem Klick, alle Angaben sind vorausgefüllt.'}</p>
+    ${b.statements.length ? b.statements.map((s) => `<article class="cr-stmt" id="st-${esc(s.id)}"><div class="ad-h-row"><h3 style="margin:0">${esc(s.label)}</h3><span class="st ${ST_TEXT[s.status]?.[0] || ''}" style="margin:0">${esc(ST_TEXT[s.status]?.[1] || s.status)}</span></div>
+        <dl class="pt-dl"><div><dt>Conversions</dt><dd>${num(s.conversions)}</dd></div><div><dt>Umsatz netto</dt><dd>${eurC(s.revenue_net_cents)}</dd></div><div><dt>Provision</dt><dd>${eurC(s.commission_cents)}</dd></div>${s.adjustments_cents ? `<div><dt>Anpassungen</dt><dd>${eurC(s.adjustments_cents)}</dd></div>` : ''}${s.vat_cents ? `<div><dt>USt</dt><dd>${eurC(s.vat_cents)}</dd></div>` : ''}<div><dt>Auszahlung</dt><dd>${eurC(s.payout_cents)}</dd></div></dl>
+        ${s.payout ? `<p class="form-note" style="margin:0 0 6px">Auszahlung: <strong>${esc(PO_TEXT[s.payout.status] || s.payout.status)}</strong>${s.payout.paid_at ? ` am ${dt(s.payout.paid_at)}` : ''} · ${esc(s.payout.iban_masked)}</p>` : ''}
+        ${s.blockers.length ? `<div class="pt-alert warn"><strong>Vor der Auszahlung offen:</strong> ${s.blockers.map(esc).join(' · ')}</div>` : ''}
+        <p class="pt-row"><button type="button" class="btn btn-outline btn-sm" data-stmt="${esc(s.id)}">Abrechnung herunterladen</button>${s.documents.filter((d) => d.doc_type !== 'STATEMENT').map((d) => `<button type="button" class="btn btn-outline btn-sm" data-doc="${esc(d.id)}">${esc(DOC_TEXT[d.doc_type] || d.doc_type)} ${esc(d.number)}</button>`).join('')}${s.status === 'READY' && s.billing_mode === 'INVOICE' && s.payout_cents > 0 ? `<button type="button" class="btn btn-dark btn-sm" data-inv="${esc(s.id)}">Rechnung erstellen</button>` : ''}</p>
+        <div data-invbox></div></article>`).join('') : '<div class="pt-empty">Noch keine abgeschlossenen Monate. Die erste Abrechnung erscheint nach dem Monatsabschluss.</div>'}</section>`;
+  v.querySelectorAll('[data-stmt]').forEach((x) => x.onclick = () => openDoc(x, { statement_id: x.dataset.stmt, doc_type: 'STATEMENT' }));
+  v.querySelectorAll('[data-doc]').forEach((x) => x.onclick = () => openDoc(x, { document_id: x.dataset.doc }));
+  v.querySelectorAll('[data-inv]').forEach((x) => x.onclick = () => invoiceForm(v, b, b.statements.find((s) => s.id === x.dataset.inv), x));
+}
+
+function invoiceForm(v, b, s, btn) {
+  const box = btn.closest('article').querySelector('[data-invbox]');
+  btn.remove();
+  const bz = me.business || {};
+  const ids = [bz.tax_number ? `Steuernummer ${bz.tax_number}` : null, bz.vat_id ? `USt-IdNr. ${bz.vat_id}` : null].filter(Boolean);
+  box.innerHTML = `<form class="cr-form cr-invoice" novalidate><h3>Rechnung erstellen</h3><p class="form-note" style="margin-top:0">Alle Angaben sind aus deiner Abrechnung und deinen Rechnungsdaten übernommen. Bitte prüfen und bestätigen.</p>
+    <dl class="cr-review">
+      <dt>Von (du)</dt><dd>${esc([bz.legal_name, bz.legal_form].filter(Boolean).join(' '))}<br><small>${esc([bz.street, [bz.postal_code, bz.city].filter(Boolean).join(' ')].filter(Boolean).join(', '))}</small>${ids.length ? `<br><small>${esc(ids.join(' · '))}</small>` : '<br><span class="st bad" style="margin:0">Steuernummer oder USt-IdNr. fehlt</span>'}</dd>
+      <dt>An</dt><dd>ImmoAdv, Inh. Feray Korkmaz<br><small>Georg-August-Zinn-Str. 25, 64354 Reinheim · USt-IdNr. DE348036700</small></dd>
+      <dt>Leistung</dt><dd>Werbeleistung im ImmoAdv Creator-Partnerprogramm: Provision ${esc(s.label)} (${num(s.conversions)} Conversions)</dd>
+      <dt>Netto</dt><dd>${eurC(s.net_cents)}</dd>${s.vat_cents ? `<dt>Umsatzsteuer</dt><dd>${eurC(s.vat_cents)}</dd>` : ''}<dt>Rechnungsbetrag</dt><dd>${eurC(s.gross_cents)}</dd>
+      <dt>Steuerhinweis</dt><dd>${esc(s.tax_note)}</dd><dt>Zahlung an</dt><dd class="cr-mask">${esc(me.payout?.iban_masked || '–')}</dd>
+    </dl>
+    <div class="ad-grid2"><label>Rechnungsnummer*<input name="number" required maxlength="40" value="${esc(b.invoice_suggestion)}"><small class="hint">Deine eigene, fortlaufende Nummer. Vorschlag kannst du ändern.</small></label><label>Rechnungsdatum<input value="${dt(new Date())}" readonly></label></div>
+    <label class="consent"><input type="checkbox" name="ok" required> Ich habe die Angaben geprüft. Die Rechnung wird in meinem Namen erstellt und an ImmoAdv übermittelt.</label>
+    <p class="cr-msg pt-alert bad" hidden></p><div class="wiz-nav"><button type="button" class="btn btn-outline" data-cancel>Abbrechen</button><button type="submit" class="btn btn-dark">Rechnung erstellen</button></div></form>`;
+  const f = box.querySelector('form');
+  f.querySelector('[data-cancel]').onclick = () => billingView(v);
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!f.elements.ok.checked) { formMsg(f, 'Bitte bestätige, dass du die Angaben geprüft hast.'); return; }
+    const d = await save(f, { statement_id: s.id, number: val(f, 'number'), confirm: true }, '/api/creator/billing/invoice', 'POST');
+    if (d) { toast(`Rechnung ${d.number} erstellt`); billingView(v); }
+  };
+}
+
+function guideView(v) {
+  const steps = [
+    ['Link oder Code teilen', 'Verwende deinen persönlichen Link (Creator Studio) oder deinen Vorteilscode. Für Kampagnen gibt es eigene Links, damit wir sehen, was funktioniert.'],
+    ['Werbung kennzeichnen', 'Jeder Beitrag über ImmoAdv ist Werbung und wird als solche gekennzeichnet. Trage veröffentlichte Beiträge im Studio ein – wir prüfen sie.'],
+    ['Was gezählt wird', 'Bezahlte Käufe von Kunden, die über deinen Link kamen (bis 90 Tage nach ihrer Registrierung) oder deinen Code eingelöst haben. Eigene Käufe und erstattete Käufe zählen nicht.'],
+    ['Provision', 'Je Kauf nach der für dich hinterlegten Regel (z. B. Prozent vom Netto-Umsatz). Ausstehende Beträge siehst du laufend unter Performance und Abrechnung.'],
+    ['Monatsabschluss', 'Ein Monat wird abgerechnet, wenn die 14-tägige Widerrufsfrist aller Käufe vorbei ist – in der Regel ab dem 15. des Folgemonats. Spätere Erstattungen werden im nächsten Monat verrechnet.'],
+    ['Rechnung oder Gutschrift', 'Je nach Vereinbarung erstellst du mit einem Klick eine vorausgefüllte Rechnung, oder ImmoAdv stellt dir eine Gutschrift aus.'],
+    ['Auszahlung', 'Nach der Freigabe überweisen wir auf dein hinterlegtes, geprüftes Konto. Du bekommst eine E-Mail, sobald die Überweisung raus ist.'],
+  ];
+  v.innerHTML = `<section class="pt-card"><h2>Wie funktioniert die Kooperation?</h2><ol class="cr-guide">${steps.map(([t, d]) => `<li><strong>${esc(t)}</strong><p>${esc(d)}</p></li>`).join('')}</ol></section>
+    <div class="pt-grid2"><section class="pt-card"><h2>Bitte so</h2><ul class="pt-check"><li>In deinem eigenen Stil erklären, was ImmoAdv kann</li><li>Eigene Beispiele und echte Erfahrungen zeigen</li><li>Werbung deutlich kennzeichnen</li><li>Freigegebene Assets unverändert verwenden</li></ul></section>
+    <section class="pt-card"><h2>Bitte nicht</h2><ul class="pt-check"><li>Keine Renditeversprechen oder garantierten Ergebnisse</li><li>Keine Kredit-, Anlage-, Steuer- oder Rechtsberatung</li><li>Keine Aussagen, ImmoAdv vermittle Kredite</li><li>Keine Eigenkäufe über den eigenen Link</li></ul></section></div>
+    <section class="pt-card"><h2>Fragen?</h2><p>Schreib uns an <strong>support@immoadv.de</strong>. Die verbindlichen Regeln stehen in deiner <a class="ck-link" href="#vereinbarung">Vereinbarung</a>.</p></section>`;
 }
 
 let assetCamp = '';
