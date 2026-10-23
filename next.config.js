@@ -70,6 +70,9 @@ module.exports = {
   async redirects() {
     return [
       { source: '/fuer-banken', destination: '/b2b', permanent: true },
+      // Direkte Anmeldung für Creator (Link zum Weitergeben): öffnet /creator gleich mit dem Anmeldeformular.
+      { source: '/creator/anmelden', destination: '/creator?anmelden', permanent: false },
+      { source: '/creator/login', destination: '/creator?anmelden', permanent: false },
       { source: '/fuer-banken/:path*', destination: '/b2b', permanent: true },
       { source: '/wissen/klug-investieren-wie-werde-ich-zum-geld-master', destination: '/wissen/klug-investieren-worauf-kommt-es-an', permanent: true },
     ];

@@ -205,3 +205,9 @@ body.is-portal>#creator{flex:1 0 auto}
 #creator>.cr-ld{display:none}
 .cr-auth #creator>.cr-ld{display:block}
 .cr-auth #crLanding{display:none}
+/* Angemeldetes Konto + Kontowechsel */
+.cr-who{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;font-size:13px;color:#475569;min-width:0}
+.cr-who strong{color:#0F2C59;overflow-wrap:anywhere}
+.cr-hero .pt-alert.warn{background:#FFFBEB;border:1px solid #FCD34D;color:#78350F;border-radius:12px;padding:12px 14px;margin:14px 0 0;max-width:62ch}
+.cr-notice{margin:0 0 12px}
+@media (max-width:560px){.cr-bar{align-items:flex-start}.cr-who{flex-direction:column;align-items:flex-end;gap:6px}}

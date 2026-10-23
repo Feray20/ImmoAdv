@@ -1,7 +1,7 @@
 // ImmoAdv Creator Partner: Bewerbung (einmaliges Onboarding), Prüfstatus und Creator-Portal.
 // Gemeinsame Anmeldung mit dem Kundenbereich (Supabase). Alle Prüfungen passieren zusätzlich auf dem Server.
 // Sicherheitstexte beschreiben nur Maßnahmen, die tatsächlich umgesetzt sind (siehe lib/creator/*).
-import { api, dt, esc, loginForm, logout, token } from './sess.mjs';
+import { api, dt, esc, loginForm, logout, setSession, token } from './sess.mjs';
 
 const root = document.getElementById('creator');
 const $ = (s, el = document) => el.querySelector(s);
@@ -66,8 +66,9 @@ function ibanOk(raw) {
 const mask = (c, l4) => `${c}${'•'.repeat(10)}${l4}`;
 
 // ---------- Start ----------
+const DIRECT_LOGIN = new URLSearchParams(location.search).has('anmelden') || location.hash === '#anmelden';
 async function boot() {
-  if (!token()) { landing(false); return; }
+  if (!token()) { landing(false); if (DIRECT_LOGIN) authForm('login'); return; }
   const r = await api('/api/creator/me');
   if (r.status === 401) { landing(false); return; }
   if (r.data?.code === 'setup') { root.innerHTML = `<div class="cr-wrap"><section class="pt-card cr-setup"><h1>Gleich geht's los</h1><p>${esc(r.data.error)}</p><p class="form-note">Deine Anmeldung bleibt bestehen. Fragen? <a href="mailto:support@immoadv.de">support@immoadv.de</a></p></section></div>`; return; }
@@ -97,14 +98,22 @@ function landing(loggedIn) {
   document.documentElement.classList.remove('cr-auth');
   if (!$('#crLanding', root)) root.innerHTML = LANDING;
   $('.cr-ld', root)?.remove();
+  const b2b = loggedIn && me?.b2b;
   if (loggedIn) {
-    $('#crLogin').textContent = 'Zur Bewerbung';
-    for (const b of root.querySelectorAll('#crStart button, #crStart2, #crStart3')) b.textContent = 'Bewerbung starten';
+    // Wer angemeldet ist, sieht mit welchem Konto – und kann wechseln (die Anmeldung gilt für die ganze Website).
+    $('#crLogin').outerHTML = `<div class="cr-who"><span>Angemeldet als <strong>${esc(me?.email || '')}</strong></span><button type="button" class="btn btn-outline btn-sm" id="crSwitch">Konto wechseln</button></div>`;
+    for (const b of root.querySelectorAll('#crStart button, #crStart2, #crStart3')) b.textContent = b2b ? 'Mit anderem Konto anmelden' : 'Bewerbung starten';
     $('#crLogin2')?.closest('p')?.remove();
+    if (b2b) {
+      const m = $('.cr-msg'); m.hidden = false; m.className = 'cr-msg pt-alert warn';
+      m.innerHTML = `Du bist mit <strong>${esc(me.email)}</strong> angemeldet – das ist ein Unternehmenskonto. Für die Creator-Bewerbung brauchst du ein eigenes, privates Konto. Melde dich mit einer anderen E-Mail-Adresse an oder lege ein neues Konto an.`;
+      m.style.margin = '0 0 16px'; $('#crStart').before(m);
+    }
   }
   const ts = Date.now();
   const apply = async (mode = 'signup') => {
     if (!loggedIn) { authForm(mode); return; }
+    if (b2b) { switchAccount(); return; }
     const btn = $('#crStart button'); btn.disabled = true;
     // Der Spam-Schutz des Servers lehnt Anfragen unter 1,5 s nach dem Laden ab – sehr schnelle Klicks kurz abwarten.
     const wait = 1700 - (Date.now() - ts); if (wait > 0) await new Promise((r) => setTimeout(r, wait));
@@ -116,6 +125,7 @@ function landing(loggedIn) {
   $('#crStart').onsubmit = (e) => { e.preventDefault(); apply(); };
   for (const id of ['#crStart2', '#crStart3']) $(id)?.addEventListener('click', () => apply());
   for (const id of ['#crLogin', '#crLogin2']) $(id)?.addEventListener('click', () => apply('login'));
+  $('#crSwitch')?.addEventListener('click', switchAccount);
   $('.cr-hero-link')?.addEventListener('click', (e) => { e.preventDefault(); $('#so-gehts')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
   // Mobile: Bewerben-Knopf bleibt unten sichtbar, sobald der Knopf im Kopfbereich aus dem Bild ist und bevor der Schluss-Knopf erscheint.
   const sticky = $('#crSticky');
@@ -126,7 +136,14 @@ function landing(loggedIn) {
   }
 }
 
-function authForm(mode = 'signup') {
+// Konto wechseln: Sitzung auf diesem Gerät beenden und die Anmeldung zeigen (gilt für die ganze Website).
+function switchAccount() {
+  setSession(null);
+  me = null;
+  authForm('login', 'Du wurdest abgemeldet. Melde dich jetzt mit deinem Creator-Konto an oder lege ein neues an.');
+}
+
+function authForm(mode = 'signup', notice = '') {
   loginForm(root, {
     title: 'Creator-Konto',
     lead: 'Melde dich mit deinem ImmoAdv-Konto an, um deine Bewerbung zu beginnen oder fortzusetzen.',
@@ -135,6 +152,7 @@ function authForm(mode = 'signup') {
     signup: { next: '/creator' },
   });
   if (mode === 'signup') $('[data-mode="signup"]', root)?.click();
+  if (notice) { const n = document.createElement('p'); n.className = 'pt-alert ok cr-notice'; n.textContent = notice; $('.area-login h1', root)?.after(n); }
   window.scrollTo({ top: 0 });
 }
 
