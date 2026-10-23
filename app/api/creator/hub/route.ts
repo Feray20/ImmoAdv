@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { creatorLink } from '@/lib/creator/attribution-rules';
 import { portalNextAction } from '@/lib/creator/model';
 import { j, requireActiveCreator, SITE_ORIGIN } from '@/lib/creator/server';
+import { ensureCreatorKit } from '@/lib/creator/kit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,7 @@ export async function GET(req: Request) {
   const g = await requireActiveCreator(req, 'hub', 120);
   if (!('creator' in g)) return g;
   const c = g.creator;
+  await ensureCreatorKit(new URL(req.url).origin).catch(() => null);
   const db = supabaseAdmin();
   const [camps, members, assets, benefits, content] = await Promise.all([
     db.from('immo_creator_campaigns').select('id, slug, name, summary, brief, dos, donts, target_path, audience, starts_on, ends_on, created_at').eq('status', 'ACTIVE').order('created_at', { ascending: false }),

@@ -531,9 +531,12 @@ const IC = {
   auszahlung: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/>',
   vereinbarung: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>',
   sicherheit: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+  abrechnung: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+  guide: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M9 7h6"/>',
+  more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
 };
-const MAIN = [['home', 'Übersicht', 'Home'], ['studio', 'Creator Studio', 'Studio'], ['performance', 'Performance', 'Performance'], ['assets', 'Asset Library', 'Assets']];
-const MORE = [['abrechnung', 'Abrechnung'], ['guide', 'Creator Guide'], ['profil', 'Profil'], ['auszahlung', 'Zahlungsdaten'], ['vereinbarung', 'Vereinbarung'], ['sicherheit', 'Sicherheit']];
+const MAIN = [['home', 'Übersicht', 'Start'], ['studio', 'Kampagnen & Beiträge', 'Kampagnen'], ['performance', 'Statistik', 'Statistik'], ['assets', 'Material', 'Material']];
+const MORE = [['abrechnung', 'Abrechnung'], ['guide', 'Leitfaden'], ['profil', 'Profil'], ['auszahlung', 'Zahlungsdaten'], ['vereinbarung', 'Vereinbarung'], ['sicherheit', 'Sicherheit']];
 const ALL = [...MAIN.map(([k, l]) => [k, l]), ...MORE];
 const svg = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
 const PLAT = { youtube: 'YouTube', tiktok: 'TikTok', instagram: 'Instagram', x: 'X', linkedin: 'LinkedIn', other: 'Andere' };
@@ -563,13 +566,14 @@ function portal() {
   const inMore = MORE.some(([k]) => k === view);
   root.innerHTML = `<div class="pt">
     <aside class="pt-side"><a class="pt-brand" href="#home"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><small class="pt-tag">Creator Portal</small>
-      <nav>${ALL.map(([k, l]) => `<a href="#${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${esc(l)}</a>`).join('')}</nav>
+      <nav class="cr-side-nav"><span class="cr-side-h">Arbeiten</span>${ALL.slice(0, 5).map(([k, l]) => `<a href="#${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${svg(k)}<span>${esc(l)}</span></a>`).join('')}
+        <span class="cr-side-h">Konto</span>${ALL.slice(5).map(([k, l]) => `<a href="#${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${svg(k)}<span>${esc(l)}</span></a>`).join('')}</nav>
       <div class="pt-foot"><a href="mailto:support@immoadv.de">Support</a><strong>${esc(name)}</strong><small>Creator Partner seit ${dt(me.creator.approved_at)}</small><button type="button" class="pt-logout" id="crOut">Abmelden</button></div></aside>
     <section class="pt-main"><header class="pt-top"><a class="pt-top-brand" href="#home" aria-label="Creator Portal – Übersicht"><img src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="pt-top-t"><small class="pt-top-k">Creator Portal</small><h1>${esc(ALL.find(([k]) => k === view)[1])}</h1></div><button type="button" class="pt-logout pt-logout-m" id="crOutM" aria-label="Abmelden" title="Abmelden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Abmelden</span></button></header>
       <div id="crView"><div class="ad-skel" aria-busy="true"><div class="ad-skel-kpis"><span></span><span></span><span></span><span></span></div></div></div></section>
     <nav class="pt-tabs" aria-label="Bereiche">${MAIN.map(([k, , s]) => `<a href="#${k}"${k === view ? ' class="on" aria-current="page"' : ''}>${svg(k)}<span>${esc(s)}</span></a>`).join('')}<button type="button" id="crMore" aria-expanded="false" aria-controls="crSheet"${inMore ? ' class="on"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg><span>Mehr</span></button></nav>
     <div class="pt-sheet" id="crSheet" hidden><div class="pt-sheet-bg" data-close></div><div class="pt-sheet-in" role="dialog" aria-label="Weitere Bereiche"><div class="pt-sheet-h"><span class="pt-sheet-t"><strong>Mehr</strong></span><button type="button" class="stage-x" data-close aria-label="Schließen">×</button></div>
-      <nav>${MORE.map(([k, l]) => `<a href="#${k}"${k === view ? ' class="on"' : ''}>${esc(l)}</a>`).join('')}<a href="mailto:support@immoadv.de">Support kontaktieren</a><button type="button" class="pt-logout" id="crOutS">Abmelden</button></nav></div></div></div>`;
+      <nav class="cr-sheet-nav">${MORE.map(([k, l]) => `<a href="#${k}"${k === view ? ' class="on"' : ''}>${svg(k)}<span>${esc(l)}</span></a>`).join('')}<a href="mailto:support@immoadv.de">Support kontaktieren</a><button type="button" class="pt-logout" id="crOutS">Abmelden</button></nav></div></div></div>`;
   ['#crOut', '#crOutM', '#crOutS'].forEach((s) => { const b = $(s); if (b) b.onclick = logout; });
   const sheet = $('#crSheet'), more = $('#crMore');
   more.onclick = () => { sheet.hidden = false; more.setAttribute('aria-expanded', 'true'); };
@@ -608,9 +612,9 @@ async function home(v) {
       <div class="pt-kpi"><small>Provision (ausstehend)</small><strong>${bill ? eurC(bill.totals.pending_cents) : '–'}</strong><small>${bill ? `${eurC(bill.totals.paid_cents)} bereits ausgezahlt` : ''}</small></div>
       <div class="pt-kpi"><small>Nächste Auszahlung</small><strong>${bill?.next_payout ? eurC(bill.next_payout.amount_cents) : '–'}</strong><small>${bill?.next_payout ? esc(PO_TEXT[bill.next_payout.status] || '') : bill ? `Abschluss ${esc(bill.next_close.label)} ab ${dt(bill.next_close.from)}` : ''}</small></div>
       <div class="pt-kpi"><small>Umsatz (30 Tage, netto)</small><strong>${perf ? eurC(perf.revenue_net_cents) : '–'}</strong><small>über dich zugeordnet</small></div>
-      <div class="pt-kpi"><small>Conversions (30 Tage)</small><strong>${perf ? num(perf.conversions) : '–'}</strong><small>${perf ? `${num(perf.registrations)} Registrierungen` : ''}</small></div>
+      <div class="pt-kpi"><small>Käufe (30 Tage)</small><strong>${perf ? num(perf.conversions) : '–'}</strong><small>${perf ? `${num(perf.registrations)} Registrierungen` : ''}</small></div>
       <div class="pt-kpi"><small>Aktive Kampagnen</small><strong>${num((h.campaigns || []).length)}</strong><small>für dich freigegeben</small></div>
-      <div class="pt-kpi"><small>Auszahlungskonto</small><strong class="cr-mask">${esc(p?.iban_masked || 'fehlt')}</strong><small>${p ? `<span class="st ${PAY_STATUS[p.status]?.[0] || ''}" style="margin:0">${esc(PAY_STATUS[p.status]?.[1] || '')}</span>` : ''}</small></div>
+      <div class="pt-kpi"><small>Auszahlungskonto</small>${p?.iban_masked ? `<strong class="cr-mask">${esc(p.iban_masked)}</strong>` : '<strong class="cr-kpi-txt">Noch nicht hinterlegt</strong><a class="ck-link" href="#auszahlung">Jetzt hinterlegen</a>'}<small>${p ? `<span class="st ${PAY_STATUS[p.status]?.[0] || ''}" style="margin:0">${esc(PAY_STATUS[p.status]?.[1] || '')}</span>` : ''}</small></div>
     </div>
     ${benefitCard(h)}${linkCard(h)}
     <section class="pt-card"><div class="ad-h-row"><h2 style="margin:0">Abrechnung</h2><a class="btn btn-outline btn-sm" href="#abrechnung">Alle Abrechnungen</a></div><p class="form-note">Abgerechnet wird monatlich, sobald die 14-tägige Widerrufsfrist aller Käufe abgelaufen ist. <a class="ck-link" href="#guide">So funktioniert die Kooperation</a></p></section>`;
@@ -680,7 +684,7 @@ async function performance(v) {
     ${p ? `<div class="pt-kpis">
       <div class="pt-kpi"><small>Besuche</small><strong>${num(p.visits)}</strong><small>${num(p.visitors)} Besucher</small></div>
       <div class="pt-kpi"><small>Registrierungen</small><strong>${num(p.registrations)}</strong><small>über deinen Link</small></div>
-      <div class="pt-kpi"><small>Conversions</small><strong>${num(p.conversions)}</strong><small>${num(p.via_code)} über deinen Code</small></div>
+      <div class="pt-kpi"><small>Käufe</small><strong>${num(p.conversions)}</strong><small>${num(p.via_code)} über deinen Code</small></div>
       <div class="pt-kpi"><small>Umsatz (netto)</small><strong>${eurC(p.revenue_net_cents)}</strong><small>${p.reversed ? `${num(p.reversed)} erstattet (nicht gezählt)` : 'ohne Erstattungen'}</small></div></div>
     <section class="pt-card"><h2>Nach Kampagne</h2>${(p.by_campaign || []).length ? `<div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Kampagne</th><th>Besuche</th><th>Registr.</th><th>Conversions</th><th>Umsatz</th></tr></thead><tbody>${p.by_campaign.map((x) => `<tr><td>${esc(x.campaign ? names.get(x.campaign) || x.campaign : 'Ohne Kampagne')}</td><td>${num(x.visits)}</td><td>${num(x.registrations)}</td><td>${num(x.conversions)}</td><td>${eurC(x.revenue_net_cents)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="form-note">In diesem Zeitraum noch keine Daten.</p>'}</section>
     <section class="pt-card"><h2>Provision</h2><dl class="pt-dl"><div><dt>Ausstehend</dt><dd>${bill ? eurC(bill.totals.pending_cents) : '–'}</dd></div><div><dt>Freigegeben</dt><dd>${bill ? eurC(bill.totals.approved_cents) : '–'}</dd></div><div><dt>Ausgezahlt</dt><dd>${bill ? eurC(bill.totals.paid_cents) : '–'}</dd></div></dl><p class="form-note">Ausstehend enthält vorläufige Beträge noch nicht abgeschlossener Monate. <a class="ck-link" href="#abrechnung">Zur Abrechnung</a></p></section>
@@ -713,7 +717,7 @@ async function billingView(v) {
     ${b.open.length ? `<section class="pt-card"><h2>Laufende Monate <small class="form-note">(vorläufig)</small></h2><div style="overflow-x:auto"><table class="ad-table"><thead><tr><th>Monat</th><th>Conversions</th><th>Umsatz netto</th><th>Provision voraussichtlich</th><th>Abschluss ab</th></tr></thead><tbody>${b.open.map((o) => `<tr><td>${esc(o.label)}</td><td>${num(o.conversions)}</td><td>${eurC(o.revenue_net_cents)}</td><td>${eurC(o.commission_cents)}</td><td>${dt(o.close_from)}</td></tr>`).join('')}</tbody></table></div><p class="form-note">Vorläufig, weil Käufe innerhalb der Widerrufsfrist noch erstattet werden können.</p></section>` : ''}
     <section class="pt-card"><h2>Deine Abrechnungen</h2><p class="form-note" style="margin-top:0">Verfahren: ${b.mode === 'CREDIT_NOTE' ? 'ImmoAdv erstellt für dich eine Gutschrift – du musst keine Rechnung schreiben.' : 'Du erstellst je Monat eine Rechnung an ImmoAdv – mit einem Klick, alle Angaben sind vorausgefüllt.'}</p>
     ${b.statements.length ? b.statements.map((s) => `<article class="cr-stmt" id="st-${esc(s.id)}"><div class="ad-h-row"><h3 style="margin:0">${esc(s.label)}</h3><span class="st ${ST_TEXT[s.status]?.[0] || ''}" style="margin:0">${esc(ST_TEXT[s.status]?.[1] || s.status)}</span></div>
-        <dl class="pt-dl"><div><dt>Conversions</dt><dd>${num(s.conversions)}</dd></div><div><dt>Umsatz netto</dt><dd>${eurC(s.revenue_net_cents)}</dd></div><div><dt>Provision</dt><dd>${eurC(s.commission_cents)}</dd></div>${s.adjustments_cents ? `<div><dt>Anpassungen</dt><dd>${eurC(s.adjustments_cents)}</dd></div>` : ''}${s.vat_cents ? `<div><dt>USt</dt><dd>${eurC(s.vat_cents)}</dd></div>` : ''}<div><dt>Auszahlung</dt><dd>${eurC(s.payout_cents)}</dd></div></dl>
+        <dl class="pt-dl"><div><dt>Käufe</dt><dd>${num(s.conversions)}</dd></div><div><dt>Umsatz netto</dt><dd>${eurC(s.revenue_net_cents)}</dd></div><div><dt>Provision</dt><dd>${eurC(s.commission_cents)}</dd></div>${s.adjustments_cents ? `<div><dt>Anpassungen</dt><dd>${eurC(s.adjustments_cents)}</dd></div>` : ''}${s.vat_cents ? `<div><dt>USt</dt><dd>${eurC(s.vat_cents)}</dd></div>` : ''}<div><dt>Auszahlung</dt><dd>${eurC(s.payout_cents)}</dd></div></dl>
         ${s.payout ? `<p class="form-note" style="margin:0 0 6px">Auszahlung: <strong>${esc(PO_TEXT[s.payout.status] || s.payout.status)}</strong>${s.payout.paid_at ? ` am ${dt(s.payout.paid_at)}` : ''} · ${esc(s.payout.iban_masked)}</p>` : ''}
         ${s.blockers.length ? `<div class="pt-alert warn"><strong>Vor der Auszahlung offen:</strong> ${s.blockers.map(esc).join(' · ')}</div>` : ''}
         <p class="pt-row"><button type="button" class="btn btn-outline btn-sm" data-stmt="${esc(s.id)}">Abrechnung herunterladen</button>${s.documents.filter((d) => d.doc_type !== 'STATEMENT').map((d) => `<button type="button" class="btn btn-outline btn-sm" data-doc="${esc(d.id)}">${esc(DOC_TEXT[d.doc_type] || d.doc_type)} ${esc(d.number)}</button>`).join('')}${s.status === 'READY' && s.billing_mode === 'INVOICE' && s.payout_cents > 0 ? `<button type="button" class="btn btn-dark btn-sm" data-inv="${esc(s.id)}">Rechnung erstellen</button>` : ''}</p>
@@ -732,7 +736,7 @@ function invoiceForm(v, b, s, btn) {
     <dl class="cr-review">
       <dt>Von (du)</dt><dd>${esc([bz.legal_name, bz.legal_form].filter(Boolean).join(' '))}<br><small>${esc([bz.street, [bz.postal_code, bz.city].filter(Boolean).join(' ')].filter(Boolean).join(', '))}</small>${ids.length ? `<br><small>${esc(ids.join(' · '))}</small>` : '<br><span class="st bad" style="margin:0">Steuernummer oder USt-IdNr. fehlt</span>'}</dd>
       <dt>An</dt><dd>ImmoAdv, Inh. Feray Korkmaz<br><small>Georg-August-Zinn-Str. 25, 64354 Reinheim · USt-IdNr. DE348036700</small></dd>
-      <dt>Leistung</dt><dd>Werbeleistung im ImmoAdv Creator-Partnerprogramm: Provision ${esc(s.label)} (${num(s.conversions)} Conversions)</dd>
+      <dt>Leistung</dt><dd>Werbeleistung im ImmoAdv Creator-Partnerprogramm: Provision ${esc(s.label)} (${num(s.conversions)} Käufe)</dd>
       <dt>Netto</dt><dd>${eurC(s.net_cents)}</dd>${s.vat_cents ? `<dt>Umsatzsteuer</dt><dd>${eurC(s.vat_cents)}</dd>` : ''}<dt>Rechnungsbetrag</dt><dd>${eurC(s.gross_cents)}</dd>
       <dt>Steuerhinweis</dt><dd>${esc(s.tax_note)}</dd><dt>Zahlung an</dt><dd class="cr-mask">${esc(me.payout?.iban_masked || '–')}</dd>
     </dl>
@@ -751,7 +755,7 @@ function invoiceForm(v, b, s, btn) {
 
 function guideView(v) {
   const steps = [
-    ['Link oder Code teilen', 'Verwende deinen persönlichen Link (Creator Studio) oder deinen Vorteilscode. Für Kampagnen gibt es eigene Links, damit wir sehen, was funktioniert.'],
+    ['Link oder Code teilen', 'Verwende deinen persönlichen Link (Übersicht oder Kampagnen) oder deinen Vorteilscode. Für Kampagnen gibt es eigene Links, damit wir sehen, was funktioniert.'],
     ['Werbung kennzeichnen', 'Jeder Beitrag über ImmoAdv ist Werbung und wird als solche gekennzeichnet. Trage veröffentlichte Beiträge im Studio ein – wir prüfen sie.'],
     ['Was gezählt wird', 'Bezahlte Käufe von Kunden, die über deinen Link kamen (bis 90 Tage nach ihrer Registrierung) oder deinen Code eingelöst haben. Eigene Käufe und erstattete Käufe zählen nicht; bei einer Teilerstattung zählt der verbleibende Betrag.'],
     ['Provision', 'Je Kauf nach der für dich hinterlegten Regel (z. B. Prozent vom Netto-Umsatz). Ausstehende Beträge siehst du laufend unter Performance und Abrechnung.'],
