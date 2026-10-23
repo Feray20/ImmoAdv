@@ -11,6 +11,13 @@ function mount() {
   fab.type = 'button'; fab.className = 'cw-fab'; fab.setAttribute('aria-haspopup', 'dialog'); fab.setAttribute('aria-expanded', 'false');
   fab.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2Z"/></svg><span>Fragen?</span>';
   document.body.appendChild(fab);
+  // Über der Fußzeile ausblenden, damit nichts verdeckt wird (Panel bleibt offen, falls schon geöffnet).
+  if ('IntersectionObserver' in window) {
+    const seen = new Set();
+    const io = new IntersectionObserver((es) => { es.forEach((e) => (e.isIntersecting ? seen.add(e.target) : seen.delete(e.target))); fab.classList.toggle('cw-away', seen.size > 0 && (!panel || panel.hidden)); });
+    const watch = () => document.querySelectorAll('footer.footer').forEach((f) => { if (!f.dataset.cwIo) { f.dataset.cwIo = '1'; io.observe(f); } });
+    watch(); new MutationObserver(watch).observe(document.body, { childList: true, subtree: true });
+  }
   let panel = null;
   const close = () => { if (!panel) return; panel.hidden = true; fab.setAttribute('aria-expanded', 'false'); fab.focus(); };
   fab.addEventListener('click', () => {
