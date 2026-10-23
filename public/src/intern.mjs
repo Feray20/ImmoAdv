@@ -383,8 +383,15 @@ function openCreatePrivate(done) {
   let d = document.getElementById('mkPDlg');
   if (!d) { d = document.createElement('dialog'); d.id = 'mkPDlg'; d.className = 'ad-dlg'; document.body.append(d); }
   d.innerHTML = `<form class="ad-dlg-in" id="mkPF"><div class="ad-dlg-h"><h2>Privatkonto anlegen (B2C)</h2><button type="button" class="stage-x" id="mkPX" aria-label="Schließen">×</button></div>
-    <p class="form-note">Für Privatkunden, z. B. nach telefonischer Beratung. Es wird ein Zugang mit Startpasswort erzeugt; bei der ersten Anmeldung legt der Kunde ein eigenes Passwort fest. Ein Tarif wird nicht freigeschaltet – gebucht wird über die Bezahlseite.</p>
+    <p class="form-note">Für Privatkunden, z. B. nach telefonischer Beratung. Passwort selbst festlegen oder automatisch erzeugen lassen. Zugriff optional sofort freischalten.</p>
     <div class="ad-grid2"><label>Name*<input name="name" required minlength="2" maxlength="120"></label><label>E-Mail (Benutzername)*<input name="email" type="email" required></label></div>
+    <fieldset class="ad-fs"><legend>Passwort</legend><label class="ad-pw">Passwort<input name="password" type="text" autocomplete="new-password" minlength="10" maxlength="72" spellcheck="false" placeholder="mind. 10 Zeichen, Buchstaben + Ziffer"></label>
+      <span class="ad-hint">Leer lassen, um ein sicheres Passwort automatisch zu erzeugen.</span>
+      <label class="chk"><input type="checkbox" name="mustChange" checked> <span>Bei der ersten Anmeldung muss ein eigenes Passwort festgelegt werden</span></label></fieldset>
+    <fieldset class="ad-fs"><legend>Zugriff</legend><div class="ad-grid2"><label>Tarif<select name="tier"><option value="free">Kostenlos (3 Basis-Tools)</option><option value="starter">Käufer-Pass – alle Kauf-Werkzeuge</option><option value="pro">Investor Pro – alle Werkzeuge</option></select></label>
+      <label>Gültig bis (leer = unbefristet)<input name="validUntil" type="date"></label>
+      <label>Kreditmappen (Anzahl)<input name="creditMaps" type="number" min="0" max="1000" value="0" inputmode="numeric"></label>
+      </div><label class="chk"><input type="checkbox" name="leitfaden"> <span>Leitfaden freischalten</span></label></fieldset>
     <label class="chk"><input type="checkbox" name="sendMail"> Zugangsdaten zusätzlich per E-Mail senden</label>
     <p class="auth-message error" id="mkPMsg" hidden></p><div id="mkPOut"></div>
     <div class="wiz-nav"><button type="button" class="btn btn-outline" id="mkPCancel">Abbrechen</button><button type="submit" class="btn btn-dark">Konto anlegen</button></div></form>`;
@@ -393,17 +400,17 @@ function openCreatePrivate(done) {
   d.querySelector('#mkPF').onsubmit = async (e) => {
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.target)), btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
-    const x = await api('/api/admin/user-create', { method: 'POST', body: JSON.stringify({ name: fd.name, email: fd.email, sendMail: fd.sendMail === 'on' }) });
+    const x = await api('/api/admin/user-create', { method: 'POST', body: JSON.stringify({ name: fd.name, email: fd.email, sendMail: fd.sendMail === 'on', password: fd.password || null, mustChange: fd.mustChange === 'on', access: { tier: fd.tier, creditMaps: Number(fd.creditMaps) || 0, leitfaden: fd.leitfaden === 'on', validUntil: fd.validUntil || null } }) });
     btn.disabled = false;
     const m = d.querySelector('#mkPMsg');
     if (!x.ok) { m.textContent = x.data?.error || 'Anlegen fehlgeschlagen.'; m.hidden = false; return; }
     m.hidden = true;
-    const txt = `Anmeldung: https://immoadv.de/auth/login\nBenutzername: ${x.data.email}\nStartpasswort: ${x.data.password}`;
+    const txt = `Anmeldung: https://immoadv.de/auth/login\nBenutzername: ${x.data.email}\nPasswort: ${x.data.password}${x.data.access && x.data.access !== 'free' ? `\nZugriff: ${x.data.access === 'pro' ? 'Investor Pro' : 'Käufer-Pass'}` : ''}`;
     d.querySelector('#mkPOut').innerHTML = `<div class="pt-alert ok"><strong>Privatkonto angelegt${x.data.mailed ? ' und Zugangsdaten per E-Mail gesendet' : ''}.</strong> Diese Daten werden nur jetzt angezeigt:<pre class="pt-code">${esc(txt)}</pre><button type="button" class="btn btn-outline" id="mkPCopy">Zugangsdaten kopieren</button></div>`;
     d.querySelector('#mkPCopy').onclick = async (ev) => { try { await navigator.clipboard.writeText(txt); ev.target.textContent = 'Kopiert ✓'; } catch { msg('Bitte markieren und kopieren.', true); } };
     e.target.querySelector('.wiz-nav').innerHTML = '<span></span><button type="button" class="btn btn-dark" id="mkPFin">Fertig</button>';
     d.querySelector('#mkPFin').onclick = () => { close(); done?.(); };
-    e.target.querySelectorAll('input').forEach((i) => { i.disabled = true; });
+    e.target.querySelectorAll('input,select').forEach((i) => { i.disabled = true; });
   };
   d.showModal ? d.showModal() : d.setAttribute('open', '');
 }
@@ -413,7 +420,7 @@ function openCreateAccount(c, done) {
   if (!d) { d = document.createElement('dialog'); d.id = 'mkDlg'; d.className = 'ad-dlg'; document.body.append(d); }
   const f = (n, l, val = '', extra = '') => `<label>${l}<input name="${n}" value="${esc(val || '')}" ${extra}></label>`;
   d.innerHTML = `<form class="ad-dlg-in" id="mkF"><div class="ad-dlg-h"><h2>Unternehmen anlegen (B2B)</h2><button type="button" class="stage-x" id="mkX" aria-label="Schließen">×</button></div>
-    <p class="form-note">Es wird ein Zugang mit Startpasswort erzeugt. Bei der ersten Anmeldung legt der Inhaber ein eigenes Passwort fest und bestätigt § 14 BGB und den AVV.</p>
+    <p class="form-note">Passwort selbst festlegen oder automatisch erzeugen lassen. Bei der ersten Anmeldung bestätigt der Inhaber § 14 BGB und den AVV.</p>
     <div class="ad-grid2">${f('companyName', 'Firmenname*', c?.company, 'required minlength="2"')}${f('legalForm', 'Rechtsform*', c?.legal_form, 'required placeholder="GmbH, e. K., …"')}
       <label>Art*<select name="institutionType">${TYPES.map(([k, l]) => `<option value="${k}"${c?.institution_type === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
       ${f('advisorName', 'Ansprechpartner*', c?.name, 'required minlength="2"')}${f('email', 'E-Mail (Benutzername)*', c?.email, 'type="email" required')}${f('phone', 'Telefon', c?.phone)}
@@ -421,6 +428,12 @@ function openCreateAccount(c, done) {
       ${f('registerNumber', 'Handelsregister- oder Vermittlerregister-Nr.', c?.register_number, 'placeholder="HRB … / D-…"')}${f('taxId', 'USt-IdNr. / Steuernummer', c?.tax_id)}</div>
     <p class="form-note">Register-Nr. oder USt-IdNr./Steuernummer: eines von beiden ist Pflicht.</p>
     ${c?.proof_name ? `<p class="pt-alert">Nachweis aus der Anfrage: <strong>${esc(c.proof_name)}</strong> <button type="button" class="text-btn" data-proof="${c.id}">ansehen</button> – wird beim Anlegen in die Verifizierungsunterlagen des Kontos übernommen.</p>` : ''}
+<fieldset class="ad-fs"><legend>Passwort</legend><label class="ad-pw">Passwort<input name="password" type="text" autocomplete="new-password" minlength="10" maxlength="72" spellcheck="false" placeholder="mind. 10 Zeichen, Buchstaben + Ziffer"></label>
+      <span class="ad-hint">Leer lassen, um ein sicheres Passwort automatisch zu erzeugen.</span>
+      <label class="chk"><input type="checkbox" name="mustChange" checked> <span>Bei der ersten Anmeldung muss ein eigenes Passwort festgelegt werden</span></label></fieldset>
+    <fieldset class="ad-fs"><legend>Zugriff</legend><div class="ad-grid2"><label>Tarif<select name="plan"><option value="">ohne Tarif (bucht selbst)</option><option value="BASIC">Basic</option><option value="PRO">Pro</option><option value="ENTERPRISE">Enterprise</option></select></label>
+      <label>Tarif gültig bis (leer = unbefristet)<input name="planUntil" type="date"></label></div>
+      <p class="form-note" style="margin:8px 0 6px">Module</p><div class="ad-grid3"><label>Schnellrechner<select name="mod_schnellrechner"><option value="auto">nach Tarif</option><option value="on">an</option><option value="off">aus</option></select></label><label>Kreditmappe<select name="mod_kreditmappe"><option value="auto">nach Tarif</option><option value="on">an</option><option value="off">aus</option></select></label><label>Stresstest<select name="mod_stresstest"><option value="auto">nach Tarif</option><option value="on">an</option><option value="off">aus</option></select></label><label>White-Label<select name="mod_whitelabel"><option value="auto">nach Tarif</option><option value="on">an</option><option value="off">aus</option></select></label><label>CRM<select name="mod_crm"><option value="auto">nach Tarif</option><option value="on">an</option><option value="off">aus</option></select></label></div></fieldset>
     <label class="chk"><input type="checkbox" name="verified"> Unternehmen bereits geprüft – sofort freischalten</label>
     <label class="chk"><input type="checkbox" name="sendMail"> Zugangsdaten zusätzlich per E-Mail senden</label>
     <p class="auth-message error" id="mkMsg" hidden></p><div id="mkOut"></div>
@@ -432,12 +445,14 @@ function openCreateAccount(c, done) {
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.target));
     const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
-    const x = await api('/api/admin/b2b-create', { method: 'POST', body: JSON.stringify({ ...fd, verified: fd.verified === 'on', sendMail: fd.sendMail === 'on', requestId: c?.id }) });
+    const mods = Object.fromEntries(Object.entries(fd).filter(([k]) => k.startsWith('mod_')).map(([k, v]) => [k.slice(4), v]));
+    const base = Object.fromEntries(Object.entries(fd).filter(([k]) => !k.startsWith('mod_') && !['password', 'mustChange', 'plan', 'planUntil'].includes(k)));
+    const x = await api('/api/admin/b2b-create', { method: 'POST', body: JSON.stringify({ ...base, verified: fd.verified === 'on', sendMail: fd.sendMail === 'on', requestId: c?.id, password: fd.password || null, mustChange: fd.mustChange === 'on', plan: fd.plan || null, planUntil: fd.planUntil || null, modules: mods }) });
     btn.disabled = false;
     const m = d.querySelector('#mkMsg');
     if (!x.ok) { m.textContent = x.data?.error || 'Anlegen fehlgeschlagen.'; m.hidden = false; return; }
     m.hidden = true;
-    const txt = `Portal: https://partner.immoadv.de\nBenutzername: ${x.data.email}\nStartpasswort: ${x.data.password}`;
+    const txt = `Portal: https://partner.immoadv.de\nBenutzername: ${x.data.email}\nPasswort: ${x.data.password}`;
     d.querySelector('#mkOut').innerHTML = `<div class="pt-alert ok"><strong>Konto angelegt (Kundennummer ${esc(String(x.data.customerNumber))})${x.data.mailed ? ' und Zugangsdaten per E-Mail gesendet' : ''}.</strong> Diese Daten werden nur jetzt angezeigt:<pre class="pt-code">${esc(txt)}</pre><button type="button" class="btn btn-outline" id="mkCopy">Zugangsdaten kopieren</button></div>`;
     d.querySelector('#mkCopy').onclick = async (ev) => { try { await navigator.clipboard.writeText(txt); ev.target.textContent = 'Kopiert ✓'; } catch { msg('Bitte markieren und kopieren.', true); } };
     e.target.querySelector('.wiz-nav').innerHTML = '<span></span><button type="button" class="btn btn-dark" id="mkFin">Fertig</button>';

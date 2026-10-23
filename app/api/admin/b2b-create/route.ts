@@ -30,6 +30,12 @@ const Body = z.object({
   verified: z.boolean().optional().default(false),
   sendMail: z.boolean().optional().default(false),
   requestId: z.string().uuid().optional(),
+  password: z.string().max(72).optional().nullable(),
+  mustChange: z.boolean().optional().default(true),
+  // Zugriff direkt bei der Anlage: Tarif (manuell, optional befristet) und Module (auto = nach Tarif, on/off = fest).
+  plan: z.enum(['BASIC', 'PRO', 'ENTERPRISE']).nullable().optional(),
+  planUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  modules: z.record(z.enum(['schnellrechner', 'kreditmappe', 'stresstest', 'whitelabel', 'crm']), z.enum(['auto', 'on', 'off'])).optional(),
 });
 
 export async function POST(req: Request) {
@@ -44,7 +50,7 @@ export async function POST(req: Request) {
   }
   const b = p.data;
   if (!b.registerNumber && !b.taxId) return j({ error: 'Bitte Handelsregisternummer oder USt-IdNr./Steuernummer angeben (eines von beiden ist Pflicht).' }, 400);
-  const login = await createB2BLogin(b.email, b.advisorName);
+  const login = await createB2BLogin(b.email, b.advisorName, 'b2b', { password: b.password, mustChange: b.mustChange });
   if (!login.ok) return j({ error: login.error }, login.status);
   const db = supabaseAdmin();
   const now = new Date().toISOString();
@@ -52,6 +58,8 @@ export async function POST(req: Request) {
     owner_id: login.userId, company_name: b.companyName, legal_form: b.legalForm, institution_type: b.institutionType,
     register_number: b.registerNumber.toUpperCase() || null, tax_id: b.taxId || null, advisor_name: b.advisorName, email: b.email, phone: b.phone || null,
     street: b.street, postal_code: b.postalCode, city: b.city, status: 'active', slug: await freeSlug(b.companyName), widget_key: newWidgetKey(),
+    ...(b.plan ? { plan_tier: b.plan, plan_source: 'manual', plan_until: b.planUntil ? `${b.planUntil}T23:59:59+01:00` : null } : {}),
+    ...(b.modules && Object.values(b.modules).some((v) => v !== 'auto') ? { modules: Object.fromEntries(Object.entries(b.modules).filter(([, v]) => v !== 'auto')) } : {}),
     referral: 'admin', ...(b.verified ? { verified_at: now, verification_status: 'geprueft', verification_decided_at: now, verification_note: 'Bei Anlage durch ImmoAdv geprüft.' } : {}),
   }).select('id, customer_number').single();
   if (ins.error || !ins.data) {
@@ -80,11 +88,11 @@ export async function POST(req: Request) {
       }
     }
   }
-  await adminAudit(auth.user.email, 'b2b_account_create', ins.data.id, { verified: b.verified, mailed: b.sendMail, fromRequest: Boolean(b.requestId) });
+  await adminAudit(auth.user.email, 'b2b_account_create', ins.data.id, { verified: b.verified, mailed: b.sendMail, fromRequest: Boolean(b.requestId), ownPassword: Boolean(b.password), plan: b.plan || null, modules: b.modules || null });
   let mailed = false;
   if (b.sendMail && mailConfigured()) {
     mailed = await sendMail(b.email, 'Ihr Zugang zum ImmoAdv-Unternehmensportal',
-      `Guten Tag ${b.advisorName},\n\nIhr Unternehmenskonto für ${b.companyName} ist eingerichtet (Kundennummer ${ins.data.customer_number}).\n\nPortal: https://partner.immoadv.de\nBenutzername: ${b.email}\nStartpasswort: ${login.password}\n\nBei der ersten Anmeldung legen Sie ein eigenes Passwort fest und bestätigen die Vertragsunterlagen (Unternehmereigenschaft, Auftragsverarbeitungsvertrag). Das Startpasswort ist danach ungültig.`,
+      `Guten Tag ${b.advisorName},\n\nIhr Unternehmenskonto für ${b.companyName} ist eingerichtet (Kundennummer ${ins.data.customer_number}).\n\nPortal: https://partner.immoadv.de\nBenutzername: ${b.email}\nPasswort: ${login.password}\n\nBei der ersten Anmeldung legen Sie ein eigenes Passwort fest und bestätigen die Vertragsunterlagen (Unternehmereigenschaft, Auftragsverarbeitungsvertrag). Das Startpasswort ist danach ungültig.`,
       [], { area: 'b2b', title: 'Ihr Zugang ist eingerichtet', button: { label: 'Zum Unternehmensportal', url: 'https://partner.immoadv.de' }, note: 'Bitte geben Sie das Startpasswort nicht weiter. Fragen: support@immoadv.de' });
   }
   return j({ ok: true, email: b.email, password: login.password, customerNumber: ins.data.customer_number, mailed });
