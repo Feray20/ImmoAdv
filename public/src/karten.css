@@ -202,3 +202,14 @@ img,svg{max-width:100%}
 body:has(> footer.k-foot){min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
 body:has(> footer.k-foot)>main{flex:1 0 auto;width:100%}
 body:has(> footer.k-foot)>:not(main){flex-shrink:0}
+
+/* ---------- Häufige Fragen nach Themen (faq.js) ---------- */
+.faq-topics{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px}
+.faq-topics::-webkit-scrollbar{display:none}
+.faq-topics button{flex:none;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 16px;border-radius:999px;border:1px solid #CBD5E1;background:#fff;color:#0F2C59;font:inherit;font-weight:700;font-size:15px;cursor:pointer;white-space:nowrap}
+.faq-topics button:hover{border-color:#0284C7}
+.faq-topics button[aria-selected="true"]{background-image:linear-gradient(135deg,#0F2C59 0%,#0B4A85 55%,#0284C7 100%)!important;color:#fff;border-color:transparent}
+.faq-topics .faq-n{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#E0F2FE;color:#0369A1;font-size:12.5px}
+.faq-topics button[aria-selected="true"] .faq-n{background:rgba(255,255,255,.2);color:#fff}
+.faq-topics button:focus-visible{outline:3px solid #7DD3FC;outline-offset:2px}
+.faq-org>details[hidden]{display:none!important}

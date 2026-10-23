@@ -1,0 +1,81 @@
+/* ---------- Markenverlauf (Logo-Farben Navy #0F2C59 → Blau #0284C7 → Hellblau #38BDF8) ----------
+   Gilt für alle farbigen Flächen: Knöpfe, Abzeichen, Tabellenköpfe, dunkle Abschnitte und Portal-Fußzeilen.
+   background-image mit !important, damit auch Portal-Stylesheets (b2b.css, creator.css) und Hover-Regeln
+   den Verlauf nicht durch eine Volltonfarbe ersetzen; die Volltonfarbe bleibt als Rückfall darunter. */
+:root{
+  --ia-grad:linear-gradient(135deg,#0F2C59 0%,#0B4A85 55%,#0284C7 100%);
+  --ia-grad-hover:linear-gradient(135deg,#123566 0%,#0E5596 55%,#0B95D8 100%);
+  --ia-grad-sky:linear-gradient(135deg,#0369A1 0%,#0284C7 50%,#38BDF8 100%);
+  --ia-grad-sky-hover:linear-gradient(135deg,#0474B0 0%,#0A92D6 50%,#56C8FA 100%);
+  --ia-grad-deep:radial-gradient(120% 120% at 100% 0%,rgba(56,189,248,.30) 0%,rgba(56,189,248,0) 55%),linear-gradient(140deg,#0F2C59 0%,#0B3B73 50%,#0369A1 100%);
+}
+/* Gefüllte Knöpfe */
+.btn-dark,.btn-primary,.nav-actions .btn-ghost,.cw-fab,.save-obj,.qz-next,.cw-send,
+.area-login .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light),.auth-card .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light){
+  background-image:var(--ia-grad)!important;background-size:100% 100%;border-color:transparent!important;color:#fff!important
+}
+.btn-dark:hover,.btn-primary:hover,.nav-actions .btn-ghost:hover,.cw-fab:hover,.save-obj:hover,.qz-next:hover,.cw-send:hover{background-image:var(--ia-grad-hover)!important}
+/* Hellblaue Handlungsknöpfe (Startseite, /b2b) */
+.hs-go,.lp-nav-btn,.bx-nav-cta{background-image:var(--ia-grad-sky)!important;border-color:transparent!important;color:#fff!important}
+.hs-go *,.lp-nav-btn *,.bx-nav-cta *{color:inherit!important}
+.hs-go:hover,.lp-nav-btn:hover,.bx-nav-cta:hover{background-image:var(--ia-grad-sky-hover)!important}
+/* Abzeichen, Schrittnummern, aktive Schritte und Reiter */
+.offer-rec,.lp-badge,.cr-step-n,.home-num,.steps li.on,.tool-tabs a[aria-current="page"],.mobile-nav a[href="/auth/login"]{background-image:var(--ia-grad)!important;color:#fff}
+.offer-rec,.lp-badge{background-image:var(--ia-grad-sky)!important}
+/* Tabellenköpfe */
+.bill-table tr:has(>th),.report tr:has(>th),.status-table tr:has(>th){background-image:var(--ia-grad)!important}
+.bill-table th,.report th,.status-table th{background:transparent!important;background-image:none!important;color:#fff!important}
+/* Dunkle Flächen und Abschnitte */
+.home-hero,.cr-hero,.bx-secu,.bx-after,.bx-cmp-c.on,aside.roi,.lp-kpi-dark,footer.ia-legal{background-image:var(--ia-grad-deep)!important}
+/* Fokus bleibt auf Verlauf sichtbar */
+.btn-dark:focus-visible,.btn-primary:focus-visible,.hs-go:focus-visible,.cw-fab:focus-visible{outline:3px solid #7DD3FC;outline-offset:2px}
+/* ---------- Drucken: saubere A4-Seite auf allen Geräten (auch Safari/iPhone) ---------- */
+@page{size:A4;margin:14mm 12mm}
+@media print{
+  html,body{background:#fff!important;color:#0F172A!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .route-hero:after,.route-hero:before,.route-hero::after,.route-hero::before{display:none!important;content:none!important}
+  .route-hero{background:none!important;color:#0F172A!important;padding:0 0 6mm!important}
+  .route-hero h1,.route-hero p{color:#0F172A!important}
+  .site-header,.mobile-nav,.bottom-nav,footer,.cw-fab,.cw-panel,.skip-link,.toast,.btn,.lp-sticky,.crumbs,.share-row{display:none!important}
+  *{box-shadow:none!important;text-shadow:none!important;animation:none!important;transition:none!important}
+  .container{width:auto!important;max-width:none!important;padding:0!important;margin:0!important}
+  .section{padding:0!important}
+  /* Mustermappe: nur die interaktive Mappe drucken (die PDF-Beispiele lassen sich separat öffnen) */
+  .ex-grid,.ex-grid+.form-note{display:none!important}
+  .metrics-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:3mm!important}
+  .metrics-grid>div,.report table,.report tr{break-inside:avoid}
+  .report{border:0!important;padding:0!important}
+  .report h2{break-after:avoid}
+  .report table{width:100%!important;table-layout:fixed;font-size:9.5pt!important}
+  .report td{overflow-wrap:anywhere}
+  .bill-table th,.report th,.status-table th{background:#0F2C59!important;background-image:none!important;color:#fff!important}
+  .btn-dark,.btn-primary,.hs-go{background-image:none!important}
+}
+
+/* ---------- Tabellen nie breiter als ihre Karte (alle Geräte, auch Safari) ---------- */
+.report{max-width:100%;overflow:hidden}
+.report table{width:100%;max-width:100%;table-layout:fixed}
+.report td{overflow-wrap:anywhere;word-break:normal;vertical-align:top}
+.report td:first-child:nth-last-child(2){width:44%}
+.report td:last-child,.report th:last-child{text-align:right}
+@media (max-width:420px){.report td:first-child:nth-last-child(2){width:46%}.report td,.report th{padding:8px 6px}}
+/* Ausgewählte Chips, Schrittnummern und Ablauf-Kästchen */
+.qz-chips button[aria-pressed="true"],.lp-use button[aria-checked="true"],[data-sim][aria-selected="true"] b,.bx-inv-steps li>b,.bx-flow li,.level-row span{background-image:var(--ia-grad-sky)!important;color:#fff!important;border-color:transparent!important}
+.level-row span{background-image:var(--ia-grad)!important}
+/* ---------- Portale (Unternehmensportal, Creator-Bereich, Web-Admin) ---------- */
+.pt-side,.bw-mind-core,.ns-title{background-image:var(--ia-grad-deep)!important}
+.ad-tabs button[aria-selected="true"],.ad-subtabs button[aria-selected="true"],.ad-actions button.ad-primary,
+body[data-ad-seg="b2b"] .ad-seg-chip,body[data-ad-seg="b2b"] .ad-segctl button[aria-pressed="true"],
+.fn-period button[aria-pressed="true"],.pc-chips button[aria-pressed="true"],.co-sub a[aria-current="page"],
+.ad-steps li::before,.bw-steps li::before,.pipe-cols li::before,.bw-no,.su-num,.pt-toast,.bw-table th{background-image:var(--ia-grad)!important;color:#fff!important}
+body[data-ad-seg="b2c"] .ad-segctl button[aria-pressed="true"],.sim-steps button[aria-selected=true] b,.ad-bar-f,.bw-toc a b{background-image:var(--ia-grad-sky)!important;color:#fff!important}
+/* ---------- Häufige Fragen nach Themen (faq.js) ---------- */
+.faq-topics{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px}
+.faq-topics::-webkit-scrollbar{display:none}
+.faq-topics button{flex:none;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 16px;border-radius:999px;border:1px solid #CBD5E1;background:#fff;color:#0F2C59;font:inherit;font-weight:700;font-size:15px;cursor:pointer;white-space:nowrap}
+.faq-topics button:hover{border-color:#0284C7}
+.faq-topics button[aria-selected="true"]{background-image:var(--ia-grad)!important;color:#fff;border-color:transparent}
+.faq-topics .faq-n{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#E0F2FE;color:#0369A1;font-size:12.5px}
+.faq-topics button[aria-selected="true"] .faq-n{background:rgba(255,255,255,.2);color:#fff}
+.faq-topics button:focus-visible{outline:3px solid #7DD3FC;outline-offset:2px}
+.faq-org>details[hidden]{display:none!important}
