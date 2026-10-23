@@ -7,6 +7,7 @@ import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase
 import { can, effectiveRole, type AdminRole, type Permission } from '@/lib/creator/roles';
 import { maskIban } from '@/lib/creator/iban';
 import { refCodeFrom, sanitizeMeta, type CreatorStatus, type OnboardingState } from '@/lib/creator/model';
+import { isCreatorAuthEmail } from '@/lib/creator/identity';
 
 // Serverseitige Bausteine des Creator Hubs: Zugriff prüfen, Audit schreiben, eigene Daten laden.
 // Grundsatz: Jede Prüfung passiert hier auf dem Server – nie nur im Browser.
@@ -76,6 +77,8 @@ export async function requireCreatorUser(req: Request, bucket: string, limit = 6
   if (!adminConfigured()) return j({ error: 'Nicht verfügbar.' }, 503);
   const user = await userFromRequest(req);
   if (!user) return j({ error: 'Bitte anmelden.' }, 401);
+  // Getrennte Konten: Im Creator-Bereich gelten nur Creator-Konten – Sitzungen aus Kundenbereich/Unternehmensportal werden abgewiesen.
+  if (!isCreatorAuthEmail(user.email)) return j({ error: 'Bitte mit deinem Creator-Konto anmelden.', code: 'wrong_account' }, 401);
   if (!(await creatorSchemaReady())) return j(SETUP_PENDING, 503);
   if (!allowRequest(`creator-${bucket}:${user.id}`, limit, 60_000)) return j({ error: 'Zu viele Anfragen. Bitte kurz warten.' }, 429);
   if (!allowRequest(`creator-ip:${anonymizedIpHash(req) ?? 'x'}`, 240, 60_000)) return j({ error: 'Zu viele Anfragen. Bitte kurz warten.' }, 429);

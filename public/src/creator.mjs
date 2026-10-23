@@ -71,7 +71,12 @@ async function boot() {
   root.dataset.booted = '1';
   if (!token()) { if (DIRECT_LOGIN && !AUTH_HASH[location.hash.slice(1)]) { history.replaceState(null, '', '/creator'); landing(false); authForm('login'); } else route(); return; }
   const r = await api('/api/creator/me');
-  if (r.status === 401) { landing(false); return; }
+  if (r.status === 401) {
+    // Keine gültige Creator-Sitzung (z. B. Konto aus einem anderen Portal): verwerfen und zur Creator-Anmeldung.
+    setSession(null); me = null;
+    if (r.data?.code === 'wrong_account') { history.replaceState(null, '', '/creator'); landing(false); authForm('login', 'Bitte melde dich mit deinem Creator-Konto an. Konten aus Kundenbereich oder Unternehmensportal gelten hier nicht.'); } else route();
+    return;
+  }
   if (r.data?.code === 'setup') { root.innerHTML = `<div class="cr-wrap"><section class="pt-card cr-setup"><h1>Gleich geht's los</h1><p>${esc(r.data.error)}</p><p class="form-note">Deine Anmeldung bleibt bestehen. Fragen? <a href="mailto:support@immoadv.de">support@immoadv.de</a></p></section></div>`; return; }
   if (!r.ok) { root.innerHTML = `<div class="cr-wrap"><div class="pt-alert bad">${esc(r.data?.error || 'Der Creator-Bereich konnte nicht geladen werden.')} <button type="button" class="btn btn-outline" id="crRetry">Erneut versuchen</button></div></div>`; $('#crRetry').onclick = boot; return; }
   me = r.data;
