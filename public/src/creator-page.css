@@ -203,14 +203,6 @@ body.is-app main>.section{padding:0}
 @media(max-width:900px){body.is-app #app{display:block}
 body.is-app main{padding:0 14px calc(88px + env(safe-area-inset-bottom))}}
 [hidden]{display:none!important}
-.foot-col{border-top:1px solid rgba(255,255,255,.12)}
-.foot-col>summary{list-style:none;cursor:pointer;padding:13px 0;margin:0;font-weight:700;color:#fff;display:flex;justify-content:space-between;align-items:center;font-size:15px}
-.foot-col>summary::-webkit-details-marker{display:none}
-.foot-col>summary::after{content:"+";color:#7DD3FC;font-size:22px;line-height:1;font-weight:400}
-.foot-col[open]>summary::after{content:"\2013"}
-@media(min-width:721px){.foot-col{border-top:0;border-bottom:1px solid rgba(255,255,255,.12)}
-.foot-col>summary{padding:18px 0;font-size:16px}
-.foot-col>summary:hover{color:#7DD3FC}}
 .st-phase{color:var(--ia-navy);font-size:20px;margin:22px 0 10px;padding-bottom:6px;border-bottom:2px solid #E2E8F0}
 .st-phase:first-of-type{margin-top:6px}
 .st-tool,.st-lock{min-width:0;overflow-wrap:anywhere}

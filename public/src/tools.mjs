@@ -408,7 +408,7 @@ if ($('pubOffers')) {
         <div class="offer-free"><strong>Immer kostenlos:</strong> ${P.kostenlos.features.map(esc).join(' · ')}</div>
         ${m.demo ? `<p class="offer-demo">${esc(m.demo)}</p>` : ''}
         ${cmpTable(m.vergleich)}
-        <div class="offer-guar"><strong>Zufriedenheitsgarantie für die Kreditmappe:</strong> Lehnt Ihre finanzierende Bank das Format der Mappe ab, erstatten wir den vollen Kaufpreis. Melden Sie sich dazu innerhalb von 60 Tagen nach dem Kauf per E-Mail mit dem Namen der Bank. Die Garantie betrifft das Format der Mappe, nicht die Kreditentscheidung der Bank. Einzelheiten: <a class="ck-link" href="/nutzungsbedingungen#garantie">Nutzungsbedingungen Nr. 4a</a>.</div>
+        <div class="offer-guar"><strong>Zufriedenheitsgarantie für die Kreditmappe:</strong> Lehnt Ihre finanzierende Bank das Format der Mappe ab, erstatten wir den vollen Kaufpreis. Melden Sie sich dazu innerhalb von 60 Tagen nach dem Kauf per E-Mail mit dem Namen der Bank. Die Garantie betrifft das Format der Mappe, nicht die Kreditentscheidung der Bank. Einzelheiten: <a class="ck-link" href="/nutzungsbedingungen#garantie">AGB Nr. 4a</a>.</div>
         <p class="form-note">Für Makler, Finanzierungsvermittler und Banken gibt es eigene Tarife (netto, mit Widget, Anfragen und Team): <a class="ck-link" href="/b2b">Angebot für Unternehmen</a>.</p>
         <p class="form-note">${esc(P.hinweis)} Widerrufsbelehrung: <a class="ck-link" href="/nutzungsbedingungen">AGB</a>. Kündigung: <a class="ck-link" href="/kuendigen">Verträge hier kündigen</a>.</p>`;
       document.querySelectorAll('#pubOffers [data-offer]').forEach((a) => a.onclick = async (e) => {
