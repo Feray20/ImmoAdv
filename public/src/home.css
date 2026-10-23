@@ -664,7 +664,10 @@ body:not(.is-app) #app>footer{margin-top:auto}
 .ia-legal{background:#0B1F3F;color:#94A3B8;margin-top:auto}
 .ia-legal small{display:block;font-size:12px;line-height:1.6;letter-spacing:.02em;color:#94A3B8;text-transform:none}
 body.is-app main .ia-legal{margin:40px -28px -48px;border-radius:0}
-@media (max-width:900px){body.is-app main .ia-legal{margin:32px -14px calc(-88px - env(safe-area-inset-bottom))}}
+@media (max-width:900px){body.is-app main{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+body.is-app main>*{min-width:0}
+body.is-app main>:has(+.ia-legal){margin-bottom:32px}
+body.is-app main .ia-legal{margin:auto -14px calc(-88px - env(safe-area-inset-bottom))}}
 @media print{.ia-legal{display:none}}
 @font-face{font-family:"IA Inter";src:url("/fonts/Inter-Regular.woff") format("woff");font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:"IA Inter";src:url("/fonts/Inter-SemiBold.woff") format("woff");font-weight:500 600;font-style:normal;font-display:swap}
@@ -714,8 +717,9 @@ html:not(.ia-paid) .nav-actions a[href="/auth/login"],html.ia-user:not(.ia-paid)
 @media (max-width:900px){body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a[href="/auth/login"],
 body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a.nav-acc,
 body:has(.site-header .nav-wrap>.nav-actions) .mobile-nav a[href^="/app/dashboard"]{display:none!important}}
-@media(min-width:901px){body.is-app main{display:flex;flex-direction:column;min-height:100vh}
+@media(min-width:901px){body.is-app main{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
 body.is-app main>*:not(.ia-legal){width:100%;max-width:1320px;margin-left:auto;margin-right:auto}
+body.is-app main>:has(+.ia-legal){margin-bottom:40px}
 body.is-app main .container{max-width:1320px}
 body.is-app main>.section{padding-bottom:40px}
 body.is-app main .ia-legal{margin:auto -28px -48px}}
@@ -742,7 +746,6 @@ body.is-app main .ia-legal{margin:auto -28px -48px}}
 .lp-nav{gap:20px}
 .lp-nav-btn{background:#0284C7;color:#fff;border-color:#0284C7}
 .lp-nav-btn:hover{background:#0369A1;border-color:#0369A1}
-.mobile-nav .lp-mnav-cta{background:#0284C7;color:#fff;font-weight:700;text-align:center}
 @media(max-width:1180px){.lp-nav{gap:14px;font-size:13.5px}}
 .lp-hero-ctas{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px}
 .lp-hero-alt{color:#fff;font-weight:700;text-decoration:underline;text-underline-offset:4px;min-height:44px;display:inline-flex;align-items:center}
@@ -950,5 +953,4 @@ html:not(.ia-paid) body.lp-sticky-on{padding-bottom:calc(76px + env(safe-area-in
 @media(max-width:600px){body.lp-hero-in .cw-fab{display:none}}
 .btn,a.btn,button.btn,.hs-go,a.hs-go,.btn-pay,.km-go{border-radius:999px!important}
 .mobile-menu{border-radius:999px!important;padding-left:14px;padding-right:16px}
-.mobile-nav .lp-mnav-cta{border-radius:999px!important;margin:10px 0 6px;padding-left:22px!important;padding-right:18px!important;border-bottom:0!important;background:#0284C7!important}
 .mobile-nav a[href="/app/dashboard"],html:not(.ia-user) .mobile-nav a[href="/auth/login"]{border-radius:999px!important}

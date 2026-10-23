@@ -322,7 +322,7 @@ export function setupApp({ u, d, saveData, reload }) {
       <p class="form-note" id="sessNote"></p>
       <div class="sess-act"><button class="btn btn-dark" type="button" id="sessOut">Abmelden</button><button class="btn btn-outline" type="button" id="pwOpen" aria-expanded="false">Passwort ändern</button></div><div id="pwBox" hidden></div>
       <p class="form-note">Ihr Passwort können Sie im Browser bzw. im iPhone-Schlüsselbund speichern lassen – beim Anmelden einfach „Passwort sichern“ bestätigen.</p></article>`);
-    const note = () => { const n = $('sessNote'); if (n) n.textContent = $('sessRem').checked ? 'Sie bleiben angemeldet, bis Sie sich abmelden oder 30 Tage nicht aktiv waren. Nur auf eigenen Geräten verwenden.' : 'Automatische Abmeldung nach 30 Minuten ohne Aktivität.'; };
+    const note = () => { const n = $('sessNote'); if (n) n.textContent = $('sessRem').checked ? 'Sie bleiben angemeldet, bis Sie sich abmelden oder 30 Tage nicht aktiv waren. Nur auf eigenen Geräten verwenden.' : 'Automatische Abmeldung nach 12 Stunden ohne Aktivität.'; };
     note();
     $('sessRem').onchange = () => { if (A) { A.setRemember($('sessRem').checked); try { localStorage.setItem('ia-last-active', String(Date.now())); } catch { /* ignore */ } } note(); };
     $('sessOut').onclick = () => document.getElementById('logout')?.click();

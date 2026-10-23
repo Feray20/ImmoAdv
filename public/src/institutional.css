@@ -1436,7 +1436,11 @@ body.is-app main .ia-legal-in{width:auto;padding-left:28px;padding-right:28px}
 body.is-portal{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
 body.is-portal>#portal{flex:1 0 auto}
 @media (max-width:900px){
-  body.is-app main .ia-legal{margin:32px -14px calc(-88px - env(safe-area-inset-bottom))}
+  /* Fußzeile auch auf Handy/Tablet immer am unteren Rand (nicht mitten auf kurzen Seiten) */
+  body.is-app main{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+  body.is-app main>*{min-width:0}
+  body.is-app main>:has(+.ia-legal){margin-bottom:32px}
+  body.is-app main .ia-legal{margin:auto -14px calc(-88px - env(safe-area-inset-bottom))}
   body.is-app main .ia-legal-in{padding-left:14px;padding-right:14px;padding-bottom:calc(100px + env(safe-area-inset-bottom))}
   body.is-portal:has(.pt-tabs) .ia-legal-b2b .ia-legal-in{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
 }
@@ -1665,8 +1669,9 @@ details.an-sec>.form-note{margin-bottom:16px}
 /* Privatbereich: keine doppelte Überschrift, Inhalt auf großen Bildschirmen mittig und breiter, Fußzeile immer unten */
 .dup-title{display:none!important}
 @media(min-width:901px){
-  body.is-app main{display:flex;flex-direction:column;min-height:100vh}
+  body.is-app main{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
   body.is-app main>*:not(.ia-legal){width:100%;max-width:1320px;margin-left:auto;margin-right:auto}
+  body.is-app main>:has(+.ia-legal){margin-bottom:40px}
   body.is-app main .container{max-width:1320px}
   body.is-app main>.section{padding-bottom:40px}
   body.is-app main .ia-legal{margin:auto -28px -48px}

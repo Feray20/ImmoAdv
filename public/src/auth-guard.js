@@ -1,7 +1,7 @@
 // Sitzungsschutz für alle Anmeldebereiche (Kundenbereich, Unternehmensportal, Admin-Zentrale).
 // Läuft synchron im <head>, bevor die Anwendung die Sitzung liest:
 //  - Automatische Abmeldung nach Inaktivität (tab-übergreifend gemessen).
-//      ohne „Angemeldet bleiben": 30 Minuten · mit „Angemeldet bleiben": 30 Tage · Admin-Zentrale: immer 15 Minuten
+//      ohne „Angemeldet bleiben": 12 Stunden · mit „Angemeldet bleiben" (Standard): 30 Tage · Admin-Zentrale: 2 Stunden
 //  - 60 Sekunden vorher erscheint ein Hinweis mit „Angemeldet bleiben".
 //  - Abmeldung in einem Tab meldet alle Tabs ab; das Refresh-Token wird bei Supabase widerrufen.
 (function () {
@@ -32,8 +32,8 @@
   function g(k) { try { return ls ? ls.getItem(k) : null; } catch (e) { return null; } }
   function s(k, v) { try { if (ls) { v == null ? ls.removeItem(k) : ls.setItem(k, v); } } catch (e) { /* ignore */ } }
   function has() { return !!g(K); }
-  function remembered() { return g(REM) === '1'; }
-  function limit() { return isAdmin ? 15 * MIN : remembered() ? 30 * DAY : 30 * MIN; }
+  function remembered() { return g(REM) !== '0'; } // Standard: angemeldet bleiben
+  function limit() { return isAdmin ? 120 * MIN : remembered() ? 30 * DAY : 12 * 60 * MIN; }
   function last() { var v = Number(g(ACT)); return v > 0 ? v : 0; }
   function touch() { s(ACT, String(Date.now())); }
 
@@ -133,7 +133,7 @@
     logout: function () { logout('manuell'); },
     // Einmaliger Hinweis für die Anmeldeseite (z. B. nach Inaktivität).
     takeReason: function () { var r = g(WHY); s(WHY, null); return r; },
-    limitText: function () { return isAdmin ? '15 Minuten' : remembered() ? '30 Tagen' : '30 Minuten'; }
+    limitText: function () { return isAdmin ? '2 Stunden' : remembered() ? '30 Tagen' : '12 Stunden'; }
   };
 })();
 
