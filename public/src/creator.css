@@ -175,7 +175,7 @@ body.is-portal>#creator{flex:1 0 auto}
 .cr-what{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;align-items:start}
 .cr-what p{color:#334155;margin:0 0 12px;max-width:60ch}
 .cr-fit{font-size:14px;font-weight:600;color:#0F2C59!important}
-.cr-fit span{display:block;font-weight:500;color:#64748B;font-size:13px;margin-bottom:2px}
+.cr-fit span{display:block;font-weight:500;color:#475569;font-size:13px;margin-bottom:2px}
 .cr-prod{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .cr-prod li{background:#fff;border:1px solid #E2E8F0;border-left:4px solid #0284C7;border-radius:12px;padding:12px 14px;display:grid;gap:2px}
 .cr-prod strong{color:#0F2C59;font-size:15px}
@@ -192,7 +192,7 @@ body.is-portal>#creator{flex:1 0 auto}
 .cr-faq-i[open] summary::after{transform:rotate(45deg)}
 .cr-faq-i summary:focus-visible{outline:3px solid rgba(15,44,89,.25);outline-offset:2px;border-radius:8px}
 .cr-faq-i p{margin:0 0 14px;color:#475569;font-size:14.5px;line-height:1.55}
-.cr-end a{color:#0F2C59;font-weight:600}
+.cr-end a{color:#0F2C59;font-weight:600;display:inline-block;padding:6px 0}
 .cr-sticky{display:none}
 @media (max-width:900px){.cr-what{grid-template-columns:1fr}}
 @media (max-width:640px){
@@ -201,3 +201,7 @@ body.is-portal>#creator{flex:1 0 auto}
   .cr-cards-6 .pt-card{padding:14px 16px}
 }
 @media (prefers-reduced-motion:reduce){.cr-faq-i summary::after{transition:none}}
+/* Statische Landingpage: angemeldete Besucher sehen bis zur Prüfung nur den Ladehinweis, abgemeldete sofort die Seite */
+#creator>.cr-ld{display:none}
+.cr-auth #creator>.cr-ld{display:block}
+.cr-auth #crLanding{display:none}
