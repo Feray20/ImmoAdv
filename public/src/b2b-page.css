@@ -804,6 +804,7 @@ body.is-app main>:has(+.ia-legal){margin-bottom:40px}
 body.is-app main .container{max-width:1320px}
 body.is-app main>.section{padding-bottom:40px}
 body.is-app main .ia-legal{margin:auto -28px -48px}}
+@media (max-width:640px){.bill-table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}}
 .btn,a.btn,button.btn,.hs-go,a.hs-go,.btn-pay,.km-go{border-radius:999px!important}
 .mobile-menu{border-radius:999px!important;padding-left:14px;padding-right:16px}
 .mobile-nav a[href="/app/dashboard"],html:not(.ia-user) .mobile-nav a[href="/auth/login"]{border-radius:999px!important}

@@ -125,6 +125,36 @@
     else if (e.key === ACT) tick();
   });
 
+  // Zugangs-Token rechtzeitig im Hintergrund erneuern (läuft sonst nach ~1 Stunde ab und Aktionen schlagen fehl).
+  // Tab-übergreifend gesperrt, damit nicht zwei Tabs gleichzeitig dasselbe Refresh-Token einlösen.
+  var LOCK = 'ia-refresh-lock' + SFX, busy = false;
+  function expOf(sess) {
+    if (sess && sess.expires_at) return Number(sess.expires_at) * 1000;
+    try { var p = String(sess.access_token).split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); return JSON.parse(atob(p)).exp * 1000; } catch (e) { return 0; }
+  }
+  function keepFresh() {
+    if (busy || !window.fetch) return;
+    var raw = g(K), cur; try { cur = JSON.parse(raw || 'null'); } catch (e) { cur = null; }
+    if (!cur || !cur.refresh_token) return;
+    var exp = expOf(cur);
+    if (exp && exp - Date.now() > 5 * MIN) return;
+    var lk = Number(g(LOCK)); if (lk && Date.now() - lk < 20000) return;
+    busy = true; s(LOCK, String(Date.now()));
+    fetch('/api/supabase-config').then(function (r) { return r.ok ? r.json() : null; }).then(function (c) {
+      if (!c || !c.url) return;
+      return fetch(c.url + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: c.anonKey || c.key || c.publishableKey, 'content-type': 'application/json' }, body: JSON.stringify({ refresh_token: cur.refresh_token }) })
+        .then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+          if (!d || !d.access_token) return;
+          var now; try { now = JSON.parse(g(K) || 'null'); } catch (e) { now = null; }
+          // Nur speichern, wenn inzwischen niemand anders erneuert oder abgemeldet hat.
+          if (now && now.refresh_token === cur.refresh_token) s(K, JSON.stringify(d.user ? d : Object.assign({}, d, { user: now.user })));
+        });
+    }).catch(function () { /* offline: beim nächsten Durchlauf erneut */ }).then(function () { busy = false; s(LOCK, null); });
+  }
+  if (has()) keepFresh();
+  setInterval(function () { if (has()) keepFresh(); }, 60000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && has()) keepFresh(); });
+
   // Öffentliche Schnittstelle für Anmeldeformular und Abmelde-Knöpfe.
   window.iaAuth = {
     remembered: remembered,

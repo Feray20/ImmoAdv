@@ -1602,6 +1602,7 @@ html:has(dialog.ad-dlg[open]),html:has(dialog.buy-dlg[open]){overflow:hidden}
 .ad-dlg[open],.buy-dlg[open]{max-height:calc(100vh - 12px);max-height:calc(100svh - 12px)}
 .ad-dlg[open]>*,.buy-dlg[open]>*{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 }
+@media (max-width:640px){.bill-table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}}
 /* landing.css */
 .lp-strip,.lp-problem,.lp-ba,.lp-demo,.lp-how,.lp-docs,.lp-wissen,.lp-trust,.lp-preise,.lp-faq{padding:80px 0}
 .lp-strip{padding:56px 0;background:#fff;border-bottom:1px solid #E2E8F0}
