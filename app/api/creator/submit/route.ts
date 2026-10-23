@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { sendMail } from '@/lib/notify/mail';
 import { creatorCanSubmit, missingSteps, STEP_TITLE } from '@/lib/creator/model';
 import { audit, creatorActor, j, onboardingState, ownCreator, requireCreatorUser } from '@/lib/creator/server';
+import { contactEmail } from '@/lib/creator/identity';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
     .eq('id', c.id).eq('status', c.status).select('id');
   if (error || !data?.length) return j({ error: 'Einreichen fehlgeschlagen. Bitte Seite neu laden.' }, 409);
   await audit('APPLICATION_SUBMITTED', c.id, creatorActor(), 'SUCCESS', { resubmit });
-  await sendMail(g.user.email, 'Deine Bewerbung als ImmoAdv Creator ist eingegangen',
+  await sendMail(await contactEmail(g.user), 'Deine Bewerbung als ImmoAdv Creator ist eingegangen',
     `Hallo ${c.first_name || ''},\n\ndanke für deine Bewerbung als ImmoAdv Creator Partner. Wir prüfen deine Angaben und melden uns per E-Mail, sobald die Prüfung abgeschlossen ist.\n\nDeinen Stand siehst du jederzeit im Creator-Bereich: https://immoadv.de/creator`,
     [], { title: 'Bewerbung eingegangen' }).catch(() => false);
   return j({ ok: true, status: 'SUBMITTED' });

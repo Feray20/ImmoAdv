@@ -159,7 +159,7 @@ function go(hash) {
 }
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
-  if (!token() || !me) { if (AUTH_HASH[h]) renderAuth(AUTH_HASH[h]); else landing(false); return; }
+  if (!token() || !me) { if (h === 'passwort') renderForgot(); else if (AUTH_HASH[h]) renderAuth(AUTH_HASH[h]); else landing(false); return; }
   if (!me.creator) { landing(true); return; }
   const s = me.creator.status;
   if ((s === 'DRAFT' || s === 'INFO_REQUESTED') && h.startsWith('bewerbung-') && STEPS.some(([k]) => k === h.slice(10))) step = h.slice(10);
@@ -171,6 +171,29 @@ function authForm(mode = 'signup', notice = '') {
   pendingNotice = notice;
   authFromStart = !AUTH_HASH[location.hash.slice(1)];
   go(mode === 'signup' ? 'registrieren' : 'anmelden');
+}
+
+// Passwort vergessen (eigene Creator-Konten): Link zum Zurücksetzen an die E-Mail-Adresse.
+function renderForgot() {
+  document.title = 'Passwort vergessen | ImmoAdv Creator';
+  root.innerHTML = `<div class="area-login"><button type="button" class="area-back" id="aBack">← Zurück zur Anmeldung</button>
+    <h1>Passwort vergessen</h1><p class="form-note">Gib die E-Mail-Adresse deines Creator-Kontos ein. Wir schicken dir einen Link, mit dem du ein neues Passwort festlegst.</p>
+    <form id="crPw" novalidate><label>E-Mail<input id="aEmail" name="email" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+      <div class="auth-message" id="aMsg" role="alert" hidden></div><button class="btn btn-dark btn-lg" type="submit">Link senden</button></form>
+    <p class="form-note">Der Creator-Bereich hat eigene Konten. Für Kundenbereich oder Unternehmensportal setzt du das Passwort dort zurück.</p></div>`;
+  $('#aBack').onclick = () => go('anmelden');
+  const f = $('#crPw'), m = $('#aMsg');
+  $('#aEmail').focus();
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const email = f.elements.email.value.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { m.hidden = false; m.className = 'auth-message error'; m.textContent = 'Bitte eine gültige E-Mail-Adresse eingeben.'; return; }
+    const btn = f.querySelector('button'); btn.disabled = true;
+    const r = await fetch('/api/creator/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'recover', email }) }).catch(() => null);
+    btn.disabled = false; m.hidden = false;
+    if (r?.ok) { m.className = 'auth-message success'; m.textContent = 'Falls es zu dieser Adresse ein Creator-Konto gibt, haben wir dir einen Link geschickt. Bitte schau in dein Postfach.'; }
+    else { const d = await r?.json().catch(() => ({})); m.className = 'auth-message error'; m.textContent = d?.error || 'Das hat nicht geklappt. Bitte später erneut versuchen.'; }
+  };
 }
 
 function renderAuth(mode) {

@@ -9,6 +9,7 @@ import { renderDoc, type DocLine } from '@/lib/creator/pdf';
 import { audit, SITE_ORIGIN, type Actor } from '@/lib/creator/server';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
 import { readyMail, reminderMail } from '@/lib/creator/mails';
+import { contactEmail } from '@/lib/creator/identity';
 
 // Serverseitige Abrechnung: Monatsabschluss, Freigabe, Dokumente (Abrechnung, Rechnung, Gutschrift), Auszahlungen.
 // Alle Beträge werden hier aus der Datenbank berechnet – nie aus Eingaben des Browsers übernommen.
@@ -377,7 +378,8 @@ async function creatorContact(creatorId: string): Promise<{ email: string; name:
   const { data: c } = await db().from('immo_creators').select('user_id, first_name, display_name').eq('id', creatorId).maybeSingle();
   if (!c?.user_id) return null;
   const { data: u } = await db().auth.admin.getUserById(c.user_id);
-  return u?.user?.email ? { email: u.user.email, name: c.first_name || c.display_name || '' } : null;
+  const em = u?.user ? await contactEmail(u.user) : '';
+  return em ? { email: em, name: c.first_name || c.display_name || '' } : null;
 }
 
 // ---------------- Automatik (täglicher Lauf): Monatsabschluss, Hinweise, Erinnerungen ----------------

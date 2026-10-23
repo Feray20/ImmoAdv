@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { audit, j, requireCreatorAdmin, uniqueRefCode } from '@/lib/creator/server';
 import { createB2BLogin } from '@/lib/b2b/provision';
+import { creatorAuthEmail } from '@/lib/creator/identity';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
 
 export const runtime = 'nodejs';
@@ -35,7 +36,8 @@ export async function POST(req: Request) {
   const b = p.data;
   const name = `${b.firstName} ${b.lastName}`;
   // Creator-Bereich hat keinen Zwang zur Passwortänderung beim ersten Login: Passwort ändern geht über „Passwort vergessen“.
-  const login = await createB2BLogin(b.email, name, 'creator', { password: b.password, mustChange: false });
+  // Eigenes Creator-Konto (interne Kennung), unabhängig von Kunden- oder Unternehmenskonten mit derselben Adresse.
+  const login = await createB2BLogin(creatorAuthEmail(b.email), name, 'creator', { password: b.password, mustChange: false, meta: { contact_email: b.email } });
   if (!login.ok) return j({ error: login.error }, login.status);
 
   const db = supabaseAdmin();

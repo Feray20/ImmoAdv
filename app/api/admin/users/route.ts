@@ -7,6 +7,7 @@ import { mailConfigured, sendMail } from '@/lib/notify/mail';
 import { adminAudit } from '@/lib/b2b/core';
 import { purgeUser } from '@/lib/account/purge';
 import { billingEnabled, entitlementsFor } from '@/lib/billing/stripe';
+import { isCreatorAuthEmail } from '@/lib/creator/identity';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,6 +51,8 @@ export async function GET(req: Request) {
       admin: isAdminEmail(u.email || ''),
       company: (() => { const m = memByUser.get(u.id); const a = m ? accById.get(m.account_id) : null; return a ? { name: a.company_name, number: a.customer_number, role: m!.role, verified: Boolean(a.verified_at), status: a.verification_status } : null; })(),
     }))
+    // Creator-Konten (eigene Kennung) werden in Creator Operations verwaltet, nicht in den Kundenlisten.
+    .filter((u) => !isCreatorAuthEmail(u.email))
     .filter((u) => (seg === 'admin' ? u.admin : seg === 'b2b' ? !u.admin && Boolean(u.company) : !u.admin && !u.company));
   await adminAudit(auth.user.email, 'users_list', null, { page, seg: q.get('seg') || 'b2c', term: term ? 'gesetzt' : '' });
   return j({ users, page, seg, more: (data.users || []).length === 200 });
