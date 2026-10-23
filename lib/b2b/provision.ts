@@ -16,14 +16,29 @@ export type LoginResult = { ok: true; userId: string; password: string } | { ok:
 
 // Neues Login anlegen (E-Mail gilt als bestätigt, da ImmoAdv die Adresse aus der Anfrage übernimmt).
 // Existiert die Adresse bereits als Konto, wird nichts verändert – bitte andere Adresse verwenden.
-export async function createB2BLogin(email: string, name: string, area: 'b2b' | 'app' = 'b2b'): Promise<LoginResult> {
-  const password = genPassword();
+// Vom Admin gewähltes Passwort: mindestens 10 Zeichen, Buchstaben und Ziffern (wie die Mindestregel der Registrierung, etwas strenger).
+export function adminPasswordError(pw: string | undefined | null): string | null {
+  if (!pw) return null;
+  if (pw.length < 10 || pw.length > 72) return 'Das Passwort muss 10 bis 72 Zeichen lang sein.';
+  if (!/[A-Za-z]/.test(pw) || !/[0-9]/.test(pw)) return 'Das Passwort braucht mindestens einen Buchstaben und eine Ziffer.';
+  return null;
+}
+
+// Zugang anlegen. Ohne eigenes Passwort wird ein Startpasswort erzeugt, das bei der ersten Anmeldung geändert werden muss.
+// Mit eigenem Passwort entscheidet der Admin, ob es bei der ersten Anmeldung geändert werden muss (mustChange).
+export async function createB2BLogin(email: string, name: string, area: 'b2b' | 'app' | 'creator' = 'b2b', opts: { password?: string | null; mustChange?: boolean } = {}): Promise<LoginResult> {
+  const own = opts.password || null;
+  const bad = adminPasswordError(own);
+  if (bad) return { ok: false, status: 400, error: bad };
+  const password = own || genPassword();
+  const mustChange = own ? opts.mustChange !== false : true;
   const { data, error } = await supabaseAdmin().auth.admin.createUser({
     email, password, email_confirm: true,
-    user_metadata: { must_change_password: true, area, name: name.slice(0, 120), created_by_admin: true },
+    user_metadata: { must_change_password: mustChange, area, name: name.slice(0, 120), created_by_admin: true },
   });
   if (error || !data.user) {
     if (/already|exists|registered/i.test(error?.message || '')) return { ok: false, status: 409, error: 'Für diese E-Mail-Adresse gibt es bereits ein ImmoAdv-Konto. Bitte eine andere Adresse verwenden.' };
+    if (/password/i.test(error?.message || '')) return { ok: false, status: 400, error: 'Das Passwort wurde abgelehnt (zu schwach oder bekannt aus Datenlecks). Bitte ein anderes wählen.' };
     return { ok: false, status: 502, error: 'Zugang konnte nicht angelegt werden.' };
   }
   return { ok: true, userId: data.user.id, password };

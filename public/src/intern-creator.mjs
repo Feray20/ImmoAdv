@@ -178,12 +178,48 @@ async function contentAdmin(v) {
     (f) => (fv(f, 'note') ? review(b.dataset.ch, 'CHANGES_REQUESTED', fv(f, 'note')) : Promise.resolve('Bitte eine Anmerkung angeben.'))));
 }
 
+// Creator-Konto direkt anlegen: E-Mail, Passwort (eigenes oder erzeugt) und Zugriff (Bewerbung ausfüllen oder sofort freigeschaltet).
+function createCreator(done) {
+  let d = document.getElementById('coMkDlg');
+  if (!d) { d = document.createElement('dialog'); d.id = 'coMkDlg'; d.className = 'ad-dlg'; document.body.append(d); }
+  d.innerHTML = `<form class="ad-dlg-in" id="coMkF" novalidate><div class="ad-dlg-h"><h2>Creator anlegen</h2><button type="button" class="stage-x" data-x aria-label="Schließen">×</button></div>
+    <p class="form-note">Eigener Login für den Creator-Bereich (getrennt von Kundenbereich und Unternehmensportal). Anmeldung unter immoadv.de/creator/anmelden.</p>
+    <div class="ad-grid2"><label>Vorname*<input name="firstName" required maxlength="80"></label><label>Nachname*<input name="lastName" required maxlength="80"></label>
+      <label>E-Mail (Benutzername)*<input name="email" type="email" required maxlength="200"></label><label>Anzeigename (z. B. Kanalname)<input name="displayName" maxlength="80"></label></div>
+    <fieldset class="ad-fs"><legend>Passwort</legend><label class="ad-pw">Passwort<input name="password" type="text" autocomplete="new-password" minlength="10" maxlength="72" spellcheck="false" placeholder="mind. 10 Zeichen, Buchstaben + Ziffer"></label>
+      <span class="ad-hint">Leer lassen, um ein sicheres Passwort automatisch zu erzeugen. Ändern kann der Creator es jederzeit über „Passwort vergessen“.</span></fieldset>
+    <fieldset class="ad-fs"><legend>Zugriff</legend>
+      <label class="chk"><input type="radio" name="access" value="APPLY" checked> <span><strong>Bewerbung ausfüllen</strong> – Creator meldet sich an, füllt die Bewerbung aus, danach prüfen und freigeben</span></label>
+      <label class="chk"><input type="radio" name="access" value="ACTIVE"> <span><strong>Sofort freischalten</strong> – Portal mit persönlichem Link ab sofort; Rechnungs- und Auszahlungsdaten ergänzt der Creator im Portal</span></label></fieldset>
+    <label class="chk"><input type="checkbox" name="sendMail"> Zugangsdaten per E-Mail senden</label>
+    <p class="auth-message error" id="coMkMsg" hidden></p><div id="coMkOut"></div>
+    <div class="wiz-nav"><button type="button" class="btn btn-outline" data-x>Abbrechen</button><button type="submit" class="btn btn-dark">Creator anlegen</button></div></form>`;
+  d.querySelectorAll('[data-x]').forEach((b) => b.onclick = () => d.close());
+  d.querySelector('#coMkF').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = e.target, fd = Object.fromEntries(new FormData(f)), m = d.querySelector('#coMkMsg');
+    if (!f.reportValidity()) return;
+    const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+    const x = await api('/api/admin/creators/create', { method: 'POST', body: JSON.stringify({ firstName: fd.firstName, lastName: fd.lastName, email: fd.email, displayName: fd.displayName || '', password: fd.password || null, access: fd.access, sendMail: fd.sendMail === 'on' }) });
+    btn.disabled = false;
+    if (!x.ok) { m.textContent = x.data?.error || 'Anlegen fehlgeschlagen.'; m.hidden = false; return; }
+    m.hidden = true;
+    const txt = `Anmeldung: ${x.data.url}\nBenutzername: ${x.data.email}\nPasswort: ${x.data.password}\nZugriff: ${x.data.access === 'ACTIVE' ? 'freigeschaltet' : 'Bewerbung ausfüllen'}`;
+    d.querySelector('#coMkOut').innerHTML = `<div class="pt-alert ok"><strong>Creator angelegt${x.data.mailed ? ' und Zugangsdaten per E-Mail gesendet' : ''}.</strong> Diese Daten werden nur jetzt angezeigt:<pre class="pt-code">${esc(txt)}</pre><button type="button" class="btn btn-outline" id="coMkCopy">Zugangsdaten kopieren</button></div>`;
+    d.querySelector('#coMkCopy').onclick = async (ev) => { try { await navigator.clipboard.writeText(txt); ev.target.textContent = 'Kopiert ✓'; } catch { ev.target.textContent = 'Bitte markieren und kopieren'; } };
+    f.querySelector('.wiz-nav').innerHTML = '<span></span><button type="button" class="btn btn-dark" id="coMkFin">Fertig</button>';
+    d.querySelector('#coMkFin').onclick = () => { d.close(); done?.(); };
+    f.querySelectorAll('input').forEach((i) => { i.disabled = true; });
+  };
+  d.showModal ? d.showModal() : d.setAttribute('open', '');
+}
+
 async function list(v, q = '') {
   const r = await api(`/api/admin/creators?status=${filter === 'ALL' ? '' : filter}&q=${encodeURIComponent(q)}`);
   if (!r.ok) { v.innerHTML = `<div class="ad-state err" role="alert"><strong>Creator konnten nicht geladen werden.</strong><span>${esc(r.data?.error || '')}</span></div>`; return; }
   const d = r.data, c = d.counts;
   const kpi = (k, label, n, sub) => `<button type="button" data-f="${k}"><div class="pt-kpi" aria-pressed="${filter === k}"><small>${label}</small><strong>${n}</strong><small>${sub}</small></div></button>`;
-  v.innerHTML = `${subnav('creator')}<section class="pt-card"><div class="ad-h-row"><h2>Creator Operations</h2><span class="form-note" style="margin:0">Ihre Rolle: <strong>${esc(d.me.role_label)}</strong>${d.me.permissions.includes('roles.manage') ? ' · <a href="#creator-rollen" class="ck-link">Rollen verwalten</a>' : ''}</span></div>
+  v.innerHTML = `${subnav('creator')}<section class="pt-card"><div class="ad-h-row"><h2>Creator Operations</h2>${d.me.permissions.includes('creators.review') ? '<button type="button" class="btn btn-dark ad-mk-one" id="coMk">+ Creator anlegen</button>' : ''}<span class="form-note" style="margin:0">Ihre Rolle: <strong>${esc(d.me.role_label)}</strong>${d.me.permissions.includes('roles.manage') ? ' · <a href="#creator-rollen" class="ck-link">Rollen verwalten</a>' : ''}</span></div>
       <p class="form-note">Wer braucht Aufmerksamkeit? ${d.attention ? `<strong>${d.attention}</strong> offene Vorgänge` : 'Keine offenen Vorgänge.'}</p></section>
     <div class="co-kpis">
       ${kpi('REVIEW', 'Neue Bewerbungen', c.SUBMITTED + c.UNDER_REVIEW, `${c.UNDER_REVIEW} in Prüfung`)}
@@ -198,6 +234,7 @@ async function list(v, q = '') {
         <span class="co-hide-m">${x.payout ? `${chip(PAY, x.payout.status)} ${x.payout.iban_masked ? `<small class="cr-mask">${esc(x.payout.iban_masked)}</small>` : ''}` : ''}<br><small>${x.submitted_at ? `eingereicht ${dt(x.submitted_at)}` : `geändert ${dt(x.updated_at)}`}</small></span>
         <span>${chip(ST, x.status)}</span></button>`).join('') : '<div class="ad-state"><strong>Keine Creator in dieser Ansicht.</strong><span>Neue Bewerbungen erscheinen hier automatisch.</span></div>'}</div>`;
   v.querySelectorAll('[data-f]').forEach((b) => b.onclick = () => { filter = b.dataset.f; list(v, q); });
+  v.querySelector('#coMk')?.addEventListener('click', () => createCreator(() => list(v, q)));
   v.querySelector('#coQ').onsubmit = (e) => { e.preventDefault(); list(v, e.target.elements.q.value.trim()); };
   v.querySelectorAll('[data-id]').forEach((b) => b.onclick = () => { location.hash = `creator-${b.dataset.id}`; });
 }
