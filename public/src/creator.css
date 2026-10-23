@@ -269,3 +269,25 @@ body.is-portal>#creator{flex:1 0 auto}
 /* Vereinbarung: großes, gut lesbares Lesefeld */
 #creator .cr-agree{max-height:min(70vh,680px);font-size:14.5px;line-height:1.7;color:#1E293B;padding:18px 20px}
 @media (max-width:640px){#creator .cr-agree{max-height:62vh;padding:14px 14px;font-size:14px}}
+/* Feinschliff Creator-Portal (alle Geräte) */
+#creator .pt-tag{color:#93C5FD!important;opacity:1}
+#creator .cr-sec-list li>span svg{width:16px;height:16px}
+#creator .cr-sheet-nav .pt-logout{display:flex;align-items:center;gap:12px}
+#creator .cr-sheet-nav .pt-logout svg{flex:none;width:20px;height:20px}
+/* Seitenleiste: Profilzeile mit Initiale und Abmelden mit Symbol */
+#creator .cr-foot{display:grid;grid-template-columns:36px minmax(0,1fr);gap:4px 10px;align-items:center}
+#creator .cr-avatar{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-weight:700;display:grid;place-items:center}
+#creator .cr-foot-t{min-width:0}
+#creator .cr-foot-t strong{display:block;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#creator .cr-foot-t small{display:block;color:#A9BCD6;font-size:12px}
+#creator .cr-foot .pt-logout{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;min-height:40px}
+#creator .cr-foot .pt-logout svg{width:18px;height:18px}
+/* Desktop: Inhalte nicht über die ganze Breite ziehen */
+@media (min-width:1200px){#creator .pt-main>#crView,#creator .pt-main>.pt-top{max-width:1040px}}
+/* Tablet: Menüpunkte einzeilig */
+@media (min-width:761px){#creator .cr-side-nav a span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+/* Provisionsregel */
+#creator .cr-comm{border-left:4px solid #16A34A}
+#creator .cr-comm h2{font-size:20px;color:#0F2C59}
+#creator .cr-comm-in{border:1px solid #BBF7D0;border-left:4px solid #16A34A;background:#F0FDF4;border-radius:12px;padding:12px 14px;margin:0 0 14px}
+#creator .cr-comm-in h2{font-size:17px}

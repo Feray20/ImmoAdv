@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { BLOCKER_TEXT, closeAllowedAt, commissionLines, reducedBase, periodLabel, periodOf, previousPeriod, suggestInvoiceNumber, type ConversionIn, type Rule } from '@/lib/creator/billing';
+import { BLOCKER_TEXT, closeAllowedAt, commissionLines, describeRule, pickRule, reducedBase, periodLabel, periodOf, previousPeriod, suggestInvoiceNumber, type ConversionIn, type Rule } from '@/lib/creator/billing';
 import { statementBlockers, type StatementRow } from '@/lib/creator/billing-server';
 import { maskIban } from '@/lib/creator/iban';
 import { j, requireActiveCreator } from '@/lib/creator/server';
@@ -62,7 +62,15 @@ export async function GET(req: Request) {
   const lastMonth = previousPeriod(periodOf(new Date()));
   const invoiceNumbers = docRows.filter((d) => d.doc_type === 'INVOICE').map((d) => d.number);
 
+  // Aktuell gültige Regeln für diesen Creator: Standard bzw. eigene Regel sowie Abweichungen je Kampagne.
+  const nowIso = new Date().toISOString();
+  const valid = ((rules.data ?? []) as unknown as Rule[]).filter((r) => r.valid_from <= nowIso && (!r.valid_to || r.valid_to > nowIso) && (!r.creator_id || r.creator_id === c.id));
+  const base = pickRule(valid.filter((r) => !r.campaign_slug), { id: '', creator_id: c.id, campaign_slug: null, amount_net_cents: 0, occurred_at: nowIso });
+  const campRules = [...new Set(valid.filter((r) => r.campaign_slug).map((r) => r.campaign_slug as string))]
+    .map((slug) => ({ slug, rule: pickRule(valid, { id: '', creator_id: c.id, campaign_slug: slug, amount_net_cents: 0, occurred_at: nowIso }) }))
+    .filter((x) => x.rule).map((x) => ({ campaign: x.slug, text: describeRule(x.rule!), since: x.rule!.valid_from }));
   return j({
+    commission: base ? { text: describeRule(base), since: base.valid_from, own: Boolean(base.creator_id), campaigns: campRules } : null,
     mode: c.billing_mode === 'CREDIT_NOTE' ? 'CREDIT_NOTE' : 'INVOICE',
     totals: {
       pending_cents: sum('PENDING') + openPeriods.reduce((a, o) => a + o.commission_cents, 0),

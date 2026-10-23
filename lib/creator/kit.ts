@@ -2,6 +2,8 @@
 // Material-Seite einmalig in den privaten Speicher „creator-assets“ übernommen und dort wie hochgeladenes Material
 // verwaltet (Admin kann es bearbeiten, deaktivieren oder ersetzen). Textvorlagen werden per Datenbank angelegt.
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { ASSET_BUCKET } from '@/lib/creator/server';
 
@@ -23,13 +25,28 @@ const FILES: { file: string; title: string; kind: 'logo' | 'image'; description:
 export async function ensureCreatorKit(origin: string): Promise<void> {
   const db = supabaseAdmin();
   // Sperre: nur ein Aufruf legt das Material an; danach nie wieder.
-  const lock = await db.from('immo_settings').insert({ key: KEY, value: 'running', updated_by: 'system:creator-kit' });
-  if (lock.error) return;
+  let lock = await db.from('immo_settings').insert({ key: KEY, value: 'running', updated_by: 'system:creator-kit' });
+  if (lock.error) {
+    // Abgebrochener Lauf (z. B. Zeitlimit): Sperre nach 5 Minuten freigeben und erneut versuchen.
+    const { data: cur } = await db.from('immo_settings').select('value, updated_at').eq('key', KEY).maybeSingle();
+    const stale = cur?.value === 'running' && Date.now() - new Date(cur.updated_at as string).getTime() > 5 * 60_000;
+    if (!stale) return;
+    await db.from('immo_settings').delete().eq('key', KEY);
+    lock = await db.from('immo_settings').insert({ key: KEY, value: 'running', updated_by: 'system:creator-kit' });
+    if (lock.error) return;
+  }
   try {
+    const { data: have } = await db.from('immo_creator_assets').select('title').eq('created_by', 'system:creator-kit');
+    const done = new Set(((have ?? []) as { title: string }[]).map((x) => x.title));
     for (const f of FILES) {
-      const r = await fetch(`${origin}/creator-kit/${f.file}`, { cache: 'no-store' });
-      if (!r.ok) throw new Error(`${f.file}: HTTP ${r.status}`);
-      const buf = Buffer.from(await r.arrayBuffer());
+      if (done.has(f.title)) continue; // bei einem zweiten Versuch keine Doppelungen
+      // Zuerst aus dem Programmpaket lesen (siehe outputFileTracingIncludes), sonst über die Website laden.
+      let buf: Buffer | null = await readFile(join(process.cwd(), 'public', 'creator-kit', f.file)).catch(() => null);
+      if (!buf) {
+        const r = await fetch(`${origin}/creator-kit/${f.file}`, { cache: 'no-store' });
+        if (!r.ok) throw new Error(`${f.file}: HTTP ${r.status}`);
+        buf = Buffer.from(await r.arrayBuffer());
+      }
       const id = randomUUID(), path = `assets/${id}/${f.file}`;
       const up = await db.storage.from(ASSET_BUCKET).upload(path, buf, { contentType: 'image/png', upsert: false });
       if (up.error) throw new Error(`${f.file}: ${up.error.message}`);
@@ -38,8 +55,10 @@ export async function ensureCreatorKit(origin: string): Promise<void> {
     }
     await db.from('immo_settings').update({ value: 'done', updated_at: new Date().toISOString() }).eq('key', KEY);
   } catch (e) {
-    console.error('creator_kit', e instanceof Error ? e.message : e);
-    await db.from('immo_settings').delete().eq('key', KEY); // beim nächsten Aufruf erneut versuchen (ohne Doppelungen: bereits angelegte bleiben)
-    await db.from('immo_creator_assets').delete().eq('created_by', 'system:creator-kit').eq('kind', 'image').is('campaign_id', null).then(() => null, () => null);
+    const why = e instanceof Error ? e.message : String(e);
+    console.error('creator_kit', why);
+    // Fehler für die Admin-Zentrale festhalten; beim nächsten Aufruf erneut versuchen (bereits übernommene Dateien bleiben).
+    await db.from('immo_settings').upsert({ key: KEY + '_error', value: { at: new Date().toISOString(), error: why.slice(0, 300) }, updated_by: 'system:creator-kit' }).then(() => null, () => null);
+    await db.from('immo_settings').delete().eq('key', KEY);
   }
 }
