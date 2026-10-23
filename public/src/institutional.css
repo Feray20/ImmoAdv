@@ -1692,25 +1692,34 @@ html:has(dialog.ad-dlg[open]),html:has(dialog.buy-dlg[open]){overflow:hidden}
 @media (max-width:640px){.bill-table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}}
 
 /* ---------- Fußzeile (kompakt, einheitlich für alle Website-Seiten) ---------- */
-footer.footer-min{padding:26px 0 22px;font-size:14px}
+footer.footer-min{padding:26px 0 22px;font-size:14px;color:#E2E8F0;
+  /* Logo-Farben als Verlauf: Navy → Blau, oben rechts ein heller Schimmer */
+  background:radial-gradient(120% 140% at 100% 0%,rgba(56,189,248,.28) 0%,rgba(56,189,248,0) 55%),linear-gradient(135deg,#0F2C59 0%,#0B3B73 50%,#0369A1 100%)}
 footer.footer-min .fm{display:grid;gap:14px}
 footer.footer-min .fm-top,footer.footer-min .fm-bottom{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 24px}
-footer.footer-min .fm-bottom{border-top:1px solid rgba(255,255,255,.12);padding-top:14px}
+footer.footer-min .fm-bottom{border-top:1px solid rgba(255,255,255,.18);padding-top:14px}
 footer.footer-min .brand-logo{width:26px;height:auto}
 footer.footer-min nav{display:flex;flex-wrap:wrap;gap:0 20px}
 footer.footer-min nav a{color:#E2E8F0;font-weight:600;min-height:36px;display:inline-flex;align-items:center;padding:0}
-footer.footer-min .fm-legal a{color:#CBD5E1;font-weight:500;font-size:13.5px}
+footer.footer-min .fm-legal a{color:rgba(255,255,255,.88);font-weight:500;font-size:13.5px}
 footer.footer-min nav a:hover{color:#fff}
 footer.footer-min a:focus-visible{outline:2px solid #7DD3FC;outline-offset:2px;border-radius:4px}
-footer.footer-min .fm-copy{color:#94A3B8;font-size:13px;white-space:nowrap}
-footer.footer-min .fm-note{margin:0;max-width:none;color:#94A3B8;font-size:12.5px;line-height:1.5}
-footer.footer-min .fm-note a{color:#CBD5E1;text-decoration:underline;display:inline;min-height:0;padding:0}
+footer.footer-min .fm-copy{color:rgba(255,255,255,.8);font-size:13px;white-space:nowrap}
+footer.footer-min .fm-note{margin:0;max-width:none;color:rgba(255,255,255,.8);font-size:12.5px;line-height:1.5}
+footer.footer-min .fm-note a{color:#fff;text-decoration:underline;display:inline;min-height:0;padding:0}
 @media (max-width:760px){
   footer.footer-min{padding-top:22px}
   footer.footer-min nav{gap:0 16px}
-  /* Platz für „Fragen?“ und die untere Schnellnavigation, damit nichts verdeckt wird */
-  footer.footer-min{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  footer.footer-min{padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+  /* Untere Schnellnavigation (nur mit Abo sichtbar): darunter Platz lassen */
+  html.ia-paid body:not(.menu-open) footer.footer-min{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 }
+/* Weniger Leerraum zwischen letztem Inhalt und Fußzeile */
+main>.section:last-child,#app>main>.section:last-child{padding-bottom:28px}
+@media (min-width:761px){main>.section:last-child,#app>main>.section:last-child{padding-bottom:44px}}
+/* „Fragen?“ blendet sich aus, sobald die Fußzeile sichtbar ist (dort steht „Kontakt“) */
+.cw-fab{transition:opacity .2s,transform .2s}
+.cw-fab.cw-away{opacity:0;transform:translateY(12px);pointer-events:none}
 
 .ia-copy{white-space:nowrap}
 
@@ -1720,7 +1729,7 @@ footer.footer-min .fm-note a{color:#CBD5E1;text-decoration:underline;display:inl
 .tip::after{content:"";position:absolute;inset:-6px}
 .desktop-nav a{display:inline-flex;align-items:center;min-height:40px}
 /* Platz unter der Fußzeile, damit der „Fragen?“-Knopf nichts verdeckt */
-@media (min-width:761px){footer.footer-min{padding-bottom:88px}}
+
 /* Anmeldeformulare: Hinweis zu „Angemeldet bleiben“ unter dem Kästchen statt in einer gequetschten zweiten Spalte */
 .area-login label.remember,.auth-card label.remember{flex-wrap:wrap}
 .area-login label.remember small,.auth-card label.remember small{flex-basis:100%;padding-left:32px;margin-top:-4px}
