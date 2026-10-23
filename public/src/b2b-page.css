@@ -808,6 +808,31 @@ body.is-app main .ia-legal{margin:auto -28px -48px}}
 .btn,a.btn,button.btn,.hs-go,a.hs-go,.btn-pay,.km-go{border-radius:999px!important}
 .mobile-menu{border-radius:999px!important;padding-left:14px;padding-right:16px}
 .mobile-nav a[href="/app/dashboard"],html:not(.ia-user) .mobile-nav a[href="/auth/login"]{border-radius:999px!important}
+.lp-founder{padding-top:40px;padding-bottom:40px}
+.lp-founder-card{display:flex;gap:22px;align-items:center;max-width:760px;margin:0 auto;padding:24px;border:1px solid #E2E8F0;border-radius:20px;background:#fff}
+.lp-founder-img{width:96px;height:96px;border-radius:50%;object-fit:cover;flex:none;display:block}
+.lp-founder-body{min-width:0}
+.lp-founder-h{margin:0 0 6px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#64748B;font-weight:700}
+.lp-founder-name{margin:0;font-size:20px;font-weight:700;color:#0F172A}
+.lp-founder-txt{margin:4px 0 0;color:#334155}
+@media(max-width:520px){.lp-founder-card{flex-direction:column;text-align:center;padding:20px}}
+.uu-wrap{max-width:760px;display:grid;gap:20px}
+.uu-card{display:flex;gap:24px;align-items:center;padding:24px;border:1px solid #E2E8F0;border-radius:20px;background:#fff}
+.uu-img{width:160px;height:160px;border-radius:50%;object-fit:cover;flex:none;display:block}
+.uu-role{margin:0;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#64748B;font-weight:700}
+.uu-name{margin:2px 0 8px;font-size:26px;color:#0F172A}
+.uu-block{padding:24px;border:1px solid #E2E8F0;border-radius:20px;background:#fff}
+.uu-block h2{margin:0 0 8px;font-size:20px;color:#0F172A}
+.uu-block p{margin:0 0 8px}
+.uu-small{font-size:14px;color:#64748B}
+.kt-list{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:10px}
+.kt-list li{display:grid;grid-template-columns:96px 1fr;gap:12px;overflow-wrap:anywhere}
+.kt-list span{color:#64748B;font-size:14px}
+@media(max-width:520px){.uu-card{flex-direction:column;text-align:center;padding:20px}
+.uu-img{width:128px;height:128px}
+.uu-block{padding:20px}
+.kt-list li{grid-template-columns:1fr;gap:2px}}
+.lp-founder-body .ck-link,.uu-wrap a{color:#0369A1;text-decoration:underline;text-underline-offset:3px}
 .bx-svg{display:block;flex:0 0 auto}
 .bx-sec{padding:76px 0}
 .bx-sub{color:#475569;font-size:17px;max-width:720px;margin:-4px 0 28px}

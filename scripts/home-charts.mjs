@@ -1,5 +1,5 @@
 // Erzeugt die Diagramme der Startseite aus dem ImmoAdv-Rechenkern (Beispielrechnung, keine Prognose)
-// und schreibt sie zwischen <!--charts:start--> und <!--charts:end--> in public/index.html.
+// und schreibt sie in /wissen/warum-investieren und /wissen/vermietete-wohnung-rechnung (zwischen den Markern charts:why bzw. charts:rechnung).
 // Aufruf: node scripts/home-charts.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
 import { analyse, balanceAfterMonths, kaufnebenkosten, GREST } from '../public/src/calc.mjs';
@@ -106,9 +106,8 @@ const kk20 = 100000 / Math.pow(1.02, 20), kk2225 = 100000 / (1.069 * 1.059 * 1.0
 const both = (fn) => fn(false) + fn(true);
 
 const n = { min: nkRows[0], max: nkRows[nkRows.length - 1] };
-const html = `<!--charts:start-->
-<section class="section home-why" id="warum"><div class="container">
-  <h2 class="home-h2">Warum überhaupt investieren?</h2>
+const html = `<section class="section home-why" id="warum"><div class="container">
+  <h1 class="home-h2">Warum überhaupt investieren?</h1>
   <p class="hc-lead">Geld, das nur auf dem Konto liegt, wirkt sicher – verliert aber jedes Jahr an Kaufkraft. Wer investiert, geht dagegen Risiken ein. Beides gehört ehrlich auf den Tisch.</p>
   <div class="why-grid">
     <figure class="hc-card why-chart"><figcaption><strong>Inflation: das stille Minus</strong><span>100.000 € ohne Zinsen sind bei 2 % Inflation nach 20 Jahren nur noch so viel wert wie heute ${eur(kk20)}. Und es kann schneller gehen: Wer Anfang 2022 100.000 € auf dem Konto hatte, konnte Ende 2025 damit nur noch kaufen, was vorher rund ${eur(Math.round(kk2225 / 100) * 100)} gekostet hat (Inflation 2022: 6,9 %, 2023: 5,9 %, 2024 und 2025: je 2,2 %, Destatis).</span></figcaption>${both(chartKaufkraft)}${kaufkraftLegend}</figure>
@@ -121,7 +120,7 @@ const html = `<!--charts:start-->
   <p class="hc-note">Allgemeine Information, keine Anlageberatung. Jede Geldanlage hat Risiken; Immobilienpreise können fallen. <a class="ck-link" href="/wissen">Wie funktioniert Geld? Alles Wichtige im Lernbereich</a></p>
 </div></section>
 <section class="section home-charts"><div class="container">
-  <h2 class="home-h2">Was eine vermietete Wohnung rechnerisch leistet</h2>
+  <h1 class="home-h2">Was eine vermietete Wohnung rechnerisch leistet</h1>
   <p class="hc-lead">Ein durchgerechnetes Beispiel: Eigentumswohnung in Hessen, ${eur(EX.price)} Kaufpreis, ${EX.area} m², ${eur(EX.rent)} Kaltmiete, ${eur(EX.equity)} Eigenkapital, ${String(EX.ratePct).replace('.', ',')} % Zins und ${EX.repaymentPct} % Tilgung.</p>
   <div class="hc-grid">
     <figure class="hc-card hc-wide"><figcaption><strong>Vermögen nach 25 Jahren – selbst wenn der Wert stagniert</strong><span>Wert der Wohnung minus Restschuld. Die rote Linie zeigt deinen eigenen Einsatz (Eigenkapital plus Zuzahlungen, zusammen ${eur(inv(years))}). Selbst bei stagnierendem Wert liegt das Vermögen mit ${eur(net(0, years))} darüber, weil der Mieter einen großen Teil der Tilgung trägt. Mit 1 bis 2 % Wertsteigerung im Jahr wächst es deutlich schneller.</span></figcaption>${both(chartWealth)}${wealthLegend}</figure>
@@ -129,12 +128,14 @@ const html = `<!--charts:start-->
     <figure class="hc-card"><figcaption><strong>Kaufnebenkosten je Bundesland</strong><span>Bei ${eur(EX.price)} Kaufpreis (ohne Makler) liegen zwischen ${n.min.name} und ${n.max.name} ${eur(n.max.v - n.min.v)}. Diese Kosten finanziert die Bank selten mit.</span></figcaption>${both(chartNk)}</figure>
   </div>
   <p class="hc-note">Beispielrechnung mit dem ImmoAdv-Rechenkern, keine Prognose und keine Anlageberatung. Vereinfacht: gleichbleibender Zins über die gesamte Laufzeit, ohne Steuern, Mietsteigerung und Rücklagen für größere Sanierungen. Wertentwicklung kann auch negativ sein. <a class="ck-link" href="/start">Mit eigenen Zahlen rechnen – kostenlos und ohne Konto</a></p>
-</div></section>
-<!--charts:end-->`;
+</div></section>`;
 
-const p = new URL('../public/index.html', import.meta.url);
-let s = readFileSync(p, 'utf8');
-if (s.includes('<!--charts:start-->')) s = s.replace(/<!--charts:start-->[\s\S]*?<!--charts:end-->/, html);
-else s = s.replace('<section class="section home-modes">', html + '\n\n<section class="section home-modes">');
-writeFileSync(p, s);
+const cut = html.indexOf('<section class="section home-charts">');
+for (const [file, key, part] of [['wissen/warum-investieren/index.html', 'why', html.slice(0, cut).trimEnd()], ['wissen/vermietete-wohnung-rechnung/index.html', 'rechnung', html.slice(cut).trimEnd()]]) {
+  const p = new URL(`../public/${file}`, import.meta.url);
+  const s = readFileSync(p, 'utf8');
+  const re = new RegExp(`<!--charts:${key}:start-->[\\s\\S]*?<!--charts:${key}:end-->`);
+  if (!re.test(s)) throw new Error(`Marker charts:${key} fehlt in ${file}`);
+  writeFileSync(p, s.replace(re, () => `<!--charts:${key}:start-->${part}<!--charts:${key}:end-->`));
+}
 console.log('charts ok', { stagnation: Math.round(net(0, years)), einsatz: Math.round(inv(years)), zuzahlung: Math.round(zu), tilgung: Math.round(a.principalM) });

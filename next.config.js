@@ -21,6 +21,9 @@ const STATIC_PAGES = [
   'fristen',
   'start',
   'szenarien',
+  'ueber-uns',
+  'kontakt',
+  'lernpfad',
 ];
 
 const cspValue = [

@@ -1,6 +1,8 @@
 // Startseite (B2C): Beispielrechnung, dezente Einblendungen, mobiler Sticky-CTA und Conversion-Ereignisse.
 // Rechnet ausschließlich im Browser mit dem gemeinsamen Rechenkern; es wird nichts gespeichert.
 // Ereignisse gehen an die cookielose Reichweitenmessung (track.js) – ohne Eingabewerte, nur Ereignisname und Ort.
+// Alte Sprungmarken der verschobenen Startseiten-Abschnitte auf die neuen Unterseiten weiterleiten.
+{ const moved = { '#warum': '/wissen/warum-investieren' }; if (moved[location.hash]) location.replace(moved[location.hash]); }
 import { demoAnalyse } from './calc.mjs';
 
 const $ = (id) => document.getElementById(id);
