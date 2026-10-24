@@ -1,6 +1,10 @@
 // Web-Admin: Akquise-Zentrale (Kontakte, Serienbriefe, Anrufe, Verlauf) und Werbungszentrale
 // (Kampagnen mit Tracking-Link und QR-Code, Erfolgsmessung, Neuigkeiten-E-Mails nur mit Double-Opt-in).
-import { api, download, dt, dtt, esc } from './sess.mjs?v=60e449fe';
+<<<<<<< HEAD
+import { api, download, dt, dtt, esc } from './sess.mjs?v=b4582530';
+=======
+import { api, download, dt, dtt, esc } from './sess.mjs?v=b4582530';
+>>>>>>> origin/main
 
 const $ = (s, r = document) => r.querySelector(s);
 const KIND = { bank: 'Bank / Sparkasse', vermittler: 'Finanzierungsvermittler', makler: 'Immobilienmakler', finanzberater: 'Finanz-/Vermögensberater', sonstige: 'Sonstige' };

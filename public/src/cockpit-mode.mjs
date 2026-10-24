@@ -2,7 +2,11 @@
 //  Einsteiger – Budget-Tacho, Haushaltsüberschuss, maximaler Kaufpreis, Warmrate, Eigenkapital, Nebenkosten-Ampel.
 //  Profi      – RenditeRadar, 10-Jahres-Vermögenskurve, Szenarien für Mietausfall und Anschlussfinanzierung.
 // Angemeldet gibt es keine Beispielzahlen: Alles rechnet mit Finanzprofil und Objekten des Kunden; fehlt etwas, steht dort ein Hinweis.
-import { budget, kaufnebenkosten, monthlyRate, tilgungsplan, GREST } from './calc.mjs?v=60e449fe';
+<<<<<<< HEAD
+import { budget, kaufnebenkosten, monthlyRate, tilgungsplan, GREST } from './calc.mjs?v=b4582530';
+=======
+import { budget, kaufnebenkosten, monthlyRate, tilgungsplan, GREST } from './calc.mjs?v=b4582530';
+>>>>>>> origin/main
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const E = (x, d = 0) => (x == null || Number.isNaN(x) ? '–' : Number(x).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: d, maximumFractionDigits: d }));

@@ -334,3 +334,7 @@
 .uu-wrap a.kt-btn:hover::after{color:#0F2C59;transform:translateX(2px)}
 @media(prefers-reduced-motion:reduce){.uu-wrap a.kt-btn::after{transition:none}}
 @media(max-width:420px){.uu-foot{flex-wrap:wrap}.uu-wrap a.uu-foot-link{flex-basis:100%;padding-left:52px}}
+/* Über uns: kurzes Motto des Gründers */
+.uu-motto{margin:14px 0 0;font-size:15px;line-height:1.5;font-style:italic;font-weight:500;color:#475569}
+.uu-motto span{display:block;margin-top:4px;font-size:12px;font-style:normal;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0284C7}
+.uu-motto span::before{content:"— "}
