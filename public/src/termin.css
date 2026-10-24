@@ -39,7 +39,6 @@
 .tm-submit{width:100%;justify-content:center}
 .tm-submit:disabled{opacity:.5;cursor:not-allowed}
 .tm-submit.busy{position:relative;opacity:.85;cursor:progress}
-.tm-submit.busy::after{content:"";display:inline-block;width:16px;height:16px;margin-left:10px;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:iaSpin .8s linear infinite;vertical-align:-3px}
 .tm-msg{min-height:1.2em;margin:10px 0 0;color:#B91C1C;font-size:14px}
 .tm-when{display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;color:#0F2C59;margin:0 0 12px}
 .tm-card:not(.tm-center) .tm-when{justify-content:flex-start}

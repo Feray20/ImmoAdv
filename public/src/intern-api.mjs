@@ -1,8 +1,8 @@
 // Web-Admin → API Management: Übersicht, Zugang, Schlüssel, Nutzung, Anfragen, Webhooks, Playground, Dokumentation,
 // Sandbox, Health, Changelog, Einstellungen und „Get Started“. Alle Daten kommen aus /api/admin/api bzw. der echten
 // API (/api/v1). Rechte prüft ausschließlich der Server; nichts hier ist simuliert.
-import { api, dtt, esc } from './sess.mjs?v=c9a14656';
-import { ENDPOINTS, ERRORS, EVENTS, SCOPE_LIST, SECTIONS } from './api-catalog.mjs?v=c9a14656';
+import { api, dtt, esc } from './sess.mjs?v=4a19dd50';
+import { ENDPOINTS, ERRORS, EVENTS, SCOPE_LIST, SECTIONS } from './api-catalog.mjs?v=4a19dd50';
 
 const SUB = [['api', 'Overview'], ['api-start', 'Get Started'], ['api-access', 'Access'], ['api-keys', 'API Keys'], ['api-usage', 'Usage'], ['api-requests', 'Requests'], ['api-webhooks', 'Webhooks'],
   ['api-playground', 'Playground'], ['api-docs', 'Documentation'], ['api-sandbox', 'Sandbox'], ['api-health', 'Health'], ['api-changelog', 'Changelog'], ['api-settings', 'Settings']];
