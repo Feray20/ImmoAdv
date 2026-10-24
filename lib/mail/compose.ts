@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { BRAND_IMAGES, resendSend, mailboxAddress, type OutAttachment } from '@/lib/mail/resend';
-import { esc, fillTemplate, htmlToText, renderBrief, sanitizeBody, wrapDocument } from '@/lib/mail/template';
+import { esc, fillTemplate, htmlToText, renderBrief, sanitizeBody, SIG_IMG, wrapDocument } from '@/lib/mail/template';
 import { isSuppressed } from '@/lib/marketing/suppression';
 
 // Ausgehende Nachricht aus einem Entwurf bauen und senden.
@@ -49,6 +49,7 @@ export async function buildOutgoing(m: MailRow, preview = false): Promise<{ html
   let inner: string, text: string;
   if (m.design === 'fertig') {
     inner = fillTemplate(m.html || '', await bookingUrl(), m.termin_fallback);
+    inner = inner.replace(/<img src="cid:att2"[^>]*>/g, SIG_IMG);
     if (token && m.token && token !== m.token) inner = inner.split(m.token).join(token);
     text = m.text_body || htmlToText(inner);
   } else {
