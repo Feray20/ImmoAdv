@@ -847,6 +847,14 @@ main>.section:last-child,#app>main>.section:last-child{padding-bottom:28px}
 @media(prefers-reduced-motion:reduce){.uu-wrap a.kt-btn::after{transition:none}}
 @media(max-width:420px){.uu-foot{flex-wrap:wrap}
 .uu-wrap a.uu-foot-link{flex-basis:100%;padding-left:52px}}
+.uu-quote{position:relative;margin:0;padding:30px 30px 26px;border-radius:20px;color:#fff;overflow:hidden;background:radial-gradient(120% 120% at 100% 0%,rgba(56,189,248,.32) 0%,rgba(56,189,248,0) 55%),linear-gradient(140deg,#0F2C59 0%,#0B3B73 50%,#0369A1 100%);box-shadow:0 18px 40px -22px rgba(15,44,89,.55)}
+.uu-quote-ic{display:block;color:#38BDF8;margin:0 0 12px;opacity:.95}
+.uu-quote blockquote{margin:0}
+.uu-quote blockquote p{margin:0;font-size:clamp(19px,2.3vw,23px);line-height:1.5;font-weight:600;letter-spacing:-.01em;color:#fff}
+.uu-quote figcaption{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.18)}
+.uu-quote figcaption strong{font-size:15px;color:#fff}
+.uu-quote figcaption span{font-size:13px;color:#BAE6FD}
+@media (max-width:560px){.uu-quote{padding:24px 20px 20px}}
 .bx-svg{display:block;flex:0 0 auto}
 .bx-sec{padding:76px 0}
 .bx-sub{color:#475569;font-size:17px;max-width:720px;margin:-4px 0 28px}
