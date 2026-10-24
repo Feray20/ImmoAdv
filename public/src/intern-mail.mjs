@@ -1,5 +1,5 @@
 // Web-Admin → Postfach: E-Mails empfangen, lesen, beantworten und im ImmoAdv-Design senden (support@immoadv.de).
-import { api, dtt, esc } from './sess.mjs?v=8d06c1ac';
+import { api, dtt, esc } from './sess.mjs?v=d25ac568';
 
 const $ = (s, r = document) => r.querySelector(s);
 const FOLDERS = [
@@ -92,7 +92,7 @@ async function openMsg(v, id) {
     ${m.direction === 'in' ? '<p class="form-note pf-note">Externe Bilder in empfangenen E-Mails werden aus Datenschutzgründen nicht geladen.</p>' : ''}`;
   rd.querySelectorAll('.pf-frame').forEach((f, i) => {
     f.srcdoc = thread[i].view;
-    f.onload = () => { try { f.style.height = Math.min(4000, f.contentDocument.documentElement.scrollHeight + 8) + 'px'; } catch { f.style.height = '640px'; } };
+    f.onload = () => fit(f);
   });
   $('#pfBack').onclick = () => { S.open = null; v.querySelector('.pf')?.classList.remove('reading'); drawList(v); };
   rd.querySelectorAll('[data-mv]').forEach((b) => b.onclick = () => bulk(v, b.dataset.mv, [m.id]));
@@ -108,6 +108,20 @@ async function openMsg(v, id) {
   $('#pfReply')?.addEventListener('click', () => compose({ replyTo: last.id, to: [last.direction === 'in' ? last.from_email : (last.to_emails || [])[0]].filter(Boolean), subject: /^(re|aw):/i.test(m.subject) ? m.subject : `Re: ${m.subject}` }));
   $('#pfFwd')?.addEventListener('click', () => compose({ forward: m.id, subject: /^(wg|fwd?):/i.test(m.subject) ? m.subject : `WG: ${m.subject}`, body: `<p><br></p><p>---------- Weitergeleitete Nachricht ----------<br>Von: ${esc(m.from_name ? `${m.from_name} <${m.from_email}>` : m.from_email)}<br>Betreff: ${esc(m.subject)}</p>${String(m.text_body || '').split(/\n{2,}/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('')}` }));
 }
+
+// E-Mail immer vollständig zeigen: zu breite Inhalte auf die Rahmenbreite verkleinern, Höhe an den Inhalt anpassen.
+function fit(f) {
+  try {
+    const doc = f.contentDocument, root = doc.documentElement;
+    root.style.zoom = '1';
+    const w = f.clientWidth, sw = Math.max(root.scrollWidth, doc.body?.scrollWidth || 0);
+    const z = sw > w + 2 ? Math.max(0.3, (w - 2) / sw) : 1;
+    root.style.zoom = String(z);
+    const h = doc.body ? doc.body.getBoundingClientRect().height : root.scrollHeight;
+    f.style.height = Math.min(8000, Math.ceil(Math.max(h, root.getBoundingClientRect().height)) + 16) + 'px';
+  } catch { f.style.height = '900px'; }
+}
+window.addEventListener('resize', () => document.querySelectorAll('.pf-frame').forEach((f) => fit(f)));
 
 // ---------- Verfassen ----------
 const TOOLS = [['bold', 'B', 'Fett'], ['italic', 'I', 'Kursiv'], ['underline', 'U', 'Unterstrichen'], ['h2', 'Ü', 'Überschrift'], ['insertUnorderedList', '•', 'Liste'], ['insertOrderedList', '1.', 'Nummerierte Liste'], ['blockquote', '❝', 'Hervorhebung'], ['link', '🔗', 'Link']];
