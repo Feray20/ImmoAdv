@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase/admin';
 import { allowRequest } from '@/lib/security/rate-limit';
 import { berlinLabel, freeSlots, getBookingConfig } from '@/lib/booking/core';
-import { graphCancelMeeting, graphConfigured } from '@/lib/booking/graph';
+import { graphCancelMeeting, graphReady } from '@/lib/booking/graph';
 import { notifyAdmins, sendBookingMail, type Booking } from '@/lib/booking/mail';
 
 export const runtime = 'nodejs';
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     const b = data as Booking | null;
     if (!b) return NextResponse.json({ error: 'Termin nicht gefunden.' }, { status: 404, headers: noStore });
     if (b.status === 'abgesagt' || b.status === 'abgelehnt') return NextResponse.json({ booking: pub(b) }, { headers: noStore });
-    if (b.ms_event_id && graphConfigured()) await graphCancelMeeting(b.ms_event_id, 'Der Termin wurde vom Gast abgesagt.').catch((e) => console.error('booking_cancel', (e as Error).message));
+    if (b.ms_event_id && (await graphReady())) await graphCancelMeeting(b.ms_event_id, 'Der Termin wurde vom Gast abgesagt.').catch((e) => console.error('booking_cancel', (e as Error).message));
     const note = p.data.reason ? `Absage durch Gast: ${p.data.reason}` : 'Absage durch Gast';
     const { data: upd } = await db.from('immo_bookings').update({ status: 'abgesagt', note, decided_at: new Date().toISOString(), decided_by: 'gast' }).eq('id', b.id).select('*').single();
     await notifyAdmins(`Termin abgesagt: ${b.name}`, `${b.name} <${b.email}> hat den Termin am ${berlinLabel(new Date(b.starts_at))} abgesagt.${p.data.reason ? `\nGrund: ${p.data.reason}` : ''}`);

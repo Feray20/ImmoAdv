@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/security/admin';
 import { berlinLabel, DEFAULT_BOOKING, getBookingConfig, type BookingConfig } from '@/lib/booking/core';
-import { graphCancelMeeting, graphConfigured, graphCreateMeeting, graphSelfTest } from '@/lib/booking/graph';
+import { graphAccount, graphCancelMeeting, graphCreateMeeting, graphReady, graphSelfTest, loginPoll, loginStart, logout } from '@/lib/booking/graph';
 import { sendBookingMail, manageUrl, type Booking } from '@/lib/booking/mail';
 import { esc } from '@/lib/mail/template';
 
@@ -17,8 +17,9 @@ export async function GET(req: Request) {
   const u = new URL(req.url);
   const since = new Date(Date.now() - 30 * 864e5).toISOString();
   const { data } = await supabaseAdmin().from('immo_bookings').select('*').gte('starts_at', since).order('starts_at', { ascending: true }).limit(400);
-  const graph = u.searchParams.get('test') ? await graphSelfTest() : { ok: graphConfigured(), message: graphConfigured() ? 'Microsoft-Zugang eingetragen.' : 'Microsoft-Zugang nicht eingetragen.' };
-  return NextResponse.json({ bookings: data ?? [], config: await getBookingConfig(), defaults: DEFAULT_BOOKING, graph }, { headers: noStore });
+  const acc = await graphAccount();
+  const graph = u.searchParams.get('test') ? await graphSelfTest() : { ok: Boolean(acc.mode), message: acc.mode ? `Verbunden mit ${acc.account}${acc.name ? ` (${acc.name})` : ''}.` : 'Noch nicht mit Microsoft verbunden.' };
+  return NextResponse.json({ bookings: data ?? [], config: await getBookingConfig(), defaults: DEFAULT_BOOKING, graph: { ...graph, mode: acc.mode, account: acc.account } }, { headers: noStore });
 }
 
 const HM = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
@@ -33,6 +34,7 @@ const Body = z.discriminatedUnion('action', [
   z.object({ action: z.literal('decline'), id: z.string().uuid(), note: z.string().trim().max(1000).optional().default('') }),
   z.object({ action: z.literal('cancel'), id: z.string().uuid(), note: z.string().trim().max(1000).optional().default('') }),
   z.object({ action: z.literal('config'), config: Cfg.nullable() }),
+  z.object({ action: z.literal('msLogin') }), z.object({ action: z.literal('msPoll') }), z.object({ action: z.literal('msLogout') }),
 ]);
 
 export async function POST(req: Request) {
@@ -40,6 +42,10 @@ export async function POST(req: Request) {
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return NextResponse.json({ error: 'Ungültige Eingabe.' }, { status: 400, headers: noStore });
   const db = supabaseAdmin(), d = p.data, actor = a.user.email;
+
+  if (d.action === 'msLogin') { try { return NextResponse.json(await loginStart(), { headers: noStore }); } catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 502, headers: noStore }); } }
+  if (d.action === 'msPoll') { try { return NextResponse.json(await loginPoll(), { headers: noStore }); } catch (e) { return NextResponse.json({ status: 'error', message: (e as Error).message }, { headers: noStore }); } }
+  if (d.action === 'msLogout') { await logout(); return NextResponse.json({ ok: true }, { headers: noStore }); }
 
   if (d.action === 'config') {
     if (d.config) for (const r of Object.values(d.config.days)) for (const [s, e] of r) if (s >= e) return NextResponse.json({ error: `Zeitraum ${s}–${e}: Ende muss nach dem Beginn liegen.` }, { status: 400, headers: noStore });
@@ -56,7 +62,7 @@ export async function POST(req: Request) {
   if (d.action === 'accept') {
     if (b.status !== 'angefragt') return NextResponse.json({ error: 'Nur offene Anfragen können angenommen werden.' }, { status: 409, headers: noStore });
     let teams = d.teamsUrl || null, ev: string | null = null;
-    if (graphConfigured()) {
+    if (await graphReady()) {
       try {
         const html = `<p>Gespräch mit ImmoAdv${b.topic ? ` – ${esc(b.topic)}` : ''}.</p><p><strong>${esc(b.name)}</strong>${b.company ? `, ${esc(b.company)}` : ''}<br>${esc(b.email)}${b.phone ? `<br>${esc(b.phone)}` : ''}</p>${b.message ? `<p>${esc(b.message).replace(/\n/g, '<br>')}</p>` : ''}<p>Termin verwalten: <a href="${manageUrl(b)}">${manageUrl(b)}</a></p>`;
         const m = await graphCreateMeeting({ subject: `ImmoAdv: ${b.topic || 'Gespräch'} – ${b.name}`, start: new Date(b.starts_at), end: new Date(b.ends_at), html, attendee: { email: b.email, name: b.name } });
@@ -76,7 +82,7 @@ export async function POST(req: Request) {
   }
 
   if (b.status !== 'bestaetigt' && b.status !== 'angefragt') return NextResponse.json({ error: 'Termin ist bereits beendet.' }, { status: 409, headers: noStore });
-  if (b.ms_event_id && graphConfigured()) await graphCancelMeeting(b.ms_event_id, d.note || 'Der Termin wurde abgesagt.').catch((e) => console.error('booking_cancel', (e as Error).message));
+  if (b.ms_event_id && (await graphReady())) await graphCancelMeeting(b.ms_event_id, d.note || 'Der Termin wurde abgesagt.').catch((e) => console.error('booking_cancel', (e as Error).message));
   const { data: upd } = await db.from('immo_bookings').update({ status: 'abgesagt', note: d.note || null, decided_at: now, decided_by: actor }).eq('id', b.id).select('*').single();
   const mailed = await sendBookingMail('abgesagt', upd as Booking);
   return NextResponse.json({ booking: upd, mailed, message: 'Abgesagt – der Gast wurde informiert.' }, { headers: noStore });

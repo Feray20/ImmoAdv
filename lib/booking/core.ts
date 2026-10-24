@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { graphBusy, graphConfigured } from '@/lib/booking/graph';
+import { graphBusy, graphReady } from '@/lib/booking/graph';
 
 // Termin-Portal: Arbeitszeiten (im Web-Admin änderbar), freie Slots in deutscher Zeit (Europe/Berlin).
 export type DayRanges = [string, string][];
@@ -51,7 +51,7 @@ export async function freeSlots(cfg: BookingConfig): Promise<Record<string, Slot
   const from = berlinToUtc(days[0], '00:00'), to = new Date(berlinToUtc(days[days.length - 1], '23:59').getTime() + 60_000);
   const { data: booked } = await supabaseAdmin().from('immo_bookings').select('starts_at, ends_at').in('status', ['angefragt', 'bestaetigt']).gte('ends_at', from.toISOString()).lte('starts_at', to.toISOString());
   const busy: [number, number][] = (booked ?? []).map((b) => [Date.parse(b.starts_at as string) - buf, Date.parse(b.ends_at as string) + buf]);
-  if (graphConfigured()) { try { for (const [s, e] of await graphBusy(from, to)) busy.push([s - buf, e + buf]); } catch (e) { console.error('booking_busy', (e as Error).message); } }
+  if (await graphReady().catch(() => false)) { try { for (const [s, e] of await graphBusy(from, to)) busy.push([s - buf, e + buf]); } catch (e) { console.error('booking_busy', (e as Error).message); } }
   const out: Record<string, Slot[]> = {};
   for (const date of [...new Set(days)]) {
     const ranges = cfg.days[wd(date)] || [];

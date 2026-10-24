@@ -1,5 +1,5 @@
 // Web-Admin → Termine: Anfragen aus immoadv.de/termin annehmen (Teams-Termin im Outlook-Kalender), ablehnen, absagen; Arbeitszeiten.
-import { api, esc } from './sess.mjs?v=db34bdea';
+import { api, esc } from './sess.mjs?v=c9a14656';
 
 const $ = (s, r = document) => r.querySelector(s);
 const TZ = 'Europe/Berlin';
@@ -26,13 +26,16 @@ function draw(v) {
   v.innerHTML = `<section class="tma">
     <div class="tma-head"><div><h2>Termine</h2><p class="form-note">Buchungsseite: <a href="/termin" target="_blank" rel="noopener">immoadv.de/termin</a> · ${S.data.config.active ? 'online buchbar' : '<strong>pausiert</strong>'}</p></div>
       <div class="tma-btns"><button class="btn btn-outline btn-sm" type="button" id="tmaCopy">Link kopieren</button><button class="btn btn-outline btn-sm" type="button" id="tmaCfg">Arbeitszeiten</button></div></div>
-    <div class="tma-ms ${graph.ok ? 'ok' : 'warn'}"><strong>Microsoft Teams &amp; Outlook:</strong> <span id="tmaMs">${esc(graph.message)}</span>${graph.ok ? ' <button class="btn btn-ghost btn-sm" type="button" id="tmaTest">Verbindung testen</button>' : ' Bis zur Verbindung können Sie beim Annehmen einen Teams-Link selbst einfügen.'}</div>
+    <div class="tma-ms ${graph.ok ? 'ok' : 'warn'}" id="tmaMsBox"><div><strong>Microsoft Teams &amp; Outlook:</strong> <span id="tmaMs">${esc(graph.message)}</span>${graph.ok ? '' : '<br><small>Einmal anmelden: Danach entsteht beim Annehmen automatisch ein Teams-Termin in Ihrem Outlook-Kalender, und belegte Zeiten werden ausgeblendet.</small>'}</div>
+      <div class="tma-btns">${graph.ok ? `<button class="btn btn-ghost btn-sm" type="button" id="tmaTest">Verbindung testen</button>${graph.mode === 'login' ? '<button class="btn btn-ghost btn-sm" type="button" id="tmaOut">Abmelden</button>' : ''}` : '<button class="btn btn-sm tma-ms-btn" type="button" id="tmaLogin"><svg viewBox="0 0 21 21" width="16" height="16" aria-hidden="true"><path fill="#F25022" d="M1 1h9v9H1z"/><path fill="#7FBA00" d="M11 1h9v9h-9z"/><path fill="#00A4EF" d="M1 11h9v9H1z"/><path fill="#FFB900" d="M11 11h9v9h-9z"/></svg>Mit Microsoft anmelden</button>'}</div></div>
     <div class="br-tabs" role="tablist">${[['offen', `Offene Anfragen (${open.length})`], ['kommend', `Bestätigt (${next.length})`], ['verlauf', 'Verlauf']].map(([k, l]) => `<button type="button" role="tab" data-t="${k}" aria-selected="${S.tab === k}">${l}</button>`).join('')}</div>
     <div class="tma-list">${list.length ? list.map(card).join('') : `<p class="form-note tma-empty">${S.tab === 'offen' ? 'Keine offenen Anfragen.' : S.tab === 'kommend' ? 'Keine bestätigten Termine.' : 'Noch kein Verlauf.'}</p>`}</div></section>`;
   v.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { S.tab = b.dataset.t; draw(v); });
   $('#tmaCopy', v).onclick = () => navigator.clipboard?.writeText('https://immoadv.de/termin').then(() => toast('Link kopiert.'));
   $('#tmaCfg', v).onclick = () => config(v);
   const t = $('#tmaTest', v); if (t) t.onclick = async () => { t.disabled = true; const rr = await api('/api/admin/termine?test=1'); t.disabled = false; if (rr.ok) { $('#tmaMs', v).textContent = rr.data.graph.message; toast(rr.data.graph.ok ? 'Verbindung in Ordnung.' : 'Verbindung fehlgeschlagen.', !rr.data.graph.ok); } };
+  const lo = $('#tmaLogin', v); if (lo) lo.onclick = () => msLogin(v, lo);
+  const out = $('#tmaOut', v); if (out) out.onclick = async () => { if (!confirm('Microsoft-Verbindung trennen? Neue Termine bekommen dann keinen Teams-Link mehr.')) return; await api('/api/admin/termine', { method: 'POST', body: JSON.stringify({ action: 'msLogout' }) }); termine(v); };
   v.querySelectorAll('[data-act]').forEach((b) => b.onclick = () => act(v, b.dataset.act, b.dataset.id, b));
 }
 
@@ -93,4 +96,28 @@ function config(v) {
     const m = d.querySelector('#cMsg');
     if (r.ok) { S.data.config = r.data.config; m.textContent = 'Gespeichert – gilt sofort auf immoadv.de/termin.'; draw(v); } else m.textContent = r.data?.error || 'Speichern fehlgeschlagen.';
   };
+}
+
+// Gerätecode-Anmeldung: Code anzeigen, Microsoft-Seite öffnen, im Hintergrund auf die Bestätigung warten.
+async function msLogin(v, btn) {
+  btn.disabled = true; btn.textContent = 'Wird vorbereitet …';
+  const r = await api('/api/admin/termine', { method: 'POST', body: JSON.stringify({ action: 'msLogin' }) });
+  if (!r.ok) { toast(r.data?.error || 'Anmeldung nicht möglich.', true); termine(v); return; }
+  const { userCode, url, interval, expiresIn } = r.data;
+  const box = $('#tmaMsBox', v);
+  box.className = 'tma-ms tma-login';
+  box.innerHTML = `<div class="tma-login-in"><strong>Bei Microsoft anmelden</strong><ol><li>Code kopieren: <button type="button" class="tma-code" id="tmaCode" title="Kopieren">${esc(userCode)}</button></li><li><a href="${esc(url)}" target="_blank" rel="noopener" id="tmaGo">Microsoft-Anmeldeseite öffnen</a>, Code einfügen und mit Ihrem Microsoft-365-Konto anmelden.</li><li>Zugriff auf den Kalender „Akzeptieren“ – dieses Fenster erkennt die Anmeldung automatisch.</li></ol>
+    <div class="ia-ld tma-wait" role="status">Warte auf Ihre Anmeldung bei Microsoft …</div><button type="button" class="btn btn-ghost btn-sm" id="tmaStop">Abbrechen</button></div>`;
+  const copy = () => navigator.clipboard?.writeText(userCode).then(() => toast('Code kopiert.')).catch(() => {});
+  $('#tmaCode', v).onclick = copy; $('#tmaGo', v).addEventListener('click', copy);
+  let stop = false; $('#tmaStop', v).onclick = () => { stop = true; termine(v); };
+  const until = Date.now() + expiresIn * 1000;
+  while (!stop && Date.now() < until && document.body.contains(box)) {
+    await new Promise((res) => setTimeout(res, interval * 1000));
+    if (stop || !document.body.contains(box)) return;
+    const p = await api('/api/admin/termine', { method: 'POST', body: JSON.stringify({ action: 'msPoll' }) });
+    const st = p.data?.status;
+    if (st === 'done') { toast(`Verbunden mit ${p.data.account}.`); termine(v); return; }
+    if (st === 'expired' || st === 'error') { toast(p.data.message || 'Anmeldung fehlgeschlagen.', true); termine(v); return; }
+  }
 }

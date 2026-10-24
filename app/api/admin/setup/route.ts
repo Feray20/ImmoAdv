@@ -6,6 +6,7 @@ import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { adminAudit } from '@/lib/b2b/core';
 import { fromAddress } from '@/lib/notify/mail';
 import { liveChecks } from '@/lib/admin/livecheck';
+import { graphReady } from '@/lib/booking/graph';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,6 +36,7 @@ async function resendDomain(): Promise<boolean | null> {
 }
 
 async function items(manual: Record<string, string>): Promise<Item[]> {
+  const msOk = await graphReady().catch(() => false);
   const db = adminConfigured() ? supabaseAdmin() : null;
   const sk = String(process.env.STRIPE_SECRET_KEY || '');
   const live = sk.startsWith('sk_live') || sk.startsWith('rk_live');
@@ -107,16 +109,14 @@ async function items(manual: Record<string, string>): Promise<Item[]> {
         'Den neuen Webhook öffnen und das <strong>Signing Secret</strong> (beginnt mit <code>whsec_</code>) kopieren.',
         `${a(VERCEL, 'Vercel → Environment Variables')} → „Add New“: Key <code>RESEND_INBOUND_SECRET</code>, Value einfügen, nur Production, „Save“ → Redeploy.`],
       check: 'Eine E-Mail an support@immoadv.de schicken – sie erscheint innerhalb von Sekunden im Web-Admin-Postfach.' },
-    { id: 'teams', group: 'E-Mail-Versand', title: 'Termine: Microsoft Teams & Outlook-Kalender verbinden', auto: true, ok: has('MS_TENANT_ID') && has('MS_CLIENT_ID') && has('MS_CLIENT_SECRET') && has('MS_CALENDAR_USER'), optional: true, time: '10 Minuten',
-      need: 'Microsoft 365 Business mit Administratorzugang und Zugang zu Vercel.',
-      why: 'Die Buchungsseite immoadv.de/termin läuft bereits. Mit der Verbindung wird beim Annehmen automatisch ein Teams-Termin in Ihrem Outlook-Kalender angelegt, der Gast bekommt den Teams-Link, und belegte Zeiten aus Outlook werden nicht mehr angeboten.',
+    { id: 'teams', group: 'E-Mail-Versand', title: 'Termine: mit Microsoft Teams & Outlook verbinden', auto: true, ok: msOk, optional: true, time: '2 Minuten',
+      need: 'Ihr Microsoft-365-Konto (E-Mail und Passwort).',
+      why: 'Die Buchungsseite immoadv.de/termin läuft bereits. Nach der Anmeldung wird beim Annehmen automatisch ein Teams-Termin in Ihrem Outlook-Kalender angelegt, der Gast bekommt den Teams-Link, und belegte Zeiten aus Outlook werden nicht mehr angeboten.',
       steps: [
-        `${a('https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade', 'Microsoft Entra → App-Registrierungen')} → <strong>„Neue Registrierung“</strong>, Name <code>ImmoAdv Termine</code>, „Nur Konten in diesem Organisationsverzeichnis“ → „Registrieren“.`,
-        'Auf der Übersicht <strong>Anwendungs-ID (Client)</strong> und <strong>Verzeichnis-ID (Mandant)</strong> kopieren.',
-        '„API-Berechtigungen“ → „Berechtigung hinzufügen“ → Microsoft Graph → <strong>Anwendungsberechtigungen</strong> → <code>Calendars.ReadWrite</code> → „Administratorzustimmung erteilen“.',
-        '„Zertifikate & Geheimnisse“ → „Neuer geheimer Clientschlüssel“ (24 Monate) → den <strong>Wert</strong> sofort kopieren.',
-        `${a(VERCEL, 'Vercel → Environment Variables')} → vier Einträge (nur Production): <code>MS_TENANT_ID</code>, <code>MS_CLIENT_ID</code>, <code>MS_CLIENT_SECRET</code>, <code>MS_CALENDAR_USER</code> (Ihre Microsoft-365-E-Mail-Adresse, deren Kalender genutzt wird) → Redeploy.`],
-      check: 'Web-Admin → Postfach & Termine → Termine → „Verbindung testen“ zeigt „Verbunden“.' },
+        'Web-Admin → <strong>Postfach &amp; Termine → Termine</strong> → „Mit Microsoft anmelden“.',
+        'Den angezeigten Code kopieren, die Microsoft-Seite öffnen, Code einfügen und mit Ihrem Microsoft-365-Konto anmelden.',
+        'Den Zugriff auf Ihren Kalender mit „Akzeptieren“ bestätigen – der Web-Admin zeigt danach „Verbunden“.'],
+      check: 'Termine → „Verbindung testen“ zeigt „Verbunden mit dem Kalender von …“.' },
     // ---------- Zahlungen ----------
     { id: 'stripe_test', group: 'Zahlungen', title: 'Stripe-Testschlüssel für den Testkauf', auto: true, ok: has('STRIPE_TEST_SECRET_KEY'), time: '5 Minuten',
       need: 'Zugang zum Stripe-Dashboard.',

@@ -1,5 +1,5 @@
 // Web-Admin → Partner → Pakete & Preise: B2B-Katalog je Branche bearbeiten (Preise, Leistungen, Tools, Zusatzbranche).
-import { api, esc } from './sess.mjs?v=db34bdea';
+import { api, esc } from './sess.mjs?v=c9a14656';
 
 const ORDER = ['makler', 'vermittler', 'finanzberater', 'allgemein', 'bank'];
 const eur = (c) => (c / 100).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
