@@ -100,3 +100,5 @@ body[data-ad-seg="b2c"] .ad-segctl button[aria-pressed="true"],.sim-steps button
   .bill-table:not(:has(tr>*:nth-child(5))){display:table!important;width:100%;table-layout:auto;font-size:12px}
   .bill-table:not(:has(tr>*:nth-child(5))) th,.bill-table:not(:has(tr>*:nth-child(5))) td{padding:6px 4px;overflow-wrap:anywhere}
 }
+/* „?“-Hilfeknöpfe: mindestens 24 × 24 px (WCAG 2.2), auf allen Geräten gleich */
+button.tip{min-width:24px;min-height:24px;width:24px;height:24px;display:inline-grid;place-items:center;padding:0;line-height:1;font-size:13px;flex:none}
