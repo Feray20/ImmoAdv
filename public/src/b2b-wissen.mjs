@@ -1,7 +1,7 @@
 // Unternehmensportal → Beratungskompass für erfahrene Berater: Gesprächsgrafiken, Sonderfälle, Einwände, Prüfpfade,
 // Unterlagen-Checklisten und Pflichten-Check (keine Grundlagen). Alle Beispielzahlen werden hier nachvollziehbar berechnet.
 // Hinweis: Orientierungswissen, keine Rechts- oder Finanzierungsberatung; bankindividuelle Vorgaben gehen vor.
-import { BRANCHEN, KAPITEL } from './b2b-branche.mjs?v=daee1d1e';
+import { BRANCHEN, KAPITEL } from './b2b-branche.mjs?v=395be540';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const E = (v, d = 0) => v.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: d, maximumFractionDigits: d });

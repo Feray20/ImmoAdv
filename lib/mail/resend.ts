@@ -10,7 +10,7 @@ export const BRAND_IMAGES = [
 ];
 
 export const mailboxAddress = () => (process.env.MAILBOX_FROM_EMAIL || 'support@immoadv.de').replace(/^.*<([^>]+)>.*$/, '$1').trim().toLowerCase();
-export const mailboxFrom = () => `${process.env.MAILBOX_FROM_NAME || 'Feray Korkmaz · ImmoAdv'} <${mailboxAddress()}>`;
+export const mailboxFrom = () => `${process.env.MAILBOX_FROM_NAME || 'Support | ImmoAdv'} <${mailboxAddress()}>`;
 
 export type OutAttachment = { filename: string; content: string /* base64 */; content_type?: string };
 

@@ -1,5 +1,5 @@
 // Web-Admin → Postfach: E-Mails empfangen, lesen, beantworten und im ImmoAdv-Design senden (support@immoadv.de).
-import { api, dtt, esc } from './sess.mjs?v=daee1d1e';
+import { api, dtt, esc } from './sess.mjs?v=395be540';
 
 const $ = (s, r = document) => r.querySelector(s);
 const FOLDERS = [
@@ -139,7 +139,7 @@ async function compose(o) {
   let d = document.getElementById('pfCompose');
   if (!d) { d = document.createElement('dialog'); d.id = 'pfCompose'; d.className = 'ad-dlg pf-dlg'; document.body.append(d); }
   d.innerHTML = `<form class="ad-dlg-in pf-c" id="pfC"><div class="ad-dlg-h"><h2>${o.replyTo ? 'Antworten' : o.forward ? 'Weiterleiten' : cur.id ? 'Entwurf' : 'Neue E-Mail'}</h2><button class="stage-x" type="button" data-x aria-label="Schließen">×</button></div>
-    <label class="pf-fld"><span>Von</span><input value="Feray Korkmaz · ImmoAdv <${esc(S.data?.mailbox || 'support@immoadv.de')}>" disabled></label>
+    <label class="pf-fld"><span>Von</span><input value="Support | ImmoAdv <${esc(S.data?.mailbox || 'support@immoadv.de')}>" disabled></label>
     <label class="pf-fld"><span>An</span><input name="to" value="${esc(cur.to.join(', '))}" placeholder="name@firma.de, …" autocomplete="off" required></label>
     <label class="pf-fld"><span>Cc</span><input name="cc" value="${esc(cur.cc.join(', '))}" autocomplete="off"></label>
     <label class="pf-fld"><span>Betreff</span><input name="subject" value="${esc(cur.subject)}" maxlength="300" required></label>
