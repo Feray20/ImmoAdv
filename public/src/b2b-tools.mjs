@@ -2,8 +2,8 @@
 // Eingaben bleiben in diesem Browser (localStorage) und werden nicht an ImmoAdv übertragen. Ausgabe: Druck / PDF, Text kopieren.
 // Basic: Haushaltsrechnung, Unterlagen-Anforderung, Provisionsrechner, Inserats-Pflichtangaben, Ertragswert.
 // Pro/Enterprise: zusätzlich Beratungsprotokoll, Bankangebote vergleichen, Vorfälligkeit & Anschluss.
-import { monthlyRate, balanceAfterMonths } from './calc.mjs?v=b1a55645';
-import { compareOffers, forwardCalc, kuendigungsrecht489 } from './b2c-tools.mjs?v=b1a55645';
+import { monthlyRate, balanceAfterMonths } from './calc.mjs?v=8d06c1ac';
+import { compareOffers, forwardCalc, kuendigungsrecht489 } from './b2c-tools.mjs?v=8d06c1ac';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const E = (v) => (Number.isFinite(v) ? v : 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });

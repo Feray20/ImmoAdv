@@ -60,3 +60,62 @@
   .api-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .api-flow span{display:none}
 }
+/* Vorschau-Dialog (Postfach) */
+.mk-pv{max-width:760px}
+.mk-pv-sw{display:inline-flex;gap:4px;margin:0 0 10px;padding:3px;border:1px solid #E2E8F0;border-radius:999px}.mk-pv-sw button{font:inherit;font-size:13px;border:0;background:none;padding:5px 14px;border-radius:999px;cursor:pointer}.mk-pv-sw button.on{background:#0F2C59;color:#fff}
+.mk-pv-if{display:block;max-width:100%;height:72vh;border:1px solid #E2E8F0;border-radius:12px;background:#eef2f7;margin:0 auto}
+/* Postfach */
+.pf{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;min-height:70vh}
+.pf-side{display:flex;flex-direction:column;gap:12px}
+.pf-new{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;min-height:46px}
+.pf-nav{display:grid;gap:2px}
+.pf-f{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;font:inherit;font-size:14px;color:#334155;padding:9px 12px;border-radius:0 999px 999px 0;cursor:pointer;text-align:left}
+.pf-f span{flex:1}.pf-f b{font-size:12px;color:#0F2C59}
+.pf-f:hover{background:#F1F5F9}.pf-f.on{background:#E0F2FE;color:#0F2C59;font-weight:700}
+.pf-box{font-size:12.5px;color:#64748B;border-top:1px solid #E2E8F0;padding-top:10px;display:grid;gap:6px}.pf-box p{margin:0}
+.pf-ok{color:#15803D!important;font-weight:600}.pf-warn{color:#B45309!important;font-weight:600}
+.pf-box form{display:grid;gap:6px}.pf-box label{display:grid;gap:3px;font-weight:600;color:#334155}.pf-box input{font:inherit;font-size:13px;padding:7px 9px;border:1px solid #CBD5E1;border-radius:8px;min-width:0}
+.pf-main{min-width:0;display:flex;flex-direction:column;gap:10px}
+.pf-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.pf-bar input{flex:1 1 260px;font:inherit;padding:10px 14px;border:1px solid #CBD5E1;border-radius:999px;background:#F8FAFC}
+.pf-acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pf-cols{display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:12px;min-height:60vh}
+.pf-list{border:1px solid #E2E8F0;border-radius:14px;background:#fff;overflow:auto;max-height:78vh}
+.pf-row{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:8px;align-items:start;padding:11px 12px;border-bottom:1px solid #F1F5F9;cursor:pointer}
+.pf-row:hover{background:#F8FAFC}.pf-row.on{background:#E0F2FE}
+.pf-row input{margin-top:3px}
+.pf-star{border:0;background:none;padding:2px;color:#CBD5E1;cursor:pointer}.pf-star.on{color:#F59E0B}.pf-star.on svg{fill:#F59E0B}
+.pf-row-t{min-width:0}.pf-row-h{display:flex;gap:8px;justify-content:space-between;font-size:14px}.pf-row-h strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:#334155}
+.pf-row-h time{flex:none;font-size:12px;color:#64748B}
+.pf-row-s{font-size:13.5px;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;gap:4px;align-items:center}
+.pf-row-p{font-size:12.5px;color:#94A3B8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-row.unread .pf-row-h strong,.pf-row.unread .pf-row-s{font-weight:800;color:#0F172A}
+.pf-row.unread{box-shadow:inset 3px 0 0 #0284C7}
+.pf-empty{padding:28px 16px;text-align:center}
+.pf-read{border:1px solid #E2E8F0;border-radius:14px;background:#fff;padding:16px;min-width:0;overflow:auto;max-height:78vh}
+.pf-read:empty::before{content:"Wähle links eine E-Mail aus.";display:block;padding:40px 10px;text-align:center;color:#94A3B8;font-size:14px}
+.pf-rh h2{margin:4px 0 8px;font-size:20px;line-height:1.3;color:#0F172A}
+.pf-ra{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.pf-back{display:none}
+.pf-msg{border:1px solid #E2E8F0;border-radius:12px;margin:0 0 12px;overflow:hidden}
+.pf-msg header{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;padding:10px 12px;background:#F8FAFC;font-size:13px;color:#475569}
+.pf-msg header strong{color:#0F172A}.pf-msg header time{margin-left:auto;font-size:12px}
+.pf-err{flex-basis:100%;color:#B91C1C}
+.pf-frame{display:block;width:100%;min-height:200px;height:640px;border:0;background:#fff}
+.pf-att{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px}
+.pf-chip{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12.5px;border:1px solid #CBD5E1;border-radius:999px;background:#fff;padding:5px 10px;cursor:pointer;color:#0F2C59}
+.pf-chip small{color:#64748B}.pf-chip button{border:0;background:none;cursor:pointer;font-size:15px;line-height:1;color:#64748B}
+.pf-note{font-size:12px}
+.pf-dlg .ad-dlg-in{max-width:860px}
+.pf-c{display:grid;gap:8px}
+.pf-fld{display:grid;grid-template-columns:70px minmax(0,1fr);align-items:center;gap:8px;font-size:13px;color:#64748B;border-bottom:1px solid #E2E8F0;padding:2px 0}
+.pf-fld input{font:inherit;font-size:15px;border:0;padding:8px 2px;background:transparent;color:#0F172A;min-width:0}.pf-fld input:focus{outline:none}
+.pf-tb{display:flex;flex-wrap:wrap;gap:4px;padding:6px 0}
+.pf-tb button{min-width:34px;height:32px;font:inherit;font-weight:700;border:1px solid #E2E8F0;background:#fff;border-radius:8px;cursor:pointer;color:#0F2C59}.pf-tb button:hover{background:#F1F5F9}
+.pf-ed{min-height:260px;max-height:50vh;overflow:auto;border:1px solid #CBD5E1;border-radius:12px;padding:14px 16px;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:#1E293B;background:#fff}
+.pf-ed:focus{outline:2px solid #7DD3FC;outline-offset:1px}.pf-ed p{margin:0 0 12px}.pf-ed h2{font-size:20px;color:#0F2C59;margin:6px 0 10px}.pf-ed blockquote{margin:0 0 12px;padding:10px 14px;border-left:3px solid #38BDF8;background:#F0F9FF}.pf-ed a{color:#0284C7}
+.pf-sig{margin:0;font-size:12px}
+.pf-cf{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.pf-sp{flex:1}
+.pf-file{display:inline-flex;align-items:center;gap:6px;cursor:pointer}.pf-un{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#475569}
+@media (max-width:980px){.pf{grid-template-columns:1fr}.pf-side{flex-direction:row;flex-wrap:wrap;align-items:center}.pf-nav{display:flex;overflow-x:auto;gap:4px;flex:1 1 100%}.pf-f{border-radius:999px;white-space:nowrap;width:auto}.pf-box{flex:1 1 100%}
+  .pf-cols{grid-template-columns:1fr}.pf.reading .pf-list{display:none}.pf:not(.reading) .pf-read{display:none}.pf-back{display:inline-flex}.pf-list,.pf-read{max-height:none}}
+@media (max-width:560px){.pf-fld{grid-template-columns:52px minmax(0,1fr)}.pf-cf .btn-dark{flex:1 1 100%}}
