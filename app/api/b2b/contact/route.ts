@@ -24,7 +24,7 @@ function sniff(b: Buffer): 'application/pdf' | 'image/png' | 'image/jpeg' | null
 
 const Schema = z.object({
   kind: z.enum(['konto', 'demo', 'enterprise', 'kooperation']),
-  institutionType: z.enum(['BANK', 'BROKER', 'REALTOR', 'OTHER']).optional(),
+  institutionType: z.enum(['BANK', 'BROKER', 'REALTOR', 'ADVISOR', 'OTHER']).optional(),
   city: z.string().trim().max(80).optional().default(''),
   legalForm: z.string().trim().max(60).optional().default(''),
   registerNumber: z.string().trim().max(60).optional().default(''),

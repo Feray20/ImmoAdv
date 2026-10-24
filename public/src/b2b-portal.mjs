@@ -1,8 +1,8 @@
 // Unternehmensportal (/b2b-portal): Registrierung mit § 14 BGB und AVV, Anfragen-Pipeline,
 // Widget- und QR-Studio, Team, Profil mit Co-Branding, Tarif und Rechnungen.
-import { logoLoader } from './loader.mjs?v=8d06c1ac';
-import { BRANCHEN, BRANCHE_KEYS, brancheFromType } from './b2b-branche.mjs?v=8d06c1ac';
-import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession } from './sess.mjs?v=8d06c1ac';
+import { logoLoader } from './loader.mjs?v=726a0d4e';
+import { BRANCHEN, BRANCHE_KEYS, brancheFromType } from './b2b-branche.mjs?v=726a0d4e';
+import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession } from './sess.mjs?v=726a0d4e';
 
 const root = document.getElementById('portal');
 try { history.scrollRestoration = 'manual'; } catch { /* ältere Browser */ }
@@ -32,8 +32,10 @@ const LAENDER = ['baden-wuerttemberg', 'bayern', 'berlin', 'brandenburg', 'breme
 const landName = (l) => l.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join('-').replace('Wuerttemberg', 'Württemberg').replace('Thueringen', 'Thüringen');
 
 let me = null;
-// Branchen-Ansicht des angemeldeten Beraters (gespeichert in seinen Kontodaten, jederzeit wechselbar).
-const br = () => BRANCHEN[me?.branche] ? me.branche : brancheFromType(me?.account?.institutionType);
+// Branche des Unternehmenskontos (bei der Anfrage festgelegt). Mit Zusatzbranchen kann zwischen den gebuchten
+// Branchen umgeschaltet werden (nur Ansicht, auf diesem Gerät gespeichert).
+const myBranches = () => (Array.isArray(me?.branches) && me.branches.length ? me.branches : [BRANCHEN[me?.branche] ? me.branche : brancheFromType(me?.account?.institutionType)]);
+const br = () => { const l = myBranches(); let v = null; try { v = localStorage.getItem('ia-b2b-view'); } catch { /* ohne Speicher */ } return l.includes(v) ? v : l[0]; };
 const B = () => BRANCHEN[br()];
 const vLabel = (v, l) => (v === 'kunden' ? B().kunden : l);
 let prices = null;
@@ -69,7 +71,7 @@ function shell() {
   </div>`;
   // Fußzeile wie im Privatbereich: in der Inhaltsspalte neben der Seitenleiste (Original unter der Seite wird per CSS ausgeblendet).
   { const lf = document.querySelector('body > footer.ia-legal-b2b'), pm = root.querySelector('.pt-main'); if (lf && pm && !pm.querySelector('.ia-legal')) { const c = lf.cloneNode(true); c.classList.add('ia-legal-in-main'); pm.appendChild(c); } }
-  root.querySelectorAll('#ptLogout,#ptLogoutM,#ptLogoutS').forEach((b) => { b.onclick = async () => { try { (await import('./b2b-tools.mjs?v=8d06c1ac')).clearAll(); } catch { /* weiter */ } logout(); }; });
+  root.querySelectorAll('#ptLogout,#ptLogoutM,#ptLogoutS').forEach((b) => { b.onclick = async () => { try { (await import('./b2b-tools.mjs?v=726a0d4e')).clearAll(); } catch { /* weiter */ } logout(); }; });
   const brb = $('#ptBr'); if (brb) brb.onclick = () => chooseBranche();
   const sheet = $('#ptSheet'), more = $('#ptMore');
   const openSheet = (on) => { sheet.hidden = !on; more.setAttribute('aria-expanded', String(on)); document.body.classList.toggle('pt-sheet-open', on); };
@@ -106,7 +108,7 @@ function route() {
   if (route.last !== view) { const ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) ae.blur(); window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })); route.last = view; }
   box.innerHTML = logoLoader();
   { const pb = $('#ptPres'); if (pb) pb.hidden = !['wissen', 'tools'].includes(view); if (!['wissen', 'tools'].includes(view)) presentation(false); }
-  ({ start: vStart, faelle: vFaelle, tools: (b) => import('./b2b-tools.mjs?v=8d06c1ac').then((m) => m.renderPrograms(b, { tier: me.tier, branche: br(), toast, brand: { color: me.limits?.cobranding && me.account.brandColor ? me.account.brandColor : '#0F2C59', logo: me.limits?.cobranding && me.account.hasLogo && me.account.slug ? `/api/b2b/logo?slug=${encodeURIComponent(me.account.slug)}` : '', sender: [me.account.companyName, me.account.advisorName].filter(Boolean).join(' · ') } })).catch(() => { b.innerHTML = '<p class="form-note">Programme konnten nicht geladen werden.</p>'; }), fall: (b) => import('./b2b-fall.mjs?v=8d06c1ac').then((m) => m.renderFall(b, { api, toast, me })).catch(() => { b.innerHTML = '<div class="pt-alert warn">Fall-Analyse konnte nicht geladen werden. <button type="button" class="btn btn-outline btn-sm" data-reload>Erneut versuchen</button></div>'; }), kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs?v=8d06c1ac').then((m) => { b.innerHTML = kompassHead(); m.renderWissen(b.querySelector('#bwBody'), br()); }).catch(() => { b.innerHTML = '<div class="pt-alert warn">Beratungskompass konnte nicht geladen werden. <button type="button" class="btn btn-outline btn-sm" data-reload>Erneut versuchen</button></div>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: (b) => vTeam(b).then(() => addPw(b)), profil: (b) => { vProfil(b); addPw(b); }, tarif: vTarif, vorschlaege: (b) => { b.innerHTML = '<section class="pt-card" id="rvBox" hidden></section><section class="pt-card" id="fbBox"></section>'; import('./reviews.mjs?v=8d06c1ac').then(async (m) => { const h = await m.askHtml('b2b'); const x = b.querySelector('#rvBox'); if (h && x) { x.innerHTML = h; x.hidden = false; } }).catch(() => {}); import('./feedback-ui.mjs?v=8d06c1ac').then((m) => m.mountFeedback(b.querySelector('#fbBox'), { area: 'b2b' })).catch(() => { b.innerHTML = '<p class="form-note">Konnte nicht geladen werden.</p>'; }); } })[view](box);
+  ({ start: vStart, faelle: vFaelle, tools: (b) => import('./b2b-tools.mjs?v=726a0d4e').then((m) => m.renderPrograms(b, { tier: me.tier, branche: br(), tools: me.tools, toast, brand: { color: me.limits?.cobranding && me.account.brandColor ? me.account.brandColor : '#0F2C59', logo: me.limits?.cobranding && me.account.hasLogo && me.account.slug ? `/api/b2b/logo?slug=${encodeURIComponent(me.account.slug)}` : '', sender: [me.account.companyName, me.account.advisorName].filter(Boolean).join(' · ') } })).catch(() => { b.innerHTML = '<p class="form-note">Programme konnten nicht geladen werden.</p>'; }), fall: (b) => import('./b2b-fall.mjs?v=726a0d4e').then((m) => m.renderFall(b, { api, toast, me })).catch(() => { b.innerHTML = '<div class="pt-alert warn">Fall-Analyse konnte nicht geladen werden. <button type="button" class="btn btn-outline btn-sm" data-reload>Erneut versuchen</button></div>'; }), kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs?v=726a0d4e').then((m) => { b.innerHTML = kompassHead(); m.renderWissen(b.querySelector('#bwBody'), br()); }).catch(() => { b.innerHTML = '<div class="pt-alert warn">Beratungskompass konnte nicht geladen werden. <button type="button" class="btn btn-outline btn-sm" data-reload>Erneut versuchen</button></div>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: (b) => vTeam(b).then(() => addPw(b)), profil: (b) => { vProfil(b); addPw(b); }, tarif: vTarif, vorschlaege: (b) => { b.innerHTML = '<section class="pt-card" id="rvBox" hidden></section><section class="pt-card" id="fbBox"></section>'; import('./reviews.mjs?v=726a0d4e').then(async (m) => { const h = await m.askHtml('b2b'); const x = b.querySelector('#rvBox'); if (h && x) { x.innerHTML = h; x.hidden = false; } }).catch(() => {}); import('./feedback-ui.mjs?v=726a0d4e').then((m) => m.mountFeedback(b.querySelector('#fbBox'), { area: 'b2b' })).catch(() => { b.innerHTML = '<p class="form-note">Konnte nicht geladen werden.</p>'; }); } })[view](box);
 }
 
 // ---------- Kachel-Auswahl: Arbeitsbereiche öffnen erst beim Antippen ----------
@@ -673,7 +675,7 @@ function vTools(box) {
   let t; box.querySelectorAll('.obj-grid input, .obj-grid select').forEach((i) => i.addEventListener('input', () => { clearTimeout(t); t = setTimeout(preview, 400); }));
   preview();
   box.querySelectorAll('[data-q]').forEach((b) => b.onclick = () => busy(b, () => download(`/api/b2b/qr?format=${b.dataset.q}&` + qs(), {}, 'QR')));
-  import('./expose-check.mjs?v=8d06c1ac').then((m) => m.mountExposeCheck($('#ecBox'), { account: { ...a, brandColor: me.limits?.cobranding ? a.brandColor : '' }, logoUrl: me.limits?.cobranding && a.hasLogo && a.slug ? `/api/b2b/logo?slug=${encodeURIComponent(a.slug)}` : '' })).catch(() => { $('#ecBox').innerHTML = '<p class="form-note">Exposé-AutoPilot konnte nicht geladen werden.</p>'; });
+  import('./expose-check.mjs?v=726a0d4e').then((m) => m.mountExposeCheck($('#ecBox'), { account: { ...a, brandColor: me.limits?.cobranding ? a.brandColor : '' }, logoUrl: me.limits?.cobranding && a.hasLogo && a.slug ? `/api/b2b/logo?slug=${encodeURIComponent(a.slug)}` : '' })).catch(() => { $('#ecBox').innerHTML = '<p class="form-note">Exposé-AutoPilot konnte nicht geladen werden.</p>'; });
 }
 
 // Zugangsdaten einmalig anzeigen (Startpasswort muss bei der ersten Anmeldung geändert werden).
@@ -772,7 +774,7 @@ function vProfil(box) {
     <section class="pt-card"><h2>Support-Zugriff</h2>
       <p class="form-note">Für Rückfragen kann der ImmoAdv-Support Ihr Portal 7 Tage lang <strong>nur lesend</strong> einsehen, einschließlich der Anfragen. Ohne Ihre Freigabe ist das nicht möglich; jeder Zugriff wird protokolliert (Weisung nach Art. 28 DSGVO).</p>
       <p>${a.supportAccessUntil && new Date(a.supportAccessUntil) > new Date() ? `Freigegeben bis ${dtt(a.supportAccessUntil)}. <button class="text-btn del" id="supOff" type="button">Jetzt beenden</button>` : '<button class="btn btn-ghost" id="supOn" type="button">Support-Zugriff für 7 Tage freigeben</button>'}</p></section>`;
-  import('./address-check.mjs?v=8d06c1ac').then((m) => m.attachAddress($('#prof'))).catch(() => {});
+  import('./address-check.mjs?v=726a0d4e').then((m) => m.attachAddress($('#prof'))).catch(() => {});
   $('#prof').onsubmit = (e) => { e.preventDefault(); busy(e.submitter || $('#prof button'), async () => {
     const f = Object.fromEntries(new FormData(e.target));
     const body = { advisorName: f.advisorName, phone: f.phone, street: f.street, postalCode: f.postalCode, city: f.city, addressConfirmed: f.addressConfirmed === 'on', bookingUrl: f.bookingUrl, slug: f.slug };
@@ -828,9 +830,10 @@ function vProfil(box) {
 const cmpTable = (v, hl = -1) => (v?.zeilen?.length ? `<details class="cmp" open><summary>Tarife im Vergleich</summary><div class="cmp-wrap"><table class="cmp-table"><thead><tr><th></th>${v.spalten.map((s, i) => `<th${i === hl ? ' class="hl"' : ''}>${esc(s)}</th>`).join('')}</tr></thead><tbody>${v.zeilen.map(([l, ...c]) => `<tr><th scope="row">${esc(l)}</th>${c.map((x, i) => `<td class="${x === '✓' ? 'y' : x === '–' ? 'n' : ''}${i === hl ? ' hl' : ''}">${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>` : '');
 // ---------- Tarif & Rechnungen ----------
 async function vTarif(box) {
-  if (!prices) prices = await fetch('/data/preise.json').then((r) => r.json());
-  const b2b = prices.b2b;
+  const o = me.offer || { branche: br(), label: B().label, selfService: true, plans: [], enterprise: null, addon: null, others: [] };
   const a = me.account;
+  const extras = (me.branches || []).slice(1);
+  const pid = (p, i) => `b2b-${o.branche}-${p.key}-${i === 'year' ? 'yearly' : 'monthly'}`;
   const [cfg, inv] = await Promise.all([fetch('/api/billing/config').then((r) => r.json()).catch(() => ({})), api('/api/b2b/invoices')]);
   const billingOn = Boolean(cfg.enabled ?? cfg.billingEnabled);
   const net = (c) => (c / 100).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' €';
@@ -839,6 +842,13 @@ async function vTarif(box) {
     <section class="pt-card"><h2>Aktueller Tarif</h2>
       ${me.tier ? `<p class="tf-act"><span class="st ok">Aktiv</span></p>` : '<p class="tf-none"><strong>Noch kein Tarif aktiv</strong><br><span class="form-note">Wählen Sie einen Tarif, um das Unternehmensportal vollständig zu nutzen.</span></p>'}<p><strong>${me.tier ? TIER[me.tier] : ''}</strong>${a.planSource === 'manual' ? ' (vom Betreiber freigeschaltet)' : ''}${a.planUntil ? ` · läuft bis ${dt(a.planUntil)}` : ''}</p>
       ${a.planSource === 'stripe' ? '<button class="btn btn-ghost" id="aboPortal" type="button">Abo verwalten (Zahlungsmittel, Wechsel, Kündigung)</button>' : ''}</section>
+    <section class="pt-card"><h2>Ihre Branche</h2>
+      <div class="br-lock"><span>Freigeschaltet: <strong>${esc(o.label)}</strong>${extras.length ? ` + ${extras.map((k) => esc(BRANCHEN[k]?.label || k)).join(', ')}` : ''}</span></div>
+      <p class="form-note">Ihre Branche bestimmt Pakete und Software-Tools. Sie wurde bei der Kontoanfrage festgelegt; einen Wechsel nimmt der Support vor: <a href="mailto:support@immoadv.de?subject=Branchenwechsel%20Unternehmenskonto">support@immoadv.de</a>.</p>
+      ${o.addon && o.others.length && me.tier && a.planSource === 'stripe' ? `<div class="br-add"><strong>Weitere Branche dazubuchen</strong><span class="form-note">${esc(o.addon.text)} – ${net(o.addon.monthCents)} netto pro Monat je Branche (bei Jahresabo ${net(o.addon.yearCents)} pro Jahr), anteilig ab heute.</span>
+        <div>${o.others.map((x) => `<label><input type="radio" name="addBr" value="${x.key}"> ${esc(x.label)}</label>`).join('')}</div>
+        <button class="btn btn-dark" type="button" id="addBrGo">Zahlungspflichtig dazubuchen</button></div>` : o.addon && o.others.length && me.tier ? '<p class="form-note">Weitere Branchen bucht der Support für Sie dazu (Kauf auf Rechnung).</p>' : ''}
+    </section>
     <section class="pt-card roi-card"><h2>Lohnt sich das für Sie? <span class="st">Schätzung</span></h2>
       <p class="form-note">Ihre eigene Rechnung – tragen Sie Ihre Werte ein. ImmoAdv nennt bewusst keine pauschale Zeitersparnis.</p>
       <div class="roi-in"><label>Fälle pro Monat<input id="roiN" type="number" min="0" step="1" inputmode="numeric" placeholder="z. B. 4"></label>
@@ -852,13 +862,13 @@ async function vTarif(box) {
       <li><b>USt-IdNr. ${esc(a.taxId || '–')}</b><span id="vatSt">${/^[A-Z]{2}[0-9A-Z]{2,12}$/.test(String(a.taxId || '').replace(/\s+/g, '')) ? '<button type="button" class="text-btn" id="vatChk">Beim EU-System VIES prüfen</button>' : 'im Profil hinterlegen, um sie per VIES prüfen zu lassen'}</span></li></ul></section>
     <label class="consent b2b-terms" id="termsL"><input type="checkbox" id="terms"> <span>Ich buche als <strong>Unternehmer (§ 14 BGB)</strong> zu den <a href="/nutzungsbedingungen#b2b" target="_blank">AGB für Unternehmen</a>. Preise netto zzgl. 19 % USt. – auf der Bezahlseite sehen Sie Netto, USt. und Brutto. Ein Widerrufsrecht besteht nicht.</span></label>
     <div class="seg" role="tablist" id="ivl"><button type="button" data-i="month" aria-selected="true">Monatlich</button><button type="button" data-i="year" aria-selected="false">Jährlich (2 Monate gespart)</button></div>
-    <div class="offers">${tiers.map((t) => b2b.plans.filter((p) => p.tier === t).map((p) => `<div class="offer${t === 'PRO' ? ' rec' : ''}" data-ivl="${p.interval}"${p.interval === 'year' ? ' hidden' : ''}>${t === 'PRO' ? '<span class="offer-rec">Empfohlen für Kanzleien &amp; Baufi-Teams</span>' : ''}
-        <h4>${esc(p.name.replace(' (Jahr)', ''))}</h4><div class="offer-price">${net(p.netto_cents)} <small>netto ${esc(p.intervall)}</small></div>
-        <ul>${p.basis ? `<li class="offer-basis">${esc(p.basis)}</li>` : ''}${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
-        ${me.tier === t ? '<span class="st ok">Gebucht</span>' : `<button class="btn btn-pay" data-plan="${p.id}" type="button"${billingOn ? '' : ' disabled'}>${billingOn ? 'Zahlungspflichtig als Unternehmer buchen' : 'Buchung startet in Kürze'}</button>`}</div>`).join('')).join('')}
-      <div class="offer"><h4>${esc(b2b.enterprise.name)}</h4><div class="offer-price">${esc(b2b.enterprise.preis)}</div><ul>${b2b.enterprise.basis ? `<li class="offer-basis">${esc(b2b.enterprise.basis)}</li>` : ''}${b2b.enterprise.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-ghost" href="/b2b#kontakt">Angebot anfragen</a></div>
+    ${o.selfService && o.plans.length && !me.tier && o.addon && o.others.length ? `<div class="br-add"><strong>Weitere Branchen direkt mitbuchen (optional)</strong><span class="form-note">${esc(o.addon.text)} – ${net(o.addon.monthCents)} netto pro Monat je Branche.</span><div>${o.others.map((x) => `<label><input type="checkbox" name="extraBr" value="${x.key}"> ${esc(x.label)}</label>`).join('')}</div></div>` : ''}
+    <div class="offers">${o.selfService ? ['month', 'year'].map((i) => o.plans.map((p) => `<div class="offer${p.tier === 'PRO' ? ' rec' : ''}" data-ivl="${i}"${i === 'year' ? ' hidden' : ''}>${p.tier === 'PRO' ? '<span class="offer-rec">Empfohlen</span>' : ''}
+        <h4>${esc(p.name)}</h4><div class="offer-price">${net(i === 'year' ? p.yearCents : p.monthCents)} <small>netto ${i === 'year' ? 'pro Jahr' : 'pro Monat'}</small></div>
+        <ul>${p.features.map((f) => `<li${/^Alles aus/.test(f) ? ' class="offer-basis"' : ''}>${esc(f)}</li>`).join('')}</ul>
+        ${me.tier === p.tier ? '<span class="st ok">Gebucht</span>' : `<button class="btn btn-pay" data-plan="${pid(p, i)}" type="button"${billingOn ? '' : ' disabled'}>${billingOn ? 'Zahlungspflichtig als Unternehmer buchen' : 'Buchung startet in Kürze'}</button>`}</div>`).join('')).join('') : ''}
+      ${o.enterprise ? `<div class="offer"><h4>${esc(o.enterprise.name)}</h4><div class="offer-price">${esc(o.enterprise.price)}</div><ul>${o.enterprise.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn ${o.selfService ? 'btn-ghost' : 'btn-dark'}" href="mailto:support@immoadv.de?subject=Angebot%20${encodeURIComponent(o.enterprise.name)}">Angebot anfragen</a></div>` : ''}
     </div>
-    ${cmpTable(b2b.vergleich, { BASIC: 0, PRO: 1, ENTERPRISE: 2 }[me.tier] ?? -1)}
     ${billingOn ? '' : '<p class="form-note">Online-Buchung ist noch nicht freigeschaltet. Für einen Testzugang oder Kauf auf Rechnung: support@immoadv.de.</p>'}
     <section class="pt-card"><h2>Rechnungen</h2>${inv.ok && inv.data?.invoices?.length ? `<table class="bill-table"><thead><tr><th>Nummer</th><th>Datum</th><th>Brutto</th><th>Status</th><th></th></tr></thead><tbody>
       ${inv.data.invoices.map((i) => `<tr><td>${esc(i.invoice_number)}${i.kind !== 'invoice' ? ' (Storno)' : ''}</td><td>${dt(i.issue_date)}</td><td>${eur(i.gross_cents)}</td><td>${{ PAID: 'bezahlt', PENDING: 'offen', OVERDUE: 'überfällig', CANCELLED: 'storniert' }[i.payment_status]}</td><td><button class="text-btn" data-inv="${i.id}" type="button">PDF</button></td></tr>`).join('')}</tbody></table>` : '<p class="form-note">Noch keine Rechnungen.</p>'}</section>`;
@@ -872,7 +882,7 @@ async function vTarif(box) {
     const n = Number($('#roiN').value) || 0, mi = Number($('#roiM').value) || 0, h = Number($('#roiH').value) || 0, o = $('#roiOut');
     if (!n || !mi || !h) { o.innerHTML = '<p class="form-note">Alle drei Werte eintragen – dann sehen Sie Ihren Gegenwert pro Monat.</p>'; return; }
     const val = (n * mi / 60) * h;
-    const pl = b2b.plans.filter((p) => p.interval === 'month');
+    const pl = (me.offer?.plans || []).map((p) => ({ name: p.name, netto_cents: p.monthCents }));
     o.innerHTML = `<p class="roi-big">Geschätzt eingesparte Arbeitszeit: <b>${(n * mi / 60).toLocaleString('de-DE', { maximumFractionDigits: 1 })} Stunden</b> pro Monat · monatlicher Gegenwert <b>${eur(Math.round(val * 100))}</b></p><p class="form-note">Schätzung mit Ihren Annahmen – keine garantierte Einsparung.</p>
       <ul class="roi-l">${pl.map((p) => `<li><span>${esc(p.name)}</span><b class="${val * 100 >= p.netto_cents ? 'ok' : 'warn'}">${val * 100 >= p.netto_cents ? 'rechnet sich' : 'rechnet sich noch nicht'}</b><small>${net(p.netto_cents)} netto / Monat</small></li>`).join('')}</ul>`;
   };
@@ -886,9 +896,18 @@ async function vTarif(box) {
   box.querySelectorAll('[data-plan]').forEach((b) => b.onclick = () => busy(b, async () => {
     if (!$('#terms').checked) { const l = $('#termsL'); l.classList.add('consent-missing'); l.scrollIntoView({ behavior: 'smooth', block: 'center' }); $('#terms').focus({ preventScroll: true }); throw Error('Bitte zuerst bestätigen, dass Sie als Unternehmer buchen.'); }
     try { window.iaTrack?.('checkout_start', { seg: 'b2b', plan: b.dataset.plan }); } catch { /* ignore */ }
-    const r = await api('/api/b2b/checkout', { method: 'POST', body: JSON.stringify({ plan: b.dataset.plan, terms: true }) });
+    const extras = [...box.querySelectorAll('[name=extraBr]:checked')].map((x) => x.value);
+    const r = await api('/api/b2b/checkout', { method: 'POST', body: JSON.stringify({ plan: b.dataset.plan, terms: true, ...(extras.length ? { extras } : {}) }) });
     if (!r.ok) throw Error(r.data?.error);
     location.href = r.data.url;
+  }));
+  $('#addBrGo')?.addEventListener('click', (e) => busy(e.target, async () => {
+    const k = box.querySelector('[name=addBr]:checked')?.value;
+    if (!k) throw Error('Bitte eine Branche wählen.');
+    if (!$('#terms').checked) { const l = $('#termsL'); l.classList.add('consent-missing'); l.scrollIntoView({ behavior: 'smooth', block: 'center' }); throw Error('Bitte zuerst bestätigen, dass Sie als Unternehmer buchen.'); }
+    const r = await api('/api/b2b/checkout', { method: 'PATCH', body: JSON.stringify({ branche: k, terms: true }) });
+    if (!r.ok) throw Error(r.data?.error);
+    toast('Branche dazugebucht – die Tools sind freigeschaltet.'); setTimeout(() => location.reload(), 900);
   }));
   if ($('#aboPortal')) $('#aboPortal').onclick = (e) => busy(e.target, async () => {
     const r = await api('/api/b2b/checkout', { method: 'PUT' });
@@ -936,13 +955,13 @@ async function onboarding(avvVersion) {
       <button class="btn btn-dark" type="submit">Unternehmenskonto anlegen</button>
       <p class="form-note">ImmoAdv ist ein technisches Analyse- und Vorbereitungsinstrument. Keine Kreditvermittlung, keine Kreditzusage, keine Steuer- oder Rechtsberatung.</p>
     </form></div>`;
-  import('./address-check.mjs?v=8d06c1ac').then((m) => m.attachAddress($('#reg'))).catch(() => {});
+  import('./address-check.mjs?v=726a0d4e').then((m) => m.attachAddress($('#reg'))).catch(() => {});
   $('#reg').onsubmit = (e) => {
     e.preventDefault();
     busy(e.target.querySelector('button[type=submit]'), async () => {
       const f = Object.fromEntries(new FormData(e.target));
       const body = { ...f, unternehmer: f.unternehmer === 'on', avv: f.avv === 'on', richtig: f.richtig === 'on', agb: f.agb === 'on', referral: ref };
-      const { work } = await import('./loader.mjs?v=8d06c1ac');
+      const { work } = await import('./loader.mjs?v=726a0d4e');
       const w = work('Unternehmenskonto wird angelegt', ['Angaben prüfen', 'Konto anlegen', 'Nachweis erstellen und senden']);
       await w.step(0);
       const pr = api('/api/b2b/account', { method: 'POST', body: JSON.stringify(body) });
@@ -1050,7 +1069,7 @@ function firstLogin(d) {
 
 // Passwort über Supabase ändern (angemeldete Sitzung). Liefert eine Fehlermeldung oder null.
 async function changePassword(pw) {
-  const { supa, token } = await import('./sess.mjs?v=8d06c1ac');
+  const { supa, token } = await import('./sess.mjs?v=726a0d4e');
   const r = await supa('/auth/v1/user', { method: 'PUT', headers: { Authorization: 'Bearer ' + token() }, body: JSON.stringify({ password: pw }) }).catch(() => null);
   if (!r) return 'Keine Verbindung. Bitte erneut versuchen.';
   if (r.ok) return null;
@@ -1086,7 +1105,7 @@ async function start() {
   if (!r.data.account) { noAccount(); return; }
   if (r.data.onboarding?.mustChange || r.data.onboarding?.consentsMissing) { firstLogin(r.data); return; }
   me = r.data;
-  const askBranche = !BRANCHEN[me.branche];
+  const askBranche = false;
   if (new URLSearchParams(location.search).get('checkout') === 'success') toast('Danke! Der Tarif wird aktiviert, sobald die Zahlung bestätigt ist.');
   shell();
   tileWatch();
@@ -1107,37 +1126,24 @@ root.addEventListener('submit', async (e) => {
   if (r.ok) { Object.assign(me.account, d); toast('Erscheinungsbild gespeichert.'); } else toast(r.data?.error || 'Speichern fehlgeschlagen.', true);
 });
 
-// Branche wählen: Kacheln; die Wahl wird in den eigenen Kontodaten gespeichert und gilt auf allen Geräten.
-function chooseBranche(first = false) {
+// Branche: festgelegt am Konto. Ansicht nur zwischen gebuchten Branchen umschalten; weitere Branchen über „Tarif“.
+function chooseBranche() {
   let d = document.getElementById('brDlg');
   if (!d) { d = document.createElement('dialog'); d.id = 'brDlg'; d.className = 'ad-dlg br-dlg'; document.body.append(d); }
-  let pre = null; if (first) { try { pre = localStorage.getItem('ia-b2b-branche'); } catch { /* ohne Speicher */ } }
-  const cur = BRANCHEN[pre] ? pre : br();
+  const own = myBranches(), cur = br();
+  const tile = (k) => { const x = BRANCHEN[k]; return `<button type="button" class="br-opt${k === cur ? ' on' : ''}" data-pick="${k}" role="radio" aria-checked="${k === cur}">
+      <span class="br-opt-h"><span class="br-opt-i" aria-hidden="true">${x.icon}</span><span><strong>${esc(x.label)}</strong><small>${esc(x.desc)}</small></span>${k === cur ? '<em>Aktiv</em>' : ''}</span></button>`; };
+  d.innerHTML = `<div class="ad-dlg-in"><div class="ad-dlg-h"><h2>Ihre Branche</h2><button type="button" class="stage-x" data-x aria-label="Schließen">×</button></div>
+    <p class="form-note">Ihr Unternehmenskonto ist für ${own.map((k) => `<strong>${esc(BRANCHEN[k].label)}</strong>`).join(' und ')} freigeschaltet. Pakete und Software-Tools richten sich danach. Einen Branchenwechsel nimmt der Support vor (<a href="mailto:support@immoadv.de?subject=Branchenwechsel">support@immoadv.de</a>).</p>
+    ${own.length > 1 ? `<div class="br-opts" role="radiogroup" aria-label="Ansicht">${own.map(tile).join('')}</div>` : ''}
+    <div class="br-foot"><a class="btn btn-outline" href="#tarif" data-x>Weitere Branche dazubuchen</a>${own.length > 1 ? '<button type="button" class="btn btn-dark" id="brOk">Ansicht übernehmen</button>' : ''}</div></div>`;
   let pick = cur;
-  const tile = (k) => { const x = BRANCHEN[k]; return `<button type="button" class="br-opt${k === pick ? ' on' : ''}" data-pick="${k}" role="radio" aria-checked="${k === pick}">
-      <span class="br-opt-h"><span class="br-opt-i" aria-hidden="true">${x.icon}</span><span><strong>${esc(x.label)}</strong><small>${esc(x.desc)}</small></span>${k === cur && !first ? '<em>Aktiv</em>' : ''}</span>
-      <ul>${x.focus.map(([t, tx]) => `<li><b>${esc(t)}</b> – ${esc(tx)}</li>`).join('')}</ul>
-      ${x.recht ? `<span class="br-opt-r">${x.recht.map((r) => `<i>${esc(r)}</i>`).join('')}</span>` : ''}</button>`; };
-  d.innerHTML = `<div class="ad-dlg-in"><div class="ad-dlg-h"><h2>${first ? 'In welcher Branche arbeiten Sie?' : 'Ihre Ansicht'}</h2>${first ? '' : '<button type="button" class="stage-x" data-x aria-label="Schließen">×</button>'}</div>
-    <p class="form-note">Startseite, Bezeichnungen und der Beratungskompass passen sich an Ihre Branche an. Wählen Sie eine Ansicht und bestätigen Sie unten.</p>
-    <div class="br-opts" role="radiogroup" aria-label="Branche">${[cur, ...BRANCHE_KEYS.filter((k) => k !== cur)].map(tile).join('')}</div>
-    <div class="br-foot"><p class="form-note" id="brMsg" role="status"></p><button type="button" class="btn btn-dark" id="brOk"${pick === cur && !first ? ' disabled' : ''}>${first ? 'Ansicht übernehmen' : 'Ansicht wechseln'}</button></div></div>`;
-  d.querySelector('[data-x]')?.addEventListener('click', () => d.close());
-  if (first) d.addEventListener('cancel', (e) => e.preventDefault(), { once: true });
-  d.querySelectorAll('[data-pick]').forEach((b) => b.onclick = () => {
-    pick = b.dataset.pick;
-    d.querySelectorAll('[data-pick]').forEach((x) => { const on = x.dataset.pick === pick; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); });
-    d.querySelector('#brOk').disabled = pick === cur && !first;
+  d.querySelectorAll('[data-x]').forEach((x) => x.addEventListener('click', () => d.close()));
+  d.querySelectorAll('[data-pick]').forEach((b) => b.onclick = () => { pick = b.dataset.pick; d.querySelectorAll('[data-pick]').forEach((x) => { const on = x.dataset.pick === pick; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); }); });
+  d.querySelector('#brOk')?.addEventListener('click', () => {
+    try { localStorage.setItem('ia-b2b-view', pick); } catch { /* ohne Speicher */ }
+    d.close(); shell(); tileWatch(); route(); toast(`Ansicht: ${BRANCHEN[pick].label}`);
   });
-  d.querySelector('#brOk').onclick = async (e) => {
-    const k = pick, ok = e.currentTarget; ok.disabled = true;
-    const { supa, token } = await import('./sess.mjs?v=8d06c1ac');
-    const r = await supa('/auth/v1/user', { method: 'PUT', headers: { Authorization: 'Bearer ' + token() }, body: JSON.stringify({ data: { b2b_branche: k } }) }).catch(() => null);
-    if (!r?.ok) { d.querySelector('#brMsg').textContent = 'Speichern fehlgeschlagen – bitte erneut versuchen.'; ok.disabled = false; return; }
-    me.branche = k; d.close();
-    shell(); tileWatch(); route();
-    toast(`Ansicht: ${BRANCHEN[k].label}`);
-  };
   d.showModal ? d.showModal() : d.setAttribute('open', '');
 }
 start();

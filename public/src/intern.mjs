@@ -1,7 +1,7 @@
 // Web-Admin (nur ADMIN_EMAILS, mit zweitem Faktor): Finanz-Cockpit, System, Nutzer, Sicherheit, Partner, Rechnungsarchiv,
 // Steuer-Export, Anfragen und Codes, Protokoll und Betreiber-Kennzahlen.
-import { logoLoader } from './loader.mjs?v=8d06c1ac';
-import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs?v=8d06c1ac';
+import { logoLoader } from './loader.mjs?v=726a0d4e';
+import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs?v=726a0d4e';
 
 // Zwei-Faktor-Code: Autofill aus der Tastatur (iOS/Android), Eingabe säubern und mit 6 Ziffern automatisch absenden.
 if (!window.__iaOtp) {
@@ -52,7 +52,7 @@ async function gate() {
 async function mfa() {
   // Bereits eingerichteter zweiter Faktor (App oder SMS): nur Code abfragen.
   try {
-    const m = await import('./mfa.mjs?v=8d06c1ac');
+    const m = await import('./mfa.mjs?v=726a0d4e');
     const { factors } = await m.factorsOf(token());
     if (factors.length) { root.innerHTML = '<div class="pt-card ad-mfa" id="adMfa"></div>'; await m.challengeUI($('#adMfa'), session(), () => location.reload()); return; }
   } catch { /* weiter mit Einrichtung */ }
@@ -171,7 +171,7 @@ function show() {
   const v = $('#adView');
   v.innerHTML = skel();
   msg('');
-  const view = ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs?v=8d06c1ac')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs?v=8d06c1ac').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs?v=8d06c1ac').then((m) => m.akquise(x)), postfach: (x) => import('./intern-mail.mjs?v=8d06c1ac').then((m) => m.postfach(x)), werbung: (x) => import('./intern-marketing.mjs?v=8d06c1ac').then((m) => m.werbung(x)), creator: (x) => import('./intern-creator.mjs?v=8d06c1ac').then((m) => m.creatorOps(x)), api: (x) => import('./intern-api.mjs?v=8d06c1ac').then((m) => m.apiOps(x)) })[t](v);
+  const view = ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs?v=726a0d4e')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs?v=726a0d4e').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs?v=726a0d4e').then((m) => m.akquise(x)), postfach: (x) => import('./intern-mail.mjs?v=726a0d4e').then((m) => m.postfach(x)), werbung: (x) => import('./intern-marketing.mjs?v=726a0d4e').then((m) => m.werbung(x)), creator: (x) => import('./intern-creator.mjs?v=726a0d4e').then((m) => m.creatorOps(x)), api: (x) => import('./intern-api.mjs?v=726a0d4e').then((m) => m.apiOps(x)) })[t](v);
   Promise.resolve(view).catch((e) => { console.warn('[admin]', e); errState(v, ''); });
 }
 
@@ -222,7 +222,7 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
   v.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => { if (b.dataset.seg !== 'admin') { setSeg(b.dataset.seg); paintSeg(); } nutzer(v, 1, '', b.dataset.seg); });
   $('#usPrev')?.addEventListener('click', () => nutzer(v, page - 1, q, seg));
   $('#usNext')?.addEventListener('click', () => nutzer(v, page + 1, q, seg));
-  v.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => import('./intern-feedback.mjs?v=8d06c1ac').then((m) => m.accessDialog(b.dataset.acc, b.dataset.mail, msg)));
+  v.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => import('./intern-feedback.mjs?v=726a0d4e').then((m) => m.accessDialog(b.dataset.acc, b.dataset.mail, msg)));
   v.querySelectorAll('[data-coapprove]').forEach((b) => b.onclick = async () => {
     if (!confirm(`${b.dataset.name} freischalten? Das Unternehmen erhält eine E-Mail.`)) return;
     b.disabled = true;
@@ -395,7 +395,7 @@ function bindMailSetup(root2) {
 }
 
 // ---------- Unternehmenskonto anlegen (Zugang mit Startpasswort) ----------
-const TYPES = [['BROKER', 'Finanzierungsvermittler (§ 34i GewO)'], ['REALTOR', 'Immobilienmakler (§ 34c GewO)'], ['BANK', 'Kreditinstitut'], ['OTHER', 'Sonstiges Unternehmen']];
+const TYPES = [['BROKER', 'Finanzierungsvermittler (§ 34i GewO)'], ['REALTOR', 'Immobilienmakler (§ 34c GewO)'], ['ADVISOR', 'Finanz- & Vermögensberater (§ 34d/f/h GewO)'], ['BANK', 'Kreditinstitut'], ['OTHER', 'Sonstiges Unternehmen']];
 // Nachweis einer Kontoanfrage öffnen (signierter Link, 5 Minuten gültig).
 async function openProof(id) {
   const w = window.open('', '_blank', 'noopener');
@@ -751,21 +751,41 @@ async function sicherheit(v) {
 }
 
 // ---------- Partner ----------
+const BR_LABEL = { bank: 'Bank & Sparkasse', vermittler: 'Finanzierungsvermittler', makler: 'Immobilienmakler', finanzberater: 'Finanz- & Vermögensberater', allgemein: 'Sonstiges Unternehmen' };
+// Branche des Kontos (bestimmt Pakete und Tools) und dazugebuchte Zusatzbranchen – Wechsel nur hier durch den Support.
+function brancheDialog(id, cur, extras, done) {
+  let d = document.getElementById('brAdm'); if (!d) { d = document.createElement('dialog'); d.id = 'brAdm'; d.className = 'ad-dlg'; document.body.append(d); }
+  d.innerHTML = `<form class="ad-dlg-in" method="dialog" id="brAdmF"><div class="ad-dlg-h"><h2>Branche festlegen</h2><button class="stage-x" type="button" data-x aria-label="Schließen">×</button></div>
+    <label>Hauptbranche<select name="branche">${Object.entries(BR_LABEL).map(([k, l]) => `<option value="${k}"${k === (cur || 'allgemein') ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+    <fieldset><legend>Zusatzbranchen (Abrechnung: Stripe-Abo oder Rechnung)</legend>${Object.entries(BR_LABEL).filter(([k]) => k !== 'bank').map(([k, l]) => `<label class="consent"><input type="checkbox" name="ex" value="${k}"${extras.includes(k) ? ' checked' : ''}> ${l}</label>`).join('')}</fieldset>
+    <p class="form-note">Wirkt sofort auf Pakete und Software-Tools im Portal. Bei Stripe-Abos gleicht der nächste Abo-Abgleich die Zusatzbranchen mit dem Abo ab.</p>
+    <div class="pt-row"><button class="btn btn-dark" type="submit">Speichern</button></div></form>`;
+  d.showModal();
+  d.querySelector('[data-x]').onclick = () => d.close();
+  d.querySelector('#brAdmF').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = e.target, branche = f.branche.value, ex = [...f.querySelectorAll('[name=ex]:checked')].map((x) => x.value).filter((x) => x !== branche);
+    const r = await api('/api/admin/b2b', { method: 'POST', body: JSON.stringify({ action: 'branche', id, branche, extras: ex }) });
+    if (r.ok) { d.close(); msg('Branche gespeichert.'); done?.(); } else msg(r.data?.error || 'Fehler', true);
+  };
+}
+
 async function partner(v) {
   const r = await api('/api/admin/b2b');
   if (!r.ok) { errState(v, r.data?.error); return; }
   const list = r.data.accounts;
   const pend = list.filter((a) => a.verification_status === 'eingereicht').length;
-  v.innerHTML = `<div class="ad-mk-tiles"><button class="ad-mk b2b" type="button" id="mkNew"><b>+ Unternehmen anlegen</b><span>B2B · Firmenzugang zum Unternehmensportal</span></button></div>${pend ? `<p class="auth-message" style="margin-bottom:10px"><strong>${pend} Unternehmen</strong> ${pend === 1 ? 'wartet' : 'warten'} auf Prüfung und Freischaltung. Filter „Zur Prüfung eingereicht“ wählen und „Prüfen“ öffnen.</p>` : ''}<div class="pt-row" style="margin-bottom:10px"><input id="pq" aria-label="Unternehmen suchen" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-ghost" id="pCsv" type="button">CSV</button></div>
+  v.innerHTML = `<div class="ad-mk-tiles"><button class="ad-mk b2b" type="button" id="mkNew"><b>+ Unternehmen anlegen</b><span>B2B · Firmenzugang zum Unternehmensportal</span></button><button class="ad-mk" type="button" id="mkCat"><b>Pakete &amp; Preise</b><span>Branchen, Preise, Leistungen, Tools, Zusatzbranche</span></button></div>${pend ? `<p class="auth-message" style="margin-bottom:10px"><strong>${pend} Unternehmen</strong> ${pend === 1 ? 'wartet' : 'warten'} auf Prüfung und Freischaltung. Filter „Zur Prüfung eingereicht“ wählen und „Prüfen“ öffnen.</p>` : ''}<div class="pt-row" style="margin-bottom:10px"><input id="pq" aria-label="Unternehmen suchen" placeholder="Suchen (Firma, Ort, Kundennummer)" style="flex:1;min-width:220px;border:1px solid #CBD5E1;border-radius:6px;padding:8px 10px"><button class="btn btn-ghost" id="pCsv" type="button">CSV</button></div>
     <div class="pc-bar"><div class="pc-chips" role="group" aria-label="Status">${[['', 'Alle'], ['pruefen', 'Wartet auf Prüfung'], ['active', 'Aktiv'], ['locked', 'Gesperrt']].map(([k, l]) => `<button type="button" data-pf="${k}" aria-pressed="${k === '' ? 'true' : 'false'}">${l} <b>${k === '' ? list.length : list.filter((a) => (a.status + (a.verified_at ? '' : ' unverified') + (a.verification_status === 'eingereicht' ? ' pruefen' : '')).split(' ').includes(k)).length}</b></button>`).join('')}</div>
       <div class="pc-batch" id="pcBatch" hidden><span id="pcN">0 ausgewählt</span><button type="button" class="btn btn-outline btn-sm" id="pcAll">Alle sichtbaren</button><button type="button" class="btn btn-sm pc-del" id="pcDel">Ausgewählte löschen</button></div></div>
     ${list.length ? `<div class="pc-list">${list.map((a) => { const st = a.status === 'locked' ? ['bad', 'Gesperrt'] : a.verification_status === 'eingereicht' ? ['warn', 'Wartet auf Prüfung'] : !a.verified_at ? ['warn', a.verification_status === 'abgelehnt' ? 'Abgelehnt' : 'Ungeprüft'] : ['ok', 'Aktiv']; return `<article class="pc" data-row="${a.id}" data-s="${a.status}${a.verified_at ? '' : ' unverified'}${a.verification_status === 'eingereicht' ? ' pruefen' : ''}" data-q="${esc((a.company_name + ' ' + a.city + ' ' + a.customer_number + ' ' + a.email + ' ' + (a.register_number || '') + ' ' + (a.tax_id || '')).toLowerCase())}">
       <header class="pc-h"><label class="pc-sel"><input type="checkbox" data-sel="${a.id}" data-owner="${esc(a.owner_id || '')}" data-mail="${esc(a.email)}" aria-label="${esc(a.company_name)} auswählen"></label><div><strong>${esc(a.company_name)}</strong><small>${esc(a.customer_number)} · ${esc(a.postal_code)} ${esc(a.city)}</small></div><span class="st ${st[0]}">${st[1]}</span></header>
-      <dl class="pc-meta"><div><dt>Rechtsform</dt><dd>${esc(a.legal_form)} · ${esc(a.institution_type)}</dd></div><div><dt>Register</dt><dd>${esc(a.register_number || '–')}</dd></div><div><dt>Steuer / USt-IdNr.</dt><dd>${esc(a.tax_id || '–')}</dd></div><div><dt>Berater</dt><dd>${esc(a.advisor_name || '–')}<br><small>${esc(a.email)}</small></dd></div><div><dt>Tarif</dt><dd>${a.tier ? TIER[a.tier] : '–'}${a.plan_source === 'manual' ? ' (manuell)' : ''}${a.plan_until ? ` · bis ${dt(a.plan_until)}` : ''}${a.dossier_bonus ? ` · +${a.dossier_bonus} Mappen` : ''}</dd></div><div><dt>Anfragen</dt><dd>${a.leads}${a.has_whitelabel ? ' · White-Label' : ''}${a.allow_invoice_payment ? ' · Rechnungskauf' : ''}</dd></div></dl>
+      <dl class="pc-meta"><div><dt>Rechtsform</dt><dd>${esc(a.legal_form)} · ${esc(a.institution_type)}</dd></div><div><dt>Branche</dt><dd>${esc(BR_LABEL[a.branche] || a.branche || '–')}${(a.extra_branches || []).length ? ` + ${a.extra_branches.map((x) => esc(BR_LABEL[x] || x)).join(', ')}` : ''}</dd></div><div><dt>Register</dt><dd>${esc(a.register_number || '–')}</dd></div><div><dt>Steuer / USt-IdNr.</dt><dd>${esc(a.tax_id || '–')}</dd></div><div><dt>Berater</dt><dd>${esc(a.advisor_name || '–')}<br><small>${esc(a.email)}</small></dd></div><div><dt>Tarif</dt><dd>${a.tier ? TIER[a.tier] : '–'}${a.plan_source === 'manual' ? ' (manuell)' : ''}${a.plan_until ? ` · bis ${dt(a.plan_until)}` : ''}${a.dossier_bonus ? ` · +${a.dossier_bonus} Mappen` : ''}</dd></div><div><dt>Anfragen</dt><dd>${a.leads}${a.has_whitelabel ? ' · White-Label' : ''}${a.allow_invoice_payment ? ' · Rechnungskauf' : ''}</dd></div></dl>
       ${a.status === 'locked' && a.lock_reason ? `<p class="pc-lock">Gesperrt: ${esc(a.lock_reason)}</p>` : ''}
       <footer class="pc-act">${a.verified_at ? `<button class="btn btn-outline btn-sm" data-a="details" data-id="${a.id}" type="button">Details</button>` : `<button class="btn btn-dark btn-sm" data-a="details" data-id="${a.id}" type="button">Prüfen &amp; freischalten</button>`}
         <details class="pc-menu"><summary class="btn btn-outline btn-sm">Aktionen ▾</summary><div class="pc-menu-in">
           ${a.verified_at ? `<button data-a="verify" data-on="false" data-id="${a.id}" type="button">Freischaltung zurücknehmen</button>` : ''}
+          <button data-a="branche" data-id="${a.id}" data-br="${esc(a.branche || '')}" data-ex="${esc((a.extra_branches || []).join(','))}" type="button">Branche festlegen</button>
           <button data-a="plan" data-id="${a.id}" type="button">Tarif zuweisen</button>
           <button data-a="karten" data-id="${a.id}" data-name="${esc(a.company_name)}" type="button">Firmenkarten (ImmoAdv Card)</button>
           <button data-a="modules" data-id="${a.id}" data-name="${esc(a.company_name)}" data-mod="${esc(JSON.stringify(a.modules || {}))}" type="button">Module freischalten</button>
@@ -817,6 +837,7 @@ async function partner(v) {
     if (a === 'invoice') return invoiceForm(id, b.dataset.name);
     if (a === 'details') return details(id);
     if (a === 'karten') return cardsDialog(id, b.dataset.name);
+    if (a === 'branche') return brancheDialog(id, b.dataset.br, (b.dataset.ex || '').split(',').filter(Boolean), () => partner(v));
     if (a === 'modules') return modulesDialog(id, b.dataset.name, JSON.parse(b.dataset.mod || '{}'), () => partner(v));
     if (a === 'verify' || a === 'whitelabel') body.on = b.dataset.on === 'true';
     if (a === 'lock') { const reason = prompt('Grund der Sperre (wird dem Unternehmen angezeigt):'); if (!reason) return; body.reason = reason; }
@@ -835,6 +856,7 @@ async function partner(v) {
     if (r.ok) { msg('Gespeichert.'); partner(v); } else msg(r.data?.error || 'Fehler', true);
   });
   $('#mkNew')?.addEventListener('click', () => openCreateAccount(null, () => partner(v)));
+  $('#mkCat')?.addEventListener('click', () => import('./intern-b2bcat.mjs?v=726a0d4e').then((m) => m.catalogEditor()));
   $('#mkPriv')?.addEventListener('click', () => openCreatePrivate());
 }
 

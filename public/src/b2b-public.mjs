@@ -5,26 +5,34 @@ const net = (c) => (c / 100).toLocaleString('de-DE', { minimumFractionDigits: 0,
 const cmpTable = (v, hl = -1) => (v?.zeilen?.length ? `<details class="cmp" open><summary>Tarife im Vergleich</summary><div class="cmp-wrap"><table class="cmp-table"><thead><tr><th></th>${v.spalten.map((s, i) => `<th${i === hl ? ' class="hl"' : ''}>${esc(s)}</th>`).join('')}</tr></thead><tbody>${v.zeilen.map(([l, ...c]) => `<tr><th scope="row">${esc(l)}</th>${c.map((x, i) => `<td class="${x === '✓' ? 'y' : x === '–' ? 'n' : ''}${i === hl ? ' hl' : ''}">${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>` : '');
 
 
+// Pakete je Branche aus dem B2B-Katalog (im Web-Admin pflegbar). Jede Branche hat eigene Tools und Preise.
+const TYPE_OF = { makler: 'REALTOR', vermittler: 'BROKER', finanzberater: 'ADVISOR', allgemein: 'OTHER', bank: 'BANK' };
 async function offers() {
   const box = document.getElementById('b2bOffers');
   if (!box) return;
-  const d = await fetch('/data/preise.json').then((r) => r.json()).catch(() => null);
-  if (!d?.b2b) { box.innerHTML = '<p class="form-note">Tarife derzeit nicht verfügbar.</p>'; return; }
-  const b = d.b2b;
-  // Zielgruppe und Grenzen je Paket aus den Tarifdaten (Zugänge, Kreditmappen) – keine zusätzlichen Versprechen.
-  const FOR = { BASIC: 'Für Einzelberater und kleinere Vermittlerteams.', PRO: 'Für Kanzleien und Baufinanzierungs-Teams.', ENTERPRISE: 'Für Banken, Sparkassen und Filialnetze.' };
-  const lim = (p) => [p.seats === 1 ? '1 Berater-Zugang' : p.seats ? `bis ${p.seats} Berater-Zugänge` : '', p.dossiers ? `${p.dossiers} Kreditmappen pro Monat` : 'Kreditmappen ohne Limit'].filter(Boolean).join(' · ');
-  const card = (p, rec) => `<div class="offer${rec ? ' rec' : ''}" data-ivl="${p.interval}"${p.interval === 'year' ? ' hidden' : ''}>${rec ? '<span class="offer-rec">Empfohlen für Kanzleien &amp; Baufi-Teams</span>' : ''}
-    <h4>${esc(p.name.replace(' (Jahr)', ''))}</h4><p class="offer-for">${esc(FOR[p.tier] || '')}</p><div class="offer-price">${net(p.netto_cents)} <small>netto ${esc(p.intervall)}</small></div><p class="offer-lim"><strong>Enthalten:</strong> ${esc(lim(p))}</p>
-    <ul>${p.basis ? `<li class="offer-basis">${esc(p.basis)}</li>` : ''}${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-dark" href="#anfrage">Unternehmenskonto anfragen</a></div>`;
-  box.innerHTML = `<div class="seg" role="tablist"><button type="button" data-i="month" aria-selected="true">Monatlich</button><button type="button" data-i="year" aria-selected="false">Jährlich</button></div>
-    <div class="offers">${b.plans.map((p) => card(p, p.tier === 'PRO')).join('')}
-      <div class="offer"><h4>${esc(b.enterprise.name)}</h4><p class="offer-for">${esc(FOR.ENTERPRISE)}</p><div class="offer-price">${esc(b.enterprise.preis)}</div><p class="offer-lim"><strong>Enthalten:</strong> ab ${b.enterprise.seats} Berater-Zugänge · Kreditmappen ohne Limit · Preis nach Filialgröße</p><ul>${b.enterprise.basis ? `<li class="offer-basis">${esc(b.enterprise.basis)}</li>` : ''}${b.enterprise.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn btn-ghost" href="#kontakt">Angebot anfragen</a></div></div>
-    ${cmpTable(b.vergleich, 1)}<p class="price-note">${esc(b.hinweis)}</p>`;
-  box.querySelectorAll('[data-i]').forEach((btn) => btn.onclick = () => {
-    box.querySelectorAll('[data-i]').forEach((x) => x.setAttribute('aria-selected', String(x === btn)));
-    box.querySelectorAll('.offer[data-ivl]').forEach((o) => { o.hidden = o.dataset.ivl !== btn.dataset.i; });
-  });
+  const d = await fetch('/api/b2b/catalog').then((r) => r.json()).catch(() => null);
+  if (!d?.branchen) { box.innerHTML = '<p class="form-note">Pakete derzeit nicht verfügbar.</p>'; return; }
+  let br = new URLSearchParams(location.search).get('branche');
+  if (!d.order.includes(br)) br = 'vermittler';
+  let ivl = 'month';
+  const lim = (p) => [p.seats === 1 ? '1 Berater-Zugang' : `bis ${p.seats} Berater-Zugänge`, p.tier === 'BASIC' ? '20 Kreditmappen pro Monat' : 'Kreditmappen ohne Limit'].join(' · ');
+  const draw = () => {
+    const c = d.branchen[br];
+    const card = (p) => { const cents = ivl === 'year' ? p.yearCents : p.monthCents; return `<div class="offer${p.tier === 'PRO' ? ' rec' : ''}">${p.tier === 'PRO' ? '<span class="offer-rec">Empfohlen</span>' : ''}
+      <h4>${esc(p.name)}</h4><div class="offer-price">${net(cents)} <small>netto ${ivl === 'year' ? 'pro Jahr' : 'pro Monat'}</small></div>${ivl === 'year' ? `<p class="offer-for">entspricht ${net(Math.round(cents / 12))} pro Monat</p>` : ''}<p class="offer-lim"><strong>Enthalten:</strong> ${esc(lim(p))}</p>
+      <ul>${p.features.map((f) => `<li${/^Alles aus/.test(f) ? ' class="offer-basis"' : ''}>${esc(f)}</li>`).join('')}</ul><a class="btn btn-dark" href="?branche=${br}#anfrage" data-pick-br="${br}">Unternehmenskonto anfragen</a></div>`; };
+    const ent = c.enterprise ? `<div class="offer"><h4>${esc(c.enterprise.name)}</h4><div class="offer-price">${esc(c.enterprise.price)}</div><ul>${c.enterprise.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul><a class="btn ${c.selfService ? 'btn-outline' : 'btn-dark'}" href="?branche=${br}&anliegen=enterprise#anfrage" data-pick-br="${br}">Angebot anfordern</a></div>` : '';
+    box.innerHTML = `<div class="br-tabs" role="tablist" aria-label="Branche">${d.order.map((k) => `<button type="button" role="tab" data-br="${k}" aria-selected="${k === br}">${esc(d.branchen[k].short === 'Allgemein' ? 'Sonstige' : d.branchen[k].short)}</button>`).join('')}</div>
+      <p class="br-desc"><strong>${esc(c.label)}</strong> – ${esc(c.desc)}</p>
+      ${c.selfService && c.plans.length ? `<div class="seg" role="tablist"><button type="button" data-i="month" aria-selected="${ivl === 'month'}">Monatlich</button><button type="button" data-i="year" aria-selected="${ivl === 'year'}">Jährlich (2 Monate geschenkt)</button></div>` : ''}
+      <div class="offers">${c.selfService ? c.plans.map(card).join('') : ''}${ent}</div>
+      ${d.addon && c.selfService ? `<p class="price-note"><strong>Mehrere Branchen?</strong> ${esc(d.addon.text)} – ${net(d.addon.monthCents)} netto pro Monat je Branche, im Checkout oder später im Portal.</p>` : ''}
+      <p class="price-note">Ihre Branche legen Sie bei der Kontoanfrage fest; sie bestimmt Pakete und Software-Tools. Ein Wechsel ist über den Support möglich. Nur für Unternehmer im Sinne des § 14 BGB. Alle Preise netto zzgl. 19 % USt. Monatsabos monatlich kündbar, Jahresabos zum Ende der Laufzeit.</p>`;
+    box.querySelectorAll('[data-br]').forEach((b) => b.onclick = () => { br = b.dataset.br; draw(); });
+    box.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => { ivl = b.dataset.i; draw(); });
+    box.querySelectorAll('[data-pick-br]').forEach((a) => a.addEventListener('click', () => { const sel = document.querySelector('#b2bContact [name=institutionType]'); if (sel) sel.value = TYPE_OF[a.dataset.pickBr] || 'OTHER'; }));
+  };
+  draw();
 }
 
 function contact() {

@@ -1,10 +1,10 @@
 // Objekt- & Dokumenten-Import mit Metrics Engine und Objekt-Analyse – gemeinsam genutzt von Anwendung und internem Bereich.
 // Es gibt keine Immobiliensuche: Objekte kommen per Exposé-PDF (Dropzone), Link, Ein-Klick-Übernahme im eigenen
 // Browser oder Eingabe. Große Portale werden nicht automatisiert abgerufen (deren Nutzungsbedingungen).
-import { GREST, kaufnebenkosten, analyse, exposeMetrics } from './calc.mjs?v=8d06c1ac';
-import { parseListing, bookmarklet } from './listing-parse.mjs?v=8d06c1ac';
-import { work } from './loader.mjs?v=8d06c1ac';
-import { showPdf } from './pdf-view.mjs?v=8d06c1ac';
+import { GREST, kaufnebenkosten, analyse, exposeMetrics } from './calc.mjs?v=726a0d4e';
+import { parseListing, bookmarklet } from './listing-parse.mjs?v=726a0d4e';
+import { work } from './loader.mjs?v=726a0d4e';
+import { showPdf } from './pdf-view.mjs?v=726a0d4e';
 
 const SESSION = 'immoadv-auth-session-v1';
 const $ = (id) => document.getElementById(id);
