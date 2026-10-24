@@ -432,7 +432,7 @@ background-image:var(--ia-grad)!important;background-size:100% 100%;border-color
 }
 .btn-dark:hover,.btn-primary:hover,.nav-actions .btn-ghost:hover,.cw-fab:hover,.save-obj:hover,.qz-next:hover,.cw-send:hover{background-image:var(--ia-grad-hover)!important}
 .offer-rec,.lp-badge,.cr-step-n,.home-num,.steps li.on,.tool-tabs a[aria-current="page"],.mobile-nav a[href="/auth/login"]{background-image:var(--ia-grad)!important;color:#fff}
-.home-hero,.cr-hero,.bx-secu,.bx-after,.bx-cmp-c.on,aside.roi,.lp-kpi-dark,footer.ia-legal{background-image:var(--ia-grad-deep)!important}
+.home-hero,.cr-hero,.bx-secu,.bx-after,.bx-cmp-c.on,aside.roi,.lp-kpi-dark{background-image:var(--ia-grad-deep)!important}
 .btn-dark:focus-visible,.btn-primary:focus-visible,.hs-go:focus-visible,.cw-fab:focus-visible{outline:3px solid #7DD3FC;outline-offset:2px}
 @page{size:A4;margin:14mm 12mm}
 @media print{html,body{background:#fff!important;color:#0F172A!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -460,6 +460,11 @@ body[data-ad-seg="b2b"] .ad-seg-chip,body[data-ad-seg="b2b"] .ad-segctl button[a
 .bx-flow.off li:is(:nth-child(2),:nth-child(3),:nth-child(6))::before,.lp-flow.off li:nth-child(4)::before{content:"!";background:#F59E0B;color:#fff}
 .bx-flow.off li:is(:nth-child(4),:nth-child(5),:nth-child(7)),.lp-flow.off li:nth-child(3){background:#FEF2F2;border-color:#FCA5A5;color:#991B1B}
 .bx-flow.off li:is(:nth-child(4),:nth-child(5),:nth-child(7))::before,.lp-flow.off li:nth-child(3)::before{content:"\2715";background:#DC2626;color:#fff}
+footer.ia-legal{background:#F8FAFC!important;background-image:none!important;border-top:1px solid #EEF2F6;color:#94A3B8}
+footer.ia-legal .ia-legal-in{padding:12px 0 calc(12px + env(safe-area-inset-bottom));gap:2px}
+footer.ia-legal .ia-legal-links{gap:0 10px}
+footer.ia-legal .ia-legal-links a{color:#94A3B8!important;font-size:11px!important;font-weight:400!important;min-height:24px}
+footer.ia-legal small{font-size:10px!important;color:#A8B3C2!important;letter-spacing:0}
 /* aus b2b.css */
 body.is-portal{background:#F1F5F9;margin:0}
 .pt{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}

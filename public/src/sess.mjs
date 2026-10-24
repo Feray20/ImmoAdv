@@ -183,7 +183,7 @@ export function loginForm(root, opts) {
         if (opts.check) { const why = await opts.check(d); if (why) { show(why); return; } }
         try { localStorage.setItem(REM, root.querySelector('#aRem')?.checked ? '1' : '0'); } catch { /* ignore */ }
         if ((d.user?.factors || []).some((x) => x.status === 'verified')) {
-          const mf = await import('./mfa.mjs?v=9b75ac74');
+          const mf = await import('./mfa.mjs?v=2e59e810');
           root.innerHTML = '<div class="area-login" id="areaMfa"></div>';
           await mf.challengeUI(root.querySelector('#areaMfa'), d, () => location.reload());
           return;
@@ -194,7 +194,7 @@ export function loginForm(root, opts) {
       finally { delete f.dataset.busy; btn.disabled = false; }
     };
     // Express-Login: erkennt beim Eintippen, ob die E-Mail schon ein Konto hat (gemeinsam für Privat- und Unternehmensbereich).
-    if (AREA !== 'admin' && AREA !== 'creator') import('./email-detect.mjs?v=9b75ac74').then((x) => x.attach(em, { mode: mode === 'signup' ? 'register' : 'login', actions: {
+    if (AREA !== 'admin' && AREA !== 'creator') import('./email-detect.mjs?v=2e59e810').then((x) => x.attach(em, { mode: mode === 'signup' ? 'register' : 'login', actions: {
       ...(signup ? { register: (v) => { draw('signup'); root.querySelector('#aEmail').value = v; root.querySelector('#aPw')?.focus(); }, login: (v) => { draw('login'); root.querySelector('#aEmail').value = v; root.querySelector('#aPw')?.focus(); } } : {}),
       ...(opts.onUnknown ? { register: (v) => opts.onUnknown(v) } : {}),
       sso: (p) => root.querySelector(`[data-sso="${p}"]`)?.click(),
