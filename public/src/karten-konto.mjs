@@ -1,7 +1,7 @@
 // ImmoAdv Card – Kartenkonto. Echte Daten nur vom Server (/api/karten); Aktionen werden serverseitig geprüft.
 // Demo nur mit ?demo=1 – deutlich gekennzeichnet, rein im Browser, ohne Serverzugriff.
-import { api, session } from './sess.mjs?v=8d06c1ac';
-import { eur, tilt } from './karten.mjs?v=8d06c1ac';
+import { api, session } from './sess.mjs?v=d25ac568';
+import { eur, tilt } from './karten.mjs?v=d25ac568';
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
