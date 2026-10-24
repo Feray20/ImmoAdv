@@ -3,7 +3,7 @@
 // → Rate-Limit → Anfragekörper → Idempotenz → Handler → Audit (im Handler) → Antwort + Anfrageprotokoll.
 import { randomBytes } from 'node:crypto';
 import { after, NextResponse } from 'next/server';
-import { supabaseAdmin, anonymizedIpHash } from '@/lib/supabase/admin';
+import { supabaseAdmin, anonymizedIpHash, adminConfigured } from '@/lib/supabase/admin';
 import { API_VERSION, keyPepper } from '@/lib/api/config';
 import { ApiError, problem, type ErrorCode } from '@/lib/api/errors';
 import { bearer, hashKey, keyState, parseKey, type Env, type KeyRow } from '@/lib/api/keys';
@@ -51,6 +51,7 @@ export function errorResponse(code: ErrorCode, requestId: string, detail?: strin
 }
 
 function logRequest(o: { requestId: string; tenantId?: string | null; key?: KeyRow | null; env?: Env | null; method: string; route: string; status: number; started: number; bytes?: number; code?: string | null; ipHash: string | null }) {
+  if (!adminConfigured()) return;
   background(async () => {
     await supabaseAdmin().from('api_requests').insert({
       request_id: o.requestId, tenant_id: o.tenantId ?? null, key_id: o.key?.id ?? null, key_prefix: o.key?.key_prefix ?? null,
@@ -77,7 +78,7 @@ export function apiRoute(opts: RouteOpts, handler: (ctx: ApiCtx) => Promise<ApiR
     };
     try {
       const pepper = keyPepper();
-      if (!pepper) return fail('CONFIGURATION_REQUIRED', 'The API is not configured on this server (API_KEY_PEPPER).');
+      if (!pepper || !adminConfigured()) return fail('CONFIGURATION_REQUIRED', 'The API is not configured on this server.');
       // 1) Authentifizierung
       const secret = bearer(req);
       if (!secret) return fail('UNAUTHENTICATED', 'Send the API key as "Authorization: Bearer <key>".', { headers: { 'WWW-Authenticate': 'Bearer realm="ImmoAdv API"' } });
