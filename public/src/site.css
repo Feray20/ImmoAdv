@@ -2121,3 +2121,18 @@ body[data-ad-seg="b2c"] .ad-segctl button[aria-pressed="true"],.sim-steps button
 .faq-org>details[hidden]{display:none!important}
 .btn-dark,.btn-primary,.nav-actions .btn-ghost,.cw-fab,.save-obj,.qz-next,.cw-send,.area-login .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light),.auth-card .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light),.btn-dark:hover,.btn-primary:hover,.nav-actions .btn-ghost:hover,.cw-fab:hover,.save-obj:hover,.qz-next:hover,.cw-send:hover,.hs-go,.lp-nav-btn,.bx-nav-cta,.hs-go:hover,.lp-nav-btn:hover,.bx-nav-cta:hover,.offer-rec,.lp-badge,.cr-step-n,.home-num,.steps li.on,.tool-tabs a[aria-current="page"],.mobile-nav a[href="/auth/login"],.bill-table tr:has(>th),.report tr:has(>th),.status-table tr:has(>th),.home-hero,.cr-hero,.bx-secu,.bx-after,.bx-cmp-c.on,aside.roi,.lp-kpi-dark,footer.ia-legal,.qz-chips button[aria-pressed="true"],.lp-use button[aria-checked="true"],[data-sim][aria-selected="true"] b,.bx-inv-steps li>b,.bx-flow li,.level-row span,.pt-side,.bw-mind-core,.ns-title,.ad-tabs button[aria-selected="true"],.ad-subtabs button[aria-selected="true"],.ad-actions button.ad-primary,body[data-ad-seg="b2b"] .ad-seg-chip,body[data-ad-seg="b2b"] .ad-segctl button[aria-pressed="true"],.fn-period button[aria-pressed="true"],.pc-chips button[aria-pressed="true"],.co-sub a[aria-current="page"],.ad-steps li::before,.bw-steps li::before,.pipe-cols li::before,.bw-no,.su-num,.pt-toast,.bw-table th,body[data-ad-seg="b2c"] .ad-segctl button[aria-pressed="true"],.sim-steps button[aria-selected=true] b,.ad-bar-f,.bw-toc a b,.faq-topics button[aria-selected="true"]{background-origin:border-box!important;background-repeat:no-repeat!important;background-clip:border-box!important}
 .btn-pay,.km-qr{background-origin:border-box!important;background-repeat:no-repeat!important}
+@media (max-width:640px){
+.bill-table:has(tr>*:nth-child(5)){font-size:12px}
+.bill-table:has(tr>*:nth-child(5)) th,.bill-table:has(tr>*:nth-child(5)) td{padding:6px 5px;white-space:nowrap}
+.bill-table,.cmp-wrap{
+background:linear-gradient(90deg,#fff 30%,rgba(255,255,255,0)) left center/28px 100% no-repeat local,
+linear-gradient(270deg,#fff 30%,rgba(255,255,255,0)) right center/28px 100% no-repeat local,
+radial-gradient(farthest-side at 0 50%,rgba(15,44,89,.18),rgba(15,44,89,0)) left center/12px 100% no-repeat scroll,
+radial-gradient(farthest-side at 100% 50%,rgba(15,44,89,.18),rgba(15,44,89,0)) right center/12px 100% no-repeat scroll;
+background-color:#fff
+}
+}
+@media (max-width:380px){
+.bill-table:not(:has(tr>*:nth-child(5))){display:table!important;width:100%;table-layout:auto;font-size:12px}
+.bill-table:not(:has(tr>*:nth-child(5))) th,.bill-table:not(:has(tr>*:nth-child(5))) td{padding:6px 4px;overflow-wrap:anywhere}
+}
