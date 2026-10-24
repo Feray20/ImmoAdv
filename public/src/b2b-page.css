@@ -570,8 +570,7 @@ img,svg,video,canvas,iframe{max-width:100%}
 main h1,main h2,main h3,main h4,main nav,main nav a,main .btn{overflow-wrap:normal;hyphens:manual}
 main input,main select,main textarea,main .btn{max-width:100%}
 main .btn{white-space:normal}
-main table th,main table td{overflow-wrap:normal;hyphens:manual;-webkit-hyphens:manual}
-main table td{min-width:max-content}}
+main table th,main table td{overflow-wrap:break-word;hyphens:manual;-webkit-hyphens:manual;min-width:0}}
 .calc-pages,.cancel-form{grid-template-columns:minmax(0,1fr)}
 @keyframes buyspin{to{transform:rotate(360deg)}}
 .auth-card{max-width:460px;margin:0 auto;padding:28px 28px 22px;border:1px solid #E2E8F0;border-radius:16px;background:#fff;box-shadow:0 12px 36px rgba(15,44,89,.08)}
