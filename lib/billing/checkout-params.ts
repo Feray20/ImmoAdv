@@ -5,8 +5,12 @@ import { PLANS, type Plan } from '@/lib/billing/stripe';
 // Zahlarten werden bewusst NICHT festgelegt: Stripe zeigt automatisch alle im Stripe-Konto aktivierten Zahlarten
 // (Karte, PayPal, Apple Pay, Google Pay, Klarna, SEPA …). Logo und Farben kommen aus Stripe → Einstellungen → Branding.
 // Stripe-Feld ist evtl. noch nicht in den SDK-Typen, daher als Spread.
-// Bezahlseite im ImmoAdv-Stil: Bestellknopf schwarz wie Apple Pay (wie alle Kaufknöpfe auf immoadv.de), Schrift Inter.
-export const CHECKOUT_BRANDING = { branding_settings: { button_color: '#000000', background_color: '#ffffff', border_style: 'pill', font_family: 'inter' } } as unknown as Partial<Stripe.Checkout.SessionCreateParams>;
+// Bezahlseite im ImmoAdv-Stil: ImmoAdv-Logo, Markenblau für den Bestellknopf, heller Hintergrund wie die Website,
+// Pillen-Knöpfe und Schrift Inter. Logo liegt öffentlich unter /img/stripe-logo.png (PNG, transparent).
+export const CHECKOUT_BRANDING = { branding_settings: {
+  display_name: 'ImmoAdv', button_color: '#0F2C59', background_color: '#F1F5F9', border_style: 'pill', font_family: 'inter',
+  logo: { type: 'url', url: 'https://immoadv.de/img/stripe-logo.png' },
+} } as unknown as Partial<Stripe.Checkout.SessionCreateParams>;
 export const NO_MANAGED_PAYMENTS = { managed_payments: { enabled: false } } as unknown as Partial<Stripe.Checkout.SessionCreateParams>;
 
 export function checkoutParams(o: {
