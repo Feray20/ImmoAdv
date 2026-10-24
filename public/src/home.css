@@ -838,6 +838,25 @@ html:not(.ia-paid) body.lp-sticky-on{padding-bottom:calc(76px + env(safe-area-in
 .mobile-nav a[href="/app/dashboard"],html:not(.ia-user) .mobile-nav a[href="/auth/login"]{border-radius:999px!important}
 .lp-more{margin:10px 0 0;font-size:15px;color:#475569}
 .lp-more a{color:#0369A1;font-weight:600}
+.hero3-sub strong{color:#fff;font-weight:700}
+.hero3-badge{display:inline-flex;align-items:center;gap:8px;margin:10px 0 0;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;line-height:1.35;color:#E0F2FE;background:rgba(255,255,255,.08);border:1px solid rgba(186,230,253,.35)}
+.hero3-badge span{display:grid;place-items:center;width:18px;height:18px;flex:none;border-radius:50%;background:#22C55E;color:#fff;font-size:11px;font-weight:800}
+.lp-stress{display:inline-flex;align-items:center;gap:8px;justify-self:start;margin:0;padding:5px 12px;border-radius:999px;background:#DCFCE7;border:1px solid #86EFAC;color:#166534;font-size:13.5px;font-weight:700}
+.lp-stress span{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#16A34A;color:#fff;font-size:11px}
+.lp-result.lp-play .lp-bar i{transition:width .9s cubic-bezier(.2,.7,.2,1)}
+.lp-result.lp-play .lp-stress{transition:opacity .4s ease .9s,transform .4s cubic-bezier(.2,.7,.2,1) .9s}
+.lp-result.lp-play .lp-risks li{transition:opacity .35s ease,transform .35s ease}
+.lp-result.lp-play .lp-risks li:nth-child(1){transition-delay:.35s}
+.lp-result.lp-play .lp-risks li:nth-child(2){transition-delay:.45s}
+.lp-result.lp-play .lp-risks li:nth-child(3){transition-delay:.55s}
+.lp-result.lp-play .lp-risks li:nth-child(4){transition-delay:.65s}
+.lp-result.lp-play .lp-risks li:nth-child(5){transition-delay:.75s}
+.lp-result.lp-play .lp-risks li:nth-child(n+6){transition-delay:.85s}
+.lp-result.lp-wait .lp-bar i{width:0!important}
+.lp-result.lp-wait .lp-stress{opacity:0;transform:scale(.92)}
+.lp-result.lp-wait .lp-risks li{opacity:0;transform:translateY(6px)}
+@media (prefers-reduced-motion:reduce){.lp-result .lp-bar i,.lp-result .lp-stress,.lp-result .lp-risks li{transition:none!important}}
+.lp-stress[hidden]{display:none}
 :root{
 --ia-grad:linear-gradient(135deg,#0F2C59 0%,#0B4A85 55%,#0284C7 100%);
 --ia-grad-hover:linear-gradient(135deg,#123566 0%,#0E5596 55%,#0B95D8 100%);

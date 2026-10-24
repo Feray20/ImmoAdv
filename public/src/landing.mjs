@@ -3,7 +3,7 @@
 // Ereignisse gehen an die cookielose Reichweitenmessung (track.js) – ohne Eingabewerte, nur Ereignisname und Ort.
 // Alte Sprungmarken der verschobenen Startseiten-Abschnitte auf die neuen Unterseiten weiterleiten.
 { const moved = { '#warum': '/wissen/warum-investieren' }; if (moved[location.hash]) location.replace(moved[location.hash]); }
-import { demoAnalyse } from './calc.mjs?v=9b75ac74';
+import { demoAnalyse } from './calc.mjs?v=1d54a941';
 
 const $ = (id) => document.getElementById(id);
 const ev = (name, where) => { try { window.iaTrack?.(name, where ? { plan: String(where).slice(0, 40) } : undefined); } catch { /* Messung darf nie stören */ } };
@@ -75,6 +75,8 @@ if (form) {
     $('lpd_label').textContent = d.label;
     $('lpd_bar').style.width = (d.score ?? 0) + '%';
     res.dataset.level = d.score == null ? '1' : d.score >= 65 ? '0' : d.score >= 45 ? '1' : '2';
+    const zp = d.lamps.find((l) => l.key === 'zinspuffer');
+    $('lpd_stress').hidden = !(zp && zp.status === 'ok');
     const n = d.openPoints + 2;
     $('lpd_open').textContent = `${n} Punkt${n === 1 ? '' : 'e'} prüfen`;
     $('lpd_risks').replaceChildren(
@@ -95,18 +97,25 @@ if (form) {
   }));
   render();
 
-  // Orientierungswert beim ersten Sichtkontakt hochzählen (nicht bei reduzierter Bewegung).
+  // Ergebnis beim ersten Sichtkontakt aufbauen: Balken von 0, Wert zählt hoch, Prüfpunkte und Stresstest-Hinweis
+  // blenden nacheinander ein. Einmal pro Seitenaufruf; bei reduzierter Bewegung sofort im Endzustand.
   const scoreEl = $('lpd_score');
-  if (!reduce && 'IntersectionObserver' in window) {
+  const res = $('lpd_result');
+  if (!reduce && 'IntersectionObserver' in window && res) {
+    res.classList.add('lp-wait');
     const io = new IntersectionObserver((es) => {
       if (!es.some((x) => x.isIntersecting)) return;
       io.disconnect();
+      res.classList.add('lp-play');
+      requestAnimationFrame(() => res.classList.remove('lp-wait'));
+      setTimeout(() => res.classList.remove('lp-play'), 2200);
+      evOnce('b2c_result_motion_viewed', 'demo');
       const target = Number(scoreEl.textContent); if (!Number.isFinite(target)) return;
-      const t0 = performance.now(), dur = 700;
+      const t0 = performance.now(), dur = 900;
       const step = (t) => { const k = Math.min(1, (t - t0) / dur); scoreEl.textContent = String(Math.round(target * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(step); };
       requestAnimationFrame(step);
-    }, { threshold: 0.5 });
-    io.observe(scoreEl);
+    }, { threshold: 0.4 });
+    io.observe(res);
   }
 }
 

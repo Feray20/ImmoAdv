@@ -37,7 +37,8 @@ export function deviceInfo(ua: string) {
 
 // Ereignis speichern. req optional (serverseitige Ereignisse wie „purchase“ haben keine Besucher-Kennung).
 export async function track(e: Ev, req?: Request): Promise<void> {
-  if (!adminConfigured()) return;
+  // Vorschau-Deployments zählen nicht mit (keine Verfälschung der Live-Zahlen).
+  if (!adminConfigured() || process.env.VERCEL_ENV === 'preview') return;
   try {
     const ua = req?.headers.get('user-agent') || '';
     const country = req?.headers.get('x-vercel-ip-country') || null;

@@ -649,3 +649,5 @@ body.intern .area-login>.pt-brand{display:none}
 @media(max-width:900px){.pt-main>.ia-legal{margin:32px -14px 0}
 .pt-main>.ia-legal .ia-legal-in{padding-left:14px!important;padding-right:14px!important}}
 .ia-copy{white-space:nowrap}
+@keyframes simIn{from{transform:translateX(28px);opacity:0}to{transform:none;opacity:1}}
+@keyframes simReady{0%{transform:scale(.97)}60%{transform:scale(1.02)}100%{transform:none}}

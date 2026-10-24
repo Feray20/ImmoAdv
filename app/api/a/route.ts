@@ -11,7 +11,8 @@ const EVENTS = ['pv', 'offer_view', 'checkout_open', 'checkout_start', 'register
   // Startseite (B2C): Conversion-Schritte ohne personenbezogene Inhalte
   'qz_result', 'hero_cta_click', 'demo_interaction', 'pricing_view', 'pricing_cta_click', 'faq_open', 'property_check_started',
   // Unternehmensseite (B2B)
-  'demo_started', 'demo_completed', 'business_cta_clicked', 'pricing_viewed'] as const;
+  'demo_started', 'demo_completed', 'business_cta_clicked', 'pricing_viewed',
+  'b2c_result_motion_viewed', 'b2b_cta_clicked', 'b2b_demo_completed', 'briefing_step_1_completed', 'briefing_step_2_completed', 'briefing_submitted'] as const;
 const s = (n: number) => z.string().max(n).optional().nullable();
 const Body = z.object({ ev: z.enum(EVENTS), seg: z.enum(['b2c', 'b2b']), path: s(400), ref: s(400), src: s(120), med: s(80), camp: s(120), plan: s(40) });
 const none = () => new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });

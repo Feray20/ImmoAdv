@@ -39,6 +39,8 @@ const Schema = z.object({
   website: z.string().optional().default(''),
   camp: z.string().regex(/^[a-z0-9-]{3,40}$/).optional().or(z.literal('')),
   ts: z.coerce.number().optional(),
+  // B2B-Briefing (Dialog auf /b2b): Angaben stehen strukturiert in message.
+  source: z.enum(['briefing']).optional(),
 });
 
 // Anfrage für ein Unternehmenskonto (Zugang vergibt ImmoAdv im Web-Admin), Demo, Enterprise-Angebot oder Kooperation.
@@ -63,6 +65,8 @@ export async function POST(req: Request) {
     return json({ error: f === 'privacy' ? 'Bitte die Datenschutzhinweise bestätigen.' : 'Bitte die Angaben prüfen.' }, 400);
   }
   const b = p.data;
+  // Vorschau-Deployments: Briefing nur prüfen, nicht speichern und keine E-Mail auslösen.
+  if (b.source === 'briefing' && process.env.VERCEL_ENV === 'preview') return json({ ok: true, preview: true }, 201);
   const guard = await guardSubmission({ email: b.email, name: b.name, message: b.message, website: b.website, ts: b.ts, bucket: 'b2b-contact' });
   if (guard.action === 'drop') return json({ ok: true }, 201);
   if (guard.action === 'reject') return json({ error: guard.error, field: guard.field, suggestion: guard.suggestion }, 400);
