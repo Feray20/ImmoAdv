@@ -2,8 +2,8 @@
 // Eingaben bleiben in diesem Browser (localStorage) und werden nicht an ImmoAdv übertragen. Ausgabe: Druck / PDF, Text kopieren.
 // Basic: Haushaltsrechnung, Unterlagen-Anforderung, Provisionsrechner, Inserats-Pflichtangaben, Ertragswert.
 // Pro/Enterprise: zusätzlich Beratungsprotokoll, Bankangebote vergleichen, Vorfälligkeit & Anschluss.
-import { monthlyRate, balanceAfterMonths } from './calc.mjs?v=5f4bc2a3';
-import { compareOffers, forwardCalc, kuendigungsrecht489 } from './b2c-tools.mjs?v=5f4bc2a3';
+import { monthlyRate, balanceAfterMonths } from './calc.mjs?v=d533c42d';
+import { compareOffers, forwardCalc, kuendigungsrecht489 } from './b2c-tools.mjs?v=d533c42d';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const E = (v) => (Number.isFinite(v) ? v : 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
@@ -321,17 +321,19 @@ export const PROGRAMS = [
 ];
 const RANK = { BASIC: 1, PRO: 2, ENTERPRISE: 3 };
 
-export function renderPrograms(box, { tier, branche, brand, toast }) {
-  const has = (p) => (RANK[tier] || 0) >= RANK[p.tier];
-  const order = [...PROGRAMS].sort((a, b) => (b.br.includes(branche) ? 1 : 0) - (a.br.includes(branche) ? 1 : 0));
+export function renderPrograms(box, { tier, branche, tools, brand, toast }) {
+  // Tools je gebuchter Branche und Paket (Katalog im Web-Admin); ohne Katalogdaten wie bisher nach Tarif.
+  const vis = tools?.visible ? new Set(tools.visible) : null, unl = tools?.unlocked ? new Set(tools.unlocked) : null;
+  const has = (p) => (unl ? unl.has(p.id) : (RANK[tier] || 0) >= RANK[p.tier]);
+  const order = [...PROGRAMS].filter((p) => !vis || vis.has(p.id)).sort((a, b) => (has(b) ? 1 : 0) - (has(a) ? 1 : 0) || (b.br.includes(branche) ? 1 : 0) - (a.br.includes(branche) ? 1 : 0));
   box.innerHTML = `<section class="pt-card"><h2>Software-Tools</h2><p class="form-note">Rechnet im Browser, Eingaben bleiben auf diesem Gerät. Ergebnisse als PDF oder Text${brand?.logo ? ' mit Ihrem Logo' : ' – mit Ihrem Logo ab Pro'}.</p>
-    <div class="pg-list">${order.map((p) => `<button type="button" class="pg-tile${has(p) ? '' : ' locked'}" data-pg="${p.id}"><strong>${esc(p.t)}</strong><span>${esc(p.d)}</span><em>${has(p) ? (p.br.includes(branche) ? 'für Ihre Branche' : 'öffnen') : p.tier === 'PRO' ? 'ab Kanzlei & Baufi Pro' : 'ab Basic'}</em></button>`).join('')}</div></section>
+    <div class="pg-list">${order.map((p) => `<button type="button" class="pg-tile${has(p) ? '' : ' locked'}" data-pg="${p.id}"><strong>${esc(p.t)}</strong><span>${esc(p.d)}</span><em>${has(p) ? 'öffnen' : !tier ? 'mit Paket' : 'im größeren Paket'}</em></button>`).join('')}</div><p class="form-note">Weitere Tools gibt es mit einer zusätzlichen Branche – unter <a href="#tarif">Tarif</a> dazubuchen.</p></section>
     <section class="pt-card" id="pgBox" hidden></section>`;
   const open = (id) => {
     const p = PROGRAMS.find((x) => x.id === id); if (!p) return;
     const b = box.querySelector('#pgBox'); b.hidden = false;
     box.querySelectorAll('.pg-tile').forEach((t) => t.classList.toggle('on', t.dataset.pg === id));
-    if (!has(p)) { b.innerHTML = `<h3>${esc(p.t)}</h3><div class="pt-alert warn"><strong>${p.tier === 'PRO' ? 'Dieses Tool ist im Tarif Kanzlei & Baufi Pro enthalten.' : 'Software-Tools gibt es ab dem Tarif Basic.'}</strong> <a class="btn btn-dark" href="#tarif">Tarif ansehen</a></div>`; return; }
+    if (!has(p)) { b.innerHTML = `<h3>${esc(p.t)}</h3><div class="pt-alert warn"><strong>${tier ? 'Dieses Tool ist im größeren Paket Ihrer Branche enthalten.' : 'Software-Tools gibt es mit einem Paket Ihrer Branche.'}</strong> <a class="btn btn-dark" href="#tarif">Tarif ansehen</a></div>`; return; }
     b.innerHTML = `<div class="pg-head"><h3>${esc(p.t)}</h3><span><button type="button" class="text-btn" id="pgReset">Eingaben löschen</button> <button type="button" class="text-btn" id="pgClose">Schließen</button></span></div><div id="pgBody"></div>
       <p class="pg-legal">${PERSONAL.has(p.id) ? 'Kundendaten in diesem Tool bleiben nur in diesem Browser-Tab und werden beim Abmelden gelöscht – sie werden nicht an ImmoAdv übertragen. ' : 'Eingaben bleiben auf diesem Gerät und werden nicht an ImmoAdv übertragen. '}Rechnerische Orientierung, keine Kreditentscheidung und keine Rechts- oder Steuerberatung; die berufsrechtliche Verantwortung (§§ 34c, 34i GewO, § 511 BGB) bleibt beim Berater.</p>`;
     b.querySelector('#pgReset').onclick = () => { try { store(p.id).removeItem(KEY(p.id)); } catch { /* ohne Speicher */ } open(id); toast?.('Eingaben gelöscht.'); };

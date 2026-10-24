@@ -1,26 +1,46 @@
 import type Stripe from 'stripe';
 import { stripe } from '@/lib/billing/stripe';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { B2B_PLANS, type B2BAccount, type Tier } from '@/lib/b2b/core';
+import { type B2BAccount, type Tier } from '@/lib/b2b/core';
+import { BRANCHEN, findPlan, getCatalog } from '@/lib/b2b/catalog';
 import { buyerFromAccount } from '@/lib/b2b/invoice';
 
 // Stripe für Unternehmenskonten: Nettopreise zzgl. 19 % USt (exklusiv), Abo monatlich oder jährlich.
 
-export async function ensureB2BPrice(planId: string): Promise<string> {
-  const p = B2B_PLANS.find((x) => x.id === planId);
-  if (!p) throw new Error('unknown_plan');
-  const lookup = `immoadv_b2b_${planId.replace(/-/g, '_')}_${p.netto_cents}`;
+// Preis je Paket aus dem B2B-Katalog (Web-Admin). Preisänderung → neuer Stripe-Preis (Lookup-Key enthält den Betrag);
+// bestehende Abos behalten ihren bisherigen Preis.
+export async function ensureB2BPrice(planId: string): Promise<{ price: string; name: string; tier: Tier; interval: 'month' | 'year' }> {
+  const f = findPlan(await getCatalog(true), planId);
+  if (!f) throw new Error('unknown_plan');
+  const lookup = `immoadv_b2b_${planId.replace(/-/g, '_')}_${f.cents}`;
+  const name = `${f.plan.name}${f.interval === 'year' ? ' (Jahr)' : ''}`;
+  const s = stripe();
+  const found = await s.prices.list({ lookup_keys: [lookup], active: true, limit: 1 });
+  if (found.data[0]) return { price: found.data[0].id, name, tier: f.plan.tier, interval: f.interval };
+  const price = await s.prices.create({
+    currency: 'eur', unit_amount: f.cents, tax_behavior: 'exclusive', lookup_key: lookup,
+    recurring: { interval: f.interval },
+    product_data: { name: `ImmoAdv ${name}`, metadata: { immoadv_b2b_plan: planId, tier: f.plan.tier, branche: f.branche } },
+    metadata: { immoadv_b2b_plan: planId, tier: f.plan.tier, branche: f.branche },
+  });
+  return { price: price.id, name, tier: f.plan.tier, interval: f.interval };
+}
+
+// Zusatzbranche (Menge = Anzahl dazugebuchter Branchen), gleiches Intervall wie das Abo.
+export async function ensureAddonPrice(interval: 'month' | 'year'): Promise<string> {
+  const cat = await getCatalog(true);
+  const cents = interval === 'year' ? cat.addon.yearCents : cat.addon.monthCents;
+  const lookup = `immoadv_b2b_addon_branche_${interval}_${cents}`;
   const s = stripe();
   const found = await s.prices.list({ lookup_keys: [lookup], active: true, limit: 1 });
   if (found.data[0]) return found.data[0].id;
   const price = await s.prices.create({
-    currency: 'eur', unit_amount: p.netto_cents, tax_behavior: 'exclusive', lookup_key: lookup,
-    recurring: { interval: p.interval },
-    product_data: { name: `ImmoAdv ${p.name}`, metadata: { immoadv_b2b_plan: planId, tier: p.tier } },
-    metadata: { immoadv_b2b_plan: planId, tier: p.tier },
+    currency: 'eur', unit_amount: cents, tax_behavior: 'exclusive', lookup_key: lookup, recurring: { interval },
+    product_data: { name: 'ImmoAdv Zusatzbranche', metadata: { immoadv_b2b_addon: 'branche' } }, metadata: { immoadv_b2b_addon: 'branche' },
   });
   return price.id;
 }
+export const parseExtras = (v: unknown): string[] => String(v || '').split(',').map((x) => x.trim()).filter((x) => (BRANCHEN as string[]).includes(x) && x !== 'bank').slice(0, 4);
 
 export async function ensureTaxRateExclusive(): Promise<string> {
   const s = stripe();
@@ -82,7 +102,8 @@ export async function syncSubscription(sub: Stripe.Subscription): Promise<void> 
   if (!accountId) return;
   const tier = TIERS.find((t) => t === sub.metadata?.tier) ?? null;
   const live = ['active', 'trialing', 'past_due'].includes(sub.status);
-  const item = sub.items.data[0] as (Stripe.SubscriptionItem & { current_period_end?: number }) | undefined;
+  const item = (sub.items.data.find((i) => !i.price?.metadata?.immoadv_b2b_addon) ?? sub.items.data[0]) as (Stripe.SubscriptionItem & { current_period_end?: number }) | undefined;
+  const extras = parseExtras(sub.metadata?.extras);
   const interval = item?.price?.recurring?.interval === 'year' ? 'year' : 'month';
   const cancelAt = sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null;
   const db = supabaseAdmin();
@@ -92,7 +113,7 @@ export async function syncSubscription(sub: Stripe.Subscription): Promise<void> 
   if (a.plan_source === 'manual' && a.stripe_subscription_id !== sub.id) return;
   await db.from('immo_b2b_accounts').update(
     live && tier
-      ? { plan_tier: tier, plan_source: 'stripe', plan_until: cancelAt, billing_interval: interval, stripe_subscription_id: sub.id, stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer.id, updated_at: new Date().toISOString() }
+      ? { plan_tier: tier, plan_source: 'stripe', plan_until: cancelAt, billing_interval: interval, stripe_subscription_id: sub.id, extra_branches: extras, stripe_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer.id, updated_at: new Date().toISOString() }
       : { plan_tier: null, plan_source: null, plan_until: null, stripe_subscription_id: sub.id, updated_at: new Date().toISOString() },
   ).eq('id', accountId);
 }

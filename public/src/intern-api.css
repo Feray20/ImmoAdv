@@ -131,3 +131,16 @@
 }
 .pf-frame{max-width:100%}
 .pf-read{padding:14px}
+/* Pakete & Preise (B2B-Katalog) */
+.cat-dlg .ad-dlg-in{max-width:900px}
+.cat-box{border:1px solid #E2E8F0;border-radius:12px;padding:10px 14px 12px;margin:0 0 12px;display:grid;gap:8px}
+.cat-box legend{font-weight:800;color:#0F2C59;padding:0 6px}
+.cat-box label{display:grid;gap:3px;font-size:13px;font-weight:600;color:#334155}
+.cat-box input,.cat-box textarea{font:inherit;font-size:14px;padding:8px 10px;border:1px solid #CBD5E1;border-radius:8px;min-width:0}
+.cat-box label.consent{display:flex;align-items:center;gap:8px}
+.cat-tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px 12px}
+.cat-tools label{display:flex!important;align-items:center;gap:6px;font-weight:500!important}
+.cat-foot{display:flex;gap:8px;align-items:center}
+.br-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.br-tabs button{font:inherit;font-size:14px;font-weight:700;padding:8px 14px;border-radius:999px;border:1.5px solid #CBD5E1;background:#fff;color:#0F2C59;cursor:pointer}
+.br-tabs button[aria-selected="true"]{background:#0F2C59;border-color:#0F2C59;color:#fff}

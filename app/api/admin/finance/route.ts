@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
-import { B2B_PLANS, effectiveTier, type B2BAccount } from '@/lib/b2b/core';
+import { effectiveTier, type B2BAccount } from '@/lib/b2b/core';
+import { accountBranches, getCatalog } from '@/lib/b2b/catalog';
 import { customerScope, scopeError } from '@/lib/admin/scope';
 import { b2cFinance } from '@/lib/admin/b2c-finance';
 
@@ -78,16 +79,22 @@ export async function GET(req: Request) {
   });
 
   // Wiederkehrender Umsatz aus aktiven Tarifen (Netto-Listenpreise; manuelle Tarife ohne Preis ausgewiesen).
-  const { data: accs } = await db.from('immo_b2b_accounts').select('status, plan_tier, plan_until, plan_source, billing_interval, created_at').limit(5000);
+  const { data: accs } = await db.from('immo_b2b_accounts').select('status, plan_tier, plan_until, plan_source, billing_interval, created_at, branche, extra_branches, institution_type').limit(5000);
   const active = (accs ?? []).filter((a) => effectiveTier(a as B2BAccount));
-  const priceOf = (tier: string, interval: string | null) => B2B_PLANS.find((p) => p.tier === tier && p.interval === (interval || 'month'))?.netto_cents ?? 0;
+  const cat = await getCatalog();
+  const priceOf = (a: Record<string, unknown>) => {
+    const br = accountBranches(a as { branche?: string; extra_branches?: string[]; institution_type?: string });
+    const plan = cat.branchen[br[0]].plans.find((p) => p.tier === a.plan_tier);
+    const yr = a.billing_interval === 'year';
+    return (plan ? (yr ? plan.yearCents : plan.monthCents) : 0) + (br.length - 1) * (yr ? cat.addon.yearCents : cat.addon.monthCents);
+  };
   let mrr = 0;
   const byTier: Record<string, number> = { BASIC: 0, PRO: 0, ENTERPRISE: 0 };
   let manual = 0;
   for (const a of active) {
     byTier[a.plan_tier as string] = (byTier[a.plan_tier as string] ?? 0) + 1;
     if (a.plan_source !== 'stripe') { manual++; continue; }
-    const c = priceOf(a.plan_tier as string, a.billing_interval);
+    const c = priceOf(a as Record<string, unknown>);
     mrr += a.billing_interval === 'year' ? Math.round(c / 12) : c;
   }
   // Abwanderung im Zeitraum: Admin-Protokoll und Stripe-Kündigungen sind nicht vollständig erfasst; hier nur Konten mit abgelaufenem Tarif.

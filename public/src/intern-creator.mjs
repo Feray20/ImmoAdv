@@ -1,6 +1,6 @@
 // Web-Admin → Creator Operations: Bewerbungen prüfen, Creator 360, Zahlungsdaten (maskiert / geschützt anzeigen), Rollen.
 // Rechte prüft ausschließlich der Server (Rolle im Creator-Bereich). Die Oberfläche blendet nur aus, was die Rolle nicht darf.
-import { api, download, dt, dtt, esc } from './sess.mjs?v=5f4bc2a3';
+import { api, download, dt, dtt, esc } from './sess.mjs?v=d533c42d';
 
 const ST = {
   DRAFT: ['', 'Entwurf'], SUBMITTED: ['warn', 'Eingereicht'], UNDER_REVIEW: ['warn', 'In Prüfung'], INFO_REQUESTED: ['warn', 'Rückfrage offen'],
