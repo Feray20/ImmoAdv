@@ -91,13 +91,22 @@ async function items(manual: Record<string, string>): Promise<Item[]> {
         'Feld <strong>„Site URL“</strong>: <code>https://immoadv.de</code> → „Save“.',
         'Bei <strong>„Redirect URLs“</strong> auf „Add URL“ und nacheinander eintragen: <code>https://immoadv.de/auth/login</code>, <code>https://immoadv.de/auth/reset</code>, <code>https://immoadv.de/auth/callback</code>, <code>https://immoadv.de/auth/confirm</code>, <code>https://immoadv.de/b2b-portal</code>, <code>https://partner.immoadv.de</code>. Jeweils speichern.'],
       check: 'Link aus einer Passwort-Mail anklicken – er muss auf immoadv.de landen, nicht auf localhost.' },
-    { id: 'b2bnotify', group: 'E-Mail-Versand', title: 'Geschäftsadresse für B2B-Meldungen', auto: true, ok: has('B2B_NOTIFY_EMAIL'), time: '2 Minuten',
-      why: 'Kontoanfragen und Registrierungsnachweise gehen sonst an die Admin-Adresse.',
+    { id: 'b2bnotify', group: 'E-Mail-Versand', title: 'Eigene Adresse für B2B-Meldungen', auto: true, ok: has('B2B_NOTIFY_EMAIL'), optional: true, time: '2 Minuten',
+      why: 'Optional: Kontoanfragen und Registrierungsnachweise gehen derzeit an die Admin-Adresse – das funktioniert bereits.',
       steps: [
         `${a(VERCEL, 'Vercel → Settings → Environment Variables')} → „Add New“.`,
         'Key <code>B2B_NOTIFY_EMAIL</code>, Value = Ihre Geschäftsadresse, nur Production, „Save“.',
         'Deployments → oberster Eintrag → „⋯“ → „Redeploy“.'],
       check: 'Testanfrage auf immoadv.de/b2b senden – die Meldung kommt an die neue Adresse.' },
+    { id: 'inbound', group: 'E-Mail-Versand', title: 'Postfach: E-Mails sofort empfangen (Resend-Webhook)', auto: true, ok: has('RESEND_INBOUND_SECRET') || has('RESEND_WEBHOOK_SECRET'), optional: true, time: '3 Minuten',
+      need: 'Zugang zu resend.com und zu Vercel.',
+      why: 'E-Mails an @immoadv.de kommen bereits an und werden beim Öffnen des Postfachs abgerufen. Mit dem Webhook erscheinen sie sofort und Sie bekommen eine Benachrichtigung.',
+      steps: [
+        `${a('https://resend.com/webhooks', 'resend.com → Webhooks')} → <strong>„Add Endpoint“</strong>.`,
+        'Endpoint URL: <code>https://immoadv.de/api/mail/inbound</code> · Event: <strong>email.received</strong> anhaken → „Add“.',
+        'Den neuen Webhook öffnen und das <strong>Signing Secret</strong> (beginnt mit <code>whsec_</code>) kopieren.',
+        `${a(VERCEL, 'Vercel → Environment Variables')} → „Add New“: Key <code>RESEND_INBOUND_SECRET</code>, Value einfügen, nur Production, „Save“ → Redeploy.`],
+      check: 'Eine E-Mail an support@immoadv.de schicken – sie erscheint innerhalb von Sekunden im Web-Admin-Postfach.' },
     // ---------- Zahlungen ----------
     { id: 'stripe_test', group: 'Zahlungen', title: 'Stripe-Testschlüssel für den Testkauf', auto: true, ok: has('STRIPE_TEST_SECRET_KEY'), time: '5 Minuten',
       need: 'Zugang zum Stripe-Dashboard.',
@@ -210,9 +219,10 @@ async function items(manual: Record<string, string>): Promise<Item[]> {
       steps: [
         'Web-Admin → Partner → <strong>„+ Privatkonto“</strong> mit einer zweiten E-Mail-Adresse anlegen, abmelden und mit dem Startpasswort anmelden.',
         'Ein Objekt anlegen, Schnellrechner und Exposé-Scan testen, Daten exportieren (Konto → Datenschutz).',
-        'Web-Admin → Partner → <strong>„+ Unternehmen“</strong> anlegen, auf partner.immoadv.de anmelden, Branche wählen, eine Fall-Analyse mit echten PDFs machen.',
+        'Web-Admin → Partner → <strong>„+ Unternehmen“</strong> anlegen (Branche wird aus der Art übernommen), im Unternehmensportal anmelden, eine Fall-Analyse mit echten PDFs machen.',
         'Auf immoadv.de/b2b eine Kontoanfrage mit Nachweis senden und im Web-Admin öffnen.',
-        'Testkauf (sobald der Stripe-Testschlüssel hinterlegt ist).',
+        'Web-Admin → Testkauf: einen Tarif mit Testkarte 4242 4242 4242 4242 kaufen.',
+        'Web-Admin → Postfach: eine E-Mail an Ihre eigene Adresse senden und darauf antworten – die Antwort erscheint im Posteingang.',
         'Alles, was hakt, mit Screenshot an mich schicken.'],
       check: 'Alle Schritte liefen ohne Fehlermeldung.' },
   ];

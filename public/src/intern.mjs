@@ -1,7 +1,7 @@
 // Web-Admin (nur ADMIN_EMAILS, mit zweitem Faktor): Finanz-Cockpit, System, Nutzer, Sicherheit, Partner, Rechnungsarchiv,
 // Steuer-Export, Anfragen und Codes, Protokoll und Betreiber-Kennzahlen.
-import { logoLoader } from './loader.mjs?v=395be540';
-import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs?v=395be540';
+import { logoLoader } from './loader.mjs?v=5f4bc2a3';
+import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs?v=5f4bc2a3';
 
 // Zwei-Faktor-Code: Autofill aus der Tastatur (iOS/Android), Eingabe säubern und mit 6 Ziffern automatisch absenden.
 if (!window.__iaOtp) {
@@ -52,7 +52,7 @@ async function gate() {
 async function mfa() {
   // Bereits eingerichteter zweiter Faktor (App oder SMS): nur Code abfragen.
   try {
-    const m = await import('./mfa.mjs?v=395be540');
+    const m = await import('./mfa.mjs?v=5f4bc2a3');
     const { factors } = await m.factorsOf(token());
     if (factors.length) { root.innerHTML = '<div class="pt-card ad-mfa" id="adMfa"></div>'; await m.challengeUI($('#adMfa'), session(), () => location.reload()); return; }
   } catch { /* weiter mit Einrichtung */ }
@@ -171,7 +171,7 @@ function show() {
   const v = $('#adView');
   v.innerHTML = skel();
   msg('');
-  const view = ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs?v=395be540')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs?v=395be540').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs?v=395be540').then((m) => m.akquise(x)), postfach: (x) => import('./intern-mail.mjs?v=395be540').then((m) => m.postfach(x)), werbung: (x) => import('./intern-marketing.mjs?v=395be540').then((m) => m.werbung(x)), creator: (x) => import('./intern-creator.mjs?v=395be540').then((m) => m.creatorOps(x)), api: (x) => import('./intern-api.mjs?v=395be540').then((m) => m.apiOps(x)) })[t](v);
+  const view = ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs?v=5f4bc2a3')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs?v=5f4bc2a3').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs?v=5f4bc2a3').then((m) => m.akquise(x)), postfach: (x) => import('./intern-mail.mjs?v=5f4bc2a3').then((m) => m.postfach(x)), werbung: (x) => import('./intern-marketing.mjs?v=5f4bc2a3').then((m) => m.werbung(x)), creator: (x) => import('./intern-creator.mjs?v=5f4bc2a3').then((m) => m.creatorOps(x)), api: (x) => import('./intern-api.mjs?v=5f4bc2a3').then((m) => m.apiOps(x)) })[t](v);
   Promise.resolve(view).catch((e) => { console.warn('[admin]', e); errState(v, ''); });
 }
 
@@ -222,7 +222,7 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
   v.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => { if (b.dataset.seg !== 'admin') { setSeg(b.dataset.seg); paintSeg(); } nutzer(v, 1, '', b.dataset.seg); });
   $('#usPrev')?.addEventListener('click', () => nutzer(v, page - 1, q, seg));
   $('#usNext')?.addEventListener('click', () => nutzer(v, page + 1, q, seg));
-  v.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => import('./intern-feedback.mjs?v=395be540').then((m) => m.accessDialog(b.dataset.acc, b.dataset.mail, msg)));
+  v.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => import('./intern-feedback.mjs?v=5f4bc2a3').then((m) => m.accessDialog(b.dataset.acc, b.dataset.mail, msg)));
   v.querySelectorAll('[data-coapprove]').forEach((b) => b.onclick = async () => {
     if (!confirm(`${b.dataset.name} freischalten? Das Unternehmen erhält eine E-Mail.`)) return;
     b.disabled = true;
@@ -1196,8 +1196,7 @@ async function einrichtung(v) {
       <span class="su-sub">${esc(x.why)}</span><span class="su-go">${x.time ? `ca. ${esc(x.time)} · ` : ''}Anleitung öffnen ›</span></button></li>`;
   v.innerHTML = `<section class="ad-over"><div class="ad-over-h"><h2>Einrichtung</h2><p class="form-note">${must.length ? `<strong>${must.length} Pflichtpunkt${must.length === 1 ? '' : 'e'} offen</strong>${open.length > must.length ? `, ${open.length - must.length} optional` : ''}.` : '<strong>Alle Pflichtpunkte erledigt.</strong>'} Tippen Sie auf einen Punkt – dann kommt die genaue Schritt-für-Schritt-Anleitung. Werte nie per Chat oder E-Mail weitergeben, immer direkt in Vercel eintragen.</p></div>
     <div class="su-bar" role="img" aria-label="${pct} Prozent erledigt"><i style="width:${pct}%"></i></div><p class="form-note">${done.length} von ${all.length} erledigt</p>
-    ${groups.map((g) => { const o = open.filter((x) => x.group === g); return o.length ? `<h3 class="ad-sub">${esc(g)}</h3><ol class="su-list">${o.map(card).join('')}</ol>` : ''; }).join('') || '<p class="pt-alert ok">Alles eingerichtet.</p>'}
-    ${done.length ? `<details class="ad-help"><summary>Erledigt (${done.length})</summary><ul class="su-done-list">${done.map((x) => `<li><button type="button" class="text-btn" data-open="${x.id}">✓ ${esc(x.title)}</button>${x.auto ? '<small>automatisch erkannt</small>' : `<button type="button" class="text-btn" data-undo="${x.id}">wieder öffnen</button>`}</li>`).join('')}</ul></details>` : ''}</section>`;
+    ${groups.map((g) => { const o = open.filter((x) => x.group === g); return o.length ? `<h3 class="ad-sub">${esc(g)}</h3><ol class="su-list">${o.map(card).join('')}</ol>` : ''; }).join('') || '<p class="pt-alert ok">Alles eingerichtet.</p>'}</section>`;
   const mark = async (id, val) => { const x = await api('/api/admin/setup', { method: 'POST', body: JSON.stringify({ id, done: val }) }); if (!x.ok) msg(x.data?.error || 'Fehler', true); einrichtung(v); };
   const guide = (x) => {
     let d = document.getElementById('suDlg');
