@@ -1,0 +1,62 @@
+/* Web-Admin → API Management (ergänzt b2b.css / creator.css; gleiche Farben und Abstände wie der übrige Admin-Bereich). */
+.api-head .ad-h-row{gap:12px;flex-wrap:wrap}
+.api-tenant{display:flex;align-items:center;gap:8px;font-weight:600;color:#0F2C59;flex:1 1 320px;min-width:0}
+.api-tenant select{flex:1;min-width:0;max-width:100%;padding:8px 10px;border:1px solid #CBD5E1;border-radius:8px;background:#fff}
+.api-test-banner{background:#FEF3C7;border:1px solid #F59E0B;color:#78350F;border-radius:12px;padding:10px 14px;margin:0 0 12px;font-size:14px}
+.api-test-banner strong{letter-spacing:.08em;margin-right:6px}
+.api-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin:12px 0}
+.api-kpi{border:1px solid #E2E8F0;border-radius:12px;padding:10px 12px;background:#fff;min-width:0}
+.api-kpi small{display:block;color:#64748B;font-size:12px}
+.api-kpi strong{display:block;font-size:20px;color:#0F2C59;margin-top:2px;overflow-wrap:anywhere}
+.api-kpi span{display:block;color:#64748B;font-size:12px;margin-top:2px;overflow-wrap:anywhere}
+.api-steps{list-style:none;padding:0;margin:12px 0;display:grid;gap:10px}
+.api-steps li{display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:center;border:1px solid #E2E8F0;border-radius:12px;padding:12px;background:#fff}
+.api-steps li.done{border-color:#86EFAC;background:#F0FDF4}
+.api-steps p{margin:2px 0;color:#475569;font-size:14px}
+.api-steps small{color:#166534}
+.api-step-n{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#0F2C59;color:#fff;font-weight:700}
+.api-steps li.done .api-step-n{background:#16A34A}
+.api-form{display:grid;gap:12px;max-width:820px}
+.api-form label,.api-filters label,.api-pg label{display:grid;gap:4px;font-size:14px;color:#334155}
+.api-form input,.api-form select,.api-filters input,.api-filters select,.api-pg input,.api-pg select,.api-pg textarea,.ad-dlg textarea,.ad-dlg input,.ad-dlg select{padding:8px 10px;border:1px solid #CBD5E1;border-radius:8px;font:inherit;background:#fff;min-width:0;max-width:100%}
+.api-switch{display:flex!important;align-items:center;gap:8px;grid-template-columns:none}
+.api-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.api-secret{display:block;padding:12px;background:#0F172A;color:#E2E8F0;border-radius:8px;overflow-wrap:anywhere;font-size:13px;margin:10px 0}
+.api-scopes code,.api-docs code,.api-flow code{font-size:12px}
+.api-acts{white-space:nowrap}
+.api-acts .btn{padding:4px 8px;font-size:12px;margin:0 2px 2px 0}
+.api-scopepick{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px;border:1px solid #E2E8F0;border-radius:8px;padding:8px}
+.api-scopepick label{display:flex;gap:6px;align-items:center;font-size:13px}
+.api-charts{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin:12px 0}
+.api-chart{margin:0;border:1px solid #E2E8F0;border-radius:12px;padding:10px;background:#fff}
+.api-chart figcaption{font-size:13px;color:#475569;display:flex;justify-content:space-between;gap:8px}
+.api-chart svg{width:100%;height:80px;display:block;margin-top:6px}
+.api-chart rect{fill:#0284C7}
+.api-filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;align-items:end;margin:10px 0}
+.api-flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 14px;font-size:13px;color:#94A3B8}
+.api-flow-step{border:1px solid #CBD5E1;background:#fff;border-radius:999px;padding:5px 10px;font:inherit;font-size:13px;color:#0F2C59;cursor:pointer}
+.api-flow-step.done{background:#DCFCE7;border-color:#86EFAC;color:#166534}
+.api-pg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.api-pg-req{display:grid;gap:10px;min-width:0}
+.api-pg-res{min-width:0;border:1px solid #E2E8F0;border-radius:12px;padding:12px;background:#F8FAFC}
+.api-pg textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+.api-res-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:13px;margin-bottom:8px}
+.api-pre{background:#0F172A;color:#E2E8F0;border-radius:8px;padding:10px;font-size:12px;max-height:440px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0}
+.api-copy{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;font-size:13px}
+.api-copy .btn{padding:5px 10px;font-size:13px}
+.api-toc{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px}
+.api-toc a{border:1px solid #E2E8F0;border-radius:999px;padding:4px 10px;font-size:13px;text-decoration:none;color:#0F2C59;background:#fff}
+.api-doc-ep{border:1px solid #E2E8F0;border-radius:12px;padding:12px;margin:10px 0;background:#fff}
+.api-doc-ep h4{margin:0 0 6px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;overflow-wrap:anywhere}
+.api-m{font-size:11px;font-weight:800;padding:2px 7px;border-radius:6px;color:#fff;background:#475569}
+.api-m-get{background:#0284C7}.api-m-post{background:#16A34A}.api-m-patch{background:#D97706}.api-m-delete{background:#DC2626}
+.api-danger{border-color:#FCA5A5!important}
+.api-chg h3 small{color:#64748B;font-weight:400}
+@media (max-width:900px){.api-pg{grid-template-columns:1fr}}
+@media (max-width:600px){
+  .api-grid2{grid-template-columns:1fr}
+  .api-steps li{grid-template-columns:32px 1fr}
+  .api-steps li .btn{grid-column:1/-1}
+  .api-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .api-flow span{display:none}
+}
