@@ -65,7 +65,7 @@ type RouteCtx = { params: Promise<Record<string, string>> };
 
 export function apiRoute(opts: RouteOpts, handler: (ctx: ApiCtx) => Promise<ApiResult>) {
   if (!isScope(opts.scope)) throw new Error(`unknown scope ${opts.scope}`);
-  return async (req: Request, routeCtx?: RouteCtx): Promise<Response> => {
+  return async (req: Request, routeCtx: RouteCtx): Promise<Response> => {
     const started = performance.now();
     const requestId = newRequestId();
     const ipHash = anonymizedIpHash(req);
@@ -136,7 +136,7 @@ export function apiRoute(opts: RouteOpts, handler: (ctx: ApiCtx) => Promise<ApiR
         try { body = JSON.parse(raw.toString('utf8')); } catch { return fail('INVALID_JSON'); }
       }
       if (opts.multipart && raw.length && !contentType.startsWith('multipart/form-data')) return fail('UNSUPPORTED_MEDIA_TYPE', 'Use Content-Type: multipart/form-data.');
-      const params = routeCtx ? await routeCtx.params : {};
+      const params = (routeCtx?.params ? await routeCtx.params : {}) ?? {};
       for (const [k2, v] of Object.entries(params)) if (/id$/i.test(k2) && !/^[0-9a-f-]{36}$/i.test(v)) return fail('RESOURCE_NOT_FOUND');
       // 10) Idempotenz
       const idemKey = req.headers.get('idempotency-key');
