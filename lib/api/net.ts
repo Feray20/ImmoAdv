@@ -4,6 +4,7 @@ import { isIP } from 'node:net';
 function v4ToInt(ip: string): number {
   return ip.split('.').reduce((a, b) => (a << 8) + Number(b), 0) >>> 0;
 }
+const B0 = BigInt(0), B16 = BigInt(16), B32 = BigInt(32), FFFF = BigInt(0xffff), MASK32 = BigInt(0xffffffff);
 function v6ToBigInt(ip: string): bigint | null {
   let s = ip.toLowerCase();
   const zone = s.indexOf('%'); if (zone >= 0) s = s.slice(0, zone);
@@ -17,8 +18,8 @@ function v6ToBigInt(ip: string): bigint | null {
   const fill = parts.length === 2 ? 8 - head.length - tail.length : 0;
   const all = [...head, ...Array(Math.max(0, fill)).fill('0'), ...tail];
   if (all.length !== 8) return null;
-  let v = 0n;
-  for (const h of all) { if (!/^[0-9a-f]{1,4}$/.test(h)) return null; v = (v << 16n) + BigInt(parseInt(h, 16)); }
+  let v = B0;
+  for (const h of all) { if (!/^[0-9a-f]{1,4}$/.test(h)) return null; v = (v << B16) + BigInt(parseInt(h, 16)); }
   return v;
 }
 
@@ -27,7 +28,7 @@ export function normalizeIp(ip: string): string {
   const s = ip.trim().replace(/^\[|\]$/g, '');
   if (isIP(s) === 6) {
     const v = v6ToBigInt(s);
-    if (v !== null && v >> 32n === 0xffffn) { const n = Number(v & 0xffffffffn); return [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.'); }
+    if (v !== null && v >> B32 === FFFF) { const n = Number(v & MASK32); return [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.'); }
   }
   return s;
 }

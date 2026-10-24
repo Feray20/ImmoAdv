@@ -242,7 +242,7 @@ export async function POST(req: Request) {
       }
       const r = await sendTest(tenant, w.environment, w.id);
       await apiAudit({ tenantId: tenant, environment: w.environment, actor, action: 'webhook.tested', resourceType: 'webhook', resourceId: w.id, result: r.ok ? 'success' : 'failure', meta: { status: r.status } });
-      return j({ ok: r.ok, ...r });
+      return j({ ...r });
     }
     if (b.action === 'sandbox_seed') {
       if (!t.policy.enabled) return j({ error: 'API für diesen Mandanten zuerst aktivieren.' }, 409);

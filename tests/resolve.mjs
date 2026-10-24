@@ -11,3 +11,12 @@ export async function resolve(specifier, context, next) {
   }
   return next(s, context);
 }
+
+// JSON-Module (z. B. public/data/preise.json) ohne Import-Attribute laden, wie es der Next.js-Bundler erlaubt.
+import { readFileSync } from 'node:fs';
+export async function load(url, context, next) {
+  if (url.startsWith('file:') && url.endsWith('.json')) {
+    return { format: 'module', source: `export default ${readFileSync(fileURLToPath(url), 'utf8')};`, shortCircuit: true };
+  }
+  return next(url, context);
+}
