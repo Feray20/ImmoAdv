@@ -214,7 +214,7 @@ body:has(> footer.k-foot)>:not(main){flex-shrink:0}
 .faq-topics button:focus-visible{outline:3px solid #7DD3FC;outline-offset:2px}
 .faq-org>details[hidden]{display:none!important}
 /* Schmale Handys (Safari): Preistabelle als Block-Liste, Spalten dürfen schrumpfen und umbrechen */
-@media (max-width:640px){
+@media (max-width:560px){
   .k-ptable,.k-ptable tbody{display:block;width:100%}
   .k-ptable tr{grid-template-columns:minmax(0,1fr) auto}
   .k-ptable td{min-width:0;overflow-wrap:anywhere}
