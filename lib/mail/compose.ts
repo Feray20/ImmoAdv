@@ -10,7 +10,7 @@ export type MailRow = {
   from_email: string; from_name: string | null; to_emails: string[]; cc_emails: string[]; subject: string; html: string | null; text_body: string | null;
   termin_fallback: string | null; token: string | null; with_unsub: boolean; message_id: string | null; in_reply_to: string | null; refs: string | null;
   attachments: { name: string; type: string; size: number; path: string; cid?: string | null; inline?: boolean }[]; contact_id: string | null;
-  created_at: string; sent_at: string | null; received_at: string | null; snippet: string | null;
+  created_at: string; sent_at: string | null; received_at: string | null; snippet: string | null; read_at: string | null; starred: boolean;
 };
 const BOOKING = 'outreach_booking_url';
 export const unsubUrl = (t: string | null) => (t ? `https://immoadv.de/api/abmelden?t=${t}` : null);
