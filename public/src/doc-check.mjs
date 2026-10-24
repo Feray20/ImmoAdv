@@ -1,11 +1,7 @@
 // Fall-Analyse: Unterlagen einer Baufinanzierung erkennen und Kernwerte auslesen.
 // Reine Textauswertung (deutsche Formulare) – läuft im Browser, die Dateien verlassen das Gerät nicht.
 // Ergebnisse sind Lesehilfen; der Berater prüft die Originale.
-<<<<<<< HEAD
-import { deNum } from './listing-parse.mjs?v=a5ae61b4';
-=======
-import { deNum } from './listing-parse.mjs?v=a5ae61b4';
->>>>>>> origin/main
+import { deNum } from './listing-parse.mjs?v=db34bdea';
 
 const NUM = String.raw`(-?\d{1,3}(?:[.\s]\d{3})+(?:,\d{1,2})?|-?\d+(?:,\d{1,2})?)`;
 const norm = (t) => String(t || '').replace(/ /g, ' ').replace(/[ \t]+/g, ' ');

@@ -1,12 +1,7 @@
 // Web-Admin (nur ADMIN_EMAILS, mit zweitem Faktor): Finanz-Cockpit, System, Nutzer, Sicherheit, Partner, Rechnungsarchiv,
 // Steuer-Export, Anfragen und Codes, Protokoll und Betreiber-Kennzahlen.
-<<<<<<< HEAD
-import { logoLoader } from './loader.mjs?v=a5ae61b4';
-import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs?v=a5ae61b4';
-=======
-import { logoLoader } from './loader.mjs?v=a5ae61b4';
-import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs?v=a5ae61b4';
->>>>>>> origin/main
+import { logoLoader } from './loader.mjs?v=db34bdea';
+import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs?v=db34bdea';
 
 // Zwei-Faktor-Code: Autofill aus der Tastatur (iOS/Android), Eingabe säubern und mit 6 Ziffern automatisch absenden.
 if (!window.__iaOtp) {
@@ -57,11 +52,7 @@ async function gate() {
 async function mfa() {
   // Bereits eingerichteter zweiter Faktor (App oder SMS): nur Code abfragen.
   try {
-<<<<<<< HEAD
-    const m = await import('./mfa.mjs?v=a5ae61b4');
-=======
-    const m = await import('./mfa.mjs?v=a5ae61b4');
->>>>>>> origin/main
+    const m = await import('./mfa.mjs?v=db34bdea');
     const { factors } = await m.factorsOf(token());
     if (factors.length) { root.innerHTML = '<div class="pt-card ad-mfa" id="adMfa"></div>'; await m.challengeUI($('#adMfa'), session(), () => location.reload()); return; }
   } catch { /* weiter mit Einrichtung */ }
@@ -180,11 +171,7 @@ function show() {
   const v = $('#adView');
   v.innerHTML = skel();
   msg('');
-<<<<<<< HEAD
-  const view = ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs?v=a5ae61b4')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs?v=a5ae61b4').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs?v=a5ae61b4').then((m) => m.akquise(x)), postfach: (x) => import('./intern-mail.mjs?v=a5ae61b4').then((m) => m.postfach(x)), termine: (x) => import('./intern-termine.mjs?v=a5ae61b4').then((m) => m.termine(x)), werbung: (x) => import('./intern-marketing.mjs?v=a5ae61b4').then((m) => m.werbung(x)), creator: (x) => import('./intern-creator.mjs?v=a5ae61b4').then((m) => m.creatorOps(x)), api: (x) => import('./intern-api.mjs?v=a5ae61b4').then((m) => m.apiOps(x)) })[t](v);
-=======
-  const view = ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs?v=a5ae61b4')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs?v=a5ae61b4').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs?v=a5ae61b4').then((m) => m.akquise(x)), postfach: (x) => import('./intern-mail.mjs?v=a5ae61b4').then((m) => m.postfach(x)), werbung: (x) => import('./intern-marketing.mjs?v=a5ae61b4').then((m) => m.werbung(x)), creator: (x) => import('./intern-creator.mjs?v=a5ae61b4').then((m) => m.creatorOps(x)), api: (x) => import('./intern-api.mjs?v=a5ae61b4').then((m) => m.apiOps(x)) })[t](v);
->>>>>>> origin/main
+  const view = ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs?v=db34bdea')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs?v=db34bdea').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs?v=db34bdea').then((m) => m.akquise(x)), postfach: (x) => import('./intern-mail.mjs?v=db34bdea').then((m) => m.postfach(x)), termine: (x) => import('./intern-termine.mjs?v=db34bdea').then((m) => m.termine(x)), werbung: (x) => import('./intern-marketing.mjs?v=db34bdea').then((m) => m.werbung(x)), creator: (x) => import('./intern-creator.mjs?v=db34bdea').then((m) => m.creatorOps(x)), api: (x) => import('./intern-api.mjs?v=db34bdea').then((m) => m.apiOps(x)) })[t](v);
   Promise.resolve(view).catch((e) => { console.warn('[admin]', e); errState(v, ''); });
 }
 
@@ -235,11 +222,7 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
   v.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => { if (b.dataset.seg !== 'admin') { setSeg(b.dataset.seg); paintSeg(); } nutzer(v, 1, '', b.dataset.seg); });
   $('#usPrev')?.addEventListener('click', () => nutzer(v, page - 1, q, seg));
   $('#usNext')?.addEventListener('click', () => nutzer(v, page + 1, q, seg));
-<<<<<<< HEAD
-  v.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => import('./intern-feedback.mjs?v=a5ae61b4').then((m) => m.accessDialog(b.dataset.acc, b.dataset.mail, msg)));
-=======
-  v.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => import('./intern-feedback.mjs?v=a5ae61b4').then((m) => m.accessDialog(b.dataset.acc, b.dataset.mail, msg)));
->>>>>>> origin/main
+  v.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => import('./intern-feedback.mjs?v=db34bdea').then((m) => m.accessDialog(b.dataset.acc, b.dataset.mail, msg)));
   v.querySelectorAll('[data-coapprove]').forEach((b) => b.onclick = async () => {
     if (!confirm(`${b.dataset.name} freischalten? Das Unternehmen erhält eine E-Mail.`)) return;
     b.disabled = true;
@@ -873,11 +856,7 @@ async function partner(v) {
     if (r.ok) { msg('Gespeichert.'); partner(v); } else msg(r.data?.error || 'Fehler', true);
   });
   $('#mkNew')?.addEventListener('click', () => openCreateAccount(null, () => partner(v)));
-<<<<<<< HEAD
-  $('#mkCat')?.addEventListener('click', () => import('./intern-b2bcat.mjs?v=a5ae61b4').then((m) => m.catalogEditor()));
-=======
-  $('#mkCat')?.addEventListener('click', () => import('./intern-b2bcat.mjs?v=a5ae61b4').then((m) => m.catalogEditor()));
->>>>>>> origin/main
+  $('#mkCat')?.addEventListener('click', () => import('./intern-b2bcat.mjs?v=db34bdea').then((m) => m.catalogEditor()));
   $('#mkPriv')?.addEventListener('click', () => openCreatePrivate());
 }
 

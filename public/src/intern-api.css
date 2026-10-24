@@ -144,7 +144,6 @@
 .br-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
 .br-tabs button{font:inherit;font-size:14px;font-weight:700;padding:8px 14px;border-radius:999px;border:1.5px solid #CBD5E1;background:#fff;color:#0F2C59;cursor:pointer}
 .br-tabs button[aria-selected="true"]{background:#0F2C59;border-color:#0F2C59;color:#fff}
-<<<<<<< HEAD
 /* Web-Admin → Termine */
 .tma{display:grid;gap:14px}
 .tma-head{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:flex-start}.tma-head h2{margin:0;color:#0F2C59}
@@ -168,5 +167,3 @@
 .tma-rng{display:inline-flex;align-items:center;gap:4px;background:#F1F5F9;border-radius:10px;padding:4px 6px}
 .tma-rng input{width:auto;padding:4px;border:1px solid #CBD5E1;border-radius:6px;font:inherit}
 .tma-x{border:0;background:none;font-size:18px;line-height:1;cursor:pointer;color:#64748B}
-=======
->>>>>>> origin/main
