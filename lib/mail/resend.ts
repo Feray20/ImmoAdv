@@ -4,7 +4,7 @@ import { normalizeRecipient } from '@/lib/notify/mail';
 // Resend: Versand (mit eingebetteten Bildern und Dateianhängen) und Empfang (Receiving-API + Webhook „email.received“).
 const SITE = 'https://immoadv.de';
 export const BRAND_IMAGES = [
-  { content_id: 'att0', filename: 'feray-korkmaz.png', path: `${SITE}/img/mail/foto.png` },
+  { content_id: 'att0', filename: 'feray-korkmaz.png', path: `${SITE}/img/mail/foto.png?v=2` },
   { content_id: 'att1', filename: 'immoadv.png', path: `${SITE}/img/mail/logo.png` },
   { content_id: 'att2', filename: 'unterschrift.png', path: `${SITE}/img/mail/unterschrift.png` },
 ];
