@@ -245,10 +245,9 @@ begin
     coalesce(new.request_id, '') || '|' || new.result || '|' || new.meta::text || '|' || to_char(new.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US'), 'sha256'), 'hex');
   return new;
 end $$;
-drop trigger if exists api_audit_chain_trg on public.api_audit_events;
-create trigger api_audit_chain_trg before insert on public.api_audit_events for each row execute function public.api_audit_chain();
+create or replace trigger api_audit_chain_trg before insert on public.api_audit_events for each row execute function public.api_audit_chain();
 
-create or replace function public.api_audit_immutable() returns trigger language plpgsql as $$
+create or replace function public.api_audit_immutable() returns trigger language plpgsql set search_path = '' as $$
 begin
   -- Mandant gelöscht: nur das Nullsetzen der Mandanten-ID (Fremdschlüssel) ist erlaubt.
   if tg_op = 'UPDATE' and new.tenant_id is null and old.tenant_id is not null
@@ -257,8 +256,7 @@ begin
   end if;
   raise exception 'api_audit_events ist unveränderlich';
 end $$;
-drop trigger if exists api_audit_immutable_trg on public.api_audit_events;
-create trigger api_audit_immutable_trg before update or delete on public.api_audit_events for each row execute function public.api_audit_immutable();
+create or replace trigger api_audit_immutable_trg before update or delete on public.api_audit_events for each row execute function public.api_audit_immutable();
 
 -- ---------- Nutzungsauswertung ----------
 create or replace function public.api_usage_series(p_tenant uuid, p_env text, p_from timestamptz, p_bucket text)
