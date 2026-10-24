@@ -777,8 +777,8 @@ img,svg,video,canvas,iframe{max-width:100%}
   main h1,main h2,main h3,main h4,main nav,main nav a,main .btn{overflow-wrap:normal;hyphens:manual}
   main input,main select,main textarea,main .btn{max-width:100%}
   main .btn{white-space:normal}
-  main table th,main table td{overflow-wrap:normal;hyphens:manual;-webkit-hyphens:manual}
-  main table td{min-width:max-content}
+  /* Tabellenzellen brechen an Leerzeichen um (kein min-width:max-content: Safari und Firefox würden die Tabelle sonst auf die längste Zeile verbreitern). */
+  main table th,main table td{overflow-wrap:break-word;hyphens:manual;-webkit-hyphens:manual;min-width:0}
 }
 .calc-pages,.cancel-form{grid-template-columns:minmax(0,1fr)}
 
@@ -1694,7 +1694,7 @@ html:has(dialog.ad-dlg[open]),html:has(dialog.buy-dlg[open]){overflow:hidden}
 /* ---------- Fußzeile (kompakt, einheitlich für alle Website-Seiten) ---------- */
 footer.footer-min{padding:26px 0 22px;font-size:14px;color:#E2E8F0;
   /* Logo-Farben als Verlauf: Navy → Blau, oben rechts ein heller Schimmer */
-  background:radial-gradient(120% 140% at 100% 0%,rgba(56,189,248,.28) 0%,rgba(56,189,248,0) 55%),linear-gradient(135deg,#0F2C59 0%,#0B3B73 50%,#0369A1 100%)}
+  background:radial-gradient(120% 140% at 100% 0%,rgba(56,189,248,.28) 0%,rgba(56,189,248,0) 55%),linear-gradient(135deg,#0F2C59 0%,#0B3B73 50%,#0369A1 100%);background-origin:border-box;background-repeat:no-repeat}
 footer.footer-min .fm{display:grid;gap:14px}
 footer.footer-min .fm-top,footer.footer-min .fm-bottom{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 24px}
 footer.footer-min .fm-bottom{border-top:1px solid rgba(255,255,255,.18);padding-top:14px}

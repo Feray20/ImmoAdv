@@ -310,8 +310,7 @@ img,svg,video,canvas,iframe{max-width:100%}
 main h1,main h2,main h3,main h4,main nav,main nav a,main .btn{overflow-wrap:normal;hyphens:manual}
 main input,main select,main textarea,main .btn{max-width:100%}
 main .btn{white-space:normal}
-main table th,main table td{overflow-wrap:normal;hyphens:manual;-webkit-hyphens:manual}
-main table td{min-width:max-content}}
+main table th,main table td{overflow-wrap:break-word;hyphens:manual;-webkit-hyphens:manual;min-width:0}}
 @keyframes buyspin{to{transform:rotate(360deg)}}
 .stage-x{border:0;background:#F1F5F9;border-radius:50%;width:38px;height:38px;font-size:22px;cursor:pointer}
 .wiz-nav{display:flex;justify-content:space-between;gap:10px;margin-top:6px}
@@ -503,6 +502,7 @@ body[data-ad-seg="b2b"] .ad-seg-chip,body[data-ad-seg="b2b"] .ad-segctl button[a
 .faq-topics button[aria-selected="true"] .faq-n{background:rgba(255,255,255,.2);color:#fff}
 .faq-topics button:focus-visible{outline:3px solid #7DD3FC;outline-offset:2px}
 .faq-org>details[hidden]{display:none!important}
+.btn-dark,.btn-primary,.nav-actions .btn-ghost,.cw-fab,.save-obj,.qz-next,.cw-send,.area-login .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light),.auth-card .btn:not(.btn-outline):not(.btn-ghost):not(.btn-light),.btn-dark:hover,.btn-primary:hover,.nav-actions .btn-ghost:hover,.cw-fab:hover,.save-obj:hover,.qz-next:hover,.cw-send:hover,.hs-go,.lp-nav-btn,.bx-nav-cta,.hs-go:hover,.lp-nav-btn:hover,.bx-nav-cta:hover,.offer-rec,.lp-badge,.cr-step-n,.home-num,.steps li.on,.tool-tabs a[aria-current="page"],.mobile-nav a[href="/auth/login"],.bill-table tr:has(>th),.report tr:has(>th),.status-table tr:has(>th),.home-hero,.cr-hero,.bx-secu,.bx-after,.bx-cmp-c.on,aside.roi,.lp-kpi-dark,footer.ia-legal,.qz-chips button[aria-pressed="true"],.lp-use button[aria-checked="true"],[data-sim][aria-selected="true"] b,.bx-inv-steps li>b,.bx-flow li,.level-row span,.pt-side,.bw-mind-core,.ns-title,.ad-tabs button[aria-selected="true"],.ad-subtabs button[aria-selected="true"],.ad-actions button.ad-primary,body[data-ad-seg="b2b"] .ad-seg-chip,body[data-ad-seg="b2b"] .ad-segctl button[aria-pressed="true"],.fn-period button[aria-pressed="true"],.pc-chips button[aria-pressed="true"],.co-sub a[aria-current="page"],.ad-steps li::before,.bw-steps li::before,.pipe-cols li::before,.bw-no,.su-num,.pt-toast,.bw-table th,body[data-ad-seg="b2c"] .ad-segctl button[aria-pressed="true"],.sim-steps button[aria-selected=true] b,.ad-bar-f,.bw-toc a b,.faq-topics button[aria-selected="true"]{background-origin:border-box!important;background-repeat:no-repeat!important;background-clip:border-box!important}
 /* aus b2b.css */
 body.is-portal{background:#F1F5F9;margin:0}
 .pt{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
