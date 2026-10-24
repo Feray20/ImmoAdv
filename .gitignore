@@ -3,3 +3,6 @@ node_modules/
 .vercel/
 *.tsbuildinfo
 .env*
+
+# Vorlage ohne Werte (wird eingecheckt)
+!.env.example

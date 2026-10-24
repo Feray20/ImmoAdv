@@ -122,7 +122,7 @@ test('Vorprüfung Testfall: maschinenlesbare Checks, Lücke erkannt, keine Kredi
   assert.equal(r.bank_readiness, 'not_ready');
   assert.ok(r.completeness_score > 0 && r.completeness_score < 100);
   assert.ok(!/genehmigt|garantiert|sicher\b/i.test(JSON.stringify(r)), 'keine Zusage-Formulierungen');
-  assert.match(r.disclaimer, /keine Kreditzusage/);
+  assert.match(r.disclaimer, /keine Kreditzusage/i);
 });
 
 test('Vorprüfung vollständiger Fall mit Unterlagen: bankreif', () => {
