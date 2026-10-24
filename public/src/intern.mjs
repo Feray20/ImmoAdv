@@ -1,7 +1,7 @@
 // Web-Admin (nur ADMIN_EMAILS, mit zweitem Faktor): Finanz-Cockpit, System, Nutzer, Sicherheit, Partner, Rechnungsarchiv,
 // Steuer-Export, Anfragen und Codes, Protokoll und Betreiber-Kennzahlen.
-import { logoLoader } from './loader.mjs?v=7c79b83a';
-import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs?v=7c79b83a';
+import { logoLoader } from './loader.mjs?v=60e449fe';
+import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession, supa, token } from './sess.mjs?v=60e449fe';
 
 // Zwei-Faktor-Code: Autofill aus der Tastatur (iOS/Android), Eingabe säubern und mit 6 Ziffern automatisch absenden.
 if (!window.__iaOtp) {
@@ -52,7 +52,7 @@ async function gate() {
 async function mfa() {
   // Bereits eingerichteter zweiter Faktor (App oder SMS): nur Code abfragen.
   try {
-    const m = await import('./mfa.mjs?v=7c79b83a');
+    const m = await import('./mfa.mjs?v=60e449fe');
     const { factors } = await m.factorsOf(token());
     if (factors.length) { root.innerHTML = '<div class="pt-card ad-mfa" id="adMfa"></div>'; await m.challengeUI($('#adMfa'), session(), () => location.reload()); return; }
   } catch { /* weiter mit Einrichtung */ }
@@ -97,15 +97,16 @@ const getSeg = () => { try { const x = localStorage.getItem('ia-admin-seg'); ret
 // Welche Reiter es in welchem Bereich gibt (alles andere ist im Bereich ausgeblendet).
 const TAB_SCOPES = {
   uebersicht: ['b2c', 'b2b'], nutzer: ['b2c', 'b2b', 'system'], vorschlaege: ['b2c', 'b2b'], werbung: ['b2c', 'b2b'], cockpit: ['b2c', 'b2b'], rechnungen: ['b2c', 'b2b'], steuer: ['b2c', 'b2b'],
-  analyse: ['b2c', 'b2b'], kennzahlen: ['b2c', 'b2b'], partner: ['b2b'], api: ['b2b'], creator: ['b2b'], anfragen: ['b2b'], akquise: ['b2b'],
+  analyse: ['b2c', 'b2b'], kennzahlen: ['b2c', 'b2b'], partner: ['b2b'], api: ['b2b'], creator: ['b2b'], anfragen: ['b2b'], akquise: ['b2b'], postfach: ['b2c', 'b2b', 'system'],
   einrichtung: ['system'], system: ['system'], testkauf: ['system'], sicherheit: ['system'], protokoll: ['system'],
 };
 const inScope = (t, g = getSeg()) => (TAB_SCOPES[t] || ['system']).includes(g);
 const firstTab = (g = getSeg()) => (g === 'system' ? 'einrichtung' : 'uebersicht');
 const setSeg = (x) => { try { localStorage.setItem('ia-admin-seg', x); } catch { /* nur Komfort */ } };
-const TABS = [['uebersicht', 'Übersicht'], ['einrichtung', 'Einrichtung'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['creator', 'Creator Operations'], ['rechnungen', 'Rechnungen'], ['steuer', 'GoBD-Export (ZIP, DATEV)'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen'], ['vorschlaege', 'Vorschläge'], ['api', 'API Management']];
+const TABS = [['postfach', 'Postfach'], ['uebersicht', 'Übersicht'], ['einrichtung', 'Einrichtung'], ['analyse', 'Analyse'], ['cockpit', 'Finanz-Cockpit'], ['system', 'System'], ['testkauf', 'Testkauf'], ['nutzer', 'Nutzer'], ['sicherheit', 'Sicherheit'], ['partner', 'Partner'], ['creator', 'Creator Operations'], ['rechnungen', 'Rechnungen'], ['steuer', 'GoBD-Export (ZIP, DATEV)'], ['anfragen', 'Anfragen & Codes'], ['akquise', 'Akquise'], ['werbung', 'Werbung'], ['protokoll', 'Protokoll'], ['kennzahlen', 'Kennzahlen'], ['vorschlaege', 'Vorschläge'], ['api', 'API Management']];
 // Vier Hauptbereiche (Handy: untere Leiste + Unterreiter; Desktop: Seitenleiste mit Gruppen).
 const GROUPS = [
+  ['mail', 'E-Mail-Postfach', 'Postfach', '<path d="M3 13h5l2 3h4l2-3h5"/><path d="M5 5h14l2 8v6H3v-6z"/>', ['postfach']],
   ['ops', 'Operations & CRM', 'CRM', '<path d="M16 11a4 4 0 1 0-8 0"/><circle cx="12" cy="7" r="3"/><path d="M4 21v-2a6 6 0 0 1 16 0v2"/>', ['uebersicht', 'vorschlaege', 'partner', 'creator', 'nutzer', 'anfragen', 'akquise', 'werbung']],
   ['fin', 'Finanzen & Compliance', 'Finanzen', '<path d="M4 7h16v12H4z"/><path d="M4 11h16M8 15h3"/>', ['cockpit', 'rechnungen', 'steuer']],
   ['ana', 'Analytics & Monitoring', 'Analyse', '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', ['analyse', 'kennzahlen', 'protokoll', 'sicherheit']],
@@ -170,7 +171,7 @@ function show() {
   const v = $('#adView');
   v.innerHTML = skel();
   msg('');
-  const view = ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs?v=7c79b83a')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs?v=7c79b83a').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs?v=7c79b83a').then((m) => m.akquise(x)), werbung: (x) => import('./intern-marketing.mjs?v=7c79b83a').then((m) => m.werbung(x)), creator: (x) => import('./intern-creator.mjs?v=7c79b83a').then((m) => m.creatorOps(x)), api: (x) => import('./intern-api.mjs?v=7c79b83a').then((m) => m.apiOps(x)) })[t](v);
+  const view = ({ uebersicht, einrichtung: (x) => einrichtung(x).then(() => mountLive(x)), analyse, testkauf: (x) => testkauf(x).then(() => mountSelftest(x)), cockpit, system: (x) => system(x, location.hash.includes('-mail')).then(() => import('./intern-feedback.mjs?v=60e449fe')).then((m) => m.reviewsAdmin(x)).catch(() => {}), nutzer: (x) => nutzer(x, 1, '', getSeg() === 'system' ? 'admin' : getSeg()), vorschlaege: (x) => import('./intern-feedback.mjs?v=60e449fe').then((m) => m.vorschlaege(x, getSeg())), sicherheit, partner, rechnungen, steuer, anfragen, protokoll, kennzahlen, akquise: (x) => import('./intern-marketing.mjs?v=60e449fe').then((m) => m.akquise(x)), postfach: (x) => import('./intern-mail.mjs?v=60e449fe').then((m) => m.postfach(x)), werbung: (x) => import('./intern-marketing.mjs?v=60e449fe').then((m) => m.werbung(x)), creator: (x) => import('./intern-creator.mjs?v=60e449fe').then((m) => m.creatorOps(x)), api: (x) => import('./intern-api.mjs?v=60e449fe').then((m) => m.apiOps(x)) })[t](v);
   Promise.resolve(view).catch((e) => { console.warn('[admin]', e); errState(v, ''); });
 }
 
@@ -221,7 +222,7 @@ async function nutzer(v, page = 1, q = '', seg = 'b2c') {
   v.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => { if (b.dataset.seg !== 'admin') { setSeg(b.dataset.seg); paintSeg(); } nutzer(v, 1, '', b.dataset.seg); });
   $('#usPrev')?.addEventListener('click', () => nutzer(v, page - 1, q, seg));
   $('#usNext')?.addEventListener('click', () => nutzer(v, page + 1, q, seg));
-  v.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => import('./intern-feedback.mjs?v=7c79b83a').then((m) => m.accessDialog(b.dataset.acc, b.dataset.mail, msg)));
+  v.querySelectorAll('[data-acc]').forEach((b) => b.onclick = () => import('./intern-feedback.mjs?v=60e449fe').then((m) => m.accessDialog(b.dataset.acc, b.dataset.mail, msg)));
   v.querySelectorAll('[data-coapprove]').forEach((b) => b.onclick = async () => {
     if (!confirm(`${b.dataset.name} freischalten? Das Unternehmen erhält eine E-Mail.`)) return;
     b.disabled = true;
