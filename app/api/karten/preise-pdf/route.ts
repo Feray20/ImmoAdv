@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, degrees, type PDFFont, type PDFPage } from 'pdf-lib';
 import { currentPricing, pricingHash } from '@/lib/cards/pricing';
 import { formatEur } from '@/lib/cards/money';
+import { pdfText } from '@/lib/pdf/text';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,18 +51,19 @@ export async function GET() {
   const meta = [['Dokument-ID', v.documentId], ['Version', v.version], ['Status', draft ? 'Entwurf – noch nicht gültig' : 'Veröffentlicht'], ['Gültig ab', v.effectiveFrom ? new Date(v.effectiveFrom).toLocaleDateString('de-DE') : 'noch nicht festgelegt'], ['Erstellt', new Date(v.createdAt).toLocaleDateString('de-DE')]];
   page.drawRectangle({ x: M, y: y - meta.length * 15 - 8, width: W - 2 * M, height: meta.length * 15 + 14, color: SOFT, borderColor: HAIR, borderWidth: 1 });
   y -= 8;
-  for (const [k, val] of meta) { page.drawText(k, { x: M + 12, y, size: 9.5, font, color: MUTED }); page.drawText(val, { x: M + 120, y, size: 9.5, font: bold, color: NAVY }); y -= 15; }
+  for (const [k, val] of meta) { page.drawText(k, { x: M + 12, y, size: 9.5, font, color: MUTED }); page.drawText(pdfText(val), { x: M + 120, y, size: 9.5, font: bold, color: NAVY }); y -= 15; }
   y -= 18;
 
   for (const ch of v.chapters) {
     need(60);
-    page.drawText(`${ch.no}. ${ch.title}`, { x: M, y, size: 12.5, font: bold, color: NAVY }); y -= 8;
+    page.drawText(pdfText(`${ch.no}. ${ch.title}`), { x: M, y, size: 12.5, font: bold, color: NAVY }); y -= 8;
     page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 0.5, color: HAIR }); y -= 15;
-    if (ch.intro) for (const l of wrap(ch.intro, font, 9.5, W - 2 * M)) { need(14); page.drawText(l, { x: M, y, size: 9.5, font, color: TEXT }); y -= 13; }
+    if (ch.intro) for (const l of wrap(pdfText(ch.intro), font, 9.5, W - 2 * M)) { need(14); page.drawText(l, { x: M, y, size: 9.5, font, color: TEXT }); y -= 13; }
     if (ch.intro) y -= 4;
     for (const it of ch.items) {
-      const price = it.amount == null ? 'Noch nicht festgelegt' : `${formatEur(it.amount)}${it.unit ? ' ' + it.unit : ''}`;
-      const nameLines = wrap(it.name, font, 10, 250), noteLines = it.note ? wrap(it.note, font, 8.5, 250) : [];
+      // formatEur nutzt für negative Beträge das Minuszeichen U+2212 – in der Standardschrift nicht darstellbar.
+      const price = pdfText(it.amount == null ? 'Noch nicht festgelegt' : `${formatEur(it.amount)}${it.unit ? ' ' + it.unit : ''}`);
+      const nameLines = wrap(pdfText(it.name), font, 10, 250), noteLines = it.note ? wrap(pdfText(it.note), font, 8.5, 250) : [];
       const h = nameLines.length * 13 + noteLines.length * 11 + 8;
       need(h);
       let yy = y;

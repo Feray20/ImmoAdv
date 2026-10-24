@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
+import { pdfText } from '@/lib/pdf/text';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { z } from 'zod';
 import { userFromRequest } from '@/lib/billing/auth';
@@ -96,21 +97,38 @@ export async function POST(req: Request) {
       }
     }
 
-    let y = 750;
-    const line = (t: string, f = font, size = 10) => {
-      if (y < 70) return;
-      toc.drawText(t.length > 95 ? t.slice(0, 92) + '…' : t, { x: 50, y, size, font: f, color: rgb(0.2, 0.25, 0.33) });
-      y -= size + 6;
+    // Anlagenverzeichnis: Zeilen sammeln; reicht eine Seite nicht, folgen weitere Verzeichnisseiten direkt dahinter
+    // (die Seitenangaben der Anlagen verschieben sich entsprechend). Dateinamen werden auf die Zeichen der
+    // Standardschrift abgebildet – sonst bricht pdf-lib bei Namen wie „Gehaltsnachweis_Şahin.pdf“ ab.
+    type Line = { t: string; f: typeof font; size: number };
+    const PER_PAGE = 41;
+    const build = (offset: number): Line[] => {
+      const ls: Line[] = [];
+      if (!contents.length) ls.push({ t: 'Zu diesem Objekt sind keine Unterlagen hochgeladen.', f: font, size: 10 });
+      for (const c of contents) ls.push({ t: `${c.label}  ·  ab Seite ${c.page + offset}`, f: font, size: 10 });
+      if (skipped.length) {
+        ls.push({ t: '', f: font, size: 10 }, { t: 'Nicht eingebunden:', f: bold, size: 10 });
+        for (const s of skipped) ls.push({ t: s, f: font, size: 10 });
+      }
+      ls.push({ t: '', f: font, size: 8 }, { t: 'Die Anlagen sind unverändert übernommene Kopien der hochgeladenen Dateien.', f: font, size: 8 });
+      return ls;
     };
-    if (!contents.length) line('Zu diesem Objekt sind keine Unterlagen hochgeladen.');
-    for (const c of contents) line(`${c.label}  ·  ab Seite ${c.page}`);
-    if (skipped.length) {
-      y -= 8;
-      line('Nicht eingebunden:', bold);
-      for (const s of skipped) line(s);
-    }
-    y -= 8;
-    line('Die Anlagen sind unverändert übernommene Kopien der hochgeladenen Dateien.', font, 8);
+    const extra = Math.max(0, Math.ceil(build(0).length / PER_PAGE) - 1);
+    const tocIndex = mainPages.length;
+    const tocPages = [toc];
+    for (let k = 1; k <= extra; k++) tocPages.push(out.insertPage(tocIndex + k, A4));
+    const lines = build(extra);
+    lines.forEach((l, i) => {
+      const pg = tocPages[Math.floor(i / PER_PAGE)];
+      const row = i % PER_PAGE;
+      if (row === 0 && pg !== toc) pg.drawText('Anlagen zum Dossier (Fortsetzung)', { x: 50, y: 780, size: 16, font: bold, color: rgb(0.06, 0.17, 0.35) });
+      if (!l.t) return;
+      const raw = pdfText(l.t);
+      let t = raw;
+      while (t.length > 4 && l.f.widthOfTextAtSize(t, l.size) > A4[0] - 100) t = t.slice(0, -2);
+      if (t !== raw) t = t.slice(0, -1) + '…';
+      pg.drawText(t, { x: 50, y: 750 - row * 16, size: l.size, font: l.f, color: rgb(0.2, 0.25, 0.33) });
+    });
 
     // Durchgehende Seitennummer und Kennung auf jeder Seite
     const total = out.getPageCount();

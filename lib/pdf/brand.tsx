@@ -1,4 +1,5 @@
 // Einheitliches PDF-Branding: Logo, Kopfzeile, Fußzeile, Wasserzeichen.
+import { pdfText } from '@/lib/pdf/text';
 import { Defs, Image, LinearGradient, Polygon, Stop, Svg, Text, View, StyleSheet, G } from '@react-pdf/renderer';
 
 export const BRAND = {
@@ -82,7 +83,7 @@ export function BrandHeader({ reportType, reportId, createdAt, partner }: { repo
       {partner ? (
         <View style={s.logoRow}>
           {partner.logo ? <Image src={partner.logo} style={{ height: 22, maxWidth: 120, objectFit: 'contain', marginRight: 6 }} /> : null}
-          <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: partner.color || BRAND.navy }}>{partner.name}</Text>
+          <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: partner.color || BRAND.navy }}>{pdfText(partner.name)}</Text>
         </View>
       ) : (
         <Logo />
@@ -99,7 +100,7 @@ export function BrandHeader({ reportType, reportId, createdAt, partner }: { repo
 export function BrandFooter({ hash, partner }: { hash?: string; partner?: PartnerBrand | null }) {
   return (
     <View style={s.footer} fixed>
-      <Text style={s.fLeft}>{partner?.whitelabel ? partner.name : 'immoadv.de | support@immoadv.de'}</Text>
+      <Text style={s.fLeft}>{partner?.whitelabel ? pdfText(partner.name) : 'immoadv.de | support@immoadv.de'}</Text>
       <Text style={s.fMid}>{PDF_DISCLAIMER}</Text>
       <Text style={s.fRight} render={({ pageNumber, totalPages }) => `${hash ? `Daten-SHA-256: ${hash.slice(0, 16)}\n` : ''}Seite ${pageNumber} von ${totalPages}`} />
     </View>
@@ -107,7 +108,7 @@ export function BrandFooter({ hash, partner }: { hash?: string; partner?: Partne
 }
 
 export function Watermark({ text, opacity = 0.05 }: { text: string; opacity?: number }) {
-  return <Text style={[s.wm, { opacity }]} fixed>{text}</Text>;
+  return <Text style={[s.wm, { opacity }]} fixed>{pdfText(text)}</Text>;
 }
 
 // Schutz-Wasserzeichen für alle Kunden-PDFs: ImmoAdv-Bildmarke als Vektorgrafik, rasterförmig über die ganze Seite

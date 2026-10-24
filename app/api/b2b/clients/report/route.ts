@@ -47,7 +47,8 @@ export async function GET(req: Request) {
   // Bankreife-Balken
   y -= 40; const best = Math.max(0, Math.min(100, Number(s.best ?? 0)));
   draw('Bankreife (bestes Objekt)', { x: L, y, size: 11, font: b, color: NAVY });
-  draw(s.best == null ? '–' : `${best} %`, { x: W - L - b.widthOfTextAtSize(`${best} %`, 22), y: y - 4, size: 22, font: b, color: NAVY });
+  const bestTxt = s.best == null ? '–' : `${best} %`;
+  draw(bestTxt, { x: W - L - b.widthOfTextAtSize(safe(bestTxt), 22), y: y - 4, size: 22, font: b, color: NAVY });
   y -= 20; page.drawRectangle({ x: L, y, width: W - 2 * L, height: 10, color: LINE });
   page.drawRectangle({ x: L, y, width: (W - 2 * L) * best / 100, height: 10, color: best >= 90 ? rgb(22 / 255, 163 / 255, 74 / 255) : best >= 60 ? rgb(245 / 255, 158 / 255, 11 / 255) : rgb(2 / 255, 132 / 255, 199 / 255) });
   y -= 16; draw(best >= 90 ? 'Bankreif – Unterlagen und Angaben weitgehend vollständig.' : best >= 60 ? 'Fast bankreif – einzelne Unterlagen oder Angaben fehlen.' : 'In Vorbereitung.', { x: L, y, size: 9.5, font: f, color: GREY });

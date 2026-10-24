@@ -196,7 +196,8 @@
      "Präsentationen unbegrenzt – mit Ihrem Logo, Ihren Farben und Ihrer Schrift",
      "Zusätzliche Tools: Beratungsprotokoll (§ 511 BGB), Angebotsvergleich, Vorfälligkeit & Anschluss",
      "Bestandskunden-Radar: Zinsbindungsenden Ihrer Kunden (mit Einwilligung)",
-     "Eigene Partnerseite mit Terminlink"
+     "Eigene Partnerseite mit Terminlink",
+     "REST-API v1 für Ihr CRM: Fälle anlegen und lesen, Vorprüfung, Schnell-Check und Unterlagenprüfung · 60 Anfragen pro Minute (Frühzugang auf Anfrage)"
     ],
     "basis": "Alles aus Basic, plus:"
    },
@@ -224,6 +225,7 @@
     "Ab 10 Berater-Zugängen, erweiterbar",
     "Kreditmappen und Präsentationen unbegrenzt",
     "White-Label: Unterlagen vollständig im Erscheinungsbild Ihres Hauses, ohne ImmoAdv",
+    "Volle REST-API v1 mit API-Webhooks, White-Label-Berichten sowie Mandanten- und Berater-Routing · Anfragelimit nach Vertrag (Frühzugang auf Anfrage)",
     "Teamverwaltung mit Berater-Zuordnung",
     "Kauf auf Rechnung, Angebot nach Filialgröße"
    ],
@@ -276,6 +278,18 @@
      "Bestandskunden-Radar, Partnerseite",
      "–",
      "✓",
+     "✓"
+    ],
+    [
+     "REST-API v1 (Fälle, Vorprüfung, Unterlagen)",
+     "– (CSV-Export)",
+     "60 Anfragen/Min.",
+     "voll, Limit nach Vertrag"
+    ],
+    [
+     "API-Webhooks, White-Label-Berichte, Routing",
+     "–",
+     "–",
      "✓"
     ],
     [

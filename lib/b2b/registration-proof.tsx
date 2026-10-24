@@ -1,5 +1,6 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import { BRAND, Logo, SecureWatermark, stamp } from '@/lib/pdf/brand';
+import { pdfSafeDeep } from '@/lib/pdf/text';
 
 // Schriftlicher Registrierungsnachweis für Unternehmenskonten: alle Angaben, die bestätigten Erklärungen im Wortlaut,
 // Zeitpunkte, technische Kennungen und eine Prüfsumme. Geht an die Geschäftsadresse von ImmoAdv und als Kopie an den Kunden.
@@ -47,7 +48,8 @@ const Row = ({ k, v }: { k: string; v?: string | null }) => (
   <View style={s.row}><Text style={s.k}>{k}</Text><Text style={s.v}>{v && String(v).trim() ? v : '–'}</Text></View>
 );
 
-export function RegistrationProofDocument({ p }: { p: RegistrationProof }) {
+export function RegistrationProofDocument({ p: input }: { p: RegistrationProof }) {
+  const p = pdfSafeDeep(input);
   return (
     <Document title={`Registrierungsnachweis ${p.company.name}`} author="ImmoAdv" subject={`Nachweis ${p.proofId}`} language="de">
       <Page size="A4" style={s.page}>

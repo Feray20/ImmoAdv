@@ -1180,7 +1180,8 @@ body{max-width:100%;overflow-x:clip}
 .pipe-cols span{font-size:13px;color:#64748B;line-height:1.4}
 @media(max-width:900px){.pipe-cols{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.pipe-cols{grid-template-columns:1fr}}
-.int-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0 10px}
+.int-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:16px 0 10px}
+.int-grid h3 small{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#E0F2FE;color:#0369A1;font-size:11px;font-weight:700;letter-spacing:.02em;vertical-align:middle}
 .int-grid article{border:1px solid #E2E8F0;border-radius:14px;padding:16px;background:#fff}
 .int-grid h3{margin:0 0 6px;font-size:16px;color:#0F2C59}
 .int-grid p{margin:0;font-size:14px;color:#475569;line-height:1.5}

@@ -77,7 +77,17 @@ export async function POST(req: Request) {
     t(b.subject, L, H - 108 * MM, 11, fb, NAVY);
     let y = H - 120 * MM;
     const text = `${anrede(c)}\n\n${b.body.replace(/\{firma\}/g, c.company).replace(/\{ort\}/g, c.city || '')}\n\nMit freundlichen Grüßen\n\n\n${b.signer}\nImmoAdv`;
-    for (const line of wrap(text, f, 10.5, TW - 34 * MM)) { if (y < 52 * MM) break; t(line, L, y, 10.5); y -= 14.5; }
+    // Langer Brieftext: nicht abschneiden, sondern auf einer Folgeseite (ohne Anschriftfeld) fortsetzen.
+    let cur: PDFPage = pg;
+    for (const line of wrap(text, f, 10.5, TW - 34 * MM)) {
+      if (y < 52 * MM && cur === pg) {
+        cur = pdf.addPage([W, H]);
+        cur.drawText(safe(`Seite 2 · ${c.company}`), { x: L, y: H - 20 * MM, size: 8, font: f, color: GREY });
+        y = H - 30 * MM;
+      }
+      if (y < 30 * MM) break;
+      cur.drawText(safe(line), { x: L, y, size: 10.5, font: f, color: rgb(0.1, 0.1, 0.12) }); y -= 14.5;
+    }
     pg.drawImage(qr, { x: R - 28 * MM, y: 62 * MM, width: 28 * MM, height: 28 * MM });
     t('Mehr erfahren:', R - 28 * MM, 92 * MM, 8, fb, NAVY);
     t('immoadv.de/b2b', R - 28 * MM, 58 * MM, 8, f, GREY);
