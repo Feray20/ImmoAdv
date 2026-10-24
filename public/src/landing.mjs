@@ -3,7 +3,7 @@
 // Ereignisse gehen an die cookielose Reichweitenmessung (track.js) – ohne Eingabewerte, nur Ereignisname und Ort.
 // Alte Sprungmarken der verschobenen Startseiten-Abschnitte auf die neuen Unterseiten weiterleiten.
 { const moved = { '#warum': '/wissen/warum-investieren' }; if (moved[location.hash]) location.replace(moved[location.hash]); }
-import { demoAnalyse } from './calc.mjs?v=9e9eafc5';
+import { demoAnalyse } from './calc.mjs?v=d533c42d';
 
 const $ = (id) => document.getElementById(id);
 const ev = (name, where) => { try { window.iaTrack?.(name, where ? { plan: String(where).slice(0, 40) } : undefined); } catch { /* Messung darf nie stören */ } };

@@ -1,7 +1,7 @@
 // Steuer-Bereich der Anwendung, gegliedert nach Phasen: Kauf · Halten/Vermieten · Verkauf.
 // Rein informatorisch und rechnerisch – KEINE Steuerberatung (§ 34i GewO / StBerG). Alle Angaben: Stand Oktober 2026.
 // Pro-Werkzeuge erscheinen im Profi-Modus; die Rechenlogik liegt in calc.mjs und ist per node:test geprüft.
-import { GREST, verbilligteMiete, dreiObjektGrenze, verkaufSteuerfrei, grenze15 } from './calc.mjs?v=9e9eafc5';
+import { GREST, verbilligteMiete, dreiObjektGrenze, verkaufSteuerfrei, grenze15 } from './calc.mjs?v=d533c42d';
 
 const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

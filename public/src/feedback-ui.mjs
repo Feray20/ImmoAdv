@@ -1,6 +1,6 @@
 // Verbesserungsvorschläge für Kunden (Privatbereich) und Unternehmen (Unternehmensportal).
 // Vorschläge gehen an den Web-Admin des jeweiligen Bereichs; der Kunde sieht Status und Antwort.
-import { api, dt, esc } from './sess.mjs?v=9e9eafc5';
+import { api, dt, esc } from './sess.mjs?v=d533c42d';
 
 const TOPICS = { bedienung: 'Bedienung & Navigation', rechner: 'Rechner & Kennzahlen', kreditmappe: 'Kreditmappe & Dokumente', inhalte: 'Inhalte & Erklärungen', neue_funktion: 'Neue Funktion', fehler: 'Fehler gefunden', sonstiges: 'Sonstiges' };
 const STATUS = { neu: 'Eingegangen', in_pruefung: 'In Prüfung', geplant: 'Geplant', umgesetzt: 'Umgesetzt', abgelehnt: 'Derzeit nicht geplant' };
