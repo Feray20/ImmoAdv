@@ -10,6 +10,9 @@ import { mailboxAddress } from '@/lib/mail/resend';
 import { normSubject, snippetOf } from '@/lib/mail/store';
 import { htmlToText, sanitizeBody } from '@/lib/mail/template';
 import { OUTREACH_IMPORT } from '@/lib/mail/import-data';
+import { syncReceived } from '@/lib/mail/ingest';
+
+let lastSync = 0;
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -98,6 +101,9 @@ export async function GET(req: Request) {
   let imported = 0;
   try { imported = await runImport(auth.user.email); } catch (e) { console.error('mail_import', (e as Error).message); }
   const folder = q.get('folder') || 'inbox';
+  // Posteingang: neue Mails bei Resend abrufen (zusätzlich zum Webhook; höchstens alle 20 Sekunden).
+  let fetched = 0;
+  if ((folder === 'inbox' || q.get('sync') === '1') && Date.now() - lastSync > 20_000) { lastSync = Date.now(); try { fetched = await syncReceived(40); } catch (e) { console.error('mail_sync', (e as Error).message); } }
   const search = (q.get('q') || '').trim().slice(0, 100);
   let sel = db.from('immo_mail_messages').select(LIST_COLS).order('created_at', { ascending: false }).limit(300);
   if (folder === 'starred') sel = sel.eq('starred', true).neq('folder', 'trash');
@@ -115,8 +121,8 @@ export async function GET(req: Request) {
   for (const r of rows ?? []) { if (folder !== 'drafts' && seen.has(r.thread_id as string)) continue; seen.add(r.thread_id as string); items.push(r); }
   const c = counts ?? [];
   return j({
-    imported, mailbox: mailboxAddress(), booking: typeof booking?.value === 'string' ? booking.value : '',
-    receiving: Boolean(process.env.RESEND_INBOUND_SECRET || process.env.RESEND_WEBHOOK_SECRET),
+    imported, fetched, mailbox: mailboxAddress(), booking: typeof booking?.value === 'string' ? booking.value : '',
+    receiving: Boolean(process.env.RESEND_API_KEY), webhook: Boolean(process.env.RESEND_INBOUND_SECRET || process.env.RESEND_WEBHOOK_SECRET),
     counts: { inbox: c.filter((x) => x.folder === 'inbox' && x.direction === 'in' && !x.read_at).length, drafts: c.filter((x) => x.folder === 'drafts').length, spam: c.filter((x) => x.folder === 'spam' && !x.read_at).length },
     items,
   });
