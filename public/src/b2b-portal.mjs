@@ -1,8 +1,8 @@
 // Unternehmensportal (/b2b-portal): Registrierung mit § 14 BGB und AVV, Anfragen-Pipeline,
 // Widget- und QR-Studio, Team, Profil mit Co-Branding, Tarif und Rechnungen.
-import { logoLoader } from './loader.mjs?v=4afff251';
-import { BRANCHEN, BRANCHE_KEYS, brancheFromType } from './b2b-branche.mjs?v=4afff251';
-import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession } from './sess.mjs?v=4afff251';
+import { logoLoader } from './loader.mjs?v=b1a55645';
+import { BRANCHEN, BRANCHE_KEYS, brancheFromType } from './b2b-branche.mjs?v=b1a55645';
+import { api, download, dt, dtt, esc, eur, loginForm, logout, session, setSession } from './sess.mjs?v=b1a55645';
 
 const root = document.getElementById('portal');
 try { history.scrollRestoration = 'manual'; } catch { /* ältere Browser */ }
@@ -69,7 +69,7 @@ function shell() {
   </div>`;
   // Fußzeile wie im Privatbereich: in der Inhaltsspalte neben der Seitenleiste (Original unter der Seite wird per CSS ausgeblendet).
   { const lf = document.querySelector('body > footer.ia-legal-b2b'), pm = root.querySelector('.pt-main'); if (lf && pm && !pm.querySelector('.ia-legal')) { const c = lf.cloneNode(true); c.classList.add('ia-legal-in-main'); pm.appendChild(c); } }
-  root.querySelectorAll('#ptLogout,#ptLogoutM,#ptLogoutS').forEach((b) => { b.onclick = async () => { try { (await import('./b2b-tools.mjs?v=4afff251')).clearAll(); } catch { /* weiter */ } logout(); }; });
+  root.querySelectorAll('#ptLogout,#ptLogoutM,#ptLogoutS').forEach((b) => { b.onclick = async () => { try { (await import('./b2b-tools.mjs?v=b1a55645')).clearAll(); } catch { /* weiter */ } logout(); }; });
   const brb = $('#ptBr'); if (brb) brb.onclick = () => chooseBranche();
   const sheet = $('#ptSheet'), more = $('#ptMore');
   const openSheet = (on) => { sheet.hidden = !on; more.setAttribute('aria-expanded', String(on)); document.body.classList.toggle('pt-sheet-open', on); };
@@ -106,7 +106,7 @@ function route() {
   if (route.last !== view) { const ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) ae.blur(); window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })); route.last = view; }
   box.innerHTML = logoLoader();
   { const pb = $('#ptPres'); if (pb) pb.hidden = !['wissen', 'tools'].includes(view); if (!['wissen', 'tools'].includes(view)) presentation(false); }
-  ({ start: vStart, faelle: vFaelle, tools: (b) => import('./b2b-tools.mjs?v=4afff251').then((m) => m.renderPrograms(b, { tier: me.tier, branche: br(), toast, brand: { color: me.limits?.cobranding && me.account.brandColor ? me.account.brandColor : '#0F2C59', logo: me.limits?.cobranding && me.account.hasLogo && me.account.slug ? `/api/b2b/logo?slug=${encodeURIComponent(me.account.slug)}` : '', sender: [me.account.companyName, me.account.advisorName].filter(Boolean).join(' · ') } })).catch(() => { b.innerHTML = '<p class="form-note">Programme konnten nicht geladen werden.</p>'; }), fall: (b) => import('./b2b-fall.mjs?v=4afff251').then((m) => m.renderFall(b, { api, toast, me })).catch(() => { b.innerHTML = '<div class="pt-alert warn">Fall-Analyse konnte nicht geladen werden. <button type="button" class="btn btn-outline btn-sm" data-reload>Erneut versuchen</button></div>'; }), kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs?v=4afff251').then((m) => { b.innerHTML = kompassHead(); m.renderWissen(b.querySelector('#bwBody'), br()); }).catch(() => { b.innerHTML = '<div class="pt-alert warn">Beratungskompass konnte nicht geladen werden. <button type="button" class="btn btn-outline btn-sm" data-reload>Erneut versuchen</button></div>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: (b) => vTeam(b).then(() => addPw(b)), profil: (b) => { vProfil(b); addPw(b); }, tarif: vTarif, vorschlaege: (b) => { b.innerHTML = '<section class="pt-card" id="rvBox" hidden></section><section class="pt-card" id="fbBox"></section>'; import('./reviews.mjs?v=4afff251').then(async (m) => { const h = await m.askHtml('b2b'); const x = b.querySelector('#rvBox'); if (h && x) { x.innerHTML = h; x.hidden = false; } }).catch(() => {}); import('./feedback-ui.mjs?v=4afff251').then((m) => m.mountFeedback(b.querySelector('#fbBox'), { area: 'b2b' })).catch(() => { b.innerHTML = '<p class="form-note">Konnte nicht geladen werden.</p>'; }); } })[view](box);
+  ({ start: vStart, faelle: vFaelle, tools: (b) => import('./b2b-tools.mjs?v=b1a55645').then((m) => m.renderPrograms(b, { tier: me.tier, branche: br(), toast, brand: { color: me.limits?.cobranding && me.account.brandColor ? me.account.brandColor : '#0F2C59', logo: me.limits?.cobranding && me.account.hasLogo && me.account.slug ? `/api/b2b/logo?slug=${encodeURIComponent(me.account.slug)}` : '', sender: [me.account.companyName, me.account.advisorName].filter(Boolean).join(' · ') } })).catch(() => { b.innerHTML = '<p class="form-note">Programme konnten nicht geladen werden.</p>'; }), fall: (b) => import('./b2b-fall.mjs?v=b1a55645').then((m) => m.renderFall(b, { api, toast, me })).catch(() => { b.innerHTML = '<div class="pt-alert warn">Fall-Analyse konnte nicht geladen werden. <button type="button" class="btn btn-outline btn-sm" data-reload>Erneut versuchen</button></div>'; }), kunden: vKunden, wissen: (b) => import('./b2b-wissen.mjs?v=b1a55645').then((m) => { b.innerHTML = kompassHead(); m.renderWissen(b.querySelector('#bwBody'), br()); }).catch(() => { b.innerHTML = '<div class="pt-alert warn">Beratungskompass konnte nicht geladen werden. <button type="button" class="btn btn-outline btn-sm" data-reload>Erneut versuchen</button></div>'; }), verifizierung: vVerify, anfragen: vLeads, einreichungen: vSubs, werkzeuge: vTools, team: (b) => vTeam(b).then(() => addPw(b)), profil: (b) => { vProfil(b); addPw(b); }, tarif: vTarif, vorschlaege: (b) => { b.innerHTML = '<section class="pt-card" id="rvBox" hidden></section><section class="pt-card" id="fbBox"></section>'; import('./reviews.mjs?v=b1a55645').then(async (m) => { const h = await m.askHtml('b2b'); const x = b.querySelector('#rvBox'); if (h && x) { x.innerHTML = h; x.hidden = false; } }).catch(() => {}); import('./feedback-ui.mjs?v=b1a55645').then((m) => m.mountFeedback(b.querySelector('#fbBox'), { area: 'b2b' })).catch(() => { b.innerHTML = '<p class="form-note">Konnte nicht geladen werden.</p>'; }); } })[view](box);
 }
 
 // ---------- Kachel-Auswahl: Arbeitsbereiche öffnen erst beim Antippen ----------
@@ -673,7 +673,7 @@ function vTools(box) {
   let t; box.querySelectorAll('.obj-grid input, .obj-grid select').forEach((i) => i.addEventListener('input', () => { clearTimeout(t); t = setTimeout(preview, 400); }));
   preview();
   box.querySelectorAll('[data-q]').forEach((b) => b.onclick = () => busy(b, () => download(`/api/b2b/qr?format=${b.dataset.q}&` + qs(), {}, 'QR')));
-  import('./expose-check.mjs?v=4afff251').then((m) => m.mountExposeCheck($('#ecBox'), { account: { ...a, brandColor: me.limits?.cobranding ? a.brandColor : '' }, logoUrl: me.limits?.cobranding && a.hasLogo && a.slug ? `/api/b2b/logo?slug=${encodeURIComponent(a.slug)}` : '' })).catch(() => { $('#ecBox').innerHTML = '<p class="form-note">Exposé-AutoPilot konnte nicht geladen werden.</p>'; });
+  import('./expose-check.mjs?v=b1a55645').then((m) => m.mountExposeCheck($('#ecBox'), { account: { ...a, brandColor: me.limits?.cobranding ? a.brandColor : '' }, logoUrl: me.limits?.cobranding && a.hasLogo && a.slug ? `/api/b2b/logo?slug=${encodeURIComponent(a.slug)}` : '' })).catch(() => { $('#ecBox').innerHTML = '<p class="form-note">Exposé-AutoPilot konnte nicht geladen werden.</p>'; });
 }
 
 // Zugangsdaten einmalig anzeigen (Startpasswort muss bei der ersten Anmeldung geändert werden).
@@ -772,7 +772,7 @@ function vProfil(box) {
     <section class="pt-card"><h2>Support-Zugriff</h2>
       <p class="form-note">Für Rückfragen kann der ImmoAdv-Support Ihr Portal 7 Tage lang <strong>nur lesend</strong> einsehen, einschließlich der Anfragen. Ohne Ihre Freigabe ist das nicht möglich; jeder Zugriff wird protokolliert (Weisung nach Art. 28 DSGVO).</p>
       <p>${a.supportAccessUntil && new Date(a.supportAccessUntil) > new Date() ? `Freigegeben bis ${dtt(a.supportAccessUntil)}. <button class="text-btn del" id="supOff" type="button">Jetzt beenden</button>` : '<button class="btn btn-ghost" id="supOn" type="button">Support-Zugriff für 7 Tage freigeben</button>'}</p></section>`;
-  import('./address-check.mjs?v=4afff251').then((m) => m.attachAddress($('#prof'))).catch(() => {});
+  import('./address-check.mjs?v=b1a55645').then((m) => m.attachAddress($('#prof'))).catch(() => {});
   $('#prof').onsubmit = (e) => { e.preventDefault(); busy(e.submitter || $('#prof button'), async () => {
     const f = Object.fromEntries(new FormData(e.target));
     const body = { advisorName: f.advisorName, phone: f.phone, street: f.street, postalCode: f.postalCode, city: f.city, addressConfirmed: f.addressConfirmed === 'on', bookingUrl: f.bookingUrl, slug: f.slug };
@@ -936,13 +936,13 @@ async function onboarding(avvVersion) {
       <button class="btn btn-dark" type="submit">Unternehmenskonto anlegen</button>
       <p class="form-note">ImmoAdv ist ein technisches Analyse- und Vorbereitungsinstrument. Keine Kreditvermittlung, keine Kreditzusage, keine Steuer- oder Rechtsberatung.</p>
     </form></div>`;
-  import('./address-check.mjs?v=4afff251').then((m) => m.attachAddress($('#reg'))).catch(() => {});
+  import('./address-check.mjs?v=b1a55645').then((m) => m.attachAddress($('#reg'))).catch(() => {});
   $('#reg').onsubmit = (e) => {
     e.preventDefault();
     busy(e.target.querySelector('button[type=submit]'), async () => {
       const f = Object.fromEntries(new FormData(e.target));
       const body = { ...f, unternehmer: f.unternehmer === 'on', avv: f.avv === 'on', richtig: f.richtig === 'on', agb: f.agb === 'on', referral: ref };
-      const { work } = await import('./loader.mjs?v=4afff251');
+      const { work } = await import('./loader.mjs?v=b1a55645');
       const w = work('Unternehmenskonto wird angelegt', ['Angaben prüfen', 'Konto anlegen', 'Nachweis erstellen und senden']);
       await w.step(0);
       const pr = api('/api/b2b/account', { method: 'POST', body: JSON.stringify(body) });
@@ -1050,7 +1050,7 @@ function firstLogin(d) {
 
 // Passwort über Supabase ändern (angemeldete Sitzung). Liefert eine Fehlermeldung oder null.
 async function changePassword(pw) {
-  const { supa, token } = await import('./sess.mjs?v=4afff251');
+  const { supa, token } = await import('./sess.mjs?v=b1a55645');
   const r = await supa('/auth/v1/user', { method: 'PUT', headers: { Authorization: 'Bearer ' + token() }, body: JSON.stringify({ password: pw }) }).catch(() => null);
   if (!r) return 'Keine Verbindung. Bitte erneut versuchen.';
   if (r.ok) return null;
@@ -1131,7 +1131,7 @@ function chooseBranche(first = false) {
   });
   d.querySelector('#brOk').onclick = async (e) => {
     const k = pick, ok = e.currentTarget; ok.disabled = true;
-    const { supa, token } = await import('./sess.mjs?v=4afff251');
+    const { supa, token } = await import('./sess.mjs?v=b1a55645');
     const r = await supa('/auth/v1/user', { method: 'PUT', headers: { Authorization: 'Bearer ' + token() }, body: JSON.stringify({ data: { b2b_branche: k } }) }).catch(() => null);
     if (!r?.ok) { d.querySelector('#brMsg').textContent = 'Speichern fehlgeschlagen – bitte erneut versuchen.'; ok.disabled = false; return; }
     me.branche = k; d.close();
