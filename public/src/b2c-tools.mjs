@@ -4,7 +4,11 @@
 // Portfolio, Anschluss & Forward und Betriebskosten. Einsteiger und Profi unterscheiden sich in Reihenfolge, Erklärtiefe
 // und Fachlogik (Beleihungsauslauf, normierter Angebotsvergleich, Steuerwirkung, Portfolio-Stresstest).
 // Die Freischaltung im Browser ist eine Komfortfunktion; die Rechenwege sind offen dokumentiert.
-import { monthlyRate, balanceAfterMonths, tilgungsplan, kaufnebenkosten, portfolio, GREST } from './calc.mjs?v=db34bdea';
+<<<<<<< HEAD
+import { monthlyRate, balanceAfterMonths, tilgungsplan, kaufnebenkosten, portfolio, GREST } from './calc.mjs?v=a5ae61b4';
+=======
+import { monthlyRate, balanceAfterMonths, tilgungsplan, kaufnebenkosten, portfolio, GREST } from './calc.mjs?v=a5ae61b4';
+>>>>>>> origin/main
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const E = (v) => (Number.isFinite(v) ? v : 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });

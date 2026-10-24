@@ -71,7 +71,7 @@ export async function freeSlots(cfg: BookingConfig): Promise<Record<string, Slot
 }
 
 // Kalendereintrag (.ics) für die Bestätigungs-E-Mail.
-export function icsFile(o: { uid: string; start: Date; end: Date; title: string; description: string; url?: string | null; method?: 'REQUEST' | 'CANCEL' }): string {
+export function icsFile(o: { uid: string; start: Date; end: Date; title: string; description: string; url?: string | null; method?: 'PUBLISH' | 'REQUEST' | 'CANCEL' }): string {
   const f = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ImmoAdv//Termine//DE', 'CALSCALE:GREGORIAN', `METHOD:${o.method || 'PUBLISH'}`, 'BEGIN:VEVENT',

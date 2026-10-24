@@ -1,5 +1,5 @@
 // Web-Admin → Termine: Anfragen aus immoadv.de/termin annehmen (Teams-Termin im Outlook-Kalender), ablehnen, absagen; Arbeitszeiten.
-import { api, esc } from './sess.mjs?v=db34bdea';
+import { api, esc } from './sess.mjs?v=a5ae61b4';
 
 const $ = (s, r = document) => r.querySelector(s);
 const TZ = 'Europe/Berlin';
