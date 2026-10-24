@@ -17,7 +17,8 @@ export const unsubUrl = (t: string | null) => (t ? `https://immoadv.de/api/abmel
 
 export async function bookingUrl(): Promise<string | null> {
   const { data } = await supabaseAdmin().from('immo_settings').select('value').eq('key', BOOKING).maybeSingle();
-  return typeof data?.value === 'string' && /^https:\/\//.test(data.value) ? data.value : null;
+  // Standard: eigenes Termin-Portal (Teams-Link bei Annahme); ein eigener Link im Postfach überschreibt das.
+  return typeof data?.value === 'string' && /^https:\/\//.test(data.value) ? data.value : 'https://immoadv.de/termin';
 }
 
 // Abmeldelink je Empfänger (nur bei genau einem Empfänger, sonst ohne Link).

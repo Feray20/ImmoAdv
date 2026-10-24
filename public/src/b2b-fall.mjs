@@ -1,7 +1,7 @@
 // Unternehmensportal → Fall-Analyse: Unterlagen eines Kunden hochladen, sofort auswerten,
 // Analyse für den Berater, verständliche Fassung für den Kunden und Präsentation mit Varianten.
 // Die PDFs werden ausschließlich im Browser gelesen und nicht übertragen; der Server zählt nur das Kontingent.
-import { analyseText, caseFacts, crossCheck, missingDocs, quality, TYPES } from './doc-check.mjs?v=d533c42d';
+import { analyseText, caseFacts, crossCheck, missingDocs, quality, TYPES } from './doc-check.mjs?v=db34bdea';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const E = (v, d = 0) => (v == null || !isFinite(v) ? '–' : v.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: d, maximumFractionDigits: d }));

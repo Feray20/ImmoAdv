@@ -1,5 +1,5 @@
 // Bindet Rechner, Fristen und Szenarien an den gemeinsamen Rechenkern (calc.mjs).
-import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg, tilgungsplan, tilgungsplanCSV, budget, scorecard, cashflowSteuer, angebot, kaufenMieten, afaPlan, mieterhoehung } from './calc.mjs?v=d533c42d';
+import { anschluss, verkauf, indexmiete, staffelmiete, kaufpreisaufteilung, grenze15, fristen, toICS, GREST, kaufnebenkosten, einstieg, tilgungsplan, tilgungsplanCSV, budget, scorecard, cashflowSteuer, angebot, kaufenMieten, afaPlan, mieterhoehung } from './calc.mjs?v=db34bdea';
 
 const $ = (id) => document.getElementById(id);
 const num = (id) => { const v = $(id)?.value; return v === '' || v == null ? 0 : Number(v); };
@@ -413,11 +413,11 @@ if ($('pubOffers')) {
         <p class="form-note">${esc(P.hinweis)} Widerrufsbelehrung: <a class="ck-link" href="/nutzungsbedingungen">AGB</a>. Kündigung: <a class="ck-link" href="/kuendigen">Verträge hier kündigen</a>.</p>`;
       document.querySelectorAll('#pubOffers [data-offer]').forEach((a) => a.onclick = async (e) => {
         e.preventDefault();
-        const { openBuy } = await import('./buy.mjs?v=d533c42d');
+        const { openBuy } = await import('./buy.mjs?v=db34bdea');
         openBuy(m.plans[+a.dataset.offer]);
       });
     };
-    const { planIcon: PIC } = await import('./buy.mjs?v=d533c42d');
+    const { planIcon: PIC } = await import('./buy.mjs?v=db34bdea');
     draw();
   }).catch(() => { $('pubOffers').innerHTML = '<p class="form-note">Preise konnten nicht geladen werden.</p>'; });
 }

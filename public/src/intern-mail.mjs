@@ -1,5 +1,5 @@
 // Web-Admin → Postfach: E-Mails empfangen, lesen, beantworten und im ImmoAdv-Design senden (support@immoadv.de).
-import { api, dtt, esc } from './sess.mjs?v=d533c42d';
+import { api, dtt, esc } from './sess.mjs?v=db34bdea';
 
 const $ = (s, r = document) => r.querySelector(s);
 const FOLDERS = [
@@ -38,7 +38,7 @@ async function load(v) {
   $('#pfNav').innerHTML = FOLDERS.map(([k, l, p]) => `<button type="button" class="pf-f${S.folder === k ? ' on' : ''}" data-f="${k}">${icon(p)}<span>${l}</span>${c[k] ? `<b>${c[k]}</b>` : ''}</button>`).join('');
   $('#pfNav').querySelectorAll('[data-f]').forEach((b) => b.onclick = () => { S.folder = b.dataset.f; S.open = null; $('#pfRead').innerHTML = ''; v.querySelector('.pf')?.classList.remove('reading'); load(v); });
   $('#pfBox').innerHTML = `<p><strong>${esc(r.data.mailbox)}</strong></p><p class="${r.data.receiving ? 'pf-ok' : 'pf-warn'}">${r.data.receiving ? `Empfang aktiv${r.data.webhook ? ' (sofort)' : ' (Abruf beim Öffnen)'}` : 'Empfang noch nicht eingerichtet – Senden funktioniert bereits.'}</p>
-    <form id="pfBook"><label>Terminbuchung (Google-Kalender-Link)<input name="url" type="url" placeholder="https://calendar.app.google/…" value="${esc(r.data.booking || '')}"></label><button class="btn btn-outline btn-sm" type="submit">Speichern</button></form>`;
+    <form id="pfBook"><label>Terminbuchung (leer = immoadv.de/termin)<input name="url" type="url" placeholder="https://immoadv.de/termin" value="${esc(r.data.booking || '')}"></label><button class="btn btn-outline btn-sm" type="submit">Speichern</button></form>`;
   $('#pfBook').onsubmit = async (e) => { e.preventDefault(); const rr = await api('/api/admin/mail', { method: 'POST', body: JSON.stringify({ action: 'booking', url: new FormData(e.target).get('url') || '' }) }); toast(rr.ok ? 'Terminlink gespeichert.' : rr.data?.error || 'Fehler', !rr.ok); };
   drawList(v);
 }

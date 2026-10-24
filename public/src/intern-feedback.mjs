@@ -1,5 +1,5 @@
 // Web-Admin → Verbesserungsvorschläge: Eingang je Bereich (B2C oder B2B), Bewertung mit Sternen, Status, Antwort.
-import { api, dtt, esc } from './sess.mjs?v=d533c42d';
+import { api, dtt, esc } from './sess.mjs?v=db34bdea';
 
 const TOPICS = { bedienung: 'Bedienung & Navigation', rechner: 'Rechner & Kennzahlen', kreditmappe: 'Kreditmappe & Dokumente', inhalte: 'Inhalte & Erklärungen', neue_funktion: 'Neue Funktion', fehler: 'Fehler gefunden', sonstiges: 'Sonstiges' };
 const STATUS = { neu: 'Neu', in_pruefung: 'In Prüfung', geplant: 'Geplant', umgesetzt: 'Umgesetzt', abgelehnt: 'Nicht geplant' };
