@@ -1,7 +1,7 @@
 // ImmoAdv Creator Partner: Bewerbung (einmaliges Onboarding), Prüfstatus und Creator-Portal.
 // Gemeinsame Anmeldung mit dem Kundenbereich (Supabase). Alle Prüfungen passieren zusätzlich auf dem Server.
 // Sicherheitstexte beschreiben nur Maßnahmen, die tatsächlich umgesetzt sind (siehe lib/creator/*).
-import { api, dt, esc, loginForm, logout, setSession, token } from './sess.mjs?v=4a19dd50';
+import { api, dt, esc, loginForm, logout, setSession, token } from './sess.mjs?v=c6ddf5c2';
 
 const root = document.getElementById('creator');
 const $ = (s, el = document) => el.querySelector(s);

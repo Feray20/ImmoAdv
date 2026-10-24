@@ -1,5 +1,5 @@
 // Web-Admin → Termine: Anfragen aus immoadv.de/termin annehmen (Teams-Termin im Outlook-Kalender), ablehnen, absagen; Arbeitszeiten.
-import { api, esc } from './sess.mjs?v=4a19dd50';
+import { api, esc } from './sess.mjs?v=c6ddf5c2';
 
 const $ = (s, r = document) => r.querySelector(s);
 const TZ = 'Europe/Berlin';
@@ -106,7 +106,7 @@ async function msLogin(v, btn) {
   const { userCode, url, interval, expiresIn } = r.data;
   const box = $('#tmaMsBox', v);
   box.className = 'tma-ms tma-login';
-  box.innerHTML = `<div class="tma-login-in"><strong>Bei Microsoft anmelden</strong><ol><li>Code kopieren: <button type="button" class="tma-code" id="tmaCode" title="Kopieren">${esc(userCode)}</button></li><li><a href="${esc(url)}" target="_blank" rel="noopener" id="tmaGo">Microsoft-Anmeldeseite öffnen</a>, Code einfügen und mit Ihrem Microsoft-365-Konto anmelden.</li><li>Zugriff auf den Kalender „Akzeptieren“ – dieses Fenster erkennt die Anmeldung automatisch.</li></ol>
+  box.innerHTML = `<div class="tma-login-in"><strong>Bei Microsoft anmelden</strong><ol><li>Code kopieren: <button type="button" class="tma-code" id="tmaCode" title="Kopieren">${esc(userCode)}</button></li><li>Code einfügen und mit Ihrem Microsoft-365-Konto anmelden: <a class="btn btn-dark btn-sm tma-go" href="${esc(url)}" target="_blank" rel="noopener" id="tmaGo">microsoft.com/devicelogin öffnen ↗</a></li><li>Zugriff auf den Kalender „Akzeptieren“ – dieses Fenster erkennt die Anmeldung automatisch.</li></ol>
     <div class="ia-ld tma-wait" role="status">Warte auf Ihre Anmeldung bei Microsoft …</div><button type="button" class="btn btn-ghost btn-sm" id="tmaStop">Abbrechen</button></div>`;
   const copy = () => navigator.clipboard?.writeText(userCode).then(() => toast('Code kopiert.')).catch(() => {});
   $('#tmaCode', v).onclick = copy; $('#tmaGo', v).addEventListener('click', copy);
