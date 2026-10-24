@@ -72,22 +72,21 @@ ${button ? buttonHtml(button, ac) : ''}
 ${note ? `<p style="margin:0 0 16px;font-size:13px;line-height:1.55;color:#64748B">${html(note)}</p>` : ''}
 </td></tr>
 <tr><td style="padding:0 28px"><div style="height:1px;line-height:1px;font-size:0;background:#E2E8F0">&nbsp;</div></td></tr>
-<tr><td class="ia-foot" style="padding:20px 18px 6px;font-size:0;text-align:left">
+<tr><td class="ia-foot" style="padding:14px 18px 2px;font-size:0;text-align:left">
 <!--[if mso]><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="50%" valign="top"><![endif]-->
-<div class="ia-col" style="display:inline-block;width:100%;max-width:270px;vertical-align:top;padding:0 10px 14px;box-sizing:border-box;font-size:13px;line-height:1.6;color:#475569">
-<strong style="display:block;font-size:14px;color:#0F2C59">Feray Korkmaz</strong>
+<div class="ia-col" style="display:inline-block;width:100%;max-width:270px;vertical-align:top;padding:0 10px 8px;box-sizing:border-box;font-size:11px;line-height:1.5;color:#94A3B8">
+<strong style="display:block;font-size:12px;color:#64748B">Feray Korkmaz</strong>
 <span style="display:block;color:#64748B">Head of Operations · ImmoAdv</span>
-<span style="display:block;margin-top:6px">Georg-August-Zinn-Str. 25<br>64354 Reinheim</span>
 </div>
 <!--[if mso]></td><td width="50%" valign="top"><![endif]-->
-<div class="ia-col" style="display:inline-block;width:100%;max-width:270px;vertical-align:top;padding:0 10px 14px;box-sizing:border-box;font-size:13px;line-height:1.6;color:#475569">
+<div class="ia-col" style="display:inline-block;width:100%;max-width:270px;vertical-align:top;padding:0 10px 8px;box-sizing:border-box;font-size:11px;line-height:1.5;color:#94A3B8">
 <span style="display:block;color:#64748B">Support</span>
-<a href="mailto:support@immoadv.de" style="display:block;color:#0369A1;font-weight:600;text-decoration:none">support@immoadv.de</a>
-<span style="display:block;margin-top:6px">${biz ? `<a href="${SITE}/b2b-portal" style="color:#475569;text-decoration:underline">Unternehmensportal</a> · ` : ''}<a href="${SITE}/impressum" style="color:#475569;text-decoration:underline">Impressum</a> · <a href="${SITE}/datenschutz" style="color:#475569;text-decoration:underline">Datenschutz</a></span>
+<a href="mailto:support@immoadv.de" style="display:block;color:#64748B;text-decoration:none">support@immoadv.de</a>
+<span style="display:block;margin-top:6px">${biz ? `<a href="${SITE}/b2b-portal" style="color:#94A3B8;text-decoration:underline">Unternehmensportal</a> · ` : ''}<a href="${SITE}/impressum" style="color:#94A3B8;text-decoration:underline">Impressum</a> · <a href="${SITE}/datenschutz" style="color:#94A3B8;text-decoration:underline">Datenschutz</a></span>
 </div>
 <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
-<tr><td style="padding:4px 28px 24px;font-size:11.5px;line-height:1.55;color:#64748B">
+<tr><td style="padding:2px 28px 20px;font-size:10px;line-height:1.5;color:#94A3B8">
 Technisches Analyse- und Vorbereitungswerkzeug – keine Kreditvermittlung, keine Anlage-, Steuer- oder Rechtsberatung.
 </td></tr></table></td></tr></table></body></html>`;
 }
@@ -109,7 +108,7 @@ export async function sendMail(to: string, subject: string, text: string, attach
   const rcpt = normalizeRecipient(to);
   if (!key || !from || !rcpt) return false;
   const subj = subject.replace(/[\r\n]+/g, ' ').trim().slice(0, 180);
-  const plain = text + (opts.button ? `\n\n${opts.button.label}: ${opts.button.url}` : '') + '\n\n—\n' + (opts.area === 'b2b' ? 'ImmoAdv Business · Unternehmensportal: https://immoadv.de/b2b-portal\n' : '') + 'ImmoAdv · Georg-August-Zinn-Str. 25 · 64354 Reinheim · support@immoadv.de · https://immoadv.de/impressum';
+  const plain = text + (opts.button ? `\n\n${opts.button.label}: ${opts.button.url}` : '') + '\n\n—\n' + (opts.area === 'b2b' ? 'ImmoAdv Business · Unternehmensportal: https://immoadv.de/b2b-portal\n' : '') + 'ImmoAdv · support@immoadv.de · https://immoadv.de/impressum';
   const body = JSON.stringify({
     from, to: [rcpt], subject: subj, text: plain,
     html: brandedHtml({ title: opts.title, text, button: opts.button, note: opts.note, area: opts.area, accent: opts.accent }),
