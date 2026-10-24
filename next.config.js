@@ -67,6 +67,10 @@ module.exports = {
     '/api/admin/invoices': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
     '/api/analyse-pdf': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
     '/api/unterlagen/[doc]': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
+    '/api/v1/cases/[id]/reports': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
+    '/api/v1/cases/[id]/reports/[reportId]': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
+    '/api/admin/api': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
+    '/api/cron/cleanup': ['./node_modules/pdfkit/js/**/*', './node_modules/@react-pdf/pdfkit/**/*'],
   },
   // Entfernte bzw. zusammengelegte Seiten: dauerhaft weiterleiten, damit Links und Suchmaschinen-Einträge nicht ins Leere führen.
   async redirects() {

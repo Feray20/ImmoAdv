@@ -38,7 +38,9 @@ export async function GET(req: Request) {
   const radar = await radarNotify(today).catch((e) => ({ error: String(e instanceof Error ? e.message : e) }));
   // Creator Hub: automatischer Monatsabschluss (falls eingeschaltet), Hinweise „Abrechnung bereit“ und Rechnungs-Erinnerungen.
   const creator = await import('@/lib/creator/billing-server').then((m) => m.runCreatorBilling()).catch((e) => ({ error: String(e instanceof Error ? e.message : e) }));
-  return NextResponse.json({ ok: true, cleanup, reminders, overdue, retention, exportsRemoved, radar, creator }, { headers: { 'Cache-Control': 'no-store' } });
+  // ImmoAdv API: fällige Webhook-Wiederholungen, hängende Berichte, Aufräumen (Rate-Zähler, Idempotenz, Protokoll 90 Tage).
+  const api = await import('@/lib/api/maintenance').then((m) => m.apiMaintenance()).catch((e) => ({ error: String(e instanceof Error ? e.message : e) }));
+  return NextResponse.json({ ok: true, cleanup, reminders, overdue, retention, exportsRemoved, radar, creator, api }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 // Bestandskunden-Radar: Am 1. jedes Monats erhält jedes Unternehmen mit Radar-Tarif eine Übersicht der Kunden,
