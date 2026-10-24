@@ -1,10 +1,6 @@
 // Web-Admin: Akquise-Zentrale (Kontakte, Serienbriefe, Anrufe, Verlauf) und Werbungszentrale
 // (Kampagnen mit Tracking-Link und QR-Code, Erfolgsmessung, Neuigkeiten-E-Mails nur mit Double-Opt-in).
-<<<<<<< HEAD
-import { api, download, dt, dtt, esc } from './sess.mjs?v=b4582530';
-=======
-import { api, download, dt, dtt, esc } from './sess.mjs?v=b4582530';
->>>>>>> origin/main
+import { api, download, dt, dtt, esc } from './sess.mjs?v=8d06c1ac';
 
 const $ = (s, r = document) => r.querySelector(s);
 const KIND = { bank: 'Bank / Sparkasse', vermittler: 'Finanzierungsvermittler', makler: 'Immobilienmakler', finanzberater: 'Finanz-/Vermögensberater', sonstige: 'Sonstige' };
@@ -42,7 +38,7 @@ export async function akquise(v) {
     <details class="ad-help"><summary>Was ist erlaubt? (kurz erklärt)</summary>
       <p><strong>Briefe</strong> an Unternehmen sind erlaubt, solange kein Werbewiderspruch vorliegt. Jeder Brief enthält automatisch den Hinweis zur Datenherkunft und zum Widerspruchsrecht (Art. 14, 21 DSGVO).</p>
       <p><strong>Anrufe</strong> bei Unternehmen nur bei mutmaßlichem Interesse (§ 7 Abs. 2 Nr. 1 UWG) – z. B. wenn ein konkreter Bezug zum Geschäft des Angerufenen besteht. Im Zweifel erst schreiben.</p>
-      <p><strong>Presse-E-Mails</strong> sind einzelne, persönliche Anfragen an Redaktionen und Blogs (öffentliche Redaktionsadresse, konkreter Themenbezug) – immer mit Abmeldelink; Abmeldungen sperren den Kontakt automatisch.</p>
+      <p><strong>Persönliche E-Mails</strong> (z. B. Presse- und Kooperationsanfragen) laufen über das Postfach – einzeln, mit Abmeldelink; Abmeldungen sperren den Kontakt automatisch.</p>
       <p><strong>Werbe-E-Mails</strong> nur an Empfänger, die über das Formular eingewilligt und bestätigt haben (Reiter „Werbung“ → Neuigkeiten). Keine E-Mails an hier gesammelte Adressen.</p>
       <p><strong>Quelle</strong> jedes Kontakts angeben (z. B. „Impressum der Filial-Website“). Bei Widerspruch Status „Werbewiderspruch“ setzen – der Kontakt bleibt als Sperrvermerk erhalten. Auf Löschverlangen „Löschen“ verwenden. Keine Rechtsberatung.</p></details>
     <div class="pt-row mk-bar"><input id="mkQ" placeholder="Suchen (Firma, Ort, Name)" value="${esc(CRM.q)}"><select id="mkSt"><option value="">Alle Status</option>${Object.entries(STATUS).map(([k, l]) => `<option value="${k}"${CRM.st === k ? ' selected' : ''}>${l}</option>`).join('')}</select><select id="mkKind"><option value="">Alle Arten</option>${Object.entries(KIND).map(([k, l]) => `<option value="${k}"${CRM.kind === k ? ' selected' : ''}>${l}</option>`).join('')}</select><label class="chk"><input type="checkbox" id="mkDue"${CRM.due ? ' checked' : ''}> nur fällige</label></div>

@@ -1,5 +1,5 @@
 // Web-Admin → Postfach: E-Mails empfangen, lesen, beantworten und im ImmoAdv-Design senden (support@immoadv.de).
-import { api, dtt, esc } from './sess.mjs?v=b4582530';
+import { api, dtt, esc } from './sess.mjs?v=8d06c1ac';
 
 const $ = (s, r = document) => r.querySelector(s);
 const FOLDERS = [

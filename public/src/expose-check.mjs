@@ -1,13 +1,8 @@
 // Exposé-AutoPilot für Makler und Berater: Exposé-PDF hineinziehen → Eckdaten werden im Browser erkannt →
 // kundenfähige Vorab-Einschätzung zur Finanzierbarkeit (Rate, Nebenkosten, nötiges Haushaltsnetto je Eigenkapital-Szenario).
 // Die Datei verlässt das Gerät nicht. Kontaktdaten Dritter (Makler, Verkäufer) werden nicht übernommen.
-<<<<<<< HEAD
-import { parseListing } from './listing-parse.mjs?v=b4582530';
-import { kaufnebenkosten, monthlyRate, GREST } from './calc.mjs?v=b4582530';
-=======
-import { parseListing } from './listing-parse.mjs?v=b4582530';
-import { kaufnebenkosten, monthlyRate, GREST } from './calc.mjs?v=b4582530';
->>>>>>> origin/main
+import { parseListing } from './listing-parse.mjs?v=8d06c1ac';
+import { kaufnebenkosten, monthlyRate, GREST } from './calc.mjs?v=8d06c1ac';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const E = (v) => (Number.isFinite(v) ? v : 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });

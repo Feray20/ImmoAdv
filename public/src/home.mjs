@@ -5,11 +5,7 @@ const $ = (id) => document.getElementById(id);
 // Ergebnis als Tacho und Ampeln statt Fachbegriffen. Rechnet ausschließlich im Browser; gespeichert wird nur lokal.
 const qz = $('qz');
 if (qz) {
-<<<<<<< HEAD
-  import('./calc.mjs?v=b4582530').then(({ einstieg, kaufnebenkosten, monthlyRate }) => {
-=======
-  import('./calc.mjs?v=b4582530').then(({ einstieg, kaufnebenkosten, monthlyRate }) => {
->>>>>>> origin/main
+  import('./calc.mjs?v=8d06c1ac').then(({ einstieg, kaufnebenkosten, monthlyRate }) => {
     const KEY = 'ia-qz';
     const IDS = ['qz_e', 'qz_b', 'qz_p', 'qz_l', 'qz_r', 'qz_i', 'qz_t', 'qz_m'];
     const n = (id) => { const v = Number(String($(id).value).replace(',', '.')); return Number.isFinite(v) ? v : 0; };
@@ -105,11 +101,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.q
 document.querySelectorAll('.km-go').forEach((a) => a.addEventListener('click', async (e) => {
   e.preventDefault();
   try {
-<<<<<<< HEAD
-    const [{ openBuy }, P] = await Promise.all([import('./buy.mjs?v=b4582530'), fetch('/data/preise.json').then((r) => r.json())]);
-=======
-    const [{ openBuy }, P] = await Promise.all([import('./buy.mjs?v=b4582530'), fetch('/data/preise.json').then((r) => r.json())]);
->>>>>>> origin/main
+    const [{ openBuy }, P] = await Promise.all([import('./buy.mjs?v=8d06c1ac'), fetch('/data/preise.json').then((r) => r.json())]);
     const o = P.privat.plans.find((x) => x.id === 'credit-map');
     if (o) { openBuy(o); return; }
   } catch { /* weiter mit Link */ }
