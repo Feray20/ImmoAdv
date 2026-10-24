@@ -219,3 +219,8 @@ body:has(> footer.k-foot)>:not(main){flex-shrink:0}
   .k-ptable tr{grid-template-columns:minmax(0,1fr) auto}
   .k-ptable td{min-width:0;overflow-wrap:anywhere}
 }
+/* Dokumentangaben (Preis- und Leistungsverzeichnis): lange Werte wie die Prüfsumme brechen um, statt die Seite zu verbreitern */
+.k-rows>div{min-width:0}
+.k-rows>div>span{flex:none}
+.k-rows>div>b{min-width:0;white-space:normal;overflow-wrap:anywhere;text-align:right}
+.k-rows .k-chip{white-space:normal}
