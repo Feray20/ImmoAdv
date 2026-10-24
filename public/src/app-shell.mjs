@@ -1,7 +1,7 @@
 // App-Rahmen für das Konto: Handy wie eine App (Tab-Leiste unten), Desktop wie ein Investment-Tool (Seitenleiste).
 // Ansichten über #hash; vorhandene Karten werden den Ansichten zugeordnet. Modus Einsteiger/Profi frei wählbar.
-import { openBuy, planIcon, resumeIntent } from './buy.mjs?v=5f4bc2a3';
-import { rank, GREST, portfolio, upcoming, readiness } from './calc.mjs?v=5f4bc2a3';
+import { openBuy, planIcon, resumeIntent } from './buy.mjs?v=9e9eafc5';
+import { rank, GREST, portfolio, upcoming, readiness } from './calc.mjs?v=9e9eafc5';
 const GREST_KEYS = Object.keys(GREST);
 
 const $ = (id) => document.getElementById(id);
@@ -259,7 +259,7 @@ export function setupApp({ u, d, saveData, reload }) {
   const main = app.querySelector('main');
   main.insertAdjacentHTML('afterbegin', `<div class="app-top"><a class="brand app-top-brand" href="/"><img class="brand-logo" src="/logo-icon.svg" alt="" width="30" height="26"><span>Immo<span>Adv</span></span></a><div class="app-top-t"><small class="app-top-k">Privatbereich</small><h1 id="appTitle"></h1></div>
     <button class="mode-chip" id="modeChip" type="button" aria-label="Modus wechseln (aktuell ${mode === 'profi' ? 'Profi' : 'Einsteiger'})"><b>${mode === 'profi' ? 'Profi' : 'Einsteiger'}</b> <span aria-hidden="true">⇄</span></button><button class="app-logout-m" id="appLogoutM" type="button" aria-label="Abmelden" title="Abmelden"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg><span>Abmelden</span></button></div>`);
-  import('./legal-foot.mjs?v=5f4bc2a3').then((m) => { if (!main.querySelector('.ia-legal')) main.insertAdjacentHTML('beforeend', m.legalFoot('b2c')); }).catch(() => {});
+  import('./legal-foot.mjs?v=9e9eafc5').then((m) => { if (!main.querySelector('.ia-legal')) main.insertAdjacentHTML('beforeend', m.legalFoot('b2c')); }).catch(() => {});
   app.insertAdjacentHTML('beforeend', `<nav class="app-tabs" aria-label="Schnellnavigation">${TABS.map((k) => `<a class="app-tab" data-go="${k}" href="#${k}">${svg(k)}<span>${k === 'werkzeuge' ? 'Tools' : k === 'start' ? 'Start' : views.find((v) => v[0] === k)[1].split(' ')[0]}</span></a>`).join('')}</nav>`);
   $('appLogout').onclick = () => document.getElementById('logout')?.click();
   $('appLogoutM').onclick = () => document.getElementById('logout')?.click();
@@ -331,9 +331,9 @@ export function setupApp({ u, d, saveData, reload }) {
   personalCard(grid);
   // Verbesserungsvorschläge (Konto): gehen an den Web-Admin, Bereich Privatkunden.
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide fb-card-b2c" data-view="konto" id="fbCardB2C"><h3>Verbesserungsvorschläge</h3><div id="fbBodyB2C"></div></article>`);
-  import('/src/feedback-ui.mjs?v=5f4bc2a3').then((m) => m.mountFeedback($('fbBodyB2C'), { area: 'b2c' })).catch(() => {});
+  import('/src/feedback-ui.mjs?v=9e9eafc5').then((m) => m.mountFeedback($('fbBodyB2C'), { area: 'b2c' })).catch(() => {});
   // Bitte um eine echte Google-Bewertung (an alle Kunden gleich, ohne Anreiz); nach einem Kauf zusätzlich auf der Startseite.
-  import('/src/reviews.mjs?v=5f4bc2a3').then(async (m) => {
+  import('/src/reviews.mjs?v=9e9eafc5').then(async (m) => {
     const h = await m.askHtml('b2c'); if (!h) return;
     grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="konto" id="rvCard">${h}</article>`);
     if (CHECKOUT === 'success') grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="start" id="rvCardStart">${h}</article>`);
@@ -352,15 +352,15 @@ export function setupApp({ u, d, saveData, reload }) {
   grid.insertAdjacentHTML('beforeend', `<article class="obj-step-card" data-view="objekte" id="objStep2"><div class="obj-step"><span aria-hidden="true">2</span><div><h3>Meine Objekte</h3><small>Gespeicherte Objekte, Unterlagen, Fristen – und daraus die Kreditmappe für die Bank.</small></div></div></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="werkzeuge" id="toolsView"><p class="ia-ld" role="status">Software-Tools werden geladen …</p></article>`);
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="steuer" id="steuerView"></article>`);
-  Promise.all([import('/src/b2c-tools.mjs?v=5f4bc2a3'), getAccess()]).then(([m, ac]) => { m.mountTools($('toolsView'), { d, tier: ac.tier || 'free', b2b: Boolean(ac.b2b), mode: mode || 'einsteiger' }); import('/src/field-help.mjs?v=5f4bc2a3').then((f) => f.attachHelp?.($('toolsView'))).catch(() => {}); }).catch(() => { const v = $('toolsView'); if (v) v.innerHTML = '<p class="form-note">Software-Tools konnten nicht geladen werden.</p>'; });
+  Promise.all([import('/src/b2c-tools.mjs?v=9e9eafc5'), getAccess()]).then(([m, ac]) => { m.mountTools($('toolsView'), { d, tier: ac.tier || 'free', b2b: Boolean(ac.b2b), mode: mode || 'einsteiger' }); import('/src/field-help.mjs?v=9e9eafc5').then((f) => f.attachHelp?.($('toolsView'))).catch(() => {}); }).catch(() => { const v = $('toolsView'); if (v) v.innerHTML = '<p class="form-note">Software-Tools konnten nicht geladen werden.</p>'; });
   grid.insertAdjacentHTML('beforeend', lernCard(mode, d));
   grid.insertAdjacentHTML('beforeend', `<article class="dash-card wide" data-view="angebot" id="angebotView"><h3>${mode === 'profi' ? 'Tarif' : 'Angebot'}</h3><div id="offerBody"><p class="ia-ld" role="status">Wird geladen …</p></div></article>`);
   bindStart(mode, d, u, saveData, reload);
   bindKm(d, u, saveData, reload);
   renderFin();
   bindLern(d, u, saveData);
-  import('/src/field-help.mjs?v=5f4bc2a3').then((m) => m.watchHelp(grid)).catch(() => {});
-  import('/src/retention.mjs?v=5f4bc2a3').then(async (m) => { const ac = await getAccess(); m.mountRetention(grid, { mode, d, u, saveData, paid: ac.tier === 'pro' || ac.b2b }); if (typeof window.__iaApplyView === 'function') window.__iaApplyView(); }).catch(() => {});
+  import('/src/field-help.mjs?v=9e9eafc5').then((m) => m.watchHelp(grid)).catch(() => {});
+  import('/src/retention.mjs?v=9e9eafc5').then(async (m) => { const ac = await getAccess(); m.mountRetention(grid, { mode, d, u, saveData, paid: ac.tier === 'pro' || ac.b2b }); if (typeof window.__iaApplyView === 'function') window.__iaApplyView(); }).catch(() => {});
 
   // Objekte: oben eine Auswahl; der jeweilige Bereich öffnet sich erst beim Antippen (vorher nichts darunter).
   const OBJ_OPS = [
@@ -421,7 +421,7 @@ export function setupApp({ u, d, saveData, reload }) {
     if (cur === 'objekte') objektModule().then(() => { if (window.__iaToAnalyse) { window.__iaToAnalyse = false; $('sucheView')?.scrollIntoView({ block: 'start' }); } }).catch(() => { const x = $('sucheMount'); if (x) x.innerHTML = '<p class="auth-message error">Import konnte nicht geladen werden.</p>'; });
     if (cur === 'steuer' && !$('steuerView').dataset.ready) {
       $('steuerView').dataset.ready = '1';
-      import('/src/steuer.mjs?v=5f4bc2a3').then((m) => m.mountSteuer($('steuerView'), { mode, phase: PH()[phaseOf(d).idx].steuer })).catch(() => { $('steuerView').innerHTML = '<p class="auth-message error">Steuer-Bereich konnte nicht geladen werden.</p>'; });
+      import('/src/steuer.mjs?v=9e9eafc5').then((m) => m.mountSteuer($('steuerView'), { mode, phase: PH()[phaseOf(d).idx].steuer })).catch(() => { $('steuerView').innerHTML = '<p class="auth-message error">Steuer-Bereich konnte nicht geladen werden.</p>'; });
     }
     if (cur === 'angebot' && !$('angebotView').dataset.ready) { $('angebotView').dataset.ready = '1'; renderOffers(mode); }
   };
@@ -536,7 +536,7 @@ async function saveFromAnalyse(o) {
 // Analyse-Modul (Suche) bei Bedarf laden – AutoPilot nutzt denselben Rechenweg wie die Analyse.
 async function objektModule() {
   const v = $('sucheMount');
-  const m = await import('/src/objekt-ui.mjs?v=5f4bc2a3');
+  const m = await import('/src/objekt-ui.mjs?v=9e9eafc5');
   if (v && !v.dataset.ready) { v.dataset.ready = '1'; m.mountObjekt(v, { pdf: true, app: true, profile: APP?.d?.profile, onSave: saveFromAnalyse }); }
   return m;
 }
@@ -600,7 +600,7 @@ function bindKm(d, u, saveData, reload) {
     const ver = r.headers.get('X-Document-Version');
     const blob = await r.blob();
     await w.done('Kreditmappe fertig');
-    const { showPdf } = await import('/src/pdf-view.mjs?v=5f4bc2a3');
+    const { showPdf } = await import('/src/pdf-view.mjs?v=9e9eafc5');
     const o = (d.objects || []).find((x) => x.id === objectId);
     showPdf(blob, {
       filename: fileName(r, preview ? 'ImmoAdv_BankReady_Vorschau.pdf' : `ImmoAdv_BankReady${ver ? '_v' + ver : ''}.pdf`),
@@ -636,12 +636,12 @@ function bindKm(d, u, saveData, reload) {
       const out = await mod.analysePdf(false);
       await w.done('RenditeRadar fertig');
       showResult(sum);
-      const { showPdf } = await import('/src/pdf-view.mjs?v=5f4bc2a3');
+      const { showPdf } = await import('/src/pdf-view.mjs?v=9e9eafc5');
       const demo = !(await getAccess()).paid ? DEMO_NOTE + ' ' : '';
       showPdf(out.blob, { filename: out.filename, title: `RenditeRadar · ${sum.name}`, note: demo + (sum.missing.length ? `Nicht im Exposé gefunden: ${esc(sum.missing.join(', '))} – in der Analyse ergänzen.` : '') });
       return;
     }
-    const { parseListing } = await import('/src/listing-parse.mjs?v=5f4bc2a3');
+    const { parseListing } = await import('/src/listing-parse.mjs?v=9e9eafc5');
     await w.step(2);
     const r = parseListing(listing);
     if (r.price == null) throw Error('Im Exposé wurde kein Kaufpreis gefunden. Bitte ein einzelnes Kaufangebot verwenden oder die Werte manuell eintragen.');
@@ -670,7 +670,7 @@ function bindKm(d, u, saveData, reload) {
       const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
       if (f.size > 40 * 1024 * 1024) { msg('Die Datei ist größer als 40 MB.', 'bad'); return; }
       msg(''); busy(true);
-      const { work } = await import('/src/loader.mjs?v=5f4bc2a3');
+      const { work } = await import('/src/loader.mjs?v=9e9eafc5');
       const w = work(`${PROD[KM.doc].name} AutoPilot`, ['Exposé öffnen', 'Text erkennen', 'Eckdaten übernehmen', KM.doc === 'km' ? 'Kreditmappe erstellen' : 'Kennzahlen & PDF erstellen']);
       try {
         await w.step(0);
@@ -688,7 +688,7 @@ function bindKm(d, u, saveData, reload) {
       e.preventDefault();
       const url = $('kmLink').value.trim(); if (!url) return;
       msg(''); busy(true);
-      const { work } = await import('/src/loader.mjs?v=5f4bc2a3');
+      const { work } = await import('/src/loader.mjs?v=9e9eafc5');
       const w = work(`${PROD[KM.doc].name} AutoPilot`, ['Link abrufen', 'Inhalt erkennen', 'Eckdaten übernehmen', KM.doc === 'km' ? 'Kreditmappe erstellen' : 'Kennzahlen & PDF erstellen']);
       try {
         await w.step(0);
@@ -718,7 +718,7 @@ function bindKm(d, u, saveData, reload) {
     $('kmGo')?.addEventListener('click', async () => {
       const id = $('kmObj')?.value; const o = (d.objects || []).find((x) => x.id === id); if (!o) return;
       msg(''); busy(true);
-      const { work } = await import('/src/loader.mjs?v=5f4bc2a3');
+      const { work } = await import('/src/loader.mjs?v=9e9eafc5');
       const w = work(`${PROD[KM.doc].name} wird erstellt`, KM.doc === 'km' ? ['Objekt und Finanzprofil laden', 'Kennzahlen und Stresstest rechnen', 'Kreditmappe erzeugen'] : ['Objekt laden', 'Kennzahlen berechnen', 'PDF erzeugen']);
       try {
         await w.step(0);
@@ -732,7 +732,7 @@ function bindKm(d, u, saveData, reload) {
           const out = await mod.analysePdf(false);
           await w.done('RenditeRadar fertig');
           showResult(sum);
-          const { showPdf } = await import('/src/pdf-view.mjs?v=5f4bc2a3');
+          const { showPdf } = await import('/src/pdf-view.mjs?v=9e9eafc5');
           showPdf(out.blob, { filename: out.filename, title: `RenditeRadar · ${sum.name}`, note: (await getAccess()).paid ? '' : DEMO_NOTE });
         }
       } catch (err) { w.close(); msg(esc(err.message), 'bad'); }
@@ -742,7 +742,7 @@ function bindKm(d, u, saveData, reload) {
     // PDF-Formular ansehen und herunterladen (zahlende Kunden ohne Wasserzeichen)
     $('kmFormGet')?.addEventListener('click', async () => {
       busy(true); msg('');
-      const { work } = await import('/src/loader.mjs?v=5f4bc2a3');
+      const { work } = await import('/src/loader.mjs?v=9e9eafc5');
       const w = work('Formular wird vorbereitet', ['Felder anlegen', 'PDF erzeugen']);
       try {
         await w.step(0);
@@ -751,7 +751,7 @@ function bindKm(d, u, saveData, reload) {
         await w.step(1);
         const blob = await r.blob(); const clean = r.headers.get('X-Form-Clean') === '1';
         await w.done('Formular bereit');
-        const { showPdf } = await import('/src/pdf-view.mjs?v=5f4bc2a3');
+        const { showPdf } = await import('/src/pdf-view.mjs?v=9e9eafc5');
         showPdf(blob, { filename: fileName(r, `ImmoAdv_${PROD[KM.doc].name}_Formular.pdf`), title: `${PROD[KM.doc].name} · Formular zum Ausfüllen`,
           note: `Herunterladen, ausfüllen, speichern – dann unter „Ausgefülltes PDF hochladen“ wieder einlesen.${clean ? '' : ' ' + DEMO_NOTE}` });
       } catch (err) { w.close(); msg(esc(err.message), 'bad'); }
@@ -762,12 +762,12 @@ function bindKm(d, u, saveData, reload) {
     $('kmFormUp')?.addEventListener('change', async (e) => {
       const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
       msg(''); busy(true);
-      const { work } = await import('/src/loader.mjs?v=5f4bc2a3');
+      const { work } = await import('/src/loader.mjs?v=9e9eafc5');
       const kind = PROD[KM.doc].form;
       const w = work(`${PROD[KM.doc].name}: Formular wird eingelesen`, ['PDF öffnen', 'Eingaben lesen', 'Daten übernehmen', KM.doc === 'km' ? 'Kreditmappe erstellen' : 'Kennzahlen & PDF erstellen']);
       try {
         await w.step(0);
-        const [{ readPdfForm, showPdf }, spec] = await Promise.all([import('/src/pdf-view.mjs?v=5f4bc2a3'), import('/src/form-spec.mjs?v=5f4bc2a3')]);
+        const [{ readPdfForm, showPdf }, spec] = await Promise.all([import('/src/pdf-view.mjs?v=9e9eafc5'), import('/src/form-spec.mjs?v=9e9eafc5')]);
         const raw = await readPdfForm(f);
         await w.step(1);
         const other = kind === 'analyse' ? 'kreditmappe' : 'analyse';
@@ -976,7 +976,7 @@ function startCard(mode, d) {
 function bindStart(mode, d, u, saveData, reload) {
   // Modusabhängiges Cockpit (Einsteiger: Budget-Tacho · Profi: RenditeRadar, Vermögenskurve, Szenarien).
   const cm = document.getElementById('cmMode');
-  if (cm) import('/src/cockpit-mode.mjs?v=5f4bc2a3').then((m) => (mode === 'profi' ? m.mountProfi(cm, { d }) : m.mountEinsteiger(cm, { d, save: (x) => { d.profile = { ...(d.profile || {}), ...x }; saveData(u, d).catch(() => {}); } }))).catch(() => {});
+  if (cm) import('/src/cockpit-mode.mjs?v=9e9eafc5').then((m) => (mode === 'profi' ? m.mountProfi(cm, { d }) : m.mountEinsteiger(cm, { d, save: (x) => { d.profile = { ...(d.profile || {}), ...x }; saveData(u, d).catch(() => {}); } }))).catch(() => {});
   document.querySelectorAll('[data-phase]').forEach((b) => b.onclick = async () => {
     d.profile = { ...(d.profile || {}), phase: Number(b.dataset.phase) };
     b.closest('.ph-pick')?.querySelectorAll('.ph-btn').forEach((x) => x.classList.toggle('on', x === b));
@@ -1148,7 +1148,7 @@ function bindPw(u) {
       if (n1.length < 10 || !/[A-Z]/.test(n1) || !/[a-z]/.test(n1) || !/[0-9]/.test(n1)) return say('Bitte mindestens 10 Zeichen mit Groß- und Kleinbuchstaben und einer Zahl.');
       sb.disabled = true; say('Wird gespeichert …', true);
       try {
-        const { supa, token } = await import('/src/sess.mjs?v=5f4bc2a3');
+        const { supa, token } = await import('/src/sess.mjs?v=9e9eafc5');
         if (hasPw) {
           const v = await supa('/auth/v1/token?grant_type=password', { method: 'POST', body: JSON.stringify({ email: u.email, password: $('pwCur').value }) });
           if (!v.ok) throw Error(v.status === 429 ? 'Zu viele Versuche. Bitte einige Minuten warten.' : 'Das aktuelle Passwort stimmt nicht.');
@@ -1201,7 +1201,7 @@ async function personalCard(grid) {
       <p class="form-note full" id="persMsg" role="status"></p>
       <div class="sess-act full"><button class="btn btn-dark" type="submit">Speichern</button>${x ? '<button class="btn btn-ghost" type="button" id="persCancel">Abbrechen</button>' : ''}</div></form>`;
     $('persCancel')?.addEventListener('click', () => show(x));
-    import('/src/address-check.mjs?v=5f4bc2a3').then((m) => m.attachAddress($('persF'))).catch(() => {});
+    import('/src/address-check.mjs?v=9e9eafc5').then((m) => m.attachAddress($('persF'))).catch(() => {});
     $('persF').onsubmit = async (e) => {
       e.preventDefault();
       const m = $('persMsg'), sb = e.target.querySelector('button[type=submit]');
@@ -1239,7 +1239,7 @@ function firstPassword(u) {
     if (a.length < 10 || !/[A-Z]/.test(a) || !/[a-z]/.test(a) || !/[0-9]/.test(a)) return say('Bitte mindestens 10 Zeichen mit Groß- und Kleinbuchstaben und einer Zahl.');
     sb.disabled = true;
     try {
-      const { supa, token } = await import('/src/sess.mjs?v=5f4bc2a3');
+      const { supa, token } = await import('/src/sess.mjs?v=9e9eafc5');
       const r = await supa('/auth/v1/user', { method: 'PUT', headers: { Authorization: 'Bearer ' + token() }, body: JSON.stringify({ password: a, data: { must_change_password: false, onboarded_at: new Date().toISOString() } }) });
       if (!r.ok) { const j = await r.json().catch(() => ({})); throw Error(/same|different/i.test(String(j.msg || j.message || '')) ? 'Bitte ein anderes Passwort als das Startpasswort wählen.' : 'Passwort konnte nicht gespeichert werden.'); }
       d.close(); d.remove();

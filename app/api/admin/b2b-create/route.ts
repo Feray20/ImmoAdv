@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { brancheFromType } from '@/lib/b2b/catalog';
 import { requireAdmin } from '@/lib/security/admin';
 import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 import { adminAudit } from '@/lib/b2b/core';
@@ -18,7 +19,7 @@ const clean = (s: string) => s.replace(/\s+/g, ' ').trim();
 const Body = z.object({
   companyName: z.string().transform(clean).pipe(z.string().min(2).max(160)),
   legalForm: z.string().transform(clean).pipe(z.string().min(1).max(60)),
-  institutionType: z.enum(['BANK', 'BROKER', 'REALTOR', 'OTHER']),
+  institutionType: z.enum(['BANK', 'BROKER', 'REALTOR', 'ADVISOR', 'OTHER']),
   advisorName: z.string().transform(clean).pipe(z.string().min(2).max(120)),
   email: z.string().trim().toLowerCase().email().max(200),
   phone: z.string().trim().max(40).optional().default(''),
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
   const db = supabaseAdmin();
   const now = new Date().toISOString();
   const ins = await db.from('immo_b2b_accounts').insert({
-    owner_id: login.userId, company_name: b.companyName, legal_form: b.legalForm, institution_type: b.institutionType,
+    owner_id: login.userId, company_name: b.companyName, legal_form: b.legalForm, institution_type: b.institutionType, branche: brancheFromType(b.institutionType),
     register_number: b.registerNumber.toUpperCase() || null, tax_id: b.taxId || null, advisor_name: b.advisorName, email: b.email, phone: b.phone || null,
     street: b.street, postal_code: b.postalCode, city: b.city, status: 'active', slug: await freeSlug(b.companyName), widget_key: newWidgetKey(),
     ...(b.plan ? { plan_tier: b.plan, plan_source: 'manual', plan_until: b.planUntil ? `${b.planUntil}T23:59:59+01:00` : null } : {}),

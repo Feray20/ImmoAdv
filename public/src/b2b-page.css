@@ -1257,3 +1257,7 @@ body .b2b-x h1.b2b-h1{font-family:inherit;font-size:12.5px;font-weight:800;line-
 .b2b-exec.bx-hero{position:relative;overflow:hidden;background:radial-gradient(70% 90% at 100% 0%,rgba(56,189,248,.34) 0%,rgba(56,189,248,0) 60%),radial-gradient(60% 70% at 0% 100%,rgba(2,132,199,.28) 0%,rgba(2,132,199,0) 65%),linear-gradient(140deg,#0F2C59 0%,#0B3B73 50%,#0369A1 100%)}
 .b2b-exec.bx-hero::after{content:"";position:absolute;inset:auto 0 0 0;height:90px;background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.06));pointer-events:none}
 .b2b-exec.bx-hero>*{position:relative;z-index:1}
+.br-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.br-tabs button{font:inherit;font-size:14px;font-weight:700;padding:9px 16px;border-radius:999px;border:1.5px solid #CBD5E1;background:#fff;color:#0F2C59;cursor:pointer}
+.br-tabs button[aria-selected="true"]{background:#0F2C59;border-color:#0F2C59;color:#fff}
+.br-desc{margin:0 0 14px;color:#475569}

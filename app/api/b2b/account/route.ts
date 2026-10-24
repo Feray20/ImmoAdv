@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createElement } from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { z } from 'zod';
+import { brancheFromType } from '@/lib/b2b/catalog';
 import { addressError, confirmedFlag } from '@/lib/address';
 import { userFromRequest } from '@/lib/billing/auth';
 import { allowRequest } from '@/lib/security/rate-limit';
@@ -9,6 +10,7 @@ import { adminConfigured, anonymizedIpHash, supabaseAdmin } from '@/lib/supabase
 import { RegistrationProofDocument, proofText, typeLabel, type RegistrationProof } from '@/lib/b2b/registration-proof';
 import { avvEvidence } from '@/lib/b2b/avv-evidence';
 import { AVV_VERSION, MODULE_KEYS, TIER_LIMITS, adminAudit, moduleOverrides, type ModuleKey, dossiersThisMonth, effectiveTier, membershipFor, newWidgetKey, slugify, type B2BAccount } from '@/lib/b2b/core';
+import { accountBranches, BRANCHEN as BRANCHEN_ALL, getCatalog, toolsFor } from '@/lib/b2b/catalog';
 import { json, requireMember } from '@/lib/b2b/http';
 import { adminList } from '@/lib/security/admin';
 import { mailConfigured, sendMail } from '@/lib/notify/mail';
@@ -25,7 +27,7 @@ const clean = (s: string) => s.replace(/\s+/g, ' ').trim();
 const RegisterSchema = z.object({
   companyName: z.string().transform(clean).pipe(z.string().min(2).max(160)),
   legalForm: z.string().transform(clean).pipe(z.string().min(1).max(60)),
-  institutionType: z.enum(['BANK', 'BROKER', 'REALTOR', 'OTHER']),
+  institutionType: z.enum(['BANK', 'BROKER', 'REALTOR', 'ADVISOR', 'OTHER']),
   registerNumber: z.string().transform(clean).optional().default(''),
   taxId: z.string().transform((s) => s.replace(/\s+/g, '').toUpperCase()).optional().default(''),
   advisorName: z.string().transform(clean).pipe(z.string().min(2).max(120)),
@@ -97,8 +99,8 @@ function view(a: B2BAccount, role: string) {
   };
 }
 
-// Branchen-Ansicht je Berater (in den eigenen Kontodaten gespeichert, jederzeit im Portal wechselbar).
-const BRANCHEN = ['bank', 'vermittler', 'makler', 'finanzberater', 'allgemein'];
+// Branche gehört zum Unternehmenskonto (bei der Anfrage festgelegt, Wechsel nur über den Support);
+// Zusatzbranchen werden dazugebucht. Daraus ergeben sich Pakete und freigeschaltete Software-Tools.
 
 export async function GET(req: Request) {
   if (!adminConfigured()) return json({ error: 'Nicht konfiguriert.' }, 503);
@@ -114,14 +116,19 @@ export async function GET(req: Request) {
     db.from('immo_b2b_leads').select('id', { count: 'exact', head: true }).eq('account_id', m.account.id).eq('status', 'neu'),
   ]);
   // Erstanmeldung: Startpasswort ändern; Inhaber bestätigt § 14 BGB und schließt den AVV ab.
-  let mustChange = false, branche: string | null = null;
+  let mustChange = false;
   try {
     const meta = (await db.auth.admin.getUserById(user.id)).data?.user?.user_metadata || {};
     mustChange = Boolean(meta.must_change_password);
-    branche = BRANCHEN.includes(meta.b2b_branche) ? meta.b2b_branche : null;
   } catch { mustChange = false; }
+  const cat = await getCatalog();
+  const branches = accountBranches(m.account);
+  const branche = branches[0];
+  const tools = toolsFor(cat, branches, effectiveTier(m.account));
+  const offer = { branche, label: cat.branchen[branche].label, selfService: cat.branchen[branche].selfService, plans: cat.branchen[branche].plans.filter((p) => p.active), enterprise: cat.branchen[branche].enterprise, addon: cat.addon,
+    others: BRANCHEN_ALL.filter((b) => !branches.includes(b) && b !== 'bank').map((b) => ({ key: b, label: cat.branchen[b].label })) };
   const consentsMissing = m.role === 'owner' && (!m.account.unternehmer_confirmed_at || !m.account.avv_accepted_at);
-  return json({ ...view(m.account, m.role), usage: { seats: seats ?? 1, dossiersThisMonth: used, leadsNew: leadsNew ?? 0 }, avvVersion: AVV_VERSION, branche, onboarding: { mustChange, consentsMissing } });
+  return json({ ...view(m.account, m.role), usage: { seats: seats ?? 1, dossiersThisMonth: used, leadsNew: leadsNew ?? 0 }, avvVersion: AVV_VERSION, branche, branches, tools, offer, onboarding: { mustChange, consentsMissing } });
 }
 
 // Registrierung eines Unternehmenskontos (nur Unternehmer nach § 14 BGB, mit AVV nach Art. 28 DSGVO).
@@ -175,7 +182,7 @@ export async function POST(req: Request) {
 
   const now = new Date().toISOString();
   const ins = await db.from('immo_b2b_accounts').insert({
-    owner_id: user.id, company_name: b.companyName, legal_form: b.legalForm, institution_type: b.institutionType,
+    owner_id: user.id, company_name: b.companyName, legal_form: b.legalForm, institution_type: b.institutionType, branche: brancheFromType(b.institutionType),
     register_number: reg || null, tax_id: b.taxId || null, advisor_name: b.advisorName, email: user.email, phone: b.phone || null,
     street: b.street, postal_code: b.postalCode, city: b.city, status: 'active', unternehmer_confirmed_at: now,
     avv_accepted_at: now, avv_version: AVV_VERSION, avv_evidence: avvEvidence(req, { userId: user.id, email: user.email, name: b.advisorName }), referral, slug, widget_key: newWidgetKey(),

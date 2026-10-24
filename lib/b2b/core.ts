@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 // B2B-Konten (Makler, Vermittler, Banken): Tarif-Grenzen, Kontozugriff und Hilfsfunktionen.
 
 export type Tier = 'BASIC' | 'PRO' | 'ENTERPRISE';
-export type InstitutionType = 'BANK' | 'BROKER' | 'REALTOR' | 'OTHER';
+export type InstitutionType = 'BANK' | 'BROKER' | 'REALTOR' | 'ADVISOR' | 'OTHER';
 
 // Geschäftsfunktionen (Kreditmappen-Kontingent, Partnerseite/Widget, Anfragen, Tarifbuchung) erst nach geprüftem
 // Gewerbenachweis (Freischaltung durch ImmoAdv im Admin-Bereich).
@@ -19,6 +19,8 @@ export type B2BAccount = {
   company_name: string;
   legal_form: string;
   institution_type: InstitutionType;
+  branche?: string | null;
+  extra_branches?: string[] | null;
   register_number: string | null;
   tax_id: string | null;
   advisor_name: string;
@@ -188,7 +190,7 @@ export function slugify(s: string): string {
 }
 
 export const INSTITUTION_LABEL: Record<InstitutionType, string> = {
-  BANK: 'Kreditinstitut', BROKER: 'Finanzierungsvermittler', REALTOR: 'Immobilienmakler', OTHER: 'Sonstiges Unternehmen',
+  BANK: 'Kreditinstitut', BROKER: 'Finanzierungsvermittler', REALTOR: 'Immobilienmakler', ADVISOR: 'Finanz- & Vermögensberater', OTHER: 'Sonstiges Unternehmen',
 };
 
 // Öffentliche Sicht eines Partners (keine Steuer- oder Registerdaten).
