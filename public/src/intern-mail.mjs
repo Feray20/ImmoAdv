@@ -1,5 +1,5 @@
 // Web-Admin → Postfach: E-Mails empfangen, lesen, beantworten und im ImmoAdv-Design senden (support@immoadv.de).
-import { api, dtt, esc } from './sess.mjs?v=d25ac568';
+import { api, dtt, esc } from './sess.mjs?v=daee1d1e';
 
 const $ = (s, r = document) => r.querySelector(s);
 const FOLDERS = [
@@ -20,21 +20,24 @@ const kb = (n) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(
 
 export async function postfach(v) {
   v.innerHTML = `<section class="pf"><aside class="pf-side"><button class="btn btn-dark pf-new" type="button" id="pfNew">${icon('<path d="M12 5v14M5 12h14"/>')}Neue E-Mail</button><nav class="pf-nav" id="pfNav"></nav><div class="pf-box" id="pfBox"></div></aside>
-    <div class="pf-main"><div class="pf-bar"><input id="pfQ" type="search" placeholder="E-Mails durchsuchen" value="${esc(S.q)}"><div class="pf-acts" id="pfActs"></div></div><div class="pf-cols"><div class="pf-list" id="pfList" aria-live="polite"></div><div class="pf-read" id="pfRead"></div></div></div></section>`;
+    <div class="pf-main"><div class="pf-bar"><input id="pfQ" type="search" placeholder="E-Mails durchsuchen" value="${esc(S.q)}"><button type="button" class="btn btn-outline btn-sm" id="pfSync" title="Neue E-Mails abrufen">${icon('<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>', 16)} Abrufen</button><div class="pf-acts" id="pfActs"></div></div><div class="pf-cols"><div class="pf-list" id="pfList" aria-live="polite"></div><div class="pf-read" id="pfRead"></div></div></div></section>`;
   $('#pfNew').onclick = () => compose({});
+  $('#pfSync').onclick = () => { S.sync = true; load(v); };
   let t; $('#pfQ').oninput = (e) => { clearTimeout(t); t = setTimeout(() => { S.q = e.target.value; load(v); }, 300); };
   await load(v);
 }
 
 async function load(v) {
-  const r = await api(`/api/admin/mail?folder=${S.folder}${S.q ? `&q=${encodeURIComponent(S.q)}` : ''}`);
+  const r = await api(`/api/admin/mail?folder=${S.folder}${S.q ? `&q=${encodeURIComponent(S.q)}` : ''}${S.sync ? '&sync=1' : ''}`); const manual = S.sync; S.sync = false;
   if (!r.ok) { $('#pfList').innerHTML = `<p class="form-note pf-empty">${esc(r.data?.error || 'Nicht verfügbar.')}</p>`; return; }
   S.data = r.data; S.items = r.data.items || []; S.sel.clear();
   if (r.data.imported) toast(`${r.data.imported} vorbereitete E-Mails liegen jetzt unter Entwürfe.`);
+  else if (r.data.fetched) toast(`${r.data.fetched} neue E-Mail(s) empfangen.`);
+  else if (manual) toast('Keine neuen E-Mails.');
   const c = r.data.counts || {};
   $('#pfNav').innerHTML = FOLDERS.map(([k, l, p]) => `<button type="button" class="pf-f${S.folder === k ? ' on' : ''}" data-f="${k}">${icon(p)}<span>${l}</span>${c[k] ? `<b>${c[k]}</b>` : ''}</button>`).join('');
   $('#pfNav').querySelectorAll('[data-f]').forEach((b) => b.onclick = () => { S.folder = b.dataset.f; S.open = null; $('#pfRead').innerHTML = ''; v.querySelector('.pf')?.classList.remove('reading'); load(v); });
-  $('#pfBox').innerHTML = `<p><strong>${esc(r.data.mailbox)}</strong></p><p class="${r.data.receiving ? 'pf-ok' : 'pf-warn'}">${r.data.receiving ? 'Empfang aktiv' : 'Empfang noch nicht eingerichtet – Senden funktioniert bereits.'}</p>
+  $('#pfBox').innerHTML = `<p><strong>${esc(r.data.mailbox)}</strong></p><p class="${r.data.receiving ? 'pf-ok' : 'pf-warn'}">${r.data.receiving ? `Empfang aktiv${r.data.webhook ? ' (sofort)' : ' (Abruf beim Öffnen)'}` : 'Empfang noch nicht eingerichtet – Senden funktioniert bereits.'}</p>
     <form id="pfBook"><label>Terminbuchung (Google-Kalender-Link)<input name="url" type="url" placeholder="https://calendar.app.google/…" value="${esc(r.data.booking || '')}"></label><button class="btn btn-outline btn-sm" type="submit">Speichern</button></form>`;
   $('#pfBook').onsubmit = async (e) => { e.preventDefault(); const rr = await api('/api/admin/mail', { method: 'POST', body: JSON.stringify({ action: 'booking', url: new FormData(e.target).get('url') || '' }) }); toast(rr.ok ? 'Terminlink gespeichert.' : rr.data?.error || 'Fehler', !rr.ok); };
   drawList(v);
