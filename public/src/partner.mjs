@@ -1,5 +1,5 @@
 // Partnerseite /p/<slug> und Website-Widget (?embed=1): Finanzierungsrechner mit Anfrage an den Partner.
-import { analyse, GREST } from './calc.mjs?v=916888c2';
+import { analyse, GREST } from './calc.mjs?v=4afff251';
 
 const box = document.getElementById('pp');
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
