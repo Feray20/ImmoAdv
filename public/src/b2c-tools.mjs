@@ -4,7 +4,7 @@
 // Portfolio, Anschluss & Forward und Betriebskosten. Einsteiger und Profi unterscheiden sich in Reihenfolge, Erklärtiefe
 // und Fachlogik (Beleihungsauslauf, normierter Angebotsvergleich, Steuerwirkung, Portfolio-Stresstest).
 // Die Freischaltung im Browser ist eine Komfortfunktion; die Rechenwege sind offen dokumentiert.
-import { monthlyRate, balanceAfterMonths, tilgungsplan, kaufnebenkosten, portfolio, GREST } from './calc.mjs?v=2e59e810';
+import { monthlyRate, balanceAfterMonths, tilgungsplan, kaufnebenkosten, portfolio, GREST } from './calc.mjs?v=916888c2';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const E = (v) => (Number.isFinite(v) ? v : 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
@@ -498,6 +498,11 @@ const TICON = {
 const RANK = { free: 0, pass: 1, pro: 2 };
 const TIER_RANK = { free: 0, starter: 1, pro: 2 };
 
+// „Rechnen mit: Beispiel“ – vorgefertigte Musterwohnung, wie ein Profi sie anlegen würde (klar als Beispiel gekennzeichnet).
+const EX_OBJ = { id: 'beispiel', name: 'Beispiel: 3-Zimmer-Wohnung (Profi-Vorlage)', price: 300000, rent: 1000, area: 75, equity: 66000, land: 'hessen', brokerPct: 3.57,
+  loan: 270000, interestPct: 3.8, repaymentPct: 2, fixedYears: 10, nonRecoverable: 120, maintenance: 80, vacancyPct: 2, marginalTaxPct: 35, payoutDate: '' };
+const EX_PROFILE = { equity: 66000, land: 'hessen', marginalTaxPct: 35, netIncome: 4200 };
+
 // Einsteiger: „So würde ein Profi das ausfüllen“ – nur auf Knopfdruck, klar als Beispiel gekennzeichnet;
 // die eigenen Eingaben werden vorher gesichert und lassen sich mit einem Tipp wiederherstellen.
 const PROFI_EX = {
@@ -525,8 +530,10 @@ export async function mountTools(view, { d, tier = 'free', b2b = false, mode = '
   try { Object.keys(localStorage).filter((k) => k.startsWith('ia-tool-')).forEach((k) => localStorage.removeItem(k)); } catch { /* ohne Speicher */ }
   const objs = (Array.isArray(d.objects) ? d.objects : []).filter((o) => o && o.name);
   let pick = null; try { pick = sessionStorage.getItem('ia-tool2-obj'); } catch { /* ohne Speicher */ }
-  const sel = objs.find((o) => String(o.id) === pick) || (pick === 'eigen' ? null : objs.find((o) => num(o.price) > 0) || null);
-  CTX = { ...CTX, mode: m, tier: t, obj: sel, objId: sel ? String(sel.id || objs.indexOf(sel)) : 'eigen' };
+  const demo = pick === 'beispiel';
+  const sel = demo ? EX_OBJ : objs.find((o) => String(o.id) === pick) || (pick === 'eigen' ? null : objs.find((o) => num(o.price) > 0) || null);
+  CTX = { ...CTX, mode: m, tier: t, obj: sel, objId: demo ? 'beispiel' : sel ? String(sel.id || objs.indexOf(sel)) : 'eigen' };
+  const dd = demo ? { ...d, profile: { ...(d.profile || {}), ...EX_PROFILE } } : d;
   try {
     const PR = await fetch('/data/preise.json').then((r) => r.json());
     const pl = Object.fromEntries((PR.privat?.plans || []).map((x) => [x.id, x]));
@@ -540,7 +547,7 @@ export async function mountTools(view, { d, tier = 'free', b2b = false, mode = '
   const mainIds = [...o.main.filter(has), ...o.main.filter((id) => !has(id))];
   view.innerHTML = `<div class="tl-top"><div><h2 class="tl-h">Software-Tools</h2><p class="form-note">${m === 'profi' ? 'Kennzahlen und Fachlogik: Beleihungsauslauf, normierter Angebotsvergleich, Steuerwirkung, Portfolio-Stresstest.' : 'Schritt für Schritt durch Ihren Kauf – jedes Tool rechnet mit Ihren eigenen Zahlen und erklärt das Ergebnis.'}</p></div><span class="tl-plan tl-plan-${t}">${t === 'pro' ? 'Investor Pro' : t === 'starter' ? 'Käufer-Pass' : 'Kostenlos'}</span></div>
     <p class="tl-planline">${esc(PLAN_LINE[t](m))}</p>
-    <div class="tl-base"><label>Rechnen mit<select id="tlObj"><option value="eigen"${sel ? '' : ' selected'}>Eigenen Werten (leer starten)</option>${objs.map((x) => `<option value="${esc(String(x.id))}"${x === sel ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>${objs.length ? '<small>Werte aus Objekt und Finanzprofil werden übernommen und lassen sich je Tool anpassen.</small>' : '<small>Noch kein Objekt angelegt – <a href="#objekte">Objekt anlegen</a>, dann rechnen die Tools mit Ihren Zahlen.</small>'}</div>
+    <div class="tl-base"><label>Rechnen mit<select id="tlObj"><option value="eigen"${sel ? '' : ' selected'}>Eigenen Werten (leer starten)</option><option value="beispiel"${demo ? ' selected' : ''}>Beispiel (Profi-Vorlage, vorausgefüllt)</option>${objs.map((x) => `<option value="${esc(String(x.id))}"${x === sel ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>${demo ? '<small class="tl-demo"><strong>Beispielzahlen</strong> – 3-Zimmer-Wohnung für 300.000 € in Hessen, so wie ein Profi sie anlegt. Nicht Ihre Zahlen: Zum Ausprobieren ändern oder oben „Eigenen Werten“ wählen.</small>' : objs.length ? '<small>Werte aus Objekt und Finanzprofil werden übernommen und lassen sich je Tool anpassen.</small>' : '<small>Noch kein Objekt angelegt – <a href="#objekte">Objekt anlegen</a>, dann rechnen die Tools mit Ihren Zahlen.</small>'}</div>
     <div class="obj-pick tl-pickgrid" role="group" aria-label="Software-Tools">${[...mainIds, ...o.more].map((id, i) => `<button type="button" class="obj-op${has(id) ? '' : ' off'}" data-tl="${id}" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TICON[id] || TICON.nk}</svg><span><strong>${m === 'einsteiger' && i < mainIds.length && has(id) ? `${i + 1}. ` : ''}${esc(TOOLS[id][0])}</strong><small>${has(id) ? esc(TOOLS[id][2]) : `${esc(TOOLS[id][2])} · ${TOOLS[id][1] === 'pro' ? 'Investor Pro' : 'Käufer-Pass'}`}</small></span><svg class="obj-op-c" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`).join('')}</div>
     <p class="tl-links"><a href="#steuer">Steuer &amp; AfA</a> · <a href="/rechner">Alle Rechner</a></p>
     
@@ -549,9 +556,9 @@ export async function mountTools(view, { d, tier = 'free', b2b = false, mode = '
   const q = (id) => view.querySelector('#t-' + id);
   const mount = (id) => {
     const b = q(id); if (!b) return; if (!has(id)) { b.innerHTML = lockCard(id); return; }
-    TOOLS[id][3](b, d);
+    TOOLS[id][3](b, dd);
     const ex = PROFI_EX[id];
-    if (m !== 'einsteiger' || !ex) return;
+    if (m !== 'einsteiger' || !ex || demo) return;
     const bak = 'ia-tool2-bak-' + id;
     let shown = false; try { shown = !!sessionStorage.getItem(bak); } catch { /* ohne Speicher */ }
     b.querySelector('h3')?.insertAdjacentHTML('afterend', shown

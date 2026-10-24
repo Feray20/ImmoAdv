@@ -1635,6 +1635,7 @@ main>.section:last-child,#app>main>.section:last-child{padding-bottom:28px}
 .area-login label.remember small,.auth-card label.remember small{flex-basis:100%;padding-left:32px;margin-top:-4px}
 .area-links a,.auth-card .form-note a{display:inline-block;padding:3px 0}
 .auth-card a:not(.btn){display:inline-block;padding-top:3px;padding-bottom:3px}
+.tl-base small.tl-demo{display:block;padding:8px 10px;border-radius:9px;background:#FFFBEB;border:1px solid #FDE68A;color:#78350F}.tl-base small.tl-demo strong{color:#92400E}
 /* landing.css */
 .lp-strip,.lp-problem,.lp-ba,.lp-demo,.lp-how,.lp-docs,.lp-wissen,.lp-trust,.lp-preise,.lp-faq{padding:80px 0}
 .lp-strip{padding:56px 0;background:#fff;border-bottom:1px solid #E2E8F0}
