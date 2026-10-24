@@ -1,6 +1,6 @@
 // Web-Admin: Akquise-Zentrale (Kontakte, Serienbriefe, Anrufe, Verlauf) und Werbungszentrale
 // (Kampagnen mit Tracking-Link und QR-Code, Erfolgsmessung, Neuigkeiten-E-Mails nur mit Double-Opt-in).
-import { api, download, dt, dtt, esc } from './sess.mjs?v=916888c2';
+import { api, download, dt, dtt, esc } from './sess.mjs?v=7c79b83a';
 
 const $ = (s, r = document) => r.querySelector(s);
 const KIND = { bank: 'Bank / Sparkasse', vermittler: 'Finanzierungsvermittler', makler: 'Immobilienmakler', finanzberater: 'Finanz-/Vermögensberater', sonstige: 'Sonstige' };
@@ -38,10 +38,11 @@ export async function akquise(v) {
     <details class="ad-help"><summary>Was ist erlaubt? (kurz erklärt)</summary>
       <p><strong>Briefe</strong> an Unternehmen sind erlaubt, solange kein Werbewiderspruch vorliegt. Jeder Brief enthält automatisch den Hinweis zur Datenherkunft und zum Widerspruchsrecht (Art. 14, 21 DSGVO).</p>
       <p><strong>Anrufe</strong> bei Unternehmen nur bei mutmaßlichem Interesse (§ 7 Abs. 2 Nr. 1 UWG) – z. B. wenn ein konkreter Bezug zum Geschäft des Angerufenen besteht. Im Zweifel erst schreiben.</p>
+      <p><strong>Presse-E-Mails</strong> sind einzelne, persönliche Anfragen an Redaktionen und Blogs (öffentliche Redaktionsadresse, konkreter Themenbezug) – immer mit Abmeldelink; Abmeldungen sperren den Kontakt automatisch.</p>
       <p><strong>Werbe-E-Mails</strong> nur an Empfänger, die über das Formular eingewilligt und bestätigt haben (Reiter „Werbung“ → Neuigkeiten). Keine E-Mails an hier gesammelte Adressen.</p>
       <p><strong>Quelle</strong> jedes Kontakts angeben (z. B. „Impressum der Filial-Website“). Bei Widerspruch Status „Werbewiderspruch“ setzen – der Kontakt bleibt als Sperrvermerk erhalten. Auf Löschverlangen „Löschen“ verwenden. Keine Rechtsberatung.</p></details>
     <div class="pt-row mk-bar"><input id="mkQ" placeholder="Suchen (Firma, Ort, Name)" value="${esc(CRM.q)}"><select id="mkSt"><option value="">Alle Status</option>${Object.entries(STATUS).map(([k, l]) => `<option value="${k}"${CRM.st === k ? ' selected' : ''}>${l}</option>`).join('')}</select><select id="mkKind"><option value="">Alle Arten</option>${Object.entries(KIND).map(([k, l]) => `<option value="${k}"${CRM.kind === k ? ' selected' : ''}>${l}</option>`).join('')}</select><label class="chk"><input type="checkbox" id="mkDue"${CRM.due ? ' checked' : ''}> nur fällige</label></div>
-    <div class="pt-row mk-bar"><button class="btn btn-dark" id="mkAdd" type="button">+ Kontakt</button><button class="btn btn-outline" id="mkImp" type="button">CSV importieren</button><button class="btn btn-outline" id="mkBrief" type="button">Serienbrief für Auswahl</button><button class="btn btn-ghost" id="mkScripts" type="button">Anruf- & LinkedIn-Vorlagen</button><span class="form-note" id="mkSel"></span></div>
+    <div class="pt-row mk-bar"><button class="btn btn-dark" id="mkAdd" type="button">+ Kontakt</button><button class="btn btn-outline" id="mkImp" type="button">CSV importieren</button><button class="btn btn-outline" id="mkBrief" type="button">Serienbrief für Auswahl</button><button class="btn btn-dark" id="mkMails" type="button">Presse-E-Mails</button><button class="btn btn-ghost" id="mkScripts" type="button">Anruf- & LinkedIn-Vorlagen</button><span class="form-note" id="mkSel"></span></div>
     <div id="mkTable"></div></section>`;
   const draw = () => {
     const q = CRM.q.toLowerCase();
@@ -59,10 +60,54 @@ export async function akquise(v) {
   $('#mkSt').onchange = (e) => { CRM.st = e.target.value; draw(); };
   $('#mkKind').onchange = (e) => { CRM.kind = e.target.value; draw(); };
   $('#mkDue').onchange = (e) => { CRM.due = e.target.checked; draw(); };
+  $('#mkMails').onclick = () => outreachMails(() => akquise(v));
   $('#mkAdd').onclick = () => editContact(null, () => akquise(v));
   $('#mkImp').onclick = () => importCsv(() => akquise(v));
   $('#mkBrief').onclick = () => { const ids = [...CRM.sel]; if (!ids.length) { toast('Bitte zuerst Kontakte auswählen.', true); return; } letters(ids, () => { CRM.sel.clear(); akquise(v); }); };
   $('#mkScripts').onclick = () => { const d = dlg('mkScr'); d.innerHTML = `<div class="ad-dlg-in"><div class="ad-dlg-h"><h2>Vorlagen</h2><button class="stage-x" data-x aria-label="Schließen">×</button></div><h3 class="ad-sub">Anruf-Leitfaden</h3><textarea rows="12" readonly class="mk-tpl">${esc(CALL)}</textarea><h3 class="ad-sub">LinkedIn-Nachricht (persönlich senden)</h3><textarea rows="6" readonly class="mk-tpl">${esc(LINKEDIN)}</textarea><p class="form-note">Kontakt danach im Kontakt-Dialog als „Anruf“ bzw. „LinkedIn“ protokollieren.</p></div>`; d.querySelector('[data-x]').onclick = () => d.close(); d.showModal(); };
+}
+
+// Persönliche Presse- und Kooperationsanfragen: Vorschau, Empfänger/Betreff anpassen, einzeln senden (support@immoadv.de).
+const OST = { entwurf: ['Entwurf', ''], gesendet: ['Gesendet', 'ok'], fehler: ['Fehler', 'bad'], gesperrt: ['Gesperrt', 'bad'] };
+async function outreachMails(done) {
+  const d = dlg('mkOut');
+  const r = await api('/api/admin/outreach');
+  if (!r.ok) { toast(r.data?.error || 'Nicht verfügbar.', true); return; }
+  const M = r.data.mails || [];
+  const open = M.filter((m) => m.status !== 'gesendet' && !m.optedOut).length;
+  d.innerHTML = `<div class="ad-dlg-in mk-out"><div class="ad-dlg-h"><h2>Presse-E-Mails</h2><button class="stage-x" data-x aria-label="Schließen">×</button></div>
+    <p class="form-note">Absender <strong>Feray Korkmaz · ImmoAdv &lt;support@immoadv.de&gt;</strong>. Foto, Logo und Unterschrift sind eingebettet, Links bleiben unverändert, jede Mail hat einen persönlichen Abmeldelink (Abmeldungen landen automatisch hier und in der Akquise als „Werbewiderspruch“). ${r.data.imported ? `<strong>${r.data.imported} Entwürfe übernommen.</strong>` : ''}</p>
+    <form class="pt-row mk-bar" id="mkBook"><label style="flex:1">Terminbuchungs-Link (Google Kalender) <input name="url" type="url" placeholder="https://calendar.app.google/…" value="${esc(r.data.booking || '')}"></label><button class="btn btn-outline" type="submit">Speichern</button></form>
+    <p class="form-note">${r.data.booking ? 'Knöpfe „Termin vorschlagen“ öffnen die Terminbuchung.' : 'Ohne Link öffnen „Termin vorschlagen“-Knöpfe eine vorbereitete Antwort-Mail.'} ${open} offen · ${M.filter((m) => m.status === 'gesendet').length} gesendet · ${M.filter((m) => m.optedOut).length} abgemeldet</p>
+    <div class="ad-wrap"><table class="ad-table"><thead><tr><th>Empfänger</th><th>Betreff</th><th>Status</th><th></th></tr></thead><tbody>${M.map((m) => `<tr><td>${esc(m.to_email)}</td><td>${esc(m.subject)}</td><td>${m.optedOut ? '<span class="st bad">Abgemeldet</span>' : `<span class="st ${OST[m.status]?.[1] || ''}">${OST[m.status]?.[0] || esc(m.status)}</span>${m.sent_at ? `<br><small>${esc(dtt(m.sent_at))}</small>` : ''}${m.error ? `<br><small>${esc(m.error)}</small>` : ''}`}</td><td style="white-space:nowrap"><button class="btn btn-outline btn-sm" data-pv="${m.id}" type="button">Ansehen</button>${m.status !== 'gesendet' && !m.optedOut ? ` <button class="btn btn-dark btn-sm" data-send="${m.id}" type="button">Senden</button>` : ''}</td></tr>`).join('')}</tbody></table></div></div>`;
+  if (!d.open) d.showModal();
+  d.querySelector('[data-x]').onclick = () => { d.close(); done?.(); };
+  d.querySelector('#mkBook').onsubmit = async (e) => { e.preventDefault(); const url = new FormData(e.target).get('url') || ''; const rr = await api('/api/admin/outreach', { method: 'POST', body: JSON.stringify({ action: 'booking', url }) }); if (rr.ok) { toast('Terminlink gespeichert.'); outreachMails(done); } else toast(rr.data?.error || 'Fehler', true); };
+  const send = async (id, btn) => {
+    const m = M.find((x) => x.id === id);
+    if (!confirm(`Jetzt an ${m.to_email} senden?\n\n„${m.subject}“`)) return;
+    if (btn) { btn.disabled = true; btn.textContent = 'Sendet …'; }
+    const rr = await api('/api/admin/outreach', { method: 'POST', body: JSON.stringify({ action: 'send', id }) });
+    if (rr.ok) toast('Gesendet und in der Akquise protokolliert.'); else toast(rr.data?.error || 'Senden fehlgeschlagen.', true);
+    outreachMails(done);
+  };
+  d.querySelectorAll('[data-send]').forEach((b) => b.onclick = () => send(b.dataset.send, b));
+  d.querySelectorAll('[data-pv]').forEach((b) => b.onclick = async () => {
+    const rr = await api('/api/admin/outreach?id=' + b.dataset.pv);
+    if (!rr.ok) { toast(rr.data?.error || 'Fehler', true); return; }
+    const m = rr.data.mail, p = dlg('mkOutPv');
+    const editable = m.status !== 'gesendet';
+    p.innerHTML = `<div class="ad-dlg-in mk-pv"><div class="ad-dlg-h"><h2>Vorschau</h2><button class="stage-x" data-x aria-label="Schließen">×</button></div>
+      <form id="mkPvF" class="mk-pv-f"><label>An <input name="to" type="email" value="${esc(m.to_email)}"${editable ? '' : ' disabled'}></label><label>Betreff <input name="subject" value="${esc(m.subject)}" maxlength="180"${editable ? '' : ' disabled'}></label>${editable ? '<div class="pt-row"><button class="btn btn-outline" type="submit">Änderungen speichern</button><button class="btn btn-dark" type="button" id="mkPvSend">Senden</button></div>' : ''}</form>
+      <div class="mk-pv-sw" role="group" aria-label="Ansicht"><button type="button" class="on" data-w="390">Handy</button><button type="button" data-w="680">Desktop</button></div>
+      <iframe class="mk-pv-if" title="E-Mail-Vorschau" sandbox="allow-popups allow-popups-to-escape-sandbox" style="width:390px"></iframe></div>`;
+    p.querySelector('iframe').srcdoc = m.preview;
+    if (!p.open) p.showModal();
+    p.querySelector('[data-x]').onclick = () => p.close();
+    p.querySelectorAll('[data-w]').forEach((x) => x.onclick = () => { p.querySelectorAll('[data-w]').forEach((y) => y.classList.toggle('on', y === x)); p.querySelector('iframe').style.width = x.dataset.w + 'px'; });
+    p.querySelector('#mkPvF').onsubmit = async (e) => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); const rr2 = await api('/api/admin/outreach', { method: 'POST', body: JSON.stringify({ action: 'update', id: m.id, to: f.to, subject: f.subject }) }); if (rr2.ok) { toast('Gespeichert.'); p.close(); outreachMails(done); } else toast(rr2.data?.error || 'Fehler', true); };
+    p.querySelector('#mkPvSend')?.addEventListener('click', () => { p.close(); send(m.id, null); });
+  });
 }
 
 const F = [['company', 'Unternehmen*'], ['branch', 'Filiale / Abteilung'], ['salutation', 'Anrede', 'sel'], ['contactName', 'Ansprechpartner'], ['role', 'Funktion'], ['street', 'Straße'], ['postalCode', 'PLZ'], ['city', 'Ort'], ['phone', 'Telefon'], ['email', 'E-Mail (geschäftlich)'], ['website', 'Website']];
